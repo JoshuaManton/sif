@@ -2,9 +2,11 @@
 
 struct Lexer {
     char *text = nullptr;
+    char *filepath = nullptr;
     int index = 0;
-    int line = 0;
-    int character = 0;
+    int line = 1;
+    int character = 1;
+    bool reported_error = false;
 };
 
 enum Token_Kind {
@@ -72,14 +74,23 @@ enum Token_Kind {
     TK_COUNT,
 };
 
+struct Location {
+    char *filepath = nullptr;
+    int line = 0;
+    int character = 0;
+};
+
 struct Token {
     char *text = nullptr;
     Token_Kind kind = TK_INVALID;
+    Location location = {};
 };
 
-void init_lexer();
+void init_lexer_globals();
+
 bool get_next_token(Lexer *lexer, Token *out_token);
 bool peek_next_token(Lexer *lexer, Token *out_token);
+void unexpected_token(Lexer *lexer, Token token, Token_Kind expected = TK_INVALID);
 bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token = nullptr);
 void print_token(Token token);
 char *token_string(Token_Kind kind);

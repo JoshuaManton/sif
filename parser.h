@@ -14,14 +14,14 @@ enum Ast_Kind {
 };
 
 struct Ast_Expr;
+struct Ast_Var;
+struct Ast_Proc;
+struct Ast_Block;
+struct Ast_Struct;
 
 struct Ast_Node {
     Ast_Kind kind = AST_INVALID;
     Ast_Node(Ast_Kind kind) : kind(kind) {}
-};
-
-struct Ast_File : public Ast_Node {
-    Ast_File() : Ast_Node(AST_FILE) {}
 };
 
 struct Ast_Block : public Ast_Node {
@@ -32,18 +32,27 @@ struct Ast_Block : public Ast_Node {
 };
 
 struct Ast_Proc : public Ast_Node {
-    Ast_Proc() : Ast_Node(AST_PROC) {}
+    char *name = nullptr;
+    Array<Ast_Var *> parameters = {};
+    Ast_Block *body = nullptr;
+    Ast_Proc() : Ast_Node(AST_PROC) {
+        parameters.allocator = default_allocator();
+    }
 };
 
 struct Ast_Var : public Ast_Node {
     char *name = nullptr;
-    char *type_name = nullptr;
+    Ast_Expr *type_expr = nullptr;
     Ast_Expr *expr = nullptr;
     Ast_Var() : Ast_Node(AST_VAR) {}
 };
 
 struct Ast_Struct : public Ast_Node {
-    Ast_Struct() : Ast_Node(AST_STRUCT) {}
+    char *name = nullptr;
+    Array<Ast_Var *> fields = {};
+    Ast_Struct() : Ast_Node(AST_STRUCT) {
+        fields.allocator = default_allocator();
+    }
 };
 
 
@@ -54,6 +63,11 @@ enum Expr_Kind {
     EXPR_BINARY,
     EXPR_ADDRESS_OF,
 
+    EXPR_SUBSCRIPT,
+    EXPR_DEREFERENCE,
+    EXPR_PROCEDURE_CALL,
+    EXPR_SELECTOR,
+
     EXPR_IDENTIFIER,
     EXPR_NUMBER_LITERAL,
     EXPR_STRING_LITERAL,
@@ -61,6 +75,9 @@ enum Expr_Kind {
     EXPR_NULL,
     EXPR_TRUE,
     EXPR_FALSE,
+
+    EXPR_POINTER_TYPE,
+    EXPR_ARRAY_TYPE,
 
     EXPR_PAREN,
 
@@ -129,6 +146,44 @@ struct Expr_String_Literal : public Ast_Expr {
     {}
 };
 
+struct Expr_Subscript : public Ast_Expr {
+    Ast_Expr *lhs = nullptr;
+    Ast_Expr *index = nullptr;
+    Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index)
+    : Ast_Expr(EXPR_SUBSCRIPT)
+    , lhs(lhs)
+    , index(index)
+    {}
+};
+
+struct Expr_Dereference : public Ast_Expr {
+    Ast_Expr *lhs = nullptr;
+    Expr_Dereference(Ast_Expr *lhs)
+    : Ast_Expr(EXPR_DEREFERENCE)
+    , lhs(lhs)
+    {}
+};
+
+struct Expr_Procedure_Call : public Ast_Expr {
+    Ast_Expr *lhs = nullptr;
+    Array<Ast_Expr *> parameters = {};
+    Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters)
+    : Ast_Expr(EXPR_PROCEDURE_CALL)
+    , lhs(lhs)
+    , parameters(parameters)
+    {}
+};
+
+struct Expr_Selector : public Ast_Expr {
+    Ast_Expr *lhs = nullptr;
+    char *field_name = nullptr;
+    Expr_Selector(Ast_Expr *lhs, char *field_name)
+    : Ast_Expr(EXPR_SELECTOR)
+    , lhs(lhs)
+    , field_name(field_name)
+    {}
+};
+
 struct Expr_Paren : public Ast_Expr {
     Ast_Expr *nested = nullptr;
     Expr_Paren(Ast_Expr *nested)
@@ -152,6 +207,24 @@ struct Expr_True : public Ast_Expr {
 struct Expr_False : public Ast_Expr {
     Expr_False()
     : Ast_Expr(EXPR_FALSE)
+    {}
+};
+
+struct Expr_Pointer_Type : public Ast_Expr {
+    Ast_Expr *pointer_to = nullptr;
+    Expr_Pointer_Type(Ast_Expr *pointer_to)
+    : Ast_Expr(EXPR_POINTER_TYPE)
+    , pointer_to(pointer_to)
+    {}
+};
+
+struct Expr_Array_Type : public Ast_Expr {
+    Ast_Expr *array_of = nullptr;
+    Ast_Expr *length = nullptr;
+    Expr_Array_Type(Ast_Expr *array_of, Ast_Expr *length)
+    : Ast_Expr(EXPR_ARRAY_TYPE)
+    , array_of(array_of)
+    , length(length)
     {}
 };
 

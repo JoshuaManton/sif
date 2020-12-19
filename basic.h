@@ -151,10 +151,10 @@ extern "C++" {
 
 template<typename T>
 struct Array {
-    T *data;
-    int count;
-    int capacity;
-    Allocator allocator;
+    T *data = {};
+    int count = {};
+    int capacity = {};
+    Allocator allocator = {};
 
     T *append(T element);
     T *insert(int index, T element);

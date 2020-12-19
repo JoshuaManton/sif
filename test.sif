@@ -1,0 +1,16 @@
+struct Vector3 {
+    var x: float;
+    var y: float;
+    var z: float;
+}
+
+var x: int = 123;
+var y: int = !x;
+var z: int = 33 - 2;
+
+proc foo(var x: int) {
+    var a: ^int = foo[123][2];
+    var b: [123]int = foo^;
+    var c: [X]int = foo(123, "foo")(true);
+    var d: int = z + 123 * 4 << 2;
+}
