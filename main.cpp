@@ -5,6 +5,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "checker.h"
 
 void print_block_contents(Ast_Block *block, int indent = 0) {
     For (idx, block->nodes) {
@@ -13,7 +14,7 @@ void print_block_contents(Ast_Block *block, int indent = 0) {
         }
         indent += 4;
         Ast_Node *node = block->nodes[idx];
-        switch (node->kind) {
+        switch (node->ast_kind) {
             case AST_VAR: {
                 Ast_Var *thing = (Ast_Var *)node;
                 printf("var %s\n", thing->name);
@@ -61,14 +62,19 @@ void main(int argc, char **argv) {
     defer(free(root_file_text));
 
     init_lexer_globals();
+    init_parser();
+    init_checker();
 
     Lexer lexer;
     lexer.filepath = root_file;
     lexer.text = root_file_text;
 
-    Ast_Block *block = parse_block(&lexer);
+    Ast_Block *global_scope = parse_block(&lexer);
     if (lexer.reported_error) {
         return;
     }
-    print_block_contents(block);
+    add_global_declarations(global_scope);
+    resolve_identifiers();
+    print_block_contents(global_scope);
+    typecheck_block(global_scope);
 }

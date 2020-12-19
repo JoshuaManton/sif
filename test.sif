@@ -5,12 +5,12 @@ struct Vector3 {
 }
 
 var x: int = 123;
-var y: int = !x;
 var z: int = 33 - 2;
+// var y: int = !x;
 
-proc foo(var x: int) {
-    var a: ^int = foo[123][2];
-    var b: [123]int = foo^;
-    var c: [X]int = foo(123, "foo")(true);
-    var d: int = z + 123 * 4 << 2;
-}
+// proc foo(var x: int) {
+//     var a: ^int = foo[123][2];
+//     var b: [123]int = foo^;
+//     var c: [X]int = foo(123, "foo")(true);
+//     var d: int = z + 123 * 4 << 2;
+// }

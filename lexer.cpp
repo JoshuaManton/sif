@@ -64,6 +64,8 @@ void init_lexer_globals() {
     token_string_map[TK_AMPERSAND]             = "&";
     token_string_map[TK_CARET]                 = "^";
 
+    token_string_map[TK_COMMENT]               = "COMMENT";
+
     token_string_map[TK_COUNT]                 = "COUNT";
 
     for (int i = 0; i < TK_COUNT; i++) {
@@ -264,6 +266,12 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             advance(lexer, 1);
             out_token->kind = TK_DIVIDE_EQUALS;
             out_token->text = "/=";
+        }
+        else if (lexer->text[lexer->index] == '/') {
+            while ((lexer->text[lexer->index] != '\n') && (lexer->text[lexer->index] != 0)) {
+                advance(lexer, 1);
+            }
+            return get_next_token(lexer, out_token);
         }
     }
     else if (lexer->text[lexer->index] == '=') {

@@ -71,6 +71,8 @@ enum Token_Kind {
     TK_AMPERSAND,
     TK_CARET,
 
+    TK_COMMENT,
+
     TK_COUNT,
 };
 

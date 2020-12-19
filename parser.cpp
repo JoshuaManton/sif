@@ -5,6 +5,63 @@
 
 #include "parser.h"
 
+Array<Expr_Identifier *> identifiers_to_resolve;
+
+void init_parser() {
+    identifiers_to_resolve.allocator = default_allocator();
+}
+
+void queue_identifier_for_resolving(Expr_Identifier *ident) {
+    identifiers_to_resolve.append(ident);
+}
+
+void resolve_identifiers() {
+    For (idx, identifiers_to_resolve) {
+        Expr_Identifier *ident = identifiers_to_resolve[idx];
+        Ast_Block *block = ident->parent_block;
+        while (block != nullptr) {
+            For (decl_idx, block->declarations) {
+                Declaration *decl = block->declarations[decl_idx];
+                if (strcmp(decl->name, ident->name) == 0) {
+                    ident->resolved_declaration = decl;
+                }
+            }
+
+            if (ident->resolved_declaration) {
+                break;
+            }
+            block = block->parent_block;
+        }
+
+        if (!ident->resolved_declaration) {
+            printf("%s\n", ident->name);
+            assert(ident->resolved_declaration != nullptr && "Unresolved identifier");
+        }
+    }
+}
+
+Ast_Block *push_ast_block(Ast_Block *block) {
+    Ast_Block *old_block = current_block;
+    current_block = block;
+    return old_block;
+}
+
+void pop_ast_block(Ast_Block *old_block) {
+    current_block = old_block;
+}
+
+void register_declaration(Declaration *new_declaration) {
+    For (decl_idx, current_block->declarations) {
+        Declaration *decl = current_block->declarations[decl_idx];
+        if (strcmp(decl->name, new_declaration->name) == 0) {
+            assert(false && "name collision");
+        }
+    }
+    current_block->declarations.append(new_declaration);
+}
+
+
+
 Ast_Var *parse_var(Lexer *lexer) {
     if (!expect_token(lexer, TK_VAR)) {
         return nullptr;
@@ -31,6 +88,7 @@ Ast_Var *parse_var(Lexer *lexer) {
         var->expr = parse_expr(lexer);
     }
 
+    register_declaration(new Var_Declaration(var));
     return var;
 }
 
@@ -39,9 +97,12 @@ Ast_Proc *parse_proc(Lexer *lexer) {
         return nullptr;
     }
     Ast_Proc *proc = new Ast_Proc;
-    Token token;
+    proc->procedure_block = new Ast_Block;
+    Ast_Block *old_block = push_ast_block(proc->procedure_block);
+    defer(pop_ast_block(old_block));
 
     // name
+    Token token;
     if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
         return nullptr;
     }
@@ -81,6 +142,7 @@ Ast_Proc *parse_proc(Lexer *lexer) {
         return nullptr;
     }
 
+    register_declaration(new Proc_Declaration(proc));
     return proc;
 }
 
@@ -101,25 +163,30 @@ Ast_Struct *parse_struct(Lexer *lexer) {
     if (!expect_token(lexer, TK_LEFT_CURLY, &token)) {
         return nullptr;
     }
-    while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
-        Ast_Var *var = parse_var(lexer);
-        if (!var) {
-            return nullptr;
-        }
-        structure->fields.append(var);
-        if (!expect_token(lexer, TK_SEMICOLON)) {
-            return nullptr;
-        }
+
+    structure->body = parse_block(lexer);
+    if (!structure->body) {
+        return nullptr;
     }
     if (!expect_token(lexer, TK_RIGHT_CURLY)) {
         return nullptr;
     }
+    For (idx, structure->body->nodes) {
+        Ast_Node *node = structure->body->nodes[idx];
+        assert(node->ast_kind == AST_VAR);
+        Ast_Var *var = (Ast_Var *)node;
+        structure->fields.append(var);
+    }
 
+    register_declaration(new Struct_Declaration(structure));
     return structure;
 }
 
 Ast_Block *parse_block(Lexer *lexer) {
     Ast_Block *block = new Ast_Block;
+    Ast_Block *old_block = push_ast_block(block);
+    defer(pop_ast_block(old_block));
+
     Token token;
     while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
         switch (token.kind) {
@@ -529,8 +596,9 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_IDENTIFIER: {
             get_next_token(lexer, &token);
-            // todo(josh): queue for resolving
-            return new Expr_Identifier(token.text);
+            Expr_Identifier *ident = new Expr_Identifier(token.text);
+            queue_identifier_for_resolving(ident);
+            return ident;
         }
         case TK_NUMBER: {
             get_next_token(lexer, &token);

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
+#include <string.h>
 
 typedef unsigned char      byte; static_assert(sizeof(byte) == 1, "byte size was not 1");
 typedef unsigned char      u8;   static_assert(sizeof(u8)   == 1, "u8 size was not 1");

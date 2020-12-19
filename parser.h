@@ -19,22 +19,39 @@ struct Ast_Proc;
 struct Ast_Block;
 struct Ast_Struct;
 
+struct Declaration;
+
+struct Type;
+
+static Ast_Block *current_block;
+
 struct Ast_Node {
-    Ast_Kind kind = AST_INVALID;
-    Ast_Node(Ast_Kind kind) : kind(kind) {}
+    Ast_Block *parent_block = {};
+    Ast_Kind ast_kind = AST_INVALID;
+    Ast_Node(Ast_Kind ast_kind)
+    : ast_kind(ast_kind)
+    , parent_block(current_block)
+    {}
 };
 
 struct Ast_Block : public Ast_Node {
     Array<Ast_Node *> nodes = {};
-    Ast_Block() : Ast_Node(AST_BLOCK) {
+    Array<Declaration *> declarations = {};
+
+    Ast_Block()
+    : Ast_Node(AST_BLOCK)
+    {
         nodes.allocator = default_allocator();
+        declarations.allocator = default_allocator();
     }
 };
 
 struct Ast_Proc : public Ast_Node {
     char *name = nullptr;
+    Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
     Array<Ast_Var *> parameters = {};
     Ast_Block *body = nullptr;
+    Type *type = nullptr;
     Ast_Proc() : Ast_Node(AST_PROC) {
         parameters.allocator = default_allocator();
     }
@@ -44,12 +61,15 @@ struct Ast_Var : public Ast_Node {
     char *name = nullptr;
     Ast_Expr *type_expr = nullptr;
     Ast_Expr *expr = nullptr;
+    Type *type = nullptr;
     Ast_Var() : Ast_Node(AST_VAR) {}
 };
 
 struct Ast_Struct : public Ast_Node {
     char *name = nullptr;
+    Type *type = nullptr;
     Array<Ast_Var *> fields = {};
+    Ast_Block *body = {};
     Ast_Struct() : Ast_Node(AST_STRUCT) {
         fields.allocator = default_allocator();
     }
@@ -124,6 +144,7 @@ struct Expr_Unary : public Ast_Expr {
 
 struct Expr_Identifier : public Ast_Expr {
     char *name = nullptr;
+    Declaration *resolved_declaration = nullptr;
     Expr_Identifier(char *name)
     : Ast_Expr(EXPR_IDENTIFIER)
     , name(name)
@@ -228,6 +249,58 @@ struct Expr_Array_Type : public Ast_Expr {
     {}
 };
 
+enum Declaration_Kind {
+    DECL_INVALID,
+    DECL_TYPE,
+    DECL_STRUCT,
+    DECL_VAR,
+    DECL_PROC,
+    DECL_COUNT,
+};
+
+struct Declaration {
+    char *name = {};
+    Declaration_Kind kind = {};
+    Declaration(char *name, Declaration_Kind kind)
+    : name(name)
+    , kind(kind)
+    {}
+};
+
+struct Type_Declaration : Declaration {
+    Type *type = {};
+    Type_Declaration(char *name, Type *type)
+    : Declaration(name, DECL_TYPE)
+    , type(type)
+    {}
+};
+
+struct Struct_Declaration : Declaration {
+    Ast_Struct *structure = {};
+    Struct_Declaration(Ast_Struct *structure)
+    : Declaration(structure->name, DECL_STRUCT)
+    , structure(structure)
+    {}
+};
+
+struct Proc_Declaration : Declaration {
+    Ast_Proc *procedure = {};
+    Proc_Declaration(Ast_Proc *procedure)
+    : Declaration(procedure->name, DECL_PROC)
+    , procedure(procedure)
+    {}
+};
+
+struct Var_Declaration : Declaration {
+    Ast_Var *var = {};
+    Var_Declaration(Ast_Var *var)
+    : Declaration(var->name, DECL_VAR)
+    , var(var)
+    {}
+};
+
+void init_parser();
+void resolve_identifiers();
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Block *parse_block(Lexer *lexer);
