@@ -4,3 +4,6 @@
 *.ilk
 *.obj
 *.bc
+
+.build/
+.vs/
