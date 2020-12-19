@@ -1,12 +1,24 @@
 #pragma once
 
+#include "common.h"
+
+struct Location {
+    char *filepath = nullptr;
+    int line = 0;
+    int character = 0;
+};
+
 struct Lexer {
     char *text = nullptr;
-    char *filepath = nullptr;
     int index = 0;
-    int line = 1;
-    int character = 1;
-    bool reported_error = false;
+    Location location = {};
+    Lexer(char *filepath, char *text)
+    : text(text)
+    {
+        location.filepath = filepath;
+        location.line = 1;
+        location.character = 1;
+    }
 };
 
 enum Token_Kind {
@@ -38,10 +50,14 @@ enum Token_Kind {
     TK_RIGHT_SHIFT,
     TK_RIGHT_SHIFT_EQUALS,
 
-    TK_BIT_AND,
+    TK_AMPERSAND, // bitwise AND and address-of
+
     TK_BIT_AND_EQUALS,
     TK_BIT_OR,
     TK_BIT_OR_EQUALS,
+
+    // todo(josh): bitwise XOR
+    // todo(josh): bitwise NOR
 
     TK_NOT,
 
@@ -68,18 +84,11 @@ enum Token_Kind {
     TK_COLON,
     TK_DOT,
     TK_COMMA,
-    TK_AMPERSAND,
     TK_CARET,
 
     TK_COMMENT,
 
     TK_COUNT,
-};
-
-struct Location {
-    char *filepath = nullptr;
-    int line = 0;
-    int character = 0;
 };
 
 struct Token {

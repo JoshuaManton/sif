@@ -36,6 +36,7 @@ void resolve_identifiers() {
         if (!ident->resolved_declaration) {
             printf("%s\n", ident->name);
             assert(ident->resolved_declaration != nullptr && "Unresolved identifier");
+            g_reported_error = true;
         }
     }
 }
@@ -63,11 +64,11 @@ void register_declaration(Declaration *new_declaration) {
 
 
 Ast_Var *parse_var(Lexer *lexer) {
-    if (!expect_token(lexer, TK_VAR)) {
+    Token token;
+    if (!expect_token(lexer, TK_VAR, &token)) {
         return nullptr;
     }
-    Ast_Var *var = new Ast_Var;
-    Token token;
+    Ast_Var *var = new Ast_Var(token.location);
 
     if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
         return nullptr;
@@ -93,16 +94,16 @@ Ast_Var *parse_var(Lexer *lexer) {
 }
 
 Ast_Proc *parse_proc(Lexer *lexer) {
-    if (!expect_token(lexer, TK_PROC)) {
+    Token token;
+    if (!expect_token(lexer, TK_PROC, &token)) {
         return nullptr;
     }
-    Ast_Proc *proc = new Ast_Proc;
-    proc->procedure_block = new Ast_Block;
+    Ast_Proc *proc = new Ast_Proc(token.location);
+    proc->procedure_block = new Ast_Block(token.location); // todo(josh): this location is incorrect, it should be the location of the body
     Ast_Block *old_block = push_ast_block(proc->procedure_block);
     defer(pop_ast_block(old_block));
 
     // name
-    Token token;
     if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
         return nullptr;
     }
@@ -147,11 +148,11 @@ Ast_Proc *parse_proc(Lexer *lexer) {
 }
 
 Ast_Struct *parse_struct(Lexer *lexer) {
-    if (!expect_token(lexer, TK_STRUCT)) {
+    Token token;
+    if (!expect_token(lexer, TK_STRUCT, &token)) {
         return nullptr;
     }
-    Ast_Struct *structure = new Ast_Struct;
-    Token token;
+    Ast_Struct *structure = new Ast_Struct(token.location);
 
     // name
     if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
@@ -183,7 +184,7 @@ Ast_Struct *parse_struct(Lexer *lexer) {
 }
 
 Ast_Block *parse_block(Lexer *lexer) {
-    Ast_Block *block = new Ast_Block;
+    Ast_Block *block = new Ast_Block(lexer->location);
     Ast_Block *old_block = push_ast_block(block);
     defer(pop_ast_block(old_block));
 
@@ -459,7 +460,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 if (!rhs) {
                     return nullptr;
                 }
-                return new Expr_Address_Of(rhs);
+                return new Expr_Address_Of(rhs, op.location);
             }
             case TK_MINUS:
             case TK_PLUS:
@@ -468,7 +469,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 if (!rhs) {
                     return nullptr;
                 }
-                return new Expr_Unary(op.kind, rhs);
+                return new Expr_Unary(op.kind, rhs, op.location);
             }
             // case .Cast: {
             //     expect(lexer, .LParen);
@@ -539,7 +540,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     return nullptr;
                 }
 
-                base_expr = new Expr_Procedure_Call(base_expr, parameters);
+                base_expr = new Expr_Procedure_Call(base_expr, parameters, op.location);
                 break;
             }
             case TK_LEFT_SQUARE: {
@@ -551,11 +552,11 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     return nullptr;
                 }
 
-                base_expr = new Expr_Subscript(base_expr, index);
+                base_expr = new Expr_Subscript(base_expr, index, op.location);
                 break;
             }
             case TK_CARET: {
-                base_expr = new Expr_Dereference(base_expr);
+                base_expr = new Expr_Dereference(base_expr, op.location);
                 break;
             }
             case TK_DOT: {
@@ -563,7 +564,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 if (!expect_token(lexer, TK_IDENTIFIER)) {
                     return nullptr;
                 }
-                base_expr = new Expr_Selector(base_expr, name_token.text);
+                base_expr = new Expr_Selector(base_expr, name_token.text, op.location);
                 break;
             }
             default: {
@@ -584,30 +585,30 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
     switch (token.kind) {
         case TK_NULL: {
             get_next_token(lexer, &token);
-            return new Expr_Null;
+            return new Expr_Null(token.location);
         }
         case TK_TRUE: {
             get_next_token(lexer, &token);
-            return new Expr_True;
+            return new Expr_True(token.location);
         }
         case TK_FALSE: {
             get_next_token(lexer, &token);
-            return new Expr_False;
+            return new Expr_False(token.location);
         }
         case TK_IDENTIFIER: {
             get_next_token(lexer, &token);
-            Expr_Identifier *ident = new Expr_Identifier(token.text);
+            Expr_Identifier *ident = new Expr_Identifier(token.text, token.location);
             queue_identifier_for_resolving(ident);
             return ident;
         }
         case TK_NUMBER: {
             get_next_token(lexer, &token);
-            return new Expr_Number_Literal(token.text);
+            return new Expr_Number_Literal(token.text, token.location);
         }
         case TK_STRING: {
             get_next_token(lexer, &token);
             // todo(josh): unescape the string
-            return new Expr_String_Literal(token.text);
+            return new Expr_String_Literal(token.text, token.location);
         }
         case TK_LEFT_PAREN: {
             get_next_token(lexer, &token);
@@ -615,7 +616,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (!expect_token(lexer, TK_RIGHT_PAREN)) {
                 return nullptr;
             }
-            return new Expr_Paren(nested);
+            return new Expr_Paren(nested, token.location);
         }
         case TK_LEFT_SQUARE: {
             get_next_token(lexer, &token);
@@ -630,7 +631,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (!array_of) {
                 return nullptr;
             }
-            return new Expr_Array_Type(array_of, length);
+            return new Expr_Array_Type(array_of, length, token.location);
         }
         case TK_CARET: {
             get_next_token(lexer, &token);
@@ -638,7 +639,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (!pointer_to) {
                 return nullptr;
             }
-            return new Expr_Pointer_Type(pointer_to);
+            return new Expr_Pointer_Type(pointer_to, token.location);
         }
         default: {
             unexpected_token(lexer, token);

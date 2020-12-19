@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 
+#include "common.h"
 #include "parser.h"
 
 enum Type_Kind {
@@ -22,6 +23,7 @@ enum Type_Flags {
     TF_UNTYPED  = 1 << 4,
     TF_NUMBER   = 1 << 5,
     TF_POINTER  = 1 << 6,
+    TF_ARRAY    = 1 << 7,
 };
 
 struct Type {
@@ -34,27 +36,31 @@ struct Type {
 };
 
 struct Type_Primitive : public Type {
-    Type_Primitive(int size)
+    char *name = nullptr;
+    Type_Primitive(char *name, int size)
     : Type(TYPE_PRIMITIVE)
+    , name(name)
     {
         this->size = size;
     }
 };
 
 struct Struct_Field {
-    char *name;
-    Type *type;
+    char *name = nullptr;
+    Type *type = nullptr;
 };
 struct Type_Struct : public Type {
-    Array<Struct_Field> fields;
-    Type_Struct(Array<Struct_Field> fields)
+    char *name = nullptr;
+    Array<Struct_Field> fields = {};
+    Type_Struct(char *name, Array<Struct_Field> fields)
     : Type(TYPE_STRUCT)
+    , name(name)
     , fields(fields)
     {}
 };
 
 struct Type_Pointer : public Type {
-    Type *pointer_to;
+    Type *pointer_to = {};
     Type_Pointer(Type *pointer_to)
     : Type(TYPE_POINTER)
     , pointer_to(pointer_to)
@@ -62,21 +68,25 @@ struct Type_Pointer : public Type {
 };
 
 struct Type_Array : public Type {
-    int count;
-    Type *array_of;
-    Type_Array(int count, Type *array_of)
+    Type *array_of = {};
+    int count = {};
+    Type_Array(Type *array_of, int count)
     : Type(TYPE_ARRAY)
-    , count(count)
     , array_of(array_of)
+    , count(count)
     {}
 };
 
 enum Operand_Flags {
     OPERAND_CONSTANT = 1 << 0,
     OPERAND_TYPE     = 1 << 1,
+    OPERAND_LVALUE   = 1 << 2,
+    OPERAND_RVALUE   = 1 << 3,
 };
 
 struct Operand {
+    Location location = {};
+
     u64 flags = {};
     Type *type = {};
 
@@ -85,6 +95,10 @@ struct Operand {
     char *string_value = {};
     bool bool_value    = {};
     Type *type_value   = {};
+
+    Operand(Location location)
+    : location(location)
+    {}
 };
 
 void init_checker();

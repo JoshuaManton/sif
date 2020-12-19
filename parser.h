@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.h"
 #include "lexer.h"
 #include "basic.h"
 
@@ -28,9 +29,11 @@ static Ast_Block *current_block;
 struct Ast_Node {
     Ast_Block *parent_block = {};
     Ast_Kind ast_kind = AST_INVALID;
-    Ast_Node(Ast_Kind ast_kind)
+    Location location = {};
+    Ast_Node(Ast_Kind ast_kind, Location location)
     : ast_kind(ast_kind)
     , parent_block(current_block)
+    , location(location)
     {}
 };
 
@@ -38,8 +41,8 @@ struct Ast_Block : public Ast_Node {
     Array<Ast_Node *> nodes = {};
     Array<Declaration *> declarations = {};
 
-    Ast_Block()
-    : Ast_Node(AST_BLOCK)
+    Ast_Block(Location location)
+    : Ast_Node(AST_BLOCK, location)
     {
         nodes.allocator = default_allocator();
         declarations.allocator = default_allocator();
@@ -52,7 +55,9 @@ struct Ast_Proc : public Ast_Node {
     Array<Ast_Var *> parameters = {};
     Ast_Block *body = nullptr;
     Type *type = nullptr;
-    Ast_Proc() : Ast_Node(AST_PROC) {
+    Ast_Proc(Location location)
+    : Ast_Node(AST_PROC, location)
+    {
         parameters.allocator = default_allocator();
     }
 };
@@ -62,7 +67,9 @@ struct Ast_Var : public Ast_Node {
     Ast_Expr *type_expr = nullptr;
     Ast_Expr *expr = nullptr;
     Type *type = nullptr;
-    Ast_Var() : Ast_Node(AST_VAR) {}
+    Ast_Var(Location location)
+    : Ast_Node(AST_VAR, location)
+    {}
 };
 
 struct Ast_Struct : public Ast_Node {
@@ -70,7 +77,9 @@ struct Ast_Struct : public Ast_Node {
     Type *type = nullptr;
     Array<Ast_Var *> fields = {};
     Ast_Block *body = {};
-    Ast_Struct() : Ast_Node(AST_STRUCT) {
+    Ast_Struct(Location location)
+    : Ast_Node(AST_STRUCT, location)
+    {
         fields.allocator = default_allocator();
     }
 };
@@ -106,8 +115,8 @@ enum Expr_Kind {
 
 struct Ast_Expr : public Ast_Node {
     Expr_Kind expr_kind = EXPR_INVALID;
-    Ast_Expr(Expr_Kind kind)
-    : Ast_Node(AST_EXPR)
+    Ast_Expr(Expr_Kind kind, Location location)
+    : Ast_Node(AST_EXPR, location)
     , expr_kind(kind)
     {}
 };
@@ -117,7 +126,7 @@ struct Expr_Binary : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Ast_Expr *rhs = nullptr;
     Expr_Binary(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs)
-    : Ast_Expr(EXPR_BINARY)
+    : Ast_Expr(EXPR_BINARY, lhs->location)
     , op(op)
     , lhs(lhs)
     , rhs(rhs)
@@ -126,8 +135,8 @@ struct Expr_Binary : public Ast_Expr {
 
 struct Expr_Address_Of : public Ast_Expr {
     Ast_Expr *rhs = nullptr;
-    Expr_Address_Of(Ast_Expr *rhs)
-    : Ast_Expr(EXPR_ADDRESS_OF)
+    Expr_Address_Of(Ast_Expr *rhs, Location location)
+    : Ast_Expr(EXPR_ADDRESS_OF, location)
     , rhs(rhs)
     {}
 };
@@ -135,8 +144,8 @@ struct Expr_Address_Of : public Ast_Expr {
 struct Expr_Unary : public Ast_Expr {
     Token_Kind op = TK_INVALID;
     Ast_Expr *rhs = nullptr;
-    Expr_Unary(Token_Kind op, Ast_Expr *rhs)
-    : Ast_Expr(EXPR_UNARY)
+    Expr_Unary(Token_Kind op, Ast_Expr *rhs, Location location)
+    : Ast_Expr(EXPR_UNARY, location)
     , op(op)
     , rhs(rhs)
     {}
@@ -145,24 +154,24 @@ struct Expr_Unary : public Ast_Expr {
 struct Expr_Identifier : public Ast_Expr {
     char *name = nullptr;
     Declaration *resolved_declaration = nullptr;
-    Expr_Identifier(char *name)
-    : Ast_Expr(EXPR_IDENTIFIER)
+    Expr_Identifier(char *name, Location location)
+    : Ast_Expr(EXPR_IDENTIFIER, location)
     , name(name)
     {}
 };
 
 struct Expr_Number_Literal : public Ast_Expr {
     char *number_string = nullptr;
-    Expr_Number_Literal(char *number_string)
-    : Ast_Expr(EXPR_NUMBER_LITERAL)
+    Expr_Number_Literal(char *number_string, Location location)
+    : Ast_Expr(EXPR_NUMBER_LITERAL, location)
     , number_string(number_string)
     {}
 };
 
 struct Expr_String_Literal : public Ast_Expr {
     char *text = nullptr;
-    Expr_String_Literal(char *text)
-    : Ast_Expr(EXPR_STRING_LITERAL)
+    Expr_String_Literal(char *text, Location location)
+    : Ast_Expr(EXPR_STRING_LITERAL, location)
     , text(text)
     {}
 };
@@ -170,8 +179,8 @@ struct Expr_String_Literal : public Ast_Expr {
 struct Expr_Subscript : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Ast_Expr *index = nullptr;
-    Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index)
-    : Ast_Expr(EXPR_SUBSCRIPT)
+    Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index, Location location)
+    : Ast_Expr(EXPR_SUBSCRIPT, location)
     , lhs(lhs)
     , index(index)
     {}
@@ -179,8 +188,8 @@ struct Expr_Subscript : public Ast_Expr {
 
 struct Expr_Dereference : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
-    Expr_Dereference(Ast_Expr *lhs)
-    : Ast_Expr(EXPR_DEREFERENCE)
+    Expr_Dereference(Ast_Expr *lhs, Location location)
+    : Ast_Expr(EXPR_DEREFERENCE, location)
     , lhs(lhs)
     {}
 };
@@ -188,8 +197,8 @@ struct Expr_Dereference : public Ast_Expr {
 struct Expr_Procedure_Call : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Array<Ast_Expr *> parameters = {};
-    Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters)
-    : Ast_Expr(EXPR_PROCEDURE_CALL)
+    Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters, Location location)
+    : Ast_Expr(EXPR_PROCEDURE_CALL, location)
     , lhs(lhs)
     , parameters(parameters)
     {}
@@ -198,8 +207,8 @@ struct Expr_Procedure_Call : public Ast_Expr {
 struct Expr_Selector : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     char *field_name = nullptr;
-    Expr_Selector(Ast_Expr *lhs, char *field_name)
-    : Ast_Expr(EXPR_SELECTOR)
+    Expr_Selector(Ast_Expr *lhs, char *field_name, Location location)
+    : Ast_Expr(EXPR_SELECTOR, location)
     , lhs(lhs)
     , field_name(field_name)
     {}
@@ -207,45 +216,45 @@ struct Expr_Selector : public Ast_Expr {
 
 struct Expr_Paren : public Ast_Expr {
     Ast_Expr *nested = nullptr;
-    Expr_Paren(Ast_Expr *nested)
-    : Ast_Expr(EXPR_PAREN)
+    Expr_Paren(Ast_Expr *nested, Location location)
+    : Ast_Expr(EXPR_PAREN, location)
     , nested(nested)
     {}
 };
 
 struct Expr_Null : public Ast_Expr {
-    Expr_Null()
-    : Ast_Expr(EXPR_NULL)
+    Expr_Null(Location location)
+    : Ast_Expr(EXPR_NULL, location)
     {}
 };
 
 struct Expr_True : public Ast_Expr {
-    Expr_True()
-    : Ast_Expr(EXPR_TRUE)
+    Expr_True(Location location)
+    : Ast_Expr(EXPR_TRUE, location)
     {}
 };
 
 struct Expr_False : public Ast_Expr {
-    Expr_False()
-    : Ast_Expr(EXPR_FALSE)
+    Expr_False(Location location)
+    : Ast_Expr(EXPR_FALSE, location)
     {}
 };
 
 struct Expr_Pointer_Type : public Ast_Expr {
     Ast_Expr *pointer_to = nullptr;
-    Expr_Pointer_Type(Ast_Expr *pointer_to)
-    : Ast_Expr(EXPR_POINTER_TYPE)
+    Expr_Pointer_Type(Ast_Expr *pointer_to, Location location)
+    : Ast_Expr(EXPR_POINTER_TYPE, location)
     , pointer_to(pointer_to)
     {}
 };
 
 struct Expr_Array_Type : public Ast_Expr {
     Ast_Expr *array_of = nullptr;
-    Ast_Expr *length = nullptr;
-    Expr_Array_Type(Ast_Expr *array_of, Ast_Expr *length)
-    : Ast_Expr(EXPR_ARRAY_TYPE)
+    Ast_Expr *count_expr = nullptr;
+    Expr_Array_Type(Ast_Expr *array_of, Ast_Expr *count_expr, Location location)
+    : Ast_Expr(EXPR_ARRAY_TYPE, location)
     , array_of(array_of)
-    , length(length)
+    , count_expr(count_expr)
     {}
 };
 

@@ -3,9 +3,12 @@
 #include <string.h>
 #include <cassert>
 
+#include "common.h"
 #include "lexer.h"
 #include "parser.h"
 #include "checker.h"
+
+bool g_reported_error = false;
 
 void print_block_contents(Ast_Block *block, int indent = 0) {
     For (idx, block->nodes) {
@@ -65,16 +68,20 @@ void main(int argc, char **argv) {
     init_parser();
     init_checker();
 
-    Lexer lexer;
-    lexer.filepath = root_file;
-    lexer.text = root_file_text;
+    Lexer lexer(root_file, root_file_text);
 
     Ast_Block *global_scope = parse_block(&lexer);
-    if (lexer.reported_error) {
+    if (g_reported_error) {
         return;
     }
     add_global_declarations(global_scope);
     resolve_identifiers();
+    if (g_reported_error) {
+        return;
+    }
     print_block_contents(global_scope);
     typecheck_block(global_scope);
+    if (g_reported_error) {
+        return;
+    }
 }

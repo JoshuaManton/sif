@@ -34,7 +34,7 @@ void init_lexer_globals() {
     token_string_map[TK_LEFT_SHIFT_EQUALS]     = "<<=";
     token_string_map[TK_RIGHT_SHIFT]           = ">>";
     token_string_map[TK_RIGHT_SHIFT_EQUALS]    = ">>=";
-    token_string_map[TK_BIT_AND]               = "&";
+    token_string_map[TK_AMPERSAND]             = "&";
     token_string_map[TK_BIT_AND_EQUALS]        = "&=";
     token_string_map[TK_BIT_OR]                = "|";
     token_string_map[TK_BIT_OR_EQUALS]         = "|=";
@@ -61,7 +61,6 @@ void init_lexer_globals() {
     token_string_map[TK_COLON]                 = ":";
     token_string_map[TK_DOT]                   = ".";
     token_string_map[TK_COMMA]                 = ",";
-    token_string_map[TK_AMPERSAND]             = "&";
     token_string_map[TK_CARET]                 = "^";
 
     token_string_map[TK_COMMENT]               = "COMMENT";
@@ -84,7 +83,7 @@ void print_token(Token token) {
 
 void advance(Lexer *lexer, int count) {
     lexer->index += count;
-    lexer->character += count;
+    lexer->location.character += count;
 }
 
 bool is_letter_or_underscore(char c) {
@@ -176,8 +175,8 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
 
     while (is_whitespace(lexer->text[lexer->index])) {
         if (lexer->text[lexer->index] == '\n') {
-            lexer->line += 1;
-            lexer->character = 0; // advance() directly below will make this 1
+            lexer->location.line += 1;
+            lexer->location.character = 0; // advance() directly below will make this 1
         }
         advance(lexer, 1);
     }
@@ -192,8 +191,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = token_string_map[t]; \
     }
 
-    int token_character = lexer->character;
-    int token_line = lexer->line;
+    Location token_location = lexer->location;
 
     if (is_letter_or_underscore(lexer->text[lexer->index])) {
         int length = 0;
@@ -336,7 +334,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     }
     else if (lexer->text[lexer->index] == '&') {
         advance(lexer, 1);
-        out_token->kind = TK_BIT_AND;
+        out_token->kind = TK_AMPERSAND;
         out_token->text = "&";
         if (lexer->text[lexer->index] == '&') {
             advance(lexer, 1);
@@ -384,16 +382,12 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else SIMPLE_TOKEN(':', TK_COLON)
     else SIMPLE_TOKEN('.', TK_DOT)
     else SIMPLE_TOKEN(',', TK_COMMA)
-    else SIMPLE_TOKEN('&', TK_AMPERSAND)
     else SIMPLE_TOKEN('^', TK_CARET)
     else {
         assert(false);
     }
 
-    out_token->location.filepath = lexer->filepath;
-    out_token->location.line = token_line;
-    out_token->location.character = token_character;
-
+    out_token->location = token_location;
     return true;
 }
 
@@ -409,7 +403,7 @@ void unexpected_token(Lexer *lexer, Token token, Token_Kind expected) {
         printf(" Expected %s.", token_string(expected));
     }
     printf("\n");
-    lexer->reported_error = true;
+    g_reported_error = true;
 }
 
 bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token) {
