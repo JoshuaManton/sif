@@ -1,23 +1,8 @@
-struct Vector3 {
-    var x: float;
-    var y: float;
-    var z: float;
+#print(sizeof(typeof(a)))
+#print(sizeof(T))
+
+var a: [sizeof(typeof(p^))]int;
+var p: ^T;
+struct T {
+    var a: [sizeof(typeof(p))]bool;
 }
-
-var a: float = 123;
-var b: float = a;
-var c: ^float = &a;
-
-var d: [4]int;
-var e: int = d[2];
-var f: ^int = &e;
-// var z: ^float = &x;
-// var z: int = 33 - 2;
-// var y: int = !x;
-
-// proc foo(var x: int) {
-//     var a: ^int = foo[123][2];
-//     var b: [123]int = foo^;
-//     var c: [X]int = foo(123, "foo")(true);
-//     var d: int = z + 123 * 4 << 2;
-// }

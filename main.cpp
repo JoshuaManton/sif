@@ -74,12 +74,15 @@ void main(int argc, char **argv) {
     if (g_reported_error) {
         return;
     }
+    // print_block_contents(global_scope);
+
     add_global_declarations(global_scope);
     resolve_identifiers();
     if (g_reported_error) {
         return;
     }
-    print_block_contents(global_scope);
+
+    make_incomplete_types_for_all_structs();
     typecheck_block(global_scope);
     if (g_reported_error) {
         return;

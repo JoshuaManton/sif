@@ -1,5 +1,7 @@
 #include "checker.h"
 
+#define POINTER_SIZE 8
+
 static Array<Type *> all_types;
 
 static Type *type_i8;
@@ -22,8 +24,20 @@ static Type *type_untyped_null;
 
 static Type *type_typeid;
 
+static Array<Declaration *> ordered_declarations;
+
+char *type_to_string(Type *type);
+void type_mismatch(Location location, Type *got, Type *expected);
+bool match_types(Operand *operand, Type *expected_type);
+Type *get_or_create_type_pointer_to(Type *type);
+Type *get_or_create_type_array_of(Type *type, int count);
+Operand typecheck_expr(Ast_Expr *expr);
+void typecheck_var(Ast_Var *var);
+void typecheck_block(Ast_Block *block);
+
 void init_checker() {
     all_types.allocator = default_allocator();
+    ordered_declarations.allocator = default_allocator();
 
     type_i8  = new Type_Primitive("i8", 1); type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8);
     type_i16 = new Type_Primitive("i16", 2); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16);
@@ -49,34 +63,53 @@ void init_checker() {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    block->declarations.append(new Type_Declaration("i8",  type_i8));
-    block->declarations.append(new Type_Declaration("i16", type_i16));
-    block->declarations.append(new Type_Declaration("i32", type_i32));
-    block->declarations.append(new Type_Declaration("i64", type_i64));
+    register_declaration(block, new Type_Declaration("i8",  type_i8));
+    register_declaration(block, new Type_Declaration("i16", type_i16));
+    register_declaration(block, new Type_Declaration("i32", type_i32));
+    register_declaration(block, new Type_Declaration("i64", type_i64));
 
-    block->declarations.append(new Type_Declaration("u8",  type_u8));
-    block->declarations.append(new Type_Declaration("u16", type_u16));
-    block->declarations.append(new Type_Declaration("u32", type_u32));
-    block->declarations.append(new Type_Declaration("u64", type_u64));
+    register_declaration(block, new Type_Declaration("u8",  type_u8));
+    register_declaration(block, new Type_Declaration("u16", type_u16));
+    register_declaration(block, new Type_Declaration("u32", type_u32));
+    register_declaration(block, new Type_Declaration("u64", type_u64));
 
-    block->declarations.append(new Type_Declaration("f32", type_f32));
-    block->declarations.append(new Type_Declaration("f64", type_f64));
+    register_declaration(block, new Type_Declaration("f32", type_f32));
+    register_declaration(block, new Type_Declaration("f64", type_f64));
 
-    block->declarations.append(new Type_Declaration("int" ,  type_i64));
-    block->declarations.append(new Type_Declaration("uint",  type_u64));
-    block->declarations.append(new Type_Declaration("float", type_f32));
+    register_declaration(block, new Type_Declaration("int" ,  type_i64));
+    register_declaration(block, new Type_Declaration("uint",  type_u64));
+    register_declaration(block, new Type_Declaration("float", type_f32));
 
-    block->declarations.append(new Type_Declaration("typeid", type_typeid));
+    register_declaration(block, new Type_Declaration("bool", type_bool));
+
+    register_declaration(block, new Type_Declaration("typeid", type_typeid));
 }
 
-bool is_type_pointer (Type *type) { return type->flags & TF_POINTER;  }
-bool is_type_array   (Type *type) { return type->flags & TF_ARRAY;    }
-bool is_type_number  (Type *type) { return type->flags & TF_NUMBER;   }
-bool is_type_integer (Type *type) { return type->flags & TF_INTEGER;  }
-bool is_type_float   (Type *type) { return type->flags & TF_FLOAT;    }
-bool is_type_untyped (Type *type) { return type->flags & TF_UNTYPED;  }
-bool is_type_unsigned(Type *type) { return type->flags & TF_UNSIGNED; }
-bool is_type_signed  (Type *type) { return type->flags & TF_SIGNED;   }
+void make_incomplete_types_for_all_structs() {
+    For (idx, g_all_declarations) {
+        Declaration *decl = g_all_declarations[idx];
+        if (decl->kind != DECL_STRUCT) { // todo(josh): @Speed maybe make a g_all_structs?
+            continue;
+        }
+
+        Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
+        Type *incomplete_type = new Type_Struct(struct_decl->structure);
+        incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
+        all_types.append(incomplete_type);
+        struct_decl->structure->type = incomplete_type;
+    }
+}
+
+bool is_type_pointer   (Type *type) { return type->flags & TF_POINTER;    }
+bool is_type_array     (Type *type) { return type->flags & TF_ARRAY;      }
+bool is_type_number    (Type *type) { return type->flags & TF_NUMBER;     }
+bool is_type_integer   (Type *type) { return type->flags & TF_INTEGER;    }
+bool is_type_float     (Type *type) { return type->flags & TF_FLOAT;      }
+bool is_type_untyped   (Type *type) { return type->flags & TF_UNTYPED;    }
+bool is_type_unsigned  (Type *type) { return type->flags & TF_UNSIGNED;   }
+bool is_type_signed    (Type *type) { return type->flags & TF_SIGNED;     }
+bool is_type_struct    (Type *type) { return type->flags & TF_STRUCT;     }
+bool is_type_incomplete(Type *type) { return type->flags & TF_INCOMPLETE; }
 
 #define UNIMPLEMENTED(val) assert(false && "Unimplemented case: " #val "\n");
 
@@ -105,6 +138,61 @@ char *type_to_string(Type *type) {
         }
     }
     return buffer;
+}
+
+void complete_type(Type *type) {
+    if (type->check_state == CS_CHECKED) {
+        return;
+    }
+    if (type->check_state == CS_CHECKING) {
+        assert(false && "circular dependency");
+    }
+    assert(type->check_state == CS_NOT_CHECKED);
+    type->check_state = CS_CHECKING;
+    defer(type->check_state = CS_CHECKED);
+    if (is_type_incomplete(type)) {
+        switch (type->kind) {
+            case TYPE_STRUCT: {
+                Type_Struct *struct_type = (Type_Struct *)type;
+                assert(struct_type->ast_struct != nullptr);
+                Ast_Struct *structure = struct_type->ast_struct;
+                typecheck_block(structure->body);
+                int size = 0;
+                Array<Struct_Field> fields = {};
+                fields.allocator = default_allocator();
+                if (structure->fields.count == 0) {
+                    size = 1;
+                }
+                else {
+                    For (idx, structure->fields) {
+                        Ast_Var *var = structure->fields[idx];
+                        complete_type(var->type);
+                        assert(var->type->size > 0);
+                        Struct_Field field = {};
+                        field.name = var->name;
+                        field.type = var->type;
+                        fields.append(field);
+                        size += field.type->size;
+                    }
+                }
+
+                assert(size > 0);
+                struct_type->size = size;
+                struct_type->fields = fields;
+                struct_type->flags &= ~(TF_INCOMPLETE);
+                break;
+            }
+            case TYPE_ARRAY: {
+                Type_Array *array_type = (Type_Array *)type;
+                complete_type(array_type->array_of);
+                assert(array_type->array_of->size > 0);
+                array_type->size = array_type->array_of->size * array_type->count;
+                assert(array_type->size > 0);
+                array_type->flags &= ~(TF_INCOMPLETE);
+                break;
+            }
+        }
+    }
 }
 
 void type_mismatch(Location location, Type *got, Type *expected) {
@@ -137,36 +225,37 @@ bool match_types(Operand *operand, Type *expected_type) {
     return false;
 }
 
-Type *get_or_create_type_pointer_to(Type *type) {
-    assert(!is_type_untyped(type));
+Type *get_or_create_type_pointer_to(Type *pointer_to) {
+    assert(!is_type_untyped(pointer_to));
     For (idx, all_types) {
         Type *other_type = all_types[idx];
         if (other_type->kind == TYPE_POINTER) {
             Type_Pointer *other_type_pointer = (Type_Pointer *)other_type;
-            if (other_type_pointer->pointer_to == type) {
+            if (other_type_pointer->pointer_to == pointer_to) {
                 return other_type;
             }
         }
     }
-    Type *new_type = new Type_Pointer(type);
+    Type *new_type = new Type_Pointer(pointer_to);
     new_type->flags = TF_POINTER;
+    new_type->size = POINTER_SIZE;
     all_types.append(new_type);
     return new_type;
 }
 
-Type *get_or_create_type_array_of(Type *type, int count) {
-    assert(!is_type_untyped(type));
+Type *get_or_create_type_array_of(Type *array_of, int count) {
+    assert(!is_type_untyped(array_of));
     For (idx, all_types) {
         Type *other_type = all_types[idx];
         if (other_type->kind == TYPE_ARRAY) {
             Type_Array *other_type_array = (Type_Array *)other_type;
-            if (other_type_array->array_of == type && other_type_array->count) {
+            if (other_type_array->array_of == array_of && other_type_array->count) {
                 return other_type;
             }
         }
     }
-    Type *new_type = new Type_Array(type, count);
-    new_type->flags = TF_ARRAY;
+    Type *new_type = new Type_Array(array_of, count);
+    new_type->flags = TF_ARRAY | TF_INCOMPLETE;
     all_types.append(new_type);
     return new_type;
 }
@@ -175,21 +264,31 @@ Operand typecheck_expr(Ast_Expr *expr) {
     switch (expr->expr_kind) {
         case EXPR_UNARY: {
             UNIMPLEMENTED(EXPR_UNARY);
+            break;
         }
         case EXPR_BINARY: {
             Expr_Binary *binary = (Expr_Binary *)expr;
             Operand lhs_operand = typecheck_expr(binary->lhs);
             Operand rhs_operand = typecheck_expr(binary->rhs);
+            assert(!is_type_incomplete(lhs_operand.type));
+            assert(!is_type_incomplete(rhs_operand.type));
             assert(match_types(&rhs_operand, lhs_operand.type));
             Operand operand(binary->location);
-            operand.type = lhs_operand.type;
             operand.flags |= OPERAND_RVALUE;
             if ((lhs_operand.flags & OPERAND_CONSTANT) && (rhs_operand.flags & OPERAND_CONSTANT)) {
                 operand.flags |= OPERAND_CONSTANT;
                 switch (binary->op) {
+                    case TK_EQUAL_TO: {
+                        assert(lhs_operand.type->flags & TF_INTEGER);
+                        assert(rhs_operand.type->flags & TF_INTEGER);
+                        operand.type = type_bool;
+                        operand.bool_value = lhs_operand.int_value == rhs_operand.int_value;
+                        break;
+                    }
                     case TK_PLUS: {
                         assert(lhs_operand.type->flags & TF_NUMBER);
                         assert(rhs_operand.type->flags & TF_NUMBER);
+                        operand.type = lhs_operand.type;
                         operand.int_value = lhs_operand.int_value + rhs_operand.int_value;
                         operand.float_value = lhs_operand.float_value + rhs_operand.float_value;
                         break;
@@ -197,6 +296,7 @@ Operand typecheck_expr(Ast_Expr *expr) {
                     case TK_MINUS: {
                         assert(lhs_operand.type->flags & TF_NUMBER);
                         assert(rhs_operand.type->flags & TF_NUMBER);
+                        operand.type = lhs_operand.type;
                         operand.int_value = lhs_operand.int_value - rhs_operand.int_value;
                         operand.float_value = lhs_operand.float_value - rhs_operand.float_value;
                         break;
@@ -224,6 +324,8 @@ Operand typecheck_expr(Ast_Expr *expr) {
             assert(is_type_array(lhs_operand.type));
             assert(lhs_operand.type->kind == TYPE_ARRAY);
             Type_Array *array_type = (Type_Array *)lhs_operand.type;
+            complete_type(array_type);
+            assert(array_type->size > 0);
 
             Operand index_operand = typecheck_expr(subscript->index);
             assert(is_type_number(index_operand.type));
@@ -245,9 +347,41 @@ Operand typecheck_expr(Ast_Expr *expr) {
         }
         case EXPR_PROCEDURE_CALL: {
             UNIMPLEMENTED(EXPR_PROCEDURE_CALL);
+            break;
         }
         case EXPR_SELECTOR: {
-            UNIMPLEMENTED(EXPR_SELECTOR);
+            Expr_Selector *selector = (Expr_Selector *)expr;
+            Operand lhs_operand = typecheck_expr(selector->lhs);
+            complete_type(lhs_operand.type);
+            Type_Struct *struct_type = nullptr;
+            if (lhs_operand.type->kind == TYPE_POINTER) {
+                Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand.type;
+                assert(is_type_struct(pointer_type->pointer_to));
+                complete_type(pointer_type->pointer_to);
+                struct_type = (Type_Struct *)pointer_type->pointer_to;
+            }
+            else if (lhs_operand.type->kind == TYPE_STRUCT) {
+                struct_type = (Type_Struct *)lhs_operand.type;
+            }
+            else {
+                assert(false && "can only use . on struct and pointer types");
+            }
+            assert(struct_type != nullptr);
+            assert(!is_type_incomplete(struct_type));
+            Operand operand(selector->location);
+            bool found_field = false;
+            For (field_idx, struct_type->fields) {
+                Struct_Field field = struct_type->fields[field_idx];
+                if (strcmp(field.name, selector->field_name) == 0) {
+                    // todo(josh): constants
+                    found_field = true;
+                    operand.type = field.type;
+                    operand.flags = OPERAND_LVALUE;
+                    break;
+                }
+            }
+            assert(found_field);
+            return operand;
         }
         case EXPR_IDENTIFIER: {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
@@ -271,7 +405,9 @@ Operand typecheck_expr(Ast_Expr *expr) {
                 }
                 case DECL_VAR: {
                     Var_Declaration *decl = (Var_Declaration *)ident->resolved_declaration;
-                    assert(decl->var->type != nullptr && "todo(josh): order independence");
+                    // todo(josh): check for use-before-declaration
+                    typecheck_var(decl->var);
+                    assert(decl->var->type != nullptr);
                     operand.type = decl->var->type;
                     operand.flags = OPERAND_LVALUE;
                     // todo(josh): constant propagation
@@ -298,6 +434,7 @@ Operand typecheck_expr(Ast_Expr *expr) {
         }
         case EXPR_STRING_LITERAL: {
             UNIMPLEMENTED(EXPR_STRING_LITERAL);
+            break;
         }
         case EXPR_NULL: {
             Operand operand(expr->location);
@@ -317,6 +454,30 @@ Operand typecheck_expr(Ast_Expr *expr) {
             operand.flags = OPERAND_CONSTANT;
             operand.type = type_bool;
             operand.bool_value = false;
+            return operand;
+        }
+        case EXPR_SIZEOF: {
+            Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
+            Operand expr_operand = typecheck_expr(expr_sizeof->expr);
+            assert(expr_operand.type == type_typeid);
+            assert(expr_operand.type_value != nullptr);
+            complete_type(expr_operand.type_value);
+            assert(!is_type_incomplete(expr_operand.type_value));
+            assert(expr_operand.type_value->size > 0);
+            Operand operand(expr_sizeof->location);
+            operand.type = type_untyped_number;
+            operand.int_value = expr_operand.type_value->size;
+            operand.flags = OPERAND_CONSTANT;
+            return operand;
+        }
+        case EXPR_TYPEOF: {
+            Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
+            Operand expr_operand = typecheck_expr(expr_typeof->expr);
+            assert(expr_operand.type != nullptr);
+            Operand operand(expr_typeof->location);
+            operand.type = type_typeid;
+            operand.type_value = expr_operand.type;
+            operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             return operand;
         }
         case EXPR_POINTER_TYPE: {
@@ -356,35 +517,62 @@ Operand typecheck_expr(Ast_Expr *expr) {
     return Operand({});
 }
 
+void typecheck_var(Ast_Var *var) {
+    Operand type_operand = typecheck_expr(var->type_expr);
+    assert(type_operand.flags & OPERAND_TYPE);
+    assert(type_operand.type_value);
+    var->type = type_operand.type_value;
+
+    if (var->expr) {
+        Operand expr_operand = typecheck_expr(var->expr);
+        if (!match_types(&expr_operand, var->type)) {
+            assert(false);
+        }
+        assert(var->type == expr_operand.type);
+    }
+}
+
 void typecheck_block(Ast_Block *block) {
     For (idx, block->nodes) {
         Ast_Node *node = block->nodes[idx];
         switch (node->ast_kind) {
             case AST_VAR: {
                 Ast_Var *var = (Ast_Var *)node;
-                Operand type_operand = typecheck_expr(var->type_expr);
-                assert(type_operand.flags & OPERAND_TYPE);
-                assert(type_operand.type_value);
-                var->type = type_operand.type_value;
-
-                if (var->expr) {
-                    Operand expr_operand = typecheck_expr(var->expr);
-                    if (!match_types(&expr_operand, var->type)) {
-                        assert(false);
-                    }
-                    assert(var->type == expr_operand.type);
-                }
-
+                typecheck_var(var);
                 break;
             }
 
             case AST_STRUCT: {
-                Ast_Struct *structure = (Ast_Struct *)node;
-                typecheck_block(structure->body);
                 break;
             }
 
             case AST_PROC: {
+                Ast_Proc *procedure = (Ast_Proc *)node;
+                For (idx, procedure->parameters) {
+                    Ast_Var *parameter = procedure->parameters[idx];
+                    typecheck_var(parameter);
+                }
+                typecheck_block(procedure->body);
+                break;
+            }
+
+            case AST_DIRECTIVE_ASSERT: {
+                Ast_Directive_Assert *directive_assert = (Ast_Directive_Assert *)node;
+                Operand expr_operand = typecheck_expr(directive_assert->expr);
+                assert(expr_operand.type == type_bool);
+                assert(expr_operand.flags & OPERAND_CONSTANT);
+                if (!expr_operand.bool_value) {
+                    assert(false && "#assert failed");
+                }
+                break;
+            }
+
+            case AST_DIRECTIVE_PRINT: {
+                Ast_Directive_Print *directive_print = (Ast_Directive_Print *)node;
+                Operand expr_operand = typecheck_expr(directive_print->expr);
+                assert(expr_operand.flags & OPERAND_CONSTANT);
+                assert(expr_operand.type->flags & TF_INTEGER);
+                printf("%s(%d:%d) #print directive: %lld\n", directive_print->location.filepath, directive_print->location.line, directive_print->location.character, expr_operand.int_value);
                 break;
             }
         }

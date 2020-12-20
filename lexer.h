@@ -35,6 +35,12 @@ enum Token_Kind {
     TK_TRUE,
     TK_FALSE,
 
+    TK_SIZEOF,
+    TK_TYPEOF,
+
+    TK_DIRECTIVE_PRINT,
+    TK_DIRECTIVE_ASSERT,
+
     TK_ASSIGN,
 
     TK_PLUS,

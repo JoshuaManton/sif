@@ -5,25 +5,28 @@
 
 #include "parser.h"
 
-Array<Expr_Identifier *> identifiers_to_resolve;
+Array<Expr_Identifier *> g_identifiers_to_resolve;
+Array<Declaration *> g_all_declarations;
 
 void init_parser() {
-    identifiers_to_resolve.allocator = default_allocator();
+    g_identifiers_to_resolve.allocator = default_allocator();
+    g_all_declarations.allocator = default_allocator();
 }
 
 void queue_identifier_for_resolving(Expr_Identifier *ident) {
-    identifiers_to_resolve.append(ident);
+    g_identifiers_to_resolve.append(ident);
 }
 
 void resolve_identifiers() {
-    For (idx, identifiers_to_resolve) {
-        Expr_Identifier *ident = identifiers_to_resolve[idx];
+    For (idx, g_identifiers_to_resolve) {
+        Expr_Identifier *ident = g_identifiers_to_resolve[idx];
         Ast_Block *block = ident->parent_block;
         while (block != nullptr) {
             For (decl_idx, block->declarations) {
                 Declaration *decl = block->declarations[decl_idx];
                 if (strcmp(decl->name, ident->name) == 0) {
                     ident->resolved_declaration = decl;
+                    break;
                 }
             }
 
@@ -51,14 +54,15 @@ void pop_ast_block(Ast_Block *old_block) {
     current_block = old_block;
 }
 
-void register_declaration(Declaration *new_declaration) {
-    For (decl_idx, current_block->declarations) {
-        Declaration *decl = current_block->declarations[decl_idx];
+void register_declaration(Ast_Block *block, Declaration *new_declaration) {
+    For (decl_idx, block->declarations) {
+        Declaration *decl = block->declarations[decl_idx];
         if (strcmp(decl->name, new_declaration->name) == 0) {
             assert(false && "name collision");
         }
     }
-    current_block->declarations.append(new_declaration);
+    block->declarations.append(new_declaration);
+    g_all_declarations.append(new_declaration);
 }
 
 
@@ -89,7 +93,7 @@ Ast_Var *parse_var(Lexer *lexer) {
         var->expr = parse_expr(lexer);
     }
 
-    register_declaration(new Var_Declaration(var));
+    register_declaration(current_block, new Var_Declaration(var));
     return var;
 }
 
@@ -143,7 +147,7 @@ Ast_Proc *parse_proc(Lexer *lexer) {
         return nullptr;
     }
 
-    register_declaration(new Proc_Declaration(proc));
+    register_declaration(current_block, new Proc_Declaration(proc));
     return proc;
 }
 
@@ -179,7 +183,7 @@ Ast_Struct *parse_struct(Lexer *lexer) {
         structure->fields.append(var);
     }
 
-    register_declaration(new Struct_Declaration(structure));
+    register_declaration(current_block, new Struct_Declaration(structure));
     return structure;
 }
 
@@ -221,6 +225,38 @@ Ast_Block *parse_block(Lexer *lexer) {
                 }
 
                 block->nodes.append(structure);
+                break;
+            }
+
+            case TK_DIRECTIVE_ASSERT: {
+                assert(expect_token(lexer, TK_DIRECTIVE_ASSERT));
+                if (!expect_token(lexer, TK_LEFT_PAREN)) {
+                    return nullptr;
+                }
+                Ast_Expr *expr = parse_expr(lexer);
+                if (!expr) {
+                    return nullptr;
+                }
+                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
+                    return nullptr;
+                }
+                block->nodes.append(new Ast_Directive_Assert(expr, token.location));
+                break;
+            }
+
+            case TK_DIRECTIVE_PRINT: {
+                assert(expect_token(lexer, TK_DIRECTIVE_PRINT));
+                if (!expect_token(lexer, TK_LEFT_PAREN)) {
+                    return nullptr;
+                }
+                Ast_Expr *expr = parse_expr(lexer);
+                if (!expr) {
+                    return nullptr;
+                }
+                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
+                    return nullptr;
+                }
+                block->nodes.append(new Ast_Directive_Print(expr, token.location));
                 break;
             }
 
@@ -311,6 +347,8 @@ bool is_unary_op(Lexer *lexer) {
         case TK_MINUS:
         case TK_PLUS:
         case TK_NOT:
+        case TK_SIZEOF:
+        case TK_TYPEOF:
         case TK_AMPERSAND: { // address-of
             return true;
         }
@@ -471,6 +509,32 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 }
                 return new Expr_Unary(op.kind, rhs, op.location);
             }
+            case TK_SIZEOF: {
+                if (!expect_token(lexer, TK_LEFT_PAREN)) {
+                    return nullptr;
+                }
+                Ast_Expr *expr = parse_expr(lexer);
+                if (!expr) {
+                    return nullptr;
+                }
+                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
+                    return nullptr;
+                }
+                return new Expr_Sizeof(expr, op.location);
+            }
+            case TK_TYPEOF: {
+                if (!expect_token(lexer, TK_LEFT_PAREN)) {
+                    return nullptr;
+                }
+                Ast_Expr *expr = parse_expr(lexer);
+                if (!expr) {
+                    return nullptr;
+                }
+                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
+                    return nullptr;
+                }
+                return new Expr_Typeof(expr, op.location);
+            }
             // case .Cast: {
             //     expect(lexer, .LParen);
             //     typespec := parse_typespec(lexer);
@@ -561,7 +625,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
             }
             case TK_DOT: {
                 Token name_token;
-                if (!expect_token(lexer, TK_IDENTIFIER)) {
+                if (!expect_token(lexer, TK_IDENTIFIER, &name_token)) {
                     return nullptr;
                 }
                 base_expr = new Expr_Selector(base_expr, name_token.text, op.location);

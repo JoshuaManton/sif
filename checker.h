@@ -16,20 +16,29 @@ enum Type_Kind {
 };
 
 enum Type_Flags {
-    TF_INTEGER  = 1 << 0,
-    TF_FLOAT    = 1 << 1,
-    TF_SIGNED   = 1 << 2,
-    TF_UNSIGNED = 1 << 3,
-    TF_UNTYPED  = 1 << 4,
-    TF_NUMBER   = 1 << 5,
-    TF_POINTER  = 1 << 6,
-    TF_ARRAY    = 1 << 7,
+    TF_INTEGER    = 1 << 0,
+    TF_FLOAT      = 1 << 1,
+    TF_SIGNED     = 1 << 2,
+    TF_UNSIGNED   = 1 << 3,
+    TF_UNTYPED    = 1 << 4,
+    TF_NUMBER     = 1 << 5,
+    TF_POINTER    = 1 << 6,
+    TF_ARRAY      = 1 << 7,
+    TF_STRUCT     = 1 << 8,
+    TF_INCOMPLETE = 1 << 9,
+};
+
+enum Check_State {
+    CS_NOT_CHECKED,
+    CS_CHECKING,
+    CS_CHECKED,
 };
 
 struct Type {
     Type_Kind kind = {};
     int size = {};
     u64 flags = {};
+    Check_State check_state = {};
     Type(Type_Kind kind)
     : kind(kind)
     {}
@@ -48,14 +57,17 @@ struct Type_Primitive : public Type {
 struct Struct_Field {
     char *name = nullptr;
     Type *type = nullptr;
+    int offset = 0;
 };
 struct Type_Struct : public Type {
     char *name = nullptr;
     Array<Struct_Field> fields = {};
-    Type_Struct(char *name, Array<Struct_Field> fields)
+    Ast_Struct *ast_struct = {};
+
+    Type_Struct(Ast_Struct *structure)
     : Type(TYPE_STRUCT)
-    , name(name)
-    , fields(fields)
+    , name(structure->name)
+    , ast_struct(structure)
     {}
 };
 
@@ -103,4 +115,5 @@ struct Operand {
 
 void init_checker();
 void add_global_declarations(Ast_Block *block);
+void make_incomplete_types_for_all_structs();
 void typecheck_block(Ast_Block *block);

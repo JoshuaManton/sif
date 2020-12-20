@@ -13,13 +13,18 @@ void init_lexer_globals() {
     token_string_map[TK_NUMBER]                = "NUMBER";
     token_string_map[TK_STRING]                = "STRING";
 
-    token_string_map[TK_VAR]                   = "VAR";
-    token_string_map[TK_PROC]                  = "PROC";
-    token_string_map[TK_STRUCT]                = "STRUCT";
-    token_string_map[TK_RETURN]                = "RETURN";
-    token_string_map[TK_NULL]                  = "NULL";
-    token_string_map[TK_TRUE]                  = "TRUE";
-    token_string_map[TK_FALSE]                 = "FALSE";
+    token_string_map[TK_VAR]                   = "var";
+    token_string_map[TK_PROC]                  = "proc";
+    token_string_map[TK_STRUCT]                = "struct";
+    token_string_map[TK_RETURN]                = "return";
+    token_string_map[TK_NULL]                  = "null";
+    token_string_map[TK_TRUE]                  = "true";
+    token_string_map[TK_FALSE]                 = "false";
+    token_string_map[TK_SIZEOF]                = "sizeof";
+    token_string_map[TK_TYPEOF]                = "typeof";
+
+    token_string_map[TK_DIRECTIVE_PRINT]       = "#print";
+    token_string_map[TK_DIRECTIVE_ASSERT]      = "#assert";
 
     token_string_map[TK_ASSIGN]                = "=";
     token_string_map[TK_PLUS]                  = "+";
@@ -64,8 +69,6 @@ void init_lexer_globals() {
     token_string_map[TK_CARET]                 = "^";
 
     token_string_map[TK_COMMENT]               = "COMMENT";
-
-    token_string_map[TK_COUNT]                 = "COUNT";
 
     for (int i = 0; i < TK_COUNT; i++) {
         if (token_string_map[i] == nullptr) {
@@ -211,6 +214,8 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("null", TK_NULL)
         else CHECK_KEYWORD("true", TK_TRUE)
         else CHECK_KEYWORD("false", TK_FALSE)
+        else CHECK_KEYWORD("sizeof", TK_SIZEOF)
+        else CHECK_KEYWORD("typeof", TK_TYPEOF)
     }
     else if (is_digit(lexer->text[lexer->index])) {
         int length = 0;
@@ -370,6 +375,24 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             advance(lexer, 1);
             out_token->kind = TK_BIT_OR_EQUALS;
             out_token->text = "|=";
+        }
+    }
+    else if (lexer->text[lexer->index] == '#') {
+        advance(lexer, 1);
+        int length = 0;
+        char *identifier = scan_identifier(&lexer->text[lexer->index], &length);
+        advance(lexer, length);
+        if (strcmp(identifier, "assert") == 0) {
+            out_token->kind = TK_DIRECTIVE_ASSERT;
+            out_token->text = "#assert";
+        }
+        else if (strcmp(identifier, "print") == 0) {
+            out_token->kind = TK_DIRECTIVE_PRINT;
+            out_token->text = "#print";
+        }
+        else {
+            printf("unknown directive: %s\n", identifier);
+            assert(false);
         }
     }
     else SIMPLE_TOKEN('(', TK_LEFT_PAREN)

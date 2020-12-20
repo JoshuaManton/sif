@@ -12,6 +12,8 @@ enum Ast_Kind {
     AST_VAR,
     AST_STRUCT,
     AST_EXPR,
+    AST_DIRECTIVE_ASSERT,
+    AST_DIRECTIVE_PRINT,
 };
 
 struct Ast_Expr;
@@ -62,6 +64,22 @@ struct Ast_Proc : public Ast_Node {
     }
 };
 
+struct Ast_Directive_Assert : public Ast_Node {
+    Ast_Expr *expr = {};
+    Ast_Directive_Assert(Ast_Expr *expr, Location location)
+    : Ast_Node(AST_DIRECTIVE_ASSERT, location)
+    , expr(expr)
+    {}
+};
+
+struct Ast_Directive_Print : public Ast_Node {
+    Ast_Expr *expr = {};
+    Ast_Directive_Print(Ast_Expr *expr, Location location)
+    : Ast_Node(AST_DIRECTIVE_PRINT, location)
+    , expr(expr)
+    {}
+};
+
 struct Ast_Var : public Ast_Node {
     char *name = nullptr;
     Ast_Expr *type_expr = nullptr;
@@ -104,6 +122,9 @@ enum Expr_Kind {
     EXPR_NULL,
     EXPR_TRUE,
     EXPR_FALSE,
+
+    EXPR_SIZEOF,
+    EXPR_TYPEOF,
 
     EXPR_POINTER_TYPE,
     EXPR_ARRAY_TYPE,
@@ -222,6 +243,22 @@ struct Expr_Paren : public Ast_Expr {
     {}
 };
 
+struct Expr_Sizeof : public Ast_Expr {
+    Ast_Expr *expr = {};
+    Expr_Sizeof(Ast_Expr *expr, Location location)
+    : Ast_Expr(EXPR_SIZEOF, location)
+    , expr(expr)
+    {}
+};
+
+struct Expr_Typeof : public Ast_Expr {
+    Ast_Expr *expr = {};
+    Expr_Typeof(Ast_Expr *expr, Location location)
+    : Ast_Expr(EXPR_TYPEOF, location)
+    , expr(expr)
+    {}
+};
+
 struct Expr_Null : public Ast_Expr {
     Expr_Null(Location location)
     : Ast_Expr(EXPR_NULL, location)
@@ -308,8 +345,11 @@ struct Var_Declaration : Declaration {
     {}
 };
 
+extern Array<Declaration *> g_all_declarations;
+
 void init_parser();
 void resolve_identifiers();
+void register_declaration(Ast_Block *block, Declaration *new_declaration);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Block *parse_block(Lexer *lexer);
