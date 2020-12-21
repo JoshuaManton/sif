@@ -106,6 +106,7 @@ struct Token {
 void init_lexer_globals();
 
 bool get_next_token(Lexer *lexer, Token *out_token);
+void eat_next_token(Lexer *lexer);
 bool peek_next_token(Lexer *lexer, Token *out_token);
 void unexpected_token(Lexer *lexer, Token token, Token_Kind expected = TK_INVALID);
 bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token = nullptr);

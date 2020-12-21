@@ -26,9 +26,9 @@ void print_block_contents(Ast_Block *block, int indent = 0) {
 
             case AST_PROC: {
                 Ast_Proc *thing = (Ast_Proc *)node;
-                printf("proc %s\n", thing->name);
-                For (param_idx, thing->parameters) {
-                    printf("    param %s\n", thing->parameters[param_idx]->name);
+                printf("proc %s\n", thing->header->name);
+                For (param_idx, thing->header->parameters) {
+                    printf("    param %s\n", thing->header->parameters[param_idx]->name);
                 }
                 print_block_contents(thing->body, indent);
                 break;

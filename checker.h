@@ -11,6 +11,7 @@ enum Type_Kind {
     TYPE_STRUCT,
     TYPE_POINTER,
     TYPE_ARRAY,
+    TYPE_PROCEDURE,
 
     TYPE_COUNT,
 };
@@ -22,10 +23,11 @@ enum Type_Flags {
     TF_UNSIGNED   = 1 << 3,
     TF_UNTYPED    = 1 << 4,
     TF_NUMBER     = 1 << 5,
-    TF_POINTER    = 1 << 6,
-    TF_ARRAY      = 1 << 7,
-    TF_STRUCT     = 1 << 8,
+    TF_POINTER    = 1 << 6,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_ARRAY      = 1 << 7,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_STRUCT     = 1 << 8,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_INCOMPLETE = 1 << 9,
+    TF_PROCEDURE  = 1 << 10, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -89,27 +91,13 @@ struct Type_Array : public Type {
     {}
 };
 
-enum Operand_Flags {
-    OPERAND_CONSTANT = 1 << 0,
-    OPERAND_TYPE     = 1 << 1,
-    OPERAND_LVALUE   = 1 << 2,
-    OPERAND_RVALUE   = 1 << 3,
-};
-
-struct Operand {
-    Location location = {};
-
-    u64 flags = {};
-    Type *type = {};
-
-    i64 int_value      = {};
-    f64 float_value    = {};
-    char *string_value = {};
-    bool bool_value    = {};
-    Type *type_value   = {};
-
-    Operand(Location location)
-    : location(location)
+struct Type_Procedure : public Type {
+    Array<Type *> parameter_types = {};
+    Type *return_type = {};
+    Type_Procedure(Array<Type *> parameter_types, Type *return_type)
+    : Type(TYPE_PROCEDURE)
+    , parameter_types(parameter_types)
+    , return_type(return_type)
     {}
 };
 

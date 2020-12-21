@@ -420,6 +420,12 @@ bool peek_next_token(Lexer *lexer, Token *out_token) {
     return ok;
 }
 
+void eat_next_token(Lexer *lexer) {
+    Token token;
+    bool ok = get_next_token(lexer, &token);
+    assert(ok);
+}
+
 void unexpected_token(Lexer *lexer, Token token, Token_Kind expected) {
     printf("%s(%d:%d) Unexpected token %s.", token.location.filepath, token.location.line, token.location.character, token_string(token.kind));
     if (expected != TK_INVALID) {

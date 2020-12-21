@@ -8,10 +8,12 @@ enum Ast_Kind {
     AST_INVALID,
     AST_FILE,
     AST_BLOCK,
+    AST_PROC_HEADER,
     AST_PROC,
     AST_VAR,
     AST_STRUCT,
     AST_EXPR,
+    AST_STATEMENT_EXPR,
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
 };
@@ -21,6 +23,7 @@ struct Ast_Var;
 struct Ast_Proc;
 struct Ast_Block;
 struct Ast_Struct;
+struct Ast_Statement_Expr;
 
 struct Declaration;
 
@@ -51,17 +54,31 @@ struct Ast_Block : public Ast_Node {
     }
 };
 
-struct Ast_Proc : public Ast_Node {
+struct Ast_Proc_Header : public Ast_Node {
     char *name = nullptr;
-    Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
     Array<Ast_Var *> parameters = {};
-    Ast_Block *body = nullptr;
+    Ast_Expr *return_type_expr = {};
     Type *type = nullptr;
-    Ast_Proc(Location location)
-    : Ast_Node(AST_PROC, location)
+    Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
+    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, Location location)
+    : Ast_Node(AST_PROC_HEADER, location)
+    , name(name)
+    , procedure_block(procedure_block)
+    , parameters(parameters)
+    , return_type_expr(return_type_expr)
     {
         parameters.allocator = default_allocator();
     }
+};
+
+struct Ast_Proc : public Ast_Node {
+    Ast_Proc_Header *header = {};
+    Ast_Block *body = nullptr;
+    Ast_Proc(Ast_Proc_Header *header, Ast_Block *body, Location location)
+    : Ast_Node(AST_PROC, location)
+    , header(header)
+    , body(body)
+    {}
 };
 
 struct Ast_Directive_Assert : public Ast_Node {
@@ -100,6 +117,14 @@ struct Ast_Struct : public Ast_Node {
     {
         fields.allocator = default_allocator();
     }
+};
+
+struct Ast_Statement_Expr : public Ast_Node {
+    Ast_Expr *expr = {};
+    Ast_Statement_Expr(Ast_Expr *expr, Location location)
+    : Ast_Node(AST_STATEMENT_EXPR, location)
+    , expr(expr)
+    {}
 };
 
 
@@ -304,9 +329,45 @@ enum Declaration_Kind {
     DECL_COUNT,
 };
 
+enum Declaration_Check_State {
+    DCS_UNCHECKED,
+    DCS_CHECKING,
+    DCS_CHECKED,
+};
+
+enum Operand_Flags {
+    OPERAND_CONSTANT = 1 << 0,
+    OPERAND_TYPE     = 1 << 1,
+    OPERAND_LVALUE   = 1 << 2,
+    OPERAND_RVALUE   = 1 << 3,
+    OPERAND_NO_VALUE = 1 << 4, // note(josh): procedures that don't return anything
+};
+
+struct Operand {
+    Location location = {};
+
+    u64 flags = {};
+    Type *type = {};
+
+    i64 int_value      = {};
+    f64 float_value    = {};
+    char *string_value = {};
+    bool bool_value    = {};
+    Type *type_value   = {};
+
+    Operand()
+    {}
+
+    Operand(Location location)
+    : location(location)
+    {}
+};
+
 struct Declaration {
+    Declaration_Check_State check_state = {};
     char *name = {};
     Declaration_Kind kind = {};
+    Operand operand = {};
     Declaration(char *name, Declaration_Kind kind)
     : name(name)
     , kind(kind)
@@ -332,7 +393,7 @@ struct Struct_Declaration : Declaration {
 struct Proc_Declaration : Declaration {
     Ast_Proc *procedure = {};
     Proc_Declaration(Ast_Proc *procedure)
-    : Declaration(procedure->name, DECL_PROC)
+    : Declaration(procedure->header->name, DECL_PROC)
     , procedure(procedure)
     {}
 };

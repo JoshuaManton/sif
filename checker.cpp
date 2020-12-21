@@ -34,6 +34,8 @@ Type *get_or_create_type_array_of(Type *type, int count);
 Operand typecheck_expr(Ast_Expr *expr);
 void typecheck_var(Ast_Var *var);
 void typecheck_block(Ast_Block *block);
+void typecheck_procedure_header(Ast_Proc_Header *header);
+void typecheck_procedure(Ast_Proc *procedure);
 
 void init_checker() {
     all_types.allocator = default_allocator();
@@ -227,7 +229,7 @@ bool match_types(Operand *operand, Type *expected_type) {
 
 Type *get_or_create_type_pointer_to(Type *pointer_to) {
     assert(!is_type_untyped(pointer_to));
-    For (idx, all_types) {
+    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_pointer_types` array
         Type *other_type = all_types[idx];
         if (other_type->kind == TYPE_POINTER) {
             Type_Pointer *other_type_pointer = (Type_Pointer *)other_type;
@@ -245,7 +247,7 @@ Type *get_or_create_type_pointer_to(Type *pointer_to) {
 
 Type *get_or_create_type_array_of(Type *array_of, int count) {
     assert(!is_type_untyped(array_of));
-    For (idx, all_types) {
+    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_array_types` array
         Type *other_type = all_types[idx];
         if (other_type->kind == TYPE_ARRAY) {
             Type_Array *other_type_array = (Type_Array *)other_type;
@@ -256,6 +258,37 @@ Type *get_or_create_type_array_of(Type *array_of, int count) {
     }
     Type *new_type = new Type_Array(array_of, count);
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
+    all_types.append(new_type);
+    return new_type;
+}
+
+Type *get_or_create_type_procedure(Array<Type *> parameter_types, Type *return_type) {
+    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_procedure_types` array
+        Type *other_type = all_types[idx];
+        if (other_type->kind == TYPE_PROCEDURE) {
+            Type_Procedure *other_type_procedure = (Type_Procedure *)other_type;
+            if (other_type_procedure->parameter_types.count != parameter_types.count) {
+                continue;
+            }
+            bool all_parameters_match = true;
+            For (parameter_idx, other_type_procedure->parameter_types) {
+                if (other_type_procedure->parameter_types[parameter_idx] != parameter_types[parameter_idx]) {
+                    all_parameters_match = false;
+                    break;
+                }
+            }
+            if (!all_parameters_match) {
+                continue;
+            }
+
+            if (other_type_procedure->return_type == return_type) {
+                return other_type_procedure;
+            }
+        }
+    }
+    Type *new_type = new Type_Procedure(parameter_types, return_type);
+    new_type->flags = TF_PROCEDURE;
+    new_type->size = POINTER_SIZE;
     all_types.append(new_type);
     return new_type;
 }
@@ -312,7 +345,7 @@ Operand typecheck_expr(Ast_Expr *expr) {
         case EXPR_ADDRESS_OF: {
             Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
             Operand rhs_operand = typecheck_expr(address_of->rhs);
-            assert(rhs_operand.flags & OPERAND_LVALUE);
+            assert(rhs_operand.flags & OPERAND_LVALUE | OPERAND_RVALUE);
             Operand operand(address_of->location);
             operand.type = get_or_create_type_pointer_to(rhs_operand.type);
             operand.flags = OPERAND_RVALUE;
@@ -332,7 +365,7 @@ Operand typecheck_expr(Ast_Expr *expr) {
             assert(is_type_integer(index_operand.type));
             Operand operand(subscript->location);
             operand.type = array_type->array_of;
-            operand.flags = OPERAND_LVALUE;
+            operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             return operand;
         }
         case EXPR_DEREFERENCE: {
@@ -342,12 +375,25 @@ Operand typecheck_expr(Ast_Expr *expr) {
             Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand.type;
             Operand operand(dereference->location);
             operand.type = pointer_type->pointer_to;
-            operand.flags = OPERAND_LVALUE;
+            operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             return operand;
         }
         case EXPR_PROCEDURE_CALL: {
-            UNIMPLEMENTED(EXPR_PROCEDURE_CALL);
-            break;
+            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+            Operand procedure_operand = typecheck_expr(call->lhs);
+            assert(procedure_operand.type->kind == TYPE_PROCEDURE);
+            Type_Procedure *target_procedure_type = (Type_Procedure *)procedure_operand.type;
+            assert(target_procedure_type->parameter_types.count == call->parameters.count);
+            Operand operand(call->location);
+            operand.type = target_procedure_type->return_type;
+            if (operand.type) {
+                operand.flags = OPERAND_RVALUE;
+            }
+            else {
+                operand.flags = OPERAND_NO_VALUE;
+            }
+            // todo(josh): constant stuff? procedures are a bit weird in that way
+            return operand;
         }
         case EXPR_SELECTOR: {
             Expr_Selector *selector = (Expr_Selector *)expr;
@@ -376,7 +422,7 @@ Operand typecheck_expr(Ast_Expr *expr) {
                     // todo(josh): constants
                     found_field = true;
                     operand.type = field.type;
-                    operand.flags = OPERAND_LVALUE;
+                    operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
                     break;
                 }
             }
@@ -385,8 +431,20 @@ Operand typecheck_expr(Ast_Expr *expr) {
         }
         case EXPR_IDENTIFIER: {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
-            Operand operand(ident->location);
             assert(ident->resolved_declaration != nullptr);
+            if (ident->resolved_declaration->check_state == DCS_CHECKED) {
+                return ident->resolved_declaration->operand;
+            }
+
+            if (ident->resolved_declaration->check_state == DCS_CHECKING) {
+                assert(false && "cyclic dependency");
+            }
+
+            assert(ident->resolved_declaration->check_state == DCS_UNCHECKED);
+            ident->resolved_declaration->check_state = DCS_CHECKING;
+            defer(ident->resolved_declaration->check_state = DCS_CHECKED);
+
+            Operand operand(ident->location);
             switch (ident->resolved_declaration->kind) {
                 case DECL_TYPE: {
                     Type_Declaration *decl = (Type_Declaration *)ident->resolved_declaration;
@@ -397,7 +455,6 @@ Operand typecheck_expr(Ast_Expr *expr) {
                 }
                 case DECL_STRUCT: {
                     Struct_Declaration *decl = (Struct_Declaration *)ident->resolved_declaration;
-                    assert(decl->structure->type != nullptr && "todo(josh): order independence");
                     operand.type = type_typeid;
                     operand.type_value = decl->structure->type;
                     operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
@@ -409,18 +466,21 @@ Operand typecheck_expr(Ast_Expr *expr) {
                     typecheck_var(decl->var);
                     assert(decl->var->type != nullptr);
                     operand.type = decl->var->type;
-                    operand.flags = OPERAND_LVALUE;
+                    operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
                     // todo(josh): constant propagation
                     break;
                 }
                 case DECL_PROC: {
                     Proc_Declaration *decl = (Proc_Declaration *)ident->resolved_declaration;
-                    assert(decl->procedure->type != nullptr && "todo(josh): order independence");
-                    operand.type = decl->procedure->type;
+                    // todo(josh): separate procedure header and procedure body so we can handle recursion
+                    typecheck_procedure_header(decl->procedure->header);
+                    assert(decl->procedure->header->type != nullptr);
+                    operand.type = decl->procedure->header->type;
                     operand.flags = OPERAND_RVALUE;
                     break;
                 }
             }
+            ident->resolved_declaration->operand = operand;
             return operand;
         }
         case EXPR_NUMBER_LITERAL: {
@@ -514,7 +574,7 @@ Operand typecheck_expr(Ast_Expr *expr) {
         }
     }
     assert(false && "unreachable");
-    return Operand({});
+    return Operand();
 }
 
 void typecheck_var(Ast_Var *var) {
@@ -530,6 +590,31 @@ void typecheck_var(Ast_Var *var) {
         }
         assert(var->type == expr_operand.type);
     }
+}
+
+void typecheck_procedure_header(Ast_Proc_Header *header) {
+    if (header->type != nullptr) {
+        // note(josh): typecheck_procedure() calls this, but also
+        // the normal declaration resolving does. hmmmmm.
+        return;
+    }
+    assert(header->type == nullptr);
+    Array<Type *> parameter_types = {};
+    parameter_types.allocator = default_allocator();
+    For (idx, header->parameters) {
+        Ast_Var *parameter = header->parameters[idx];
+        typecheck_var(parameter);
+        assert(parameter->type != nullptr);
+        parameter_types.append(parameter->type);
+    }
+    Type *return_type = {};
+    if (header->return_type_expr) {
+        Operand return_type_operand = typecheck_expr(header->return_type_expr);
+        assert(return_type_operand.flags & OPERAND_CONSTANT);
+        assert(return_type_operand.type == type_typeid);
+        return_type = return_type_operand.type_value;
+    }
+    header->type = get_or_create_type_procedure(parameter_types, return_type);
 }
 
 void typecheck_block(Ast_Block *block) {
@@ -548,11 +633,16 @@ void typecheck_block(Ast_Block *block) {
 
             case AST_PROC: {
                 Ast_Proc *procedure = (Ast_Proc *)node;
-                For (idx, procedure->parameters) {
-                    Ast_Var *parameter = procedure->parameters[idx];
-                    typecheck_var(parameter);
-                }
+                typecheck_procedure_header(procedure->header);
                 typecheck_block(procedure->body);
+                break;
+            }
+
+            case AST_STATEMENT_EXPR: {
+                Ast_Statement_Expr *stmt = (Ast_Statement_Expr *)node;
+                typecheck_expr(stmt->expr);
+                // todo(josh): maybe give an error for statements with no side-effects i.e.
+                //             foo == bar;
                 break;
             }
 
@@ -573,6 +663,11 @@ void typecheck_block(Ast_Block *block) {
                 assert(expr_operand.flags & OPERAND_CONSTANT);
                 assert(expr_operand.type->flags & TF_INTEGER);
                 printf("%s(%d:%d) #print directive: %lld\n", directive_print->location.filepath, directive_print->location.line, directive_print->location.character, expr_operand.int_value);
+                break;
+            }
+
+            default: {
+                UNIMPLEMENTED(node->ast_kind);
                 break;
             }
         }

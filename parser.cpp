@@ -13,10 +13,6 @@ void init_parser() {
     g_all_declarations.allocator = default_allocator();
 }
 
-void queue_identifier_for_resolving(Expr_Identifier *ident) {
-    g_identifiers_to_resolve.append(ident);
-}
-
 void resolve_identifiers() {
     For (idx, g_identifiers_to_resolve) {
         Expr_Identifier *ident = g_identifiers_to_resolve[idx];
@@ -97,26 +93,29 @@ Ast_Var *parse_var(Lexer *lexer) {
     return var;
 }
 
-Ast_Proc *parse_proc(Lexer *lexer) {
+Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     Token token;
     if (!expect_token(lexer, TK_PROC, &token)) {
         return nullptr;
     }
-    Ast_Proc *proc = new Ast_Proc(token.location);
-    proc->procedure_block = new Ast_Block(token.location); // todo(josh): this location is incorrect, it should be the location of the body
-    Ast_Block *old_block = push_ast_block(proc->procedure_block);
+    Location proc_location = token.location;
+    Ast_Block *procedure_block = new Ast_Block(token.location);
+    Ast_Block *old_block = push_ast_block(procedure_block);
     defer(pop_ast_block(old_block));
 
     // name
     if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
         return nullptr;
     }
-    proc->name = token.text;
+
+    char *proc_name = token.text;
 
     // parameter list
     if (!expect_token(lexer, TK_LEFT_PAREN)) {
         return nullptr;
     }
+    Array<Ast_Var *> parameters = {};
+    parameters.allocator = default_allocator();
     bool first = true;
     while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
         if (!first) {
@@ -129,25 +128,55 @@ Ast_Proc *parse_proc(Lexer *lexer) {
         if (!var) {
             return nullptr;
         }
-        proc->parameters.append(var);
+        parameters.append(var);
         first = false;
     }
     if (!expect_token(lexer, TK_RIGHT_PAREN)) {
         return nullptr;
     }
 
-    // body
+    // return type
+    Ast_Expr *return_type_expr = {};
+    Token colon = {};
+    if (!peek_next_token(lexer, &colon)) {
+        assert(false);
+        return nullptr;
+    }
+    if (colon.kind == TK_COLON) {
+        eat_next_token(lexer);
+        return_type_expr = parse_expr(lexer);
+        if (!return_type_expr) {
+            return nullptr;
+        }
+    }
+
+    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, proc_location);
+}
+
+Ast_Proc *parse_proc(Lexer *lexer) {
+    Ast_Proc_Header *header = parse_proc_header(lexer);
+
+
+
     if (!expect_token(lexer, TK_LEFT_CURLY)) {
         return nullptr;
     }
 
-    proc->body = parse_block(lexer);
+    Ast_Block *old_block = push_ast_block(header->procedure_block);
+    Ast_Block *body = parse_block(lexer);
+    pop_ast_block(old_block);
+    if (body == nullptr) {
+        return nullptr;
+    }
 
     if (!expect_token(lexer, TK_RIGHT_CURLY)) {
         return nullptr;
     }
 
-    register_declaration(current_block, new Proc_Declaration(proc));
+
+
+    Ast_Proc *proc = new Ast_Proc(header, body, header->location);
+    register_declaration(proc->parent_block, new Proc_Declaration(proc));
     return proc;
 }
 
@@ -240,6 +269,8 @@ Ast_Block *parse_block(Lexer *lexer) {
                 if (!expect_token(lexer, TK_RIGHT_PAREN)) {
                     return nullptr;
                 }
+                // todo(josh): maybe don't add this to the block and instead add it to a separate list
+                //             to be processed in the checker
                 block->nodes.append(new Ast_Directive_Assert(expr, token.location));
                 break;
             }
@@ -256,13 +287,29 @@ Ast_Block *parse_block(Lexer *lexer) {
                 if (!expect_token(lexer, TK_RIGHT_PAREN)) {
                     return nullptr;
                 }
+                // todo(josh): maybe don't add this to the block and instead add it to a separate list
+                //             to be processed in the checker
                 block->nodes.append(new Ast_Directive_Print(expr, token.location));
                 break;
             }
 
             default: {
-                unexpected_token(lexer, token);
-                return nullptr;
+                Ast_Expr *expr = parse_expr(lexer);
+                Token next_token;
+                if (!peek_next_token(lexer, &next_token)) {
+                    assert(false);
+                    return nullptr;
+                }
+                switch (next_token.kind) {
+                    case TK_SEMICOLON: {
+                        eat_next_token(lexer);
+                        block->nodes.append(new Ast_Statement_Expr(expr, expr->location));
+                        break;
+                    }
+                    case TK_ASSIGN: {
+                        break;
+                    }
+                }
             }
         }
     }
@@ -662,7 +709,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         case TK_IDENTIFIER: {
             get_next_token(lexer, &token);
             Expr_Identifier *ident = new Expr_Identifier(token.text, token.location);
-            queue_identifier_for_resolving(ident);
+            g_identifiers_to_resolve.append(ident);
             return ident;
         }
         case TK_NUMBER: {

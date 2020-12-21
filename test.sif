@@ -1,3 +1,11 @@
+proc foo(var x: int) {
+    bar(1);
+}
+
+proc bar(var x: int) {
+    foo(2);
+}
+
 #print(sizeof(typeof(a)))
 #print(sizeof(T))
 
