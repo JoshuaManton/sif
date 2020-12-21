@@ -103,5 +103,4 @@ struct Type_Procedure : public Type {
 
 void init_checker();
 void add_global_declarations(Ast_Block *block);
-void make_incomplete_types_for_all_structs();
-void typecheck_block(Ast_Block *block);
+void typecheck_global_scope(Ast_Block *block);

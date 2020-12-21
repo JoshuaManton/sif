@@ -1,16 +1,40 @@
 proc foo(var x: int) {
     bar(1);
+    global_var;
+    var b: Some_Struct;
+    var z: int;
+    z = 321;
 }
 
 proc bar(var x: int) {
-    foo(2);
+    baz(2);
+    // var x: int;
+    // var y: ^int = &x;
+    // var z: int = y^;
+    // x = 123 + x;
+    // x = x + 123;
+    // x = 12 + 12;
 }
 
-#print(sizeof(typeof(a)))
-#print(sizeof(T))
-
-var a: [sizeof(typeof(p^))]int;
-var p: ^T;
-struct T {
-    var a: [sizeof(typeof(p))]bool;
+proc baz(var x: int) {
+    foo(x);
 }
+
+var global_var: int;
+
+struct Some_Struct {
+    var x: int;
+}
+
+
+
+
+
+// #print(sizeof(typeof(a)))
+// #print(sizeof(T))
+
+// var a: [sizeof(typeof(p^))]int;
+// var p: ^T;
+// struct T {
+//     var a: [sizeof(typeof(p))]bool;
+// }

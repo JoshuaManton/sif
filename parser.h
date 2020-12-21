@@ -12,6 +12,7 @@ enum Ast_Kind {
     AST_PROC,
     AST_VAR,
     AST_STRUCT,
+    AST_ASSIGN,
     AST_EXPR,
     AST_STATEMENT_EXPR,
     AST_DIRECTIVE_ASSERT,
@@ -26,6 +27,10 @@ struct Ast_Struct;
 struct Ast_Statement_Expr;
 
 struct Declaration;
+struct Type_Declaration;
+struct Struct_Declaration;
+struct Proc_Declaration;
+struct Var_Declaration;
 
 struct Type;
 
@@ -42,10 +47,14 @@ struct Ast_Node {
     {}
 };
 
+enum Block_Flags {
+    BF_IS_GLOBAL_SCOPE = 1 << 0,
+};
+
 struct Ast_Block : public Ast_Node {
     Array<Ast_Node *> nodes = {};
     Array<Declaration *> declarations = {};
-
+    u64 flags = {};
     Ast_Block(Location location)
     : Ast_Node(AST_BLOCK, location)
     {
@@ -74,10 +83,22 @@ struct Ast_Proc_Header : public Ast_Node {
 struct Ast_Proc : public Ast_Node {
     Ast_Proc_Header *header = {};
     Ast_Block *body = nullptr;
+    Proc_Declaration *declaration = {};
     Ast_Proc(Ast_Proc_Header *header, Ast_Block *body, Location location)
     : Ast_Node(AST_PROC, location)
     , header(header)
     , body(body)
+    {}
+};
+
+struct Ast_Assign : public Ast_Node {
+    Ast_Expr *lhs = {};
+    Ast_Expr *rhs = {};
+    // todo(josh): +=, -=, etc
+    Ast_Assign(Ast_Expr *lhs, Ast_Expr *rhs, Location location)
+    : Ast_Node(AST_ASSIGN, location)
+    , lhs(lhs)
+    , rhs(rhs)
     {}
 };
 
@@ -102,6 +123,7 @@ struct Ast_Var : public Ast_Node {
     Ast_Expr *type_expr = nullptr;
     Ast_Expr *expr = nullptr;
     Type *type = nullptr;
+    Var_Declaration *declaration = {};
     Ast_Var(Location location)
     : Ast_Node(AST_VAR, location)
     {}
@@ -112,6 +134,7 @@ struct Ast_Struct : public Ast_Node {
     Type *type = nullptr;
     Array<Ast_Var *> fields = {};
     Ast_Block *body = {};
+    Struct_Declaration *declaration = {};
     Ast_Struct(Location location)
     : Ast_Node(AST_STRUCT, location)
     {
@@ -364,53 +387,57 @@ struct Operand {
 };
 
 struct Declaration {
+    Ast_Block *parent_block = {};
     Declaration_Check_State check_state = {};
     char *name = {};
     Declaration_Kind kind = {};
     Operand operand = {};
-    Declaration(char *name, Declaration_Kind kind)
+    Declaration(char *name, Declaration_Kind kind, Ast_Block *parent_block)
     : name(name)
     , kind(kind)
+    , parent_block(parent_block)
     {}
 };
 
 struct Type_Declaration : Declaration {
     Type *type = {};
-    Type_Declaration(char *name, Type *type)
-    : Declaration(name, DECL_TYPE)
+    Type_Declaration(char *name, Type *type, Ast_Block *parent_block)
+    : Declaration(name, DECL_TYPE, parent_block)
     , type(type)
     {}
 };
 
 struct Struct_Declaration : Declaration {
     Ast_Struct *structure = {};
-    Struct_Declaration(Ast_Struct *structure)
-    : Declaration(structure->name, DECL_STRUCT)
+    Struct_Declaration(Ast_Struct *structure, Ast_Block *parent_block)
+    : Declaration(structure->name, DECL_STRUCT, parent_block)
     , structure(structure)
     {}
 };
 
 struct Proc_Declaration : Declaration {
     Ast_Proc *procedure = {};
-    Proc_Declaration(Ast_Proc *procedure)
-    : Declaration(procedure->header->name, DECL_PROC)
+    Proc_Declaration(Ast_Proc *procedure, Ast_Block *parent_block)
+    : Declaration(procedure->header->name, DECL_PROC, parent_block)
     , procedure(procedure)
     {}
 };
 
 struct Var_Declaration : Declaration {
     Ast_Var *var = {};
-    Var_Declaration(Ast_Var *var)
-    : Declaration(var->name, DECL_VAR)
+    Var_Declaration(Ast_Var *var, Ast_Block *parent_block)
+    : Declaration(var->name, DECL_VAR, parent_block)
     , var(var)
     {}
 };
 
 extern Array<Declaration *> g_all_declarations;
+extern Array<Ast_Directive_Assert *> g_all_assert_directives;
+extern Array<Ast_Directive_Print *>  g_all_print_directives;
 
 void init_parser();
 void resolve_identifiers();
-void register_declaration(Ast_Block *block, Declaration *new_declaration);
+void register_declaration(Declaration *new_declaration);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Block *parse_block(Lexer *lexer);

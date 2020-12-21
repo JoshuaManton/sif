@@ -82,9 +82,9 @@ void main(int argc, char **argv) {
         return;
     }
 
-    make_incomplete_types_for_all_structs();
-    typecheck_block(global_scope);
+    typecheck_global_scope(global_scope);
     if (g_reported_error) {
+        printf("There were errors.\n");
         return;
     }
 }

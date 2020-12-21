@@ -7,10 +7,14 @@
 
 Array<Expr_Identifier *> g_identifiers_to_resolve;
 Array<Declaration *> g_all_declarations;
+Array<Ast_Directive_Assert *> g_all_assert_directives;
+Array<Ast_Directive_Print *>  g_all_print_directives;
 
 void init_parser() {
     g_identifiers_to_resolve.allocator = default_allocator();
     g_all_declarations.allocator = default_allocator();
+    g_all_assert_directives.allocator = default_allocator();
+    g_all_print_directives.allocator = default_allocator();
 }
 
 void resolve_identifiers() {
@@ -33,7 +37,6 @@ void resolve_identifiers() {
         }
 
         if (!ident->resolved_declaration) {
-            printf("%s\n", ident->name);
             assert(ident->resolved_declaration != nullptr && "Unresolved identifier");
             g_reported_error = true;
         }
@@ -50,14 +53,15 @@ void pop_ast_block(Ast_Block *old_block) {
     current_block = old_block;
 }
 
-void register_declaration(Ast_Block *block, Declaration *new_declaration) {
-    For (decl_idx, block->declarations) {
-        Declaration *decl = block->declarations[decl_idx];
+void register_declaration(Declaration *new_declaration) {
+    assert(new_declaration->parent_block != nullptr);
+    For (decl_idx, new_declaration->parent_block->declarations) {
+        Declaration *decl = new_declaration->parent_block->declarations[decl_idx];
         if (strcmp(decl->name, new_declaration->name) == 0) {
             assert(false && "name collision");
         }
     }
-    block->declarations.append(new_declaration);
+    new_declaration->parent_block->declarations.append(new_declaration);
     g_all_declarations.append(new_declaration);
 }
 
@@ -89,7 +93,8 @@ Ast_Var *parse_var(Lexer *lexer) {
         var->expr = parse_expr(lexer);
     }
 
-    register_declaration(current_block, new Var_Declaration(var));
+    var->declaration = new Var_Declaration(var, current_block);
+    register_declaration(var->declaration);
     return var;
 }
 
@@ -176,7 +181,8 @@ Ast_Proc *parse_proc(Lexer *lexer) {
 
 
     Ast_Proc *proc = new Ast_Proc(header, body, header->location);
-    register_declaration(proc->parent_block, new Proc_Declaration(proc));
+    proc->declaration = new Proc_Declaration(proc, current_block);
+    register_declaration(proc->declaration);
     return proc;
 }
 
@@ -212,7 +218,8 @@ Ast_Struct *parse_struct(Lexer *lexer) {
         structure->fields.append(var);
     }
 
-    register_declaration(current_block, new Struct_Declaration(structure));
+    structure->declaration = new Struct_Declaration(structure, current_block);
+    register_declaration(structure->declaration);
     return structure;
 }
 
@@ -220,6 +227,10 @@ Ast_Block *parse_block(Lexer *lexer) {
     Ast_Block *block = new Ast_Block(lexer->location);
     Ast_Block *old_block = push_ast_block(block);
     defer(pop_ast_block(old_block));
+
+    if (old_block == nullptr) {
+        block->flags |= BF_IS_GLOBAL_SCOPE;
+    }
 
     Token token;
     while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
@@ -258,7 +269,7 @@ Ast_Block *parse_block(Lexer *lexer) {
             }
 
             case TK_DIRECTIVE_ASSERT: {
-                assert(expect_token(lexer, TK_DIRECTIVE_ASSERT));
+                eat_next_token(lexer);
                 if (!expect_token(lexer, TK_LEFT_PAREN)) {
                     return nullptr;
                 }
@@ -269,14 +280,12 @@ Ast_Block *parse_block(Lexer *lexer) {
                 if (!expect_token(lexer, TK_RIGHT_PAREN)) {
                     return nullptr;
                 }
-                // todo(josh): maybe don't add this to the block and instead add it to a separate list
-                //             to be processed in the checker
-                block->nodes.append(new Ast_Directive_Assert(expr, token.location));
+                g_all_assert_directives.append(new Ast_Directive_Assert(expr, token.location));
                 break;
             }
 
             case TK_DIRECTIVE_PRINT: {
-                assert(expect_token(lexer, TK_DIRECTIVE_PRINT));
+                eat_next_token(lexer);
                 if (!expect_token(lexer, TK_LEFT_PAREN)) {
                     return nullptr;
                 }
@@ -287,9 +296,13 @@ Ast_Block *parse_block(Lexer *lexer) {
                 if (!expect_token(lexer, TK_RIGHT_PAREN)) {
                     return nullptr;
                 }
-                // todo(josh): maybe don't add this to the block and instead add it to a separate list
-                //             to be processed in the checker
-                block->nodes.append(new Ast_Directive_Print(expr, token.location));
+                g_all_print_directives.append(new Ast_Directive_Print(expr, token.location));
+                break;
+            }
+
+            case TK_SEMICOLON: {
+                // note(josh): empty statement
+                eat_next_token(lexer);
                 break;
             }
 
@@ -307,7 +320,17 @@ Ast_Block *parse_block(Lexer *lexer) {
                         break;
                     }
                     case TK_ASSIGN: {
+                        eat_next_token(lexer);
+                        Ast_Expr *rhs = parse_expr(lexer);
+                        if (!expect_token(lexer, TK_SEMICOLON)) {
+                            return nullptr;
+                        }
+                        block->nodes.append(new Ast_Assign(expr, rhs, expr->location));
                         break;
+                    }
+                    default: {
+                        unexpected_token(lexer, next_token);
+                        return nullptr;
                     }
                 }
             }
