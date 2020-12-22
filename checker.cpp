@@ -126,7 +126,6 @@ Operand check_declaration(Declaration *decl) {
 
     assert(decl->check_state == DCS_UNCHECKED);
     decl->check_state = DCS_CHECKING;
-    defer(decl->check_state = DCS_CHECKED);
 
     Operand operand;
     switch (decl->kind) {
@@ -164,9 +163,16 @@ Operand check_declaration(Declaration *decl) {
         }
     }
     decl->operand = operand;
+    decl->check_state = DCS_CHECKED;
     if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
         ordered_declarations.append(decl);
     }
+
+    if (decl->kind == DECL_PROC) {
+        Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
+        typecheck_block(proc_decl->procedure->body);
+    }
+
     return operand;
 }
 
@@ -175,10 +181,6 @@ void typecheck_global_scope(Ast_Block *block) {
     make_incomplete_types_for_all_structs(); // todo(josh): this is kinda goofy. should be able to just do this as we traverse the program
     For (idx, block->declarations) {
         Declaration *decl = block->declarations[idx];
-        if (decl->kind == DECL_PROC) {
-            Proc_Declaration *decl_proc = (Proc_Declaration *)decl;
-            typecheck_block(decl_proc->procedure->body);
-        }
         check_declaration(decl);
     }
     bool all_assert_directives_passed = do_assert_directives();
@@ -732,17 +734,6 @@ void typecheck_block(Ast_Block *block) {
             case AST_VAR: {
                 Ast_Var *var = (Ast_Var *)node;
                 typecheck_var(var);
-                break;
-            }
-
-            case AST_STRUCT: {
-                break;
-            }
-
-            case AST_PROC: {
-                Ast_Proc *procedure = (Ast_Proc *)node;
-                typecheck_procedure_header(procedure->header);
-                typecheck_block(procedure->body);
                 break;
             }
 

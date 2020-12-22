@@ -4,6 +4,19 @@ struct T {
     var a: [sizeof(typeof(p))]bool;
 }
 
+struct A {
+    var b: [4]B;
+}
+
+struct B {
+    var a: ^A;
+}
+
+proc AAA() {
+    var aa: A;
+    var b: B = aa.b[2];
+}
+
 var simple: int;
 var pointer: ^int;
 var array: [4]int;
@@ -15,6 +28,23 @@ var wack: ^^[4][8]int;
 var more_wack: [4][8]^^int;
 var still_more_wack: ^[4]^[8]int;
 var complicated_garbage: ^^[4]^[8][32]^int;
+
+proc recursion() {
+    var b: ^Some_Struct;
+    recursion();
+}
+
+proc duo_recursion1() {
+    duo_recursion2();
+}
+proc duo_recursion2() {
+    var a: Some_Struct;
+    duo_recursion1();
+}
+
+proc baz(var x: int) {
+    foo(x);
+}
 
 proc foo(var x: int) {
     bar(1);
@@ -30,9 +60,6 @@ proc bar(var x: int) {
     z = 123 + z;
     z = z + 123;
     z = 12 + 12;
-}
-proc baz(var x: int) {
-    foo(x);
 }
 var global_var: int;
 struct Some_Struct {

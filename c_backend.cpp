@@ -239,8 +239,11 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             break;
         }
         case EXPR_SUBSCRIPT: {
-            UNIMPLEMENTED(EXPR_SUBSCRIPT);
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
+            c_print_expr(sb, subscript->lhs);
+            sb->print("[");
+            c_print_expr(sb, subscript->index);
+            sb->print("]");
             break;
         }
         case EXPR_DEREFERENCE: {
@@ -328,13 +331,6 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_STRUCT: {
                 Struct_Declaration *structure = (Struct_Declaration *)decl;
                 sb.printf("struct %s", decl->name);
-                sb.print(";\n");
-                break;
-            }
-            case DECL_VAR: {
-                Var_Declaration *var = (Var_Declaration *)decl;
-                sb.print("extern ");
-                c_print_var(&sb, var->var);
                 sb.print(";\n");
                 break;
             }
