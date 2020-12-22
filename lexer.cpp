@@ -23,6 +23,13 @@ void init_lexer_globals() {
     token_string_map[TK_FALSE]                 = "false";
     token_string_map[TK_SIZEOF]                = "sizeof";
     token_string_map[TK_TYPEOF]                = "typeof";
+    token_string_map[TK_IF]                    = "if";
+    token_string_map[TK_ELSE]                  = "else";
+    token_string_map[TK_FOR]                   = "for";
+    token_string_map[TK_WHILE]                 = "while";
+    token_string_map[TK_BREAK]                 = "break";
+    token_string_map[TK_CONTINUE]              = "continue";
+    token_string_map[TK_CAST]                  = "cast";
 
     token_string_map[TK_DIRECTIVE_PRINT]       = "#print";
     token_string_map[TK_DIRECTIVE_ASSERT]      = "#assert";
@@ -217,6 +224,13 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("false", TK_FALSE)
         else CHECK_KEYWORD("sizeof", TK_SIZEOF)
         else CHECK_KEYWORD("typeof", TK_TYPEOF)
+        else CHECK_KEYWORD("if", TK_IF)
+        else CHECK_KEYWORD("else", TK_ELSE)
+        else CHECK_KEYWORD("for", TK_FOR)
+        else CHECK_KEYWORD("while", TK_WHILE)
+        else CHECK_KEYWORD("break", TK_BREAK)
+        else CHECK_KEYWORD("continue", TK_CONTINUE)
+        else CHECK_KEYWORD("cast", TK_CAST)
     }
     else if (is_digit(lexer->text[lexer->index])) {
         int length = 0;

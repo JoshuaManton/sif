@@ -34,6 +34,14 @@ enum Token_Kind {
     TK_NULL,
     TK_TRUE,
     TK_FALSE,
+    TK_CAST,
+
+    TK_IF,
+    TK_ELSE,
+    TK_FOR,
+    TK_WHILE,
+    TK_BREAK,
+    TK_CONTINUE,
 
     TK_SIZEOF,
     TK_TYPEOF,

@@ -12,6 +12,12 @@ enum Ast_Kind {
     AST_PROC,
     AST_VAR,
     AST_STRUCT,
+    AST_IF,
+    AST_FOR,
+    AST_WHILE,
+    AST_RETURN,
+    AST_BREAK,
+    AST_CONTINUE,
     AST_ASSIGN,
     AST_EXPR,
     AST_STATEMENT_EXPR,
@@ -145,6 +151,28 @@ struct Ast_Struct : public Ast_Node {
     }
 };
 
+struct Ast_If : public Ast_Node {
+    Ast_Expr *condition = {};
+    Ast_Block *body = {};
+    Ast_Block *else_body = {};
+    Ast_If(Ast_Expr *condition, Ast_Block *body, Ast_Block *else_body, Location location)
+    : Ast_Node(AST_IF, location)
+    , condition(condition)
+    , body(body)
+    , else_body(else_body)
+    {}
+};
+
+struct Ast_Return : public Ast_Node {
+    Ast_Proc_Header *matching_procedure = {};
+    Ast_Expr *expr = {};
+    Ast_Return(Ast_Proc_Header *matching_procedure, Ast_Expr *expr, Location location)
+    : Ast_Node(AST_RETURN, location)
+    , matching_procedure(matching_procedure)
+    , expr(expr)
+    {}
+};
+
 struct Ast_Statement_Expr : public Ast_Node {
     Ast_Expr *expr = {};
     Ast_Statement_Expr(Ast_Expr *expr, Location location)
@@ -204,6 +232,7 @@ enum Expr_Kind {
 
     EXPR_SIZEOF,
     EXPR_TYPEOF,
+    EXPR_CAST,
 
     EXPR_POINTER_TYPE,
     EXPR_ARRAY_TYPE,
@@ -320,6 +349,16 @@ struct Expr_Paren : public Ast_Expr {
     Expr_Paren(Ast_Expr *nested, Location location)
     : Ast_Expr(EXPR_PAREN, location)
     , nested(nested)
+    {}
+};
+
+struct Expr_Cast : public Ast_Expr {
+    Ast_Expr *type_expr = {};
+    Ast_Expr *rhs;
+    Expr_Cast(Ast_Expr *type_expr, Ast_Expr *rhs, Location location)
+    : Ast_Expr(EXPR_CAST, location)
+    , type_expr(type_expr)
+    , rhs(rhs)
     {}
 };
 
@@ -444,5 +483,5 @@ void resolve_identifiers();
 void register_declaration(Declaration *new_declaration);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
-Ast_Block *parse_block(Lexer *lexer);
+Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false);
 Ast_Node *parse_statement(Lexer *lexer);

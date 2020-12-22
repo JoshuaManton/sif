@@ -35,7 +35,7 @@ void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type);
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Array *get_or_create_type_array_of(Type *type, int count);
-Operand typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
+Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
 void typecheck_var(Ast_Var *var);
 void typecheck_block(Ast_Block *block);
 void typecheck_procedure_header(Ast_Proc_Header *header);
@@ -64,7 +64,7 @@ void init_checker() {
 
     type_typeid = new Type_Primitive("typeid", 8);
 
-    type_untyped_number = new Type_Primitive("untyped number", -1); type_untyped_number->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER | TF_FLOAT; // todo(josh): having this be both integer and float is kinda goofy
+    type_untyped_number = new Type_Primitive("untyped number", -1); type_untyped_number->flags = TF_NUMBER | TF_UNTYPED | TF_INTEGER | TF_FLOAT; // todo(josh): having this be both integer and float is kinda goofy
     type_untyped_null   = new Type_Primitive("untyped null", -1); type_untyped_null->flags   = TF_POINTER | TF_UNTYPED;
 
     type_int = type_i64;
@@ -406,7 +406,19 @@ Type *get_most_concrete_type(Type *a, Type *b) {
     }
 }
 
-Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
+bool can_cast(Ast_Expr *expr, Type *type) {
+    assert(expr != nullptr);
+    assert(type != nullptr);
+    if ((expr->operand.type->flags & TF_NUMBER) && (type->flags & TF_NUMBER)) {
+        return true;
+    }
+    if ((expr->operand.type->flags & TF_POINTER) && (type->flags & TF_POINTER)) {
+        return true;
+    }
+    return false;
+}
+
+Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     if (expected_type != nullptr) {
         assert(!(expected_type->flags & TF_UNTYPED)); // note(josh): an expected_type should never be untyped
     }
@@ -418,55 +430,55 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_BINARY: {
             Expr_Binary *binary = (Expr_Binary *)expr;
-            Operand lhs_operand = typecheck_expr(binary->lhs, expected_type);
-            Operand rhs_operand = typecheck_expr(binary->rhs, expected_type);
-            assert(!is_type_incomplete(lhs_operand.type));
-            assert(!is_type_incomplete(rhs_operand.type));
+            Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
+            Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
+            assert(!is_type_incomplete(lhs_operand->type));
+            assert(!is_type_incomplete(rhs_operand->type));
             result_operand.flags |= OPERAND_RVALUE;
-            Type *most_concrete = get_most_concrete_type(lhs_operand.type, rhs_operand.type);
+            Type *most_concrete = get_most_concrete_type(lhs_operand->type, rhs_operand->type);
             if (expected_type != nullptr) {
                 most_concrete = get_most_concrete_type(most_concrete, expected_type);
             }
             if (most_concrete->flags & TF_UNTYPED) {
                 // note(josh): if the most concrete type was untyped, that should mean that both were
                 //             untyped. in which case make sure they are both the same
-                assert(lhs_operand.type == rhs_operand.type);
+                assert(lhs_operand->type == rhs_operand->type);
             }
             else {
-                assert(match_types(&lhs_operand, most_concrete));
-                assert(match_types(&rhs_operand, most_concrete));
+                assert(match_types(lhs_operand, most_concrete));
+                assert(match_types(rhs_operand, most_concrete));
             }
 
             switch (binary->op) {
                 case TK_EQUAL_TO: {
-                    assert(lhs_operand.type->flags & TF_INTEGER);
-                    assert(rhs_operand.type->flags & TF_INTEGER);
+                    assert(lhs_operand->type->flags & TF_INTEGER);
+                    assert(rhs_operand->type->flags & TF_INTEGER);
                     result_operand.type = type_bool;
-                    if ((lhs_operand.flags & OPERAND_CONSTANT) && (rhs_operand.flags & OPERAND_CONSTANT)) {
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
-                        result_operand.bool_value = lhs_operand.int_value == rhs_operand.int_value;
+                        result_operand.bool_value = lhs_operand->int_value == rhs_operand->int_value;
                     }
                     break;
                 }
                 case TK_PLUS: {
-                    assert(lhs_operand.type->flags & TF_NUMBER);
-                    assert(rhs_operand.type->flags & TF_NUMBER);
+                    assert(lhs_operand->type->flags & TF_NUMBER);
+                    assert(rhs_operand->type->flags & TF_NUMBER);
                     result_operand.type = most_concrete;
-                    if ((lhs_operand.flags & OPERAND_CONSTANT) && (rhs_operand.flags & OPERAND_CONSTANT)) {
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
-                        result_operand.int_value = lhs_operand.int_value + rhs_operand.int_value;
-                        result_operand.float_value = lhs_operand.float_value + rhs_operand.float_value;
+                        result_operand.int_value = lhs_operand->int_value + rhs_operand->int_value;
+                        result_operand.float_value = lhs_operand->float_value + rhs_operand->float_value;
                     }
                     break;
                 }
                 case TK_MINUS: {
-                    assert(lhs_operand.type->flags & TF_NUMBER);
-                    assert(rhs_operand.type->flags & TF_NUMBER);
+                    assert(lhs_operand->type->flags & TF_NUMBER);
+                    assert(rhs_operand->type->flags & TF_NUMBER);
                     result_operand.type = most_concrete;
-                    if ((lhs_operand.flags & OPERAND_CONSTANT) && (rhs_operand.flags & OPERAND_CONSTANT)) {
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
-                        result_operand.int_value = lhs_operand.int_value - rhs_operand.int_value;
-                        result_operand.float_value = lhs_operand.float_value - rhs_operand.float_value;
+                        result_operand.int_value = lhs_operand->int_value - rhs_operand->int_value;
+                        result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
                     }
                     break;
                 }
@@ -478,44 +490,55 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(result_operand.type != nullptr);
             break;
         }
+        case EXPR_CAST: {
+            Expr_Cast *expr_cast = (Expr_Cast *)expr;
+            Operand *type_operand = typecheck_expr(expr_cast->type_expr);
+            assert(expr_cast->type_expr->operand.type == type_typeid);
+            Operand *rhs_operand = typecheck_expr(expr_cast->rhs);
+            assert(can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value));
+            result_operand.type = type_operand->type_value;
+            result_operand.flags = OPERAND_RVALUE;
+            // todo(josh): constant propagation
+            break;
+        }
         case EXPR_ADDRESS_OF: {
             Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
-            Operand rhs_operand = typecheck_expr(address_of->rhs);
-            assert(rhs_operand.flags & OPERAND_LVALUE | OPERAND_RVALUE);
-            result_operand.type = get_or_create_type_pointer_to(rhs_operand.type);
+            Operand *rhs_operand = typecheck_expr(address_of->rhs);
+            assert(rhs_operand->flags & OPERAND_LVALUE | OPERAND_RVALUE);
+            result_operand.type = get_or_create_type_pointer_to(rhs_operand->type);
             result_operand.flags = OPERAND_RVALUE;
             break;
         }
         case EXPR_SUBSCRIPT: {
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
-            Operand lhs_operand = typecheck_expr(subscript->lhs); // todo(josh): should we pass expected_type down here?
-            assert(is_type_array(lhs_operand.type));
-            assert(lhs_operand.type->kind == TYPE_ARRAY);
-            Type_Array *array_type = (Type_Array *)lhs_operand.type;
+            Operand *lhs_operand = typecheck_expr(subscript->lhs); // todo(josh): should we pass expected_type down here?
+            assert(is_type_array(lhs_operand->type));
+            assert(lhs_operand->type->kind == TYPE_ARRAY);
+            Type_Array *array_type = (Type_Array *)lhs_operand->type;
             complete_type(array_type);
             assert(array_type->size > 0);
 
-            Operand index_operand = typecheck_expr(subscript->index, type_int); // todo(josh): should we pass expected_type down here?
-            assert(is_type_number(index_operand.type));
-            assert(is_type_integer(index_operand.type));
+            Operand *index_operand = typecheck_expr(subscript->index, type_int); // todo(josh): should we pass expected_type down here?
+            assert(is_type_number(index_operand->type));
+            assert(is_type_integer(index_operand->type));
             result_operand.type = array_type->array_of;
             result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             break;
         }
         case EXPR_DEREFERENCE: {
             Expr_Dereference *dereference = (Expr_Dereference *)expr;
-            Operand lhs_operand = typecheck_expr(dereference->lhs); // todo(josh): should we pass expected_type down here?
-            assert(is_type_pointer(lhs_operand.type));
-            Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand.type;
+            Operand *lhs_operand = typecheck_expr(dereference->lhs); // todo(josh): should we pass expected_type down here?
+            assert(is_type_pointer(lhs_operand->type));
+            Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
             result_operand.type = pointer_type->pointer_to;
             result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             break;
         }
         case EXPR_PROCEDURE_CALL: {
             Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-            Operand procedure_operand = typecheck_expr(call->lhs);
-            assert(procedure_operand.type->kind == TYPE_PROCEDURE);
-            Type_Procedure *target_procedure_type = (Type_Procedure *)procedure_operand.type;
+            Operand *procedure_operand = typecheck_expr(call->lhs);
+            assert(procedure_operand->type->kind == TYPE_PROCEDURE);
+            Type_Procedure *target_procedure_type = (Type_Procedure *)procedure_operand->type;
             assert(target_procedure_type->parameter_types.count == call->parameters.count);
             For (idx, call->parameters) {
                 Ast_Expr *parameter = call->parameters[idx];
@@ -535,17 +558,17 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_SELECTOR: {
             Expr_Selector *selector = (Expr_Selector *)expr;
-            Operand lhs_operand = typecheck_expr(selector->lhs);
-            complete_type(lhs_operand.type);
+            Operand *lhs_operand = typecheck_expr(selector->lhs);
+            complete_type(lhs_operand->type);
             Type_Struct *struct_type = nullptr;
-            if (lhs_operand.type->kind == TYPE_POINTER) {
-                Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand.type;
+            if (lhs_operand->type->kind == TYPE_POINTER) {
+                Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
                 assert(is_type_struct(pointer_type->pointer_to));
                 complete_type(pointer_type->pointer_to);
                 struct_type = (Type_Struct *)pointer_type->pointer_to;
             }
-            else if (lhs_operand.type->kind == TYPE_STRUCT) {
-                struct_type = (Type_Struct *)lhs_operand.type;
+            else if (lhs_operand->type->kind == TYPE_STRUCT) {
+                struct_type = (Type_Struct *)lhs_operand->type;
             }
             else {
                 assert(false && "can only use . on struct and pointer types");
@@ -604,52 +627,52 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_SIZEOF: {
             Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
-            Operand expr_operand = typecheck_expr(expr_sizeof->expr);
-            assert(expr_operand.type == type_typeid);
-            assert(expr_operand.type_value != nullptr);
-            complete_type(expr_operand.type_value);
-            assert(!is_type_incomplete(expr_operand.type_value));
-            assert(expr_operand.type_value->size > 0);
+            Operand *expr_operand = typecheck_expr(expr_sizeof->expr);
+            assert(expr_operand->type == type_typeid);
+            assert(expr_operand->type_value != nullptr);
+            complete_type(expr_operand->type_value);
+            assert(!is_type_incomplete(expr_operand->type_value));
+            assert(expr_operand->type_value->size > 0);
             result_operand.type = type_untyped_number;
-            result_operand.int_value = expr_operand.type_value->size;
+            result_operand.int_value = expr_operand->type_value->size;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             break;
         }
         case EXPR_TYPEOF: {
             Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
-            Operand expr_operand = typecheck_expr(expr_typeof->expr);
-            assert(expr_operand.type != nullptr);
+            Operand *expr_operand = typecheck_expr(expr_typeof->expr);
+            assert(expr_operand->type != nullptr);
             result_operand.type = type_typeid;
-            result_operand.type_value = expr_operand.type;
+            result_operand.type_value = expr_operand->type;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             break;
         }
         case EXPR_POINTER_TYPE: {
             Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
             assert(expr_pointer->pointer_to != nullptr);
-            Operand pointer_to_operand = typecheck_expr(expr_pointer->pointer_to);
-            assert((pointer_to_operand.flags & OPERAND_CONSTANT) && (pointer_to_operand.flags & OPERAND_TYPE));
+            Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to);
+            assert((pointer_to_operand->flags & OPERAND_CONSTANT) && (pointer_to_operand->flags & OPERAND_TYPE));
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_pointer_to(pointer_to_operand.type_value);
+            result_operand.type_value = get_or_create_type_pointer_to(pointer_to_operand->type_value);
             break;
         }
         case EXPR_ARRAY_TYPE: {
             Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
             assert(expr_array->array_of != nullptr);
-            Operand array_of_operand = typecheck_expr(expr_array->array_of);
-            assert((array_of_operand.flags & OPERAND_CONSTANT) && (array_of_operand.flags & OPERAND_TYPE));
-            Operand count_operand = typecheck_expr(expr_array->count_expr);
-            assert((count_operand.flags & OPERAND_CONSTANT) && is_type_integer(count_operand.type));
-            assert(count_operand.int_value > 0);
+            Operand *array_of_operand = typecheck_expr(expr_array->array_of);
+            assert((array_of_operand->flags & OPERAND_CONSTANT) && (array_of_operand->flags & OPERAND_TYPE));
+            Operand *count_operand = typecheck_expr(expr_array->count_expr);
+            assert((count_operand->flags & OPERAND_CONSTANT) && is_type_integer(count_operand->type));
+            assert(count_operand->int_value > 0);
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_array_of(array_of_operand.type_value, count_operand.int_value);
+            result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
             break;
         }
         case EXPR_PAREN: {
             Expr_Paren *paren = (Expr_Paren *)expr;
-            result_operand = typecheck_expr(paren->nested);
+            result_operand = *typecheck_expr(paren->nested);
             result_operand.location = paren->location;
             break;
         }
@@ -664,26 +687,22 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         assert(!(result_operand.type->flags & TF_UNTYPED));
     }
 
-    if (expr->expr_kind == EXPR_NUMBER_LITERAL) {
-        int a = 123;
-    }
-
     expr->operand = result_operand;
-    return result_operand;
+    return &expr->operand;
 }
 
 void typecheck_var(Ast_Var *var) {
-    Operand type_operand = typecheck_expr(var->type_expr, type_typeid);
-    assert(type_operand.flags & OPERAND_TYPE);
-    assert(type_operand.type_value);
-    var->type = type_operand.type_value;
+    Operand *type_operand = typecheck_expr(var->type_expr, type_typeid);
+    assert(type_operand->flags & OPERAND_TYPE);
+    assert(type_operand->type_value);
+    var->type = type_operand->type_value;
 
     if (var->expr) {
-        Operand expr_operand = typecheck_expr(var->expr, var->type);
-        if (!match_types(&expr_operand, var->type)) {
+        Operand *expr_operand = typecheck_expr(var->expr, var->type);
+        if (!match_types(expr_operand, var->type)) {
             assert(false);
         }
-        assert(var->type == expr_operand.type);
+        assert(var->type == expr_operand->type);
     }
 
     complete_type(var->type);
@@ -706,10 +725,10 @@ void typecheck_procedure_header(Ast_Proc_Header *header) {
     }
     Type *return_type = {};
     if (header->return_type_expr) {
-        Operand return_type_operand = typecheck_expr(header->return_type_expr);
-        assert(return_type_operand.flags & OPERAND_CONSTANT);
-        assert(return_type_operand.type == type_typeid);
-        return_type = return_type_operand.type_value;
+        Operand *return_type_operand = typecheck_expr(header->return_type_expr);
+        assert(return_type_operand->flags & OPERAND_CONSTANT);
+        assert(return_type_operand->type == type_typeid);
+        return_type = return_type_operand->type_value;
     }
     header->type = get_or_create_type_procedure(parameter_types, return_type);
 }
@@ -718,10 +737,10 @@ bool do_assert_directives() {
     bool all_pass = true;
     For (idx, g_all_assert_directives) {
         Ast_Directive_Assert *assert_directive = g_all_assert_directives[idx];
-        Operand expr_operand = typecheck_expr(assert_directive->expr);
-        assert(expr_operand.type == type_bool);
-        assert(expr_operand.flags & OPERAND_CONSTANT);
-        if (!expr_operand.bool_value) {
+        Operand *expr_operand = typecheck_expr(assert_directive->expr);
+        assert(expr_operand->type == type_bool);
+        assert(expr_operand->flags & OPERAND_CONSTANT);
+        if (!expr_operand->bool_value) {
             report_error(assert_directive->location, "#assert directive failed.\n");
             all_pass = false;
             return false;
@@ -733,10 +752,10 @@ bool do_assert_directives() {
 void do_print_directives() {
     For (idx, g_all_print_directives) {
         Ast_Directive_Print *print_directive = g_all_print_directives[idx];
-        Operand expr_operand = typecheck_expr(print_directive->expr);
-        assert(expr_operand.flags & OPERAND_CONSTANT);
-        assert(expr_operand.type->flags & TF_INTEGER);
-        printf("%s(%d:%d) #print directive: %lld\n", print_directive->location.filepath, print_directive->location.line, print_directive->location.character, expr_operand.int_value);
+        Operand *expr_operand = typecheck_expr(print_directive->expr);
+        assert(expr_operand->flags & OPERAND_CONSTANT);
+        assert(expr_operand->type->flags & TF_INTEGER);
+        printf("%s(%d:%d) #print directive: %lld\n", print_directive->location.filepath, print_directive->location.line, print_directive->location.character, expr_operand->int_value);
     }
 }
 
@@ -752,12 +771,12 @@ void typecheck_block(Ast_Block *block) {
 
             case AST_ASSIGN: {
                 Ast_Assign *assign = (Ast_Assign *)node;
-                Operand lhs_operand = typecheck_expr(assign->lhs);
-                assert(lhs_operand.flags & OPERAND_LVALUE);
-                assert(lhs_operand.type != nullptr);
-                Operand rhs_operand = typecheck_expr(assign->rhs, lhs_operand.type);
-                assert(rhs_operand.flags & OPERAND_RVALUE);
-                if (!match_types(&rhs_operand, lhs_operand.type)) {
+                Operand *lhs_operand = typecheck_expr(assign->lhs);
+                assert(lhs_operand->flags & OPERAND_LVALUE);
+                assert(lhs_operand->type != nullptr);
+                Operand *rhs_operand = typecheck_expr(assign->rhs, lhs_operand->type);
+                assert(rhs_operand->flags & OPERAND_RVALUE);
+                if (!match_types(rhs_operand, lhs_operand->type)) {
                     assert(false);
                 }
                 break;
@@ -768,6 +787,29 @@ void typecheck_block(Ast_Block *block) {
                 typecheck_expr(stmt->expr);
                 // todo(josh): maybe give an error for statements with no side-effects i.e.
                 //             foo == bar;
+                break;
+            }
+
+            case AST_IF: {
+                Ast_If *ast_if = (Ast_If *)node;
+                Operand *condition_operand = typecheck_expr(ast_if->condition);
+                assert(condition_operand->type == type_bool);
+                typecheck_block(ast_if->body);
+                if (ast_if->else_body) {
+                    typecheck_block(ast_if->else_body);
+                }
+                break;
+            }
+
+            case AST_RETURN: {
+                Ast_Return *ast_return = (Ast_Return *)node;
+                assert(ast_return->matching_procedure != nullptr);
+                assert(ast_return->matching_procedure->type != nullptr);
+                if (ast_return->matching_procedure->type->return_type != nullptr) {
+                    assert(ast_return->expr != nullptr);
+                    Operand *return_operand = typecheck_expr(ast_return->expr);
+                    assert(match_types(return_operand, ast_return->matching_procedure->type->return_type));
+                }
                 break;
             }
 

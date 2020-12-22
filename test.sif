@@ -1,3 +1,34 @@
+struct Vector3 {
+    var x: float;
+    var y: float;
+    var z: float;
+}
+
+proc main() {
+    var v: Vector3;
+    v.x = 1.5;
+    v.y = 4;
+    v.z = 9;
+
+    var v_ptr: ^Vector3 = &v;
+    v_ptr.x = 2;
+    v_ptr.y = cast(float, return_stuff());
+
+    var x_ptr: ^float = cast(^float, v_ptr);
+    x_ptr^ = 149;
+
+    // if (x_ptr == 40) {
+    //     return;
+    // }
+}
+
+proc return_stuff() : int {
+    if (1 == 1) {
+        return 123;
+    }
+    return 321;
+}
+
 var a: [sizeof(typeof(p^))]int;
 var p: ^T;
 struct T {

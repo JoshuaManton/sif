@@ -160,9 +160,6 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
 }
 
 void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
-    if (expr->expr_kind == EXPR_NUMBER_LITERAL) {
-        int a = 123;
-    }
     if (expr->operand.flags & OPERAND_CONSTANT) {
         if (is_type_float(expr->operand.type)) {
             sb->printf("%f", expr->operand.float_value);
@@ -234,8 +231,9 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             break;
         }
         case EXPR_ADDRESS_OF: {
-            UNIMPLEMENTED(EXPR_ADDRESS_OF);
             Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
+            sb->print("&");
+            c_print_expr(sb, address_of->rhs);
             break;
         }
         case EXPR_SUBSCRIPT: {
@@ -256,6 +254,8 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             Expr_Selector *selector = (Expr_Selector *)expr;
             c_print_expr(sb, selector->lhs);
             if (is_type_pointer(selector->lhs->operand.type)) {
+                Type_Pointer *type_pointer = (Type_Pointer *)selector->lhs->operand.type;
+                assert(type_pointer->pointer_to->kind == TYPE_STRUCT);
                 sb->print("->");
             }
             else {
@@ -263,6 +263,16 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 sb->print(".");
             }
             sb->print(selector->field_name);
+            break;
+        }
+        case EXPR_CAST: {
+            Expr_Cast *expr_cast = (Expr_Cast *)expr;
+            sb->print("(");
+            sb->print("(");
+            c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
+            sb->print(")");
+            c_print_expr(sb, expr_cast->rhs);
+            sb->print(")");
             break;
         }
         case EXPR_NUMBER_LITERAL: {
@@ -288,7 +298,6 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             sb->print("(");
             c_print_expr(sb, paren->nested);
             sb->print(")");
-            UNIMPLEMENTED(EXPR_STRING_LITERAL);
             break;
         }
         case EXPR_NULL: {
@@ -317,6 +326,79 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
     }
 }
 
+void print_indents(String_Builder *sb, int indent_level) {
+    for (int i = 0; i < indent_level; i++) {
+        sb->print("    ");
+    }
+}
+
+void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level) {
+    For (idx, block->nodes) {
+        print_indents(sb, indent_level);
+        Ast_Node *node = block->nodes[idx];
+        switch (node->ast_kind) {
+            case AST_VAR: {
+                Ast_Var *var = (Ast_Var *)node;
+                c_print_var(sb, var);
+                if (var->expr == nullptr) {
+                    sb->printf(" = {}");
+                }
+                sb->print(";\n");
+                break;
+            }
+
+            case AST_ASSIGN: {
+                Ast_Assign *assign = (Ast_Assign *)node;
+                c_print_expr(sb, assign->lhs);
+                sb->print(" = ");
+                c_print_expr(sb, assign->rhs);
+                sb->print(";\n");
+                break;
+            }
+
+            case AST_STATEMENT_EXPR: {
+                Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
+                c_print_expr(sb, statement->expr);
+                sb->print(";\n");
+                break;
+            }
+
+            case AST_IF: {
+                Ast_If *ast_if = (Ast_If *)node;
+                assert(ast_if->condition != nullptr);
+                assert(ast_if->body != nullptr);
+                sb->print("if (");
+                c_print_expr(sb, ast_if->condition);
+                sb->print(") {\n");
+                c_print_block(sb, ast_if->body, indent_level + 1);
+                print_indents(sb, indent_level);
+                sb->print("}\n");
+                if (ast_if->else_body) {
+                    sb->print("else ");
+                    c_print_block(sb, ast_if->else_body, indent_level + 1);
+                }
+                break;
+            }
+
+            case AST_RETURN: {
+                Ast_Return *ast_return = (Ast_Return *)node;
+                sb->print("return");
+                if (ast_return->expr) {
+                    sb->print(" ");
+                    c_print_expr(sb, ast_return->expr);
+                }
+                sb->print(";\n");
+                break;
+            }
+
+            default: {
+                assert(false);
+                break;
+            }
+        }
+    }
+}
+
 String_Builder generate_c_main_file(Ast_Block *global_scope) {
     // todo(josh): I think there's a bug in my String_Buffer implementation
     //             as this crashes on resize sometimes
@@ -324,7 +406,11 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
 
     sb.printf("#include <stdint.h>\n");
     sb.printf("#include <stdbool.h>\n");
+
     sb.printf("typedef int64_t i64;\n");
+
+    sb.printf("typedef float f32;\n");
+    sb.printf("typedef double f64;\n");
 
     // todo(josh): we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather
@@ -367,46 +453,18 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
                 c_print_var(&sb, var->var);
+                if (var->var->expr == nullptr) {
+                    sb.printf(" = {}");
+                }
                 sb.print(";\n");
                 break;
             }
             case DECL_PROC: {
                 Proc_Declaration *procedure = (Proc_Declaration *)decl;
+                assert(procedure->procedure->body != nullptr);
                 c_print_procedure_header(&sb, procedure->procedure->header);
                 sb.print(" {\n");
-                For (idx, procedure->procedure->body->nodes) {
-                    Ast_Node *node = procedure->procedure->body->nodes[idx];
-                    sb.printf("    ", node->ast_kind);
-                    switch (node->ast_kind) {
-                        case AST_VAR: {
-                            Ast_Var *var = (Ast_Var *)node;
-                            c_print_var(&sb, var);
-                            sb.print(";\n");
-                            break;
-                        }
-
-                        case AST_ASSIGN: {
-                            Ast_Assign *assign = (Ast_Assign *)node;
-                            c_print_expr(&sb, assign->lhs);
-                            sb.print(" = ");
-                            c_print_expr(&sb, assign->rhs);
-                            sb.print(";\n");
-                            break;
-                        }
-
-                        case AST_STATEMENT_EXPR: {
-                            Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
-                            c_print_expr(&sb, statement->expr);
-                            sb.print(";\n");
-                            break;
-                        }
-
-                        default: {
-                            assert(false);
-                            break;
-                        }
-                    }
-                }
+                c_print_block(&sb, procedure->procedure->body, 1);
                 sb.print("}\n");
                 break;
             }
