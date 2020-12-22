@@ -240,6 +240,13 @@ char *read_entire_file(const char *filename, int *len) {
     return str;
 }
 
+void write_entire_file(const char *filename, const char *data) {
+    FILE *file = fopen(filename, "w");
+    assert(file != nullptr);
+    fprintf(file, data);
+    fclose(file);
+}
+
 
 
 String_Builder make_string_builder(Allocator allocator, int capacity) {

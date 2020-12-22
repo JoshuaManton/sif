@@ -262,6 +262,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 assert(is_type_struct(selector->lhs->operand.type));
                 sb->print(".");
             }
+            sb->print(selector->field_name);
             break;
         }
         case EXPR_NUMBER_LITERAL: {
@@ -320,7 +321,11 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     // todo(josh): I think there's a bug in my String_Buffer implementation
     //             as this crashes on resize sometimes
     String_Builder sb = make_string_builder(default_allocator(), 10 * 1024);
-    // predeclare everything
+
+    sb.printf("#include <stdint.h>\n");
+    sb.printf("#include <stdbool.h>\n");
+    sb.printf("typedef int64_t i64;\n");
+
     // todo(josh): we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather
     // than predeclaring literally everything in the program
@@ -343,7 +348,6 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
         }
     }
 
-    // actually generate the declarations
     sb.print("\n// Actual declarations\n");
     For (idx, ordered_declarations) {
         Declaration *decl = ordered_declarations[idx];

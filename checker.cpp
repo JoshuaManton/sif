@@ -24,9 +24,13 @@ Type *type_untyped_null;
 
 Type *type_typeid;
 
+Type *type_int;
+Type *type_float;
+
 Array<Declaration *> ordered_declarations;
 
 char *type_to_string(Type *type);
+void complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type);
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
@@ -62,6 +66,9 @@ void init_checker() {
 
     type_untyped_number = new Type_Primitive("untyped number", -1); type_untyped_number->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER | TF_FLOAT; // todo(josh): having this be both integer and float is kinda goofy
     type_untyped_null   = new Type_Primitive("untyped null", -1); type_untyped_null->flags   = TF_POINTER | TF_UNTYPED;
+
+    type_int = type_i64;
+    type_float = type_f32;
 }
 
 void add_global_declarations(Ast_Block *block) {
@@ -164,13 +171,16 @@ Operand check_declaration(Declaration *decl) {
     }
     decl->operand = operand;
     decl->check_state = DCS_CHECKED;
-    if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
-        ordered_declarations.append(decl);
-    }
 
     if (decl->kind == DECL_PROC) {
         Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
         typecheck_block(proc_decl->procedure->body);
+    }
+
+    if (decl->kind != DECL_STRUCT) {
+        if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
+            ordered_declarations.append(decl);
+        }
     }
 
     return operand;
@@ -188,12 +198,14 @@ void typecheck_global_scope(Ast_Block *block) {
         g_reported_error = true;
     }
     do_print_directives();
-    // For (idx, ordered_declarations) {
-    //     Declaration *decl = ordered_declarations[idx];
-    //     if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
-    //         printf("Declaration: %s\n", decl->name);
-    //     }
-    // }
+
+    // note(josh): complete any types that haven't been completed because they haven't been used.
+    //             we have to do this because using a struct type by pointer will NOT trigger
+    //             a call to complete_type(), only actually using the type and it's members will.
+    For (idx, all_types) {
+        Type *type = all_types[idx];
+        complete_type(type);
+    }
 }
 
 char *type_to_string(Type *type) {
@@ -265,6 +277,7 @@ void complete_type(Type *type) {
                 struct_type->flags &= ~(TF_INCOMPLETE);
 
                 assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE); // todo(josh): locally scoped structs and procs
+                ordered_declarations.append(structure->declaration);
                 break;
             }
             case TYPE_ARRAY: {
@@ -482,7 +495,7 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             complete_type(array_type);
             assert(array_type->size > 0);
 
-            Operand index_operand = typecheck_expr(subscript->index); // todo(josh): should we pass expected_type down here?
+            Operand index_operand = typecheck_expr(subscript->index, type_int); // todo(josh): should we pass expected_type down here?
             assert(is_type_number(index_operand.type));
             assert(is_type_integer(index_operand.type));
             result_operand.type = array_type->array_of;

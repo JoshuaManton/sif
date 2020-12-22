@@ -7,14 +7,31 @@ struct T {
 struct A {
     var b: [4]B;
 }
-
 struct B {
     var a: ^A;
+}
+
+struct Contains_Pointers1 {
+    var a: ^Contains_Pointers2;
+}
+struct Contains_Pointers2 {
+    var b: ^Contains_Pointers1;
+}
+
+struct Self_Pointer {
+    var b: ^Self_Pointer;
 }
 
 proc AAA() {
     var aa: A;
     var b: B = aa.b[2];
+
+    var c: ^Contains_Pointers1;
+    var d: ^Contains_Pointers2 = c.a;
+    c.a = d;
+    // d.b = c;
+
+    var e: Self_Pointer;
 }
 
 var simple: int;
@@ -31,6 +48,7 @@ var complicated_garbage: ^^[4]^[8][32]^int;
 
 proc recursion() {
     var b: ^Some_Struct;
+    var x: int = b.x;
     recursion();
 }
 

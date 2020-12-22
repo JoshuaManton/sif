@@ -119,6 +119,7 @@ void destroy_pool(Pool_Allocator pool);
 
 // todo(josh): read_entire_file should be in a different file I think
 char *read_entire_file(const char *filename, int *len);
+void write_entire_file(const char *filename, const char *data);
 
 // note(josh): defer implementation stolen from gb.h
 #if !defined(GB_NO_DEFER) && defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1400) || (__cplusplus >= 201103L))

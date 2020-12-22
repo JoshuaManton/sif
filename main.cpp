@@ -90,6 +90,7 @@ void main(int argc, char **argv) {
     }
 
     String_Builder c_code = generate_c_main_file(global_scope);
-    defer(c_code.destroy());
     printf("%s\n", c_code.string());
+
+    write_entire_file("output.cpp", c_code.string());
 }
