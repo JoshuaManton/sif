@@ -101,6 +101,8 @@ struct Type_Procedure : public Type {
     {}
 };
 
+extern Array<Declaration *> ordered_declarations;
+
 void init_checker();
 void add_global_declarations(Ast_Block *block);
 void typecheck_global_scope(Ast_Block *block);

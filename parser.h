@@ -33,6 +33,9 @@ struct Proc_Declaration;
 struct Var_Declaration;
 
 struct Type;
+struct Type_Procedure;
+struct Type_Struct;
+struct Type_Array;
 
 static Ast_Block *current_block;
 
@@ -67,7 +70,7 @@ struct Ast_Proc_Header : public Ast_Node {
     char *name = nullptr;
     Array<Ast_Var *> parameters = {};
     Ast_Expr *return_type_expr = {};
-    Type *type = nullptr;
+    Type_Procedure *type = nullptr;
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
     Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
@@ -152,6 +155,34 @@ struct Ast_Statement_Expr : public Ast_Node {
 
 
 
+enum Operand_Flags {
+    OPERAND_CONSTANT = 1 << 0,
+    OPERAND_TYPE     = 1 << 1,
+    OPERAND_LVALUE   = 1 << 2,
+    OPERAND_RVALUE   = 1 << 3,
+    OPERAND_NO_VALUE = 1 << 4, // note(josh): procedures that don't return anything
+};
+
+struct Operand {
+    Location location = {};
+
+    u64 flags = {};
+    Type *type = {};
+
+    i64 int_value      = {};
+    f64 float_value    = {};
+    char *string_value = {};
+    bool bool_value    = {};
+    Type *type_value   = {};
+
+    Operand()
+    {}
+
+    Operand(Location location)
+    : location(location)
+    {}
+};
+
 enum Expr_Kind {
     EXPR_INVALID,
     EXPR_UNARY,
@@ -184,6 +215,7 @@ enum Expr_Kind {
 
 struct Ast_Expr : public Ast_Node {
     Expr_Kind expr_kind = EXPR_INVALID;
+    Operand operand = {};
     Ast_Expr(Expr_Kind kind, Location location)
     : Ast_Node(AST_EXPR, location)
     , expr_kind(kind)
@@ -356,34 +388,6 @@ enum Declaration_Check_State {
     DCS_UNCHECKED,
     DCS_CHECKING,
     DCS_CHECKED,
-};
-
-enum Operand_Flags {
-    OPERAND_CONSTANT = 1 << 0,
-    OPERAND_TYPE     = 1 << 1,
-    OPERAND_LVALUE   = 1 << 2,
-    OPERAND_RVALUE   = 1 << 3,
-    OPERAND_NO_VALUE = 1 << 4, // note(josh): procedures that don't return anything
-};
-
-struct Operand {
-    Location location = {};
-
-    u64 flags = {};
-    Type *type = {};
-
-    i64 int_value      = {};
-    f64 float_value    = {};
-    char *string_value = {};
-    bool bool_value    = {};
-    Type *type_value   = {};
-
-    Operand()
-    {}
-
-    Operand(Location location)
-    : location(location)
-    {}
 };
 
 struct Declaration {

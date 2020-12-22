@@ -7,6 +7,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "checker.h"
+#include "c_backend.h"
 
 bool g_reported_error = false;
 
@@ -87,4 +88,8 @@ void main(int argc, char **argv) {
         printf("There were errors.\n");
         return;
     }
+
+    String_Builder c_code = generate_c_main_file(global_scope);
+    defer(c_code.destroy());
+    printf("%s\n", c_code.string());
 }

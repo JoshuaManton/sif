@@ -1,3 +1,15 @@
+var simple: int;
+var pointer: ^int;
+var array: [4]int;
+var pointer_to_pointer: ^^int;
+var array_of_arrays: [4][8]int;
+var pointer_to_array: ^[4]int;
+var array_of_pointers: [4]^int;
+var wack: ^^[4][8]int;
+var more_wack: [4][8]^^int;
+var still_more_wack: ^[4]^[8]int;
+var complicated_garbage: ^^[4]^[8][32]^int;
+
 proc foo(var x: int) {
     bar(1);
     global_var;
@@ -8,12 +20,12 @@ proc foo(var x: int) {
 
 proc bar(var x: int) {
     baz(2);
-    // var x: int;
-    // var y: ^int = &x;
-    // var z: int = y^;
-    // x = 123 + x;
-    // x = x + 123;
-    // x = 12 + 12;
+    var x: int;
+    var y: ^int = &x;
+    var z: int = y^;
+    x = 123 + x;
+    x = x + 123;
+    x = 12 + 12;
 }
 
 proc baz(var x: int) {
@@ -28,13 +40,8 @@ struct Some_Struct {
 
 
 
-
-
-// #print(sizeof(typeof(a)))
-// #print(sizeof(T))
-
-// var a: [sizeof(typeof(p^))]int;
-// var p: ^T;
-// struct T {
-//     var a: [sizeof(typeof(p))]bool;
-// }
+var a: [sizeof(typeof(p^))]int;
+var p: ^T;
+struct T {
+    var a: [sizeof(typeof(p))]bool;
+}
