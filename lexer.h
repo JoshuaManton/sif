@@ -112,3 +112,8 @@ void unexpected_token(Lexer *lexer, Token token, Token_Kind expected = TK_INVALI
 bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token = nullptr);
 void print_token(Token token);
 char *token_string(Token_Kind kind);
+
+void report_error(Location location, const char *fmt, ...);
+
+#define UNIMPLEMENTED(val) assert(false && "Unimplemented case: " #val "\n");
+

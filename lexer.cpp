@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cassert>
+#include <stdarg.h>
 
 #include "lexer.h"
 
@@ -426,13 +427,23 @@ void eat_next_token(Lexer *lexer) {
     assert(ok);
 }
 
-void unexpected_token(Lexer *lexer, Token token, Token_Kind expected) {
-    printf("%s(%d:%d) Unexpected token %s.", token.location.filepath, token.location.line, token.location.character, token_string(token.kind));
-    if (expected != TK_INVALID) {
-        printf(" Expected %s.", token_string(expected));
-    }
+void report_error(Location location, const char *fmt, ...) {
+    printf("%s(%d:%d) ", location.filepath, location.line, location.character);
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
     printf("\n");
     g_reported_error = true;
+}
+
+void unexpected_token(Lexer *lexer, Token token, Token_Kind expected) {
+    if (expected != TK_INVALID) {
+        report_error(token.location, "Unexpected token %s, expected %s.", token_string(token.kind), token_string(expected));
+    }
+    else {
+        report_error(token.location, "Unexpected token %s.", token_string(token.kind));
+    }
 }
 
 bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token) {

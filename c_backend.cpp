@@ -1,6 +1,7 @@
 #include "c_backend.h"
 
 void c_print_type(String_Builder *sb, Type *type, char *var_name);
+void c_print_expr(String_Builder *sb, Ast_Expr *expr);
 
 void c_print_type_prefix(String_Builder *sb, Type *type) {
     if (type == nullptr) {
@@ -139,6 +140,10 @@ void c_print_type(String_Builder *sb, Type *type, char *var_name) {
 
 void c_print_var(String_Builder *sb, Ast_Var *var) {
     c_print_type(sb, var->type, var->name);
+    if (var->expr != nullptr) {
+        sb->print(" = ");
+        c_print_expr(sb, var->expr);
+    }
 }
 
 void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
@@ -152,6 +157,160 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
         }
     }
     sb->print(")");
+}
+
+void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
+    if (expr->expr_kind == EXPR_NUMBER_LITERAL) {
+        int a = 123;
+    }
+    if (expr->operand.flags & OPERAND_CONSTANT) {
+        if (is_type_float(expr->operand.type)) {
+            sb->printf("%f", expr->operand.float_value);
+        }
+        else if (is_type_integer(expr->operand.type)) {
+            sb->printf("%d", expr->operand.int_value);
+        }
+        else if (expr->operand.type == type_bool) {
+            sb->print(expr->operand.bool_value ? "true" : "false");
+        }
+        return;
+    }
+
+    if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
+        assert(expr->operand.type != nullptr);
+    }
+    assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
+
+    switch (expr->expr_kind) {
+        case EXPR_IDENTIFIER: {
+            Expr_Identifier *identifier = (Expr_Identifier *)expr;
+            sb->print(identifier->name);
+            break;
+        }
+        case EXPR_UNARY: {
+            UNIMPLEMENTED(EXPR_UNARY);
+            Expr_Unary *unary = (Expr_Unary *)expr;
+            break;
+        }
+        case EXPR_BINARY: {
+            Expr_Binary *binary = (Expr_Binary *)expr;
+            c_print_expr(sb, binary->lhs);
+            switch (binary->op) {
+                case TK_PLUS: {
+                    sb->print(" + ");
+                    break;
+                }
+                case TK_MINUS: {
+                    sb->print(" - ");
+                    break;
+                }
+                case TK_MULTIPLY: {
+                    sb->print(" * ");
+                    break;
+                }
+                case TK_DIVIDE: {
+                    sb->print(" / ");
+                    break;
+                }
+                default: {
+                    assert(false);
+                }
+            }
+            c_print_expr(sb, binary->rhs);
+            break;
+        }
+        case EXPR_PROCEDURE_CALL: {
+            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+            c_print_expr(sb, call->lhs);
+            sb->print("(");
+            For (idx, call->parameters) {
+                Ast_Expr *parameter = call->parameters[idx];
+                c_print_expr(sb, parameter);
+                if (idx != (call->parameters.count-1)) {
+                    sb->print(", ");
+                }
+            }
+            sb->print(")");
+            break;
+        }
+        case EXPR_ADDRESS_OF: {
+            UNIMPLEMENTED(EXPR_ADDRESS_OF);
+            Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
+            break;
+        }
+        case EXPR_SUBSCRIPT: {
+            UNIMPLEMENTED(EXPR_SUBSCRIPT);
+            Expr_Subscript *subscript = (Expr_Subscript *)expr;
+            break;
+        }
+        case EXPR_DEREFERENCE: {
+            Expr_Dereference *dereference = (Expr_Dereference *)expr;
+            sb->print("*");
+            c_print_expr(sb, dereference->lhs);
+            break;
+        }
+        case EXPR_SELECTOR: {
+            Expr_Selector *selector = (Expr_Selector *)expr;
+            c_print_expr(sb, selector->lhs);
+            if (is_type_pointer(selector->lhs->operand.type)) {
+                sb->print("->");
+            }
+            else {
+                assert(is_type_struct(selector->lhs->operand.type));
+                sb->print(".");
+            }
+            break;
+        }
+        case EXPR_NUMBER_LITERAL: {
+            assert(false && "shouldn't ever get in here with a number literal because of constant handling above");
+            break;
+        }
+        case EXPR_STRING_LITERAL: {
+            UNIMPLEMENTED(EXPR_STRING_LITERAL);
+            break;
+        }
+        case EXPR_POINTER_TYPE: {
+            Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
+            UNIMPLEMENTED(EXPR_STRING_LITERAL);
+            break;
+        }
+        case EXPR_ARRAY_TYPE: {
+            Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
+            UNIMPLEMENTED(EXPR_STRING_LITERAL);
+            break;
+        }
+        case EXPR_PAREN: {
+            Expr_Paren *paren = (Expr_Paren *)expr;
+            sb->print("(");
+            c_print_expr(sb, paren->nested);
+            sb->print(")");
+            UNIMPLEMENTED(EXPR_STRING_LITERAL);
+            break;
+        }
+        case EXPR_NULL: {
+            assert(false && "shouldn't ever get in here with a null because of constant handling above");
+            break;
+        }
+        case EXPR_TRUE: {
+            assert(false && "shouldn't ever get in here with a true because of constant handling above");
+            break;
+        }
+        case EXPR_FALSE: {
+            assert(false && "shouldn't ever get in here with a false because of constant handling above");
+            break;
+        }
+        case EXPR_SIZEOF: {
+            assert(false && "shouldn't ever get in here with a sizeof because of constant handling above");
+            break;
+        }
+        case EXPR_TYPEOF: {
+            assert(false && "shouldn't ever get in here with a typeof because of constant handling above");
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
 }
 
 String_Builder generate_c_main_file(Ast_Block *global_scope) {
@@ -202,13 +361,13 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                     c_print_var(&sb, var);
                     sb.print(";\n");
                 }
-                sb.print("};\n\n");
+                sb.print("};\n");
                 break;
             }
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
                 c_print_var(&sb, var->var);
-                sb.print(";\n\n");
+                sb.print(";\n");
                 break;
             }
             case DECL_PROC: {
@@ -217,9 +376,38 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 sb.print(" {\n");
                 For (idx, procedure->procedure->body->nodes) {
                     Ast_Node *node = procedure->procedure->body->nodes[idx];
-                    // sb.printf("    %d\n", node->ast_kind);
+                    sb.printf("    ", node->ast_kind);
+                    switch (node->ast_kind) {
+                        case AST_VAR: {
+                            Ast_Var *var = (Ast_Var *)node;
+                            c_print_var(&sb, var);
+                            sb.print(";\n");
+                            break;
+                        }
+
+                        case AST_ASSIGN: {
+                            Ast_Assign *assign = (Ast_Assign *)node;
+                            c_print_expr(&sb, assign->lhs);
+                            sb.print(" = ");
+                            c_print_expr(&sb, assign->rhs);
+                            sb.print(";\n");
+                            break;
+                        }
+
+                        case AST_STATEMENT_EXPR: {
+                            Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
+                            c_print_expr(&sb, statement->expr);
+                            sb.print(";\n");
+                            break;
+                        }
+
+                        default: {
+                            assert(false);
+                            break;
+                        }
+                    }
                 }
-                sb.print("}\n\n");
+                sb.print("}\n");
                 break;
             }
         }

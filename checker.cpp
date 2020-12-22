@@ -4,25 +4,25 @@
 
 static Array<Type *> all_types;
 
-static Type *type_i8;
-static Type *type_i16;
-static Type *type_i32;
-static Type *type_i64;
+Type *type_i8;
+Type *type_i16;
+Type *type_i32;
+Type *type_i64;
 
-static Type *type_u8;
-static Type *type_u16;
-static Type *type_u32;
-static Type *type_u64;
+Type *type_u8;
+Type *type_u16;
+Type *type_u32;
+Type *type_u64;
 
-static Type *type_f32;
-static Type *type_f64;
+Type *type_f32;
+Type *type_f64;
 
-static Type *type_bool;
+Type *type_bool;
 
-static Type *type_untyped_number;
-static Type *type_untyped_null;
+Type *type_untyped_number;
+Type *type_untyped_null;
 
-static Type *type_typeid;
+Type *type_typeid;
 
 Array<Declaration *> ordered_declarations;
 
@@ -115,9 +115,7 @@ bool is_type_signed    (Type *type) { return type->flags & TF_SIGNED;     }
 bool is_type_struct    (Type *type) { return type->flags & TF_STRUCT;     }
 bool is_type_incomplete(Type *type) { return type->flags & TF_INCOMPLETE; }
 
-#define UNIMPLEMENTED(val) assert(false && "Unimplemented case: " #val "\n");
-
-Operand check_declaration(Declaration *decl, bool check_procedure_body) {
+Operand check_declaration(Declaration *decl) {
     if (decl->check_state == DCS_CHECKED) {
         return decl->operand;
     }
@@ -162,9 +160,6 @@ Operand check_declaration(Declaration *decl, bool check_procedure_body) {
             assert(proc_decl->procedure->header->type != nullptr);
             operand.type = proc_decl->procedure->header->type;
             operand.flags = OPERAND_RVALUE;
-            if (check_procedure_body) {
-                typecheck_block(proc_decl->procedure->body);
-            }
             break;
         }
     }
@@ -180,7 +175,11 @@ void typecheck_global_scope(Ast_Block *block) {
     make_incomplete_types_for_all_structs(); // todo(josh): this is kinda goofy. should be able to just do this as we traverse the program
     For (idx, block->declarations) {
         Declaration *decl = block->declarations[idx];
-        check_declaration(decl, true);
+        if (decl->kind == DECL_PROC) {
+            Proc_Declaration *decl_proc = (Proc_Declaration *)decl;
+            typecheck_block(decl_proc->procedure->body);
+        }
+        check_declaration(decl);
     }
     bool all_assert_directives_passed = do_assert_directives();
     if (!all_assert_directives_passed) {
@@ -264,7 +263,6 @@ void complete_type(Type *type) {
                 struct_type->flags &= ~(TF_INCOMPLETE);
 
                 assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE); // todo(josh): locally scoped structs and procs
-                // ordered_declarations.append(structure->declaration);
                 break;
             }
             case TYPE_ARRAY: {
@@ -281,12 +279,13 @@ void complete_type(Type *type) {
 }
 
 void type_mismatch(Location location, Type *got, Type *expected) {
-    // todo(josh): create a unified report_error() procedure. just copy pasted this from unexpected_token() for now
-    printf("%s(%d:%d) Type mismatch. Expected %s, got %s.\n", location.filepath, location.line, location.character, type_to_string(expected), type_to_string(got));
-    g_reported_error = true;
+    report_error(location, "Type mismatch. Expected %s, got %s.\n", type_to_string(expected), type_to_string(got));
 }
 
 bool match_types(Operand *operand, Type *expected_type) {
+    assert(operand->type != nullptr);
+    assert(expected_type != nullptr);
+
     if (operand->type == expected_type) {
         return true;
     }
@@ -506,7 +505,8 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             For (idx, call->parameters) {
                 Ast_Expr *parameter = call->parameters[idx];
                 assert(target_procedure_type->parameter_types[idx] != nullptr);
-                Operand parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
+                typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
+                assert(parameter->operand.type != nullptr);
             }
             result_operand.type = target_procedure_type->return_type;
             if (result_operand.type) {
@@ -554,7 +554,7 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         case EXPR_IDENTIFIER: {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
             assert(ident->resolved_declaration != nullptr);
-            result_operand = check_declaration(ident->resolved_declaration, false);
+            result_operand = check_declaration(ident->resolved_declaration);
             result_operand.location = ident->location;
             break;
         }
@@ -648,6 +648,11 @@ Operand typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         assert(!(result_operand.type->flags & TF_UNTYPED));
     }
+
+    if (expr->expr_kind == EXPR_NUMBER_LITERAL) {
+        int a = 123;
+    }
+
     expr->operand = result_operand;
     return result_operand;
 }
@@ -702,7 +707,7 @@ bool do_assert_directives() {
         assert(expr_operand.type == type_bool);
         assert(expr_operand.flags & OPERAND_CONSTANT);
         if (!expr_operand.bool_value) {
-            printf("%s(%d:%d) #assert directive failed\n", assert_directive->location.filepath, assert_directive->location.line, assert_directive->location.character);
+            report_error(assert_directive->location, "#assert directive failed.\n");
             all_pass = false;
             return false;
         }

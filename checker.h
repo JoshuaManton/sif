@@ -102,7 +102,32 @@ struct Type_Procedure : public Type {
 };
 
 extern Array<Declaration *> ordered_declarations;
+extern Type *type_i8;
+extern Type *type_i16;
+extern Type *type_i32;
+extern Type *type_i64;
+extern Type *type_u8;
+extern Type *type_u16;
+extern Type *type_u32;
+extern Type *type_u64;
+extern Type *type_f32;
+extern Type *type_f64;
+extern Type *type_bool;
+extern Type *type_untyped_number;
+extern Type *type_untyped_null;
+extern Type *type_typeid;
 
 void init_checker();
 void add_global_declarations(Ast_Block *block);
 void typecheck_global_scope(Ast_Block *block);
+
+bool is_type_pointer   (Type *type);
+bool is_type_array     (Type *type);
+bool is_type_number    (Type *type);
+bool is_type_integer   (Type *type);
+bool is_type_float     (Type *type);
+bool is_type_untyped   (Type *type);
+bool is_type_unsigned  (Type *type);
+bool is_type_signed    (Type *type);
+bool is_type_struct    (Type *type);
+bool is_type_incomplete(Type *type);
