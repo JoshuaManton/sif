@@ -83,6 +83,7 @@ i64 return_stuff() {
     return 321;
 }
 void main() {
+    // constant declaration omitted: N
     Vector3 (*memory) = ((Vector3 (*))alloc(192));
     Slice slice = {};
     *((Vector3 (*(*)))&slice.data) = memory;
@@ -122,6 +123,7 @@ void main() {
     print_float(v.x);
     print_float(v.y);
     print_float(v.z);
+    bool neato[123] = {};
     i64 a[4] = {};
     i64 x = *(&a[2]);
     Vector3 (*v_ptr2) = &v;

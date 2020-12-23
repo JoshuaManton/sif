@@ -16,6 +16,7 @@ void init_lexer_globals() {
     token_string_map[TK_STRING]                = "STRING";
 
     token_string_map[TK_VAR]                   = "var";
+    token_string_map[TK_CONST]                 = "const";
     token_string_map[TK_PROC]                  = "proc";
     token_string_map[TK_STRUCT]                = "struct";
     token_string_map[TK_RETURN]                = "return";
@@ -269,6 +270,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
 
         CHECK_KEYWORD("return", TK_RETURN)
         else CHECK_KEYWORD("var", TK_VAR)
+        else CHECK_KEYWORD("const", TK_CONST)
         else CHECK_KEYWORD("proc", TK_PROC)
         else CHECK_KEYWORD("struct", TK_STRUCT)
         else CHECK_KEYWORD("null", TK_NULL)

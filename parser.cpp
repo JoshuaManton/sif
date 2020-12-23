@@ -78,8 +78,18 @@ bool register_declaration(Declaration *new_declaration) {
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
 
 Ast_Var *parse_var(Lexer *lexer) {
-    Token var_token;
-    EXPECT(lexer, TK_VAR, &var_token);
+    Token root_token;
+    if (!peek_next_token(lexer, &root_token)) {
+        return nullptr;
+    }
+    if (root_token.kind != TK_VAR) {
+        if (root_token.kind != TK_CONST) {
+            assert(false);
+        }
+    }
+    eat_next_token(lexer);
+
+    bool is_constant = root_token.kind == TK_CONST;
 
     Token var_name_token;
     EXPECT(lexer, TK_IDENTIFIER, &var_name_token);
@@ -108,7 +118,12 @@ Ast_Var *parse_var(Lexer *lexer) {
         }
     }
 
-    Ast_Var *var = new Ast_Var(var_name, type_expr, expr, var_token.location);
+    if (type_expr == nullptr && expr == nullptr) {
+        report_error(root_token.location, "Variable declaration missing both type and expression. Please provide at least one.");
+        return nullptr;
+    }
+
+    Ast_Var *var = new Ast_Var(var_name, type_expr, expr, is_constant, root_token.location);
     var->declaration = new Var_Declaration(var, current_block);
     if (!register_declaration(var->declaration)) {
         return nullptr;
@@ -260,6 +275,17 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
 
     switch (root_token.kind) {
         case TK_VAR: {
+            Ast_Var *var = parse_var(lexer);
+            if (!var) {
+                return nullptr;
+            }
+            if (eat_semicolon) {
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+            }
+            return var;
+        }
+
+        case TK_CONST: {
             Ast_Var *var = parse_var(lexer);
             if (!var) {
                 return nullptr;
@@ -887,7 +913,6 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_STRING: {
             eat_next_token(lexer);
-            // todo(josh): unescape the string
             return new Expr_String_Literal(token.text, token.scanner_length, token.escaped_text, token.escaped_length, token.location);
         }
         case TK_LEFT_PAREN: {

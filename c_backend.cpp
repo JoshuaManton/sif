@@ -149,6 +149,7 @@ void c_print_type(String_Builder *sb, Type *type, char *var_name) {
 }
 
 void c_print_var(String_Builder *sb, Ast_Var *var) {
+    assert(!var->is_constant);
     c_print_type(sb, var->type, var->name);
     if (var->expr != nullptr) {
         sb->print(" = ");
@@ -161,6 +162,7 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
     sb->print("(");
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
+        assert(!parameter->is_constant);
         c_print_var(sb, parameter);
         if (idx != (header->parameters.count-1)) {
             sb->print(", ");
@@ -378,12 +380,17 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
-            c_print_var(sb, var);
-            if (var->expr == nullptr) {
-                sb->printf(" = {}");
+            if (!var->is_constant) {
+                c_print_var(sb, var);
+                if (var->expr == nullptr) {
+                    sb->printf(" = {}");
+                }
+                if (print_semicolon) {
+                    sb->print(";\n");
+                }
             }
-            if (print_semicolon) {
-                sb->print(";\n");
+            else {
+                sb->printf("// constant declaration omitted: %s\n", var->name);
             }
             break;
         }
@@ -535,6 +542,9 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 sb.printf("struct %s {\n", decl->name);
                 For (idx, structure->structure->fields) {
                     Ast_Var *var = structure->structure->fields[idx];
+                    if (var->is_constant) {
+                        continue;
+                    }
                     sb.print("    ");
                     c_print_var(&sb, var);
                     sb.print(";\n");
@@ -544,11 +554,13 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             }
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
-                c_print_var(&sb, var->var);
-                if (var->var->expr == nullptr) {
-                    sb.printf(" = {}");
+                if (!var->var->is_constant) {
+                    c_print_var(&sb, var->var);
+                    if (var->var->expr == nullptr) {
+                        sb.printf(" = {}");
+                    }
+                    sb.print(";\n");
                 }
-                sb.print(";\n");
                 break;
             }
             case DECL_PROC: {

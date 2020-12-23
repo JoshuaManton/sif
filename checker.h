@@ -59,9 +59,11 @@ struct Type_Primitive : public Type {
 };
 
 struct Struct_Field {
-    char *name = nullptr;
-    Type *type = nullptr;
-    int offset = 0;
+    char *name = {};
+    Type *type = {};
+    int offset = {};
+    Operand constant_operand = {};
+    bool is_constant = {};
 };
 struct Type_Struct : public Type {
     char *name = nullptr;

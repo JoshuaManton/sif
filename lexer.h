@@ -28,6 +28,7 @@ enum Token_Kind {
     TK_STRING,
 
     TK_VAR,
+    TK_CONST,
     TK_PROC,
     TK_STRUCT,
     TK_RETURN,

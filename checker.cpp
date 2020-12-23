@@ -187,20 +187,20 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
     assert(decl->check_state == DCS_UNCHECKED);
     decl->check_state = DCS_CHECKING;
 
-    Operand operand;
+    Operand decl_operand;
     switch (decl->kind) {
         case DECL_TYPE: {
             Type_Declaration *type_decl = (Type_Declaration *)decl;
-            operand.type = type_typeid;
-            operand.type_value = type_decl->type;
-            operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            decl_operand.type = type_typeid;
+            decl_operand.type_value = type_decl->type;
+            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             break;
         }
         case DECL_STRUCT: {
             Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
-            operand.type = type_typeid;
-            operand.type_value = struct_decl->structure->type;
-            operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            decl_operand.type = type_typeid;
+            decl_operand.type_value = struct_decl->structure->type;
+            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             break;
         }
         case DECL_VAR: {
@@ -237,14 +237,40 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
                         report_error(var->location, "Cannot infer type from expression `null`.");
                     }
                 }
+
+                if (var->is_constant) {
+                    if (!(expr_operand->flags & OPERAND_CONSTANT)) {
+                        report_error(var->expr->location, "Expression must be constant.");
+                        return false;
+                    }
+                    else {
+                        decl_operand = *expr_operand;
+                    }
+                }
             }
+            else {
+                if (var->is_constant) {
+                    report_error(var->location, "Constant must have an expression.");
+                    return false;
+                }
+            }
+
+            assert(declared_type != nullptr);
+
             var->type = declared_type;
-            complete_type(var->type);
+            if (!complete_type(var->type)) {
+                return false;
+            }
             assert(var->type != nullptr);
 
-            operand.type = var->type;
-            operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            // todo(josh): constant propagation
+            if (!var->is_constant) {
+                decl_operand.type = var->type;
+                decl_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+            }
+            else {
+                assert(decl_operand.flags != 0 && "decl_operand should have been filled in above");
+                assert(decl_operand.type != nullptr && "decl_operand should have been filled in above");
+            }
             break;
         }
         case DECL_PROC: {
@@ -253,12 +279,12 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
                 return false;
             }
             assert(proc_decl->procedure->header->type != nullptr);
-            operand.type = proc_decl->procedure->header->type;
-            operand.flags = OPERAND_RVALUE;
+            decl_operand.type = proc_decl->procedure->header->type;
+            decl_operand.flags = OPERAND_RVALUE;
             break;
         }
     }
-    decl->operand = operand;
+    decl->operand = decl_operand;
     decl->check_state = DCS_CHECKED;
 
     if (decl->kind == DECL_PROC) {
@@ -281,7 +307,7 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
     }
 
     if (out_operand) {
-        *out_operand = operand;
+        *out_operand = decl_operand;
     }
     return true;
 }
@@ -371,14 +397,27 @@ bool complete_type(Type *type) {
                     For (idx, structure->fields) {
                         Ast_Var *var = structure->fields[idx];
                         if (!complete_type(var->type)) {
-                            return false; // todo(josh): error message
+                            return false;
                         }
-                        assert(var->type->size > 0);
+
                         Struct_Field field = {};
                         field.name = var->name;
                         field.type = var->type;
+                        if (var->is_constant) {
+                            assert(var->expr != nullptr);
+                            Operand *constant_operand = typecheck_expr(var->expr);
+                            if (!constant_operand) {
+                                return nullptr;
+                            }
+                            field.constant_operand = *constant_operand;
+                            field.is_constant = true;
+                        }
+                        else {
+                            assert(var->type->size > 0);
+                            field.offset = size; // todo(josh): alignment and everything
+                            size += field.type->size;
+                        }
                         fields.append(field);
-                        size += field.type->size;
                     }
                 }
 
@@ -922,10 +961,15 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 For (field_idx, struct_type->fields) {
                     Struct_Field field = struct_type->fields[field_idx];
                     if (strcmp(field.name, selector->field_name) == 0) {
-                        // todo(josh): constants
                         found_field = true;
                         result_operand.type = field.type;
-                        result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                        if (field.is_constant) {
+                            assert(field.constant_operand.flags & OPERAND_CONSTANT);
+                            result_operand = field.constant_operand;
+                        }
+                        else {
+                            result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                        }
                         break;
                     }
                 }
@@ -1122,6 +1166,14 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
     parameter_types.allocator = default_allocator();
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
+        if (parameter->is_constant) {
+            report_error(parameter->location, "Constant parameters are not allowed.");
+            return false;
+        }
+        if (parameter->expr != nullptr) {
+            report_error(parameter->expr->location, "Default values for procedure parameters are not yet supported.");
+            return false;
+        }
         if (!check_declaration(parameter->declaration)) {
             return false;
         }

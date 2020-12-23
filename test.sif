@@ -32,6 +32,7 @@ proc free(var ptr: rawptr) #foreign;
 proc assert(var condition: bool) #foreign;
 
 struct Vector3 {
+    const WOW_A_CONSTANT = 123;
     var x: float;
     var y: float;
     var z: float;
@@ -44,10 +45,16 @@ struct Vector3 {
 #assert(("foo" + "bar") == "foobar");
 
 proc main() {
-    var memory = cast(^Vector3, alloc(sizeof(Vector3) * 16));
+    const N = 16;
+    #assert(N == 16);
+
+    // todo(josh)
+    // print_int(Vector3.WOW_A_CONSTANT);
+
+    var memory = cast(^Vector3, alloc(sizeof(Vector3) * N));
     var slice: []Vector3;
     slice.data = memory;
-    slice.count = 16;
+    slice.count = N;
     for (var i = 0; i < slice.count; i = i + 1) {
         var v = &slice[i];
         v.x = 9;
@@ -56,9 +63,6 @@ proc main() {
     }
 
     print("Hello, " + "World!");
-
-    // var ptr: rawptr = null;
-    // var a = ptr.asd;
 
     var v_in_slice = slice[9];
     print_float(v_in_slice.x);
@@ -91,6 +95,9 @@ proc main() {
     print_float(v.x);
     print_float(v.y);
     print_float(v.z);
+
+    var neato: [v.WOW_A_CONSTANT]bool;
+    #assert(sizeof(typeof(neato)) == 123);
 
     var a: [4]int;
     var x = (&a[2])^;

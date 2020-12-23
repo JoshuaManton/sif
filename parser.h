@@ -140,16 +140,18 @@ struct Ast_Directive_C_Code : public Ast_Node {
 };
 
 struct Ast_Var : public Ast_Node {
-    char *name = nullptr;
-    Ast_Expr *type_expr = nullptr;
-    Ast_Expr *expr = nullptr;
-    Type *type = nullptr;
+    char *name = {};
+    Ast_Expr *type_expr = {};
+    Ast_Expr *expr = {};
+    Type *type = {};
+    bool is_constant = {};
     Var_Declaration *declaration = {};
-    Ast_Var(char *name, Ast_Expr *type_expr, Ast_Expr *expr, Location location)
+    Ast_Var(char *name, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
     , type_expr(type_expr)
     , expr(expr)
+    , is_constant(is_constant)
     {}
 };
 
