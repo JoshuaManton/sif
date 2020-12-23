@@ -1,9 +1,20 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+typedef int32_t i32;
 typedef int64_t i64;
 typedef float f32;
 typedef double f64;
+void print_int(int i) {
+    printf("%d\n", i);
+}
+void print_float(float f) {
+    printf("%f\n", f);
+}
+
 // Forward declarations
+void print_int(i32 i);
+void print_float(f32 f);
 struct Vector3;
 i64 return_stuff();
 void main();
@@ -35,10 +46,20 @@ i64 return_stuff() {
     return 321;
 }
 void main() {
+    i64 arr[3] = {};
+    arr[0] = 1;
+    arr[1] = 4;
+    arr[2] = 9;
+    for (i64 i = 0; i < 3; i = i + 1) {
+        print_int(((i32 )arr[i]));
+    }
     Vector3 v = {};
     v.x = 1.500000;
-    v.y = 4.000000;
-    v.z = 9.000000;
+    v.y = 4.400000;
+    v.z = 9.300000;
+    print_float(v.x);
+    print_float(v.y);
+    print_float(v.z);
     i64 a[4] = {};
     i64 x = *(&a[2]);
     Vector3 (*v_ptr) = &v;
@@ -46,6 +67,8 @@ void main() {
     v_ptr->y = ((f32 )return_stuff());
     f32 (*x_ptr) = ((f32 (*))v_ptr);
     *x_ptr = 149.000000;
+    for (i64 i = 0; i < 10; i = i + 1) {
+    }
 }
 T (*p) = {};
 struct T {

@@ -60,7 +60,8 @@ void register_declaration(Declaration *new_declaration) {
     For (decl_idx, new_declaration->parent_block->declarations) {
         Declaration *decl = new_declaration->parent_block->declarations[decl_idx];
         if (strcmp(decl->name, new_declaration->name) == 0) {
-            assert(false && "name collision");
+            report_error(new_declaration->location, "Name collision.");
+            return;
         }
     }
     new_declaration->parent_block->declarations.append(new_declaration);
@@ -69,16 +70,14 @@ void register_declaration(Declaration *new_declaration) {
 
 
 
+#define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
+
 Ast_Var *parse_var(Lexer *lexer) {
     Token var_token;
-    if (!expect_token(lexer, TK_VAR, &var_token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_VAR, &var_token);
 
     Token var_name_token;
-    if (!expect_token(lexer, TK_IDENTIFIER, &var_name_token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_IDENTIFIER, &var_name_token);
     char *var_name = var_name_token.text;
 
     Token colon;
@@ -112,33 +111,25 @@ Ast_Var *parse_var(Lexer *lexer) {
 
 Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     Token token;
-    if (!expect_token(lexer, TK_PROC, &token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_PROC, &token);
     Location proc_location = token.location;
     Ast_Block *procedure_block = new Ast_Block(token.location);
     Ast_Block *old_block = push_ast_block(procedure_block);
     defer(pop_ast_block(old_block));
 
     // name
-    if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_IDENTIFIER, &token);
 
     char *proc_name = token.text;
 
     // parameter list
-    if (!expect_token(lexer, TK_LEFT_PAREN)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_LEFT_PAREN, nullptr);
     Array<Ast_Var *> parameters = {};
     parameters.allocator = default_allocator();
     bool first = true;
     while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
         if (!first) {
-            if (!expect_token(lexer, TK_COMMA)) {
-                return nullptr;
-            }
+            EXPECT(lexer, TK_COMMA, nullptr);
         }
 
         Ast_Var *var = parse_var(lexer);
@@ -148,15 +139,12 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
         parameters.append(var);
         first = false;
     }
-    if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
 
     // return type
     Ast_Expr *return_type_expr = {};
     Token colon = {};
     if (!peek_next_token(lexer, &colon)) {
-        assert(false);
         return nullptr;
     }
     if (colon.kind == TK_COLON) {
@@ -167,33 +155,39 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
         }
     }
 
-    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, proc_location);
+    Token foreign;
+    bool is_foreign = false;
+    if (!peek_next_token(lexer, &foreign)) {
+        return nullptr;
+    }
+    if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
+        eat_next_token(lexer);
+        is_foreign = true;
+        EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
+    }
+
+    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, proc_location);
 }
 
 Ast_Proc *parse_proc(Lexer *lexer) {
     Ast_Proc_Header *header = parse_proc_header(lexer);
 
+    Ast_Block *body = nullptr;
+    if (!header->is_foreign) {
+        EXPECT(lexer, TK_LEFT_CURLY, nullptr);
 
+        Ast_Proc_Header *old_current_proc = g_currently_parsing_proc;
+        g_currently_parsing_proc = header;
+        Ast_Block *old_block = push_ast_block(header->procedure_block);
+        body = parse_block(lexer);
+        pop_ast_block(old_block);
+        g_currently_parsing_proc = old_current_proc;
+        if (body == nullptr) {
+            return nullptr;
+        }
 
-    if (!expect_token(lexer, TK_LEFT_CURLY)) {
-        return nullptr;
+        EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
     }
-
-    Ast_Proc_Header *old_current_proc = g_currently_parsing_proc;
-    g_currently_parsing_proc = header;
-    Ast_Block *old_block = push_ast_block(header->procedure_block);
-    Ast_Block *body = parse_block(lexer);
-    pop_ast_block(old_block);
-    g_currently_parsing_proc = old_current_proc;
-    if (body == nullptr) {
-        return nullptr;
-    }
-
-    if (!expect_token(lexer, TK_RIGHT_CURLY)) {
-        return nullptr;
-    }
-
-
 
     Ast_Proc *proc = new Ast_Proc(header, body, header->location);
     proc->declaration = new Proc_Declaration(proc, current_block);
@@ -203,29 +197,21 @@ Ast_Proc *parse_proc(Lexer *lexer) {
 
 Ast_Struct *parse_struct(Lexer *lexer) {
     Token token;
-    if (!expect_token(lexer, TK_STRUCT, &token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_STRUCT, &token);
     Ast_Struct *structure = new Ast_Struct(token.location);
 
     // name
-    if (!expect_token(lexer, TK_IDENTIFIER, &token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_IDENTIFIER, &token);
     structure->name = token.text;
 
     // fields
-    if (!expect_token(lexer, TK_LEFT_CURLY, &token)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_LEFT_CURLY, &token);
 
     structure->body = parse_block(lexer);
     if (!structure->body) {
         return nullptr;
     }
-    if (!expect_token(lexer, TK_RIGHT_CURLY)) {
-        return nullptr;
-    }
+    EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
     For (idx, structure->body->nodes) {
         Ast_Node *node = structure->body->nodes[idx];
         assert(node->ast_kind == AST_VAR);
@@ -250,11 +236,175 @@ Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
     }
     Ast_Block *body = parse_block(lexer, only_parse_one_statement);
     if (!only_parse_one_statement) {
-        if (!expect_token(lexer, TK_RIGHT_CURLY)) {
-            return nullptr;
-        }
+        EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
     }
     return body;
+}
+
+Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
+    Token root_token;
+    if (!peek_next_token(lexer, &root_token)) {
+        return nullptr;
+    }
+
+    switch (root_token.kind) {
+        case TK_VAR: {
+            Ast_Var *var = parse_var(lexer);
+            if (!var) {
+                return nullptr;
+            }
+            if (eat_semicolon) {
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+            }
+            return var;
+        }
+
+        case TK_PROC: {
+            Ast_Proc *proc = parse_proc(lexer);
+            if (!proc) {
+                return nullptr;
+            }
+            return proc;
+        }
+
+        case TK_STRUCT: {
+            Ast_Struct *structure = parse_struct(lexer);
+            if (!structure) {
+                return nullptr;
+            }
+            return structure;
+        }
+
+        case TK_DIRECTIVE_ASSERT: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *expr = parse_expr(lexer);
+            if (!expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return new Ast_Directive_Assert(expr, root_token.location);
+        }
+
+        case TK_DIRECTIVE_PRINT: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *expr = parse_expr(lexer);
+            if (!expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return new Ast_Directive_Print(expr, root_token.location);
+        }
+
+        case TK_SEMICOLON: {
+            if (eat_semicolon) {
+                eat_next_token(lexer);
+            }
+            return new Ast_Empty_Statement(root_token.location);
+        }
+
+        case TK_FOR: {
+            Ast_Block *block = new Ast_Block(lexer->location);
+            Ast_Block *old_block = push_ast_block(block);
+
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Node *pre = parse_single_statement(lexer, false);
+            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            Ast_Expr *condition = parse_expr(lexer);
+            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            Ast_Node *post = parse_single_statement(lexer, false);
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            Ast_Block *body = parse_block_including_curly_brackets(lexer);
+            pop_ast_block(old_block);
+
+            return new Ast_For_Loop(pre, condition, post, body, root_token.location);
+        }
+
+        case TK_IF: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *condition = parse_expr(lexer);
+            if (!condition) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            Ast_Block *body = parse_block_including_curly_brackets(lexer);
+            if (body == nullptr) {
+                return nullptr;
+            }
+            Token else_token;
+            if (!peek_next_token(lexer, &else_token)) {
+                return nullptr;
+            }
+            Ast_Block *else_body = nullptr;
+            if (else_token.kind == TK_ELSE) {
+                eat_next_token(lexer);
+                else_body = parse_block_including_curly_brackets(lexer);
+            }
+            return new Ast_If(condition, body, else_body, root_token.location);
+        }
+
+        case TK_RETURN: {
+            eat_next_token(lexer);
+            Token semicolon;
+            if (!peek_next_token(lexer, &semicolon)) {
+                return nullptr;
+            }
+            Ast_Expr *return_expr = nullptr;
+            if (semicolon.kind == TK_SEMICOLON) {
+                eat_next_token(lexer);
+            }
+            else {
+                return_expr = parse_expr(lexer);
+                if (!return_expr) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+            }
+            assert(g_currently_parsing_proc != nullptr);
+            return new Ast_Return(g_currently_parsing_proc, return_expr, root_token.location);
+        }
+
+        default: {
+            Ast_Expr *expr = parse_expr(lexer);
+            if (expr == nullptr) {
+                return nullptr;
+            }
+
+            Token next_token;
+            if (!peek_next_token(lexer, &next_token)) {
+                assert(false);
+                return nullptr;
+            }
+            switch (next_token.kind) {
+                case TK_SEMICOLON: {
+                    if (eat_semicolon) {
+                        eat_next_token(lexer);
+                    }
+                    return new Ast_Statement_Expr(expr, expr->location);
+                }
+                case TK_ASSIGN: {
+                    eat_next_token(lexer);
+                    Ast_Expr *rhs = parse_expr(lexer);
+                    if (rhs == nullptr) {
+                        return nullptr;
+                    }
+                    if (eat_semicolon) {
+                        EXPECT(lexer, TK_SEMICOLON, nullptr);
+                    }
+                    return new Ast_Assign(expr, rhs, expr->location);
+                }
+                default: {
+                    unexpected_token(lexer, next_token);
+                    return nullptr;
+                }
+            }
+        }
+    }
+    assert(false && "unreachable");
+    return nullptr;
 }
 
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
@@ -268,161 +418,27 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
 
     Token root_token;
     while (peek_next_token(lexer, &root_token) && root_token.kind != TK_RIGHT_CURLY) {
-        switch (root_token.kind) {
-            case TK_VAR: {
-                Ast_Var *var = parse_var(lexer);
-                if (!var) {
-                    return nullptr;
-                }
-                if (!expect_token(lexer, TK_SEMICOLON)) {
-                    return nullptr;
-                }
-                block->nodes.append(var);
+        Ast_Node *node = parse_single_statement(lexer);
+        if (node == nullptr) {
+            return nullptr;
+        }
+        switch (node->ast_kind) {
+            case AST_DIRECTIVE_ASSERT: {
+                Ast_Directive_Assert *directive = (Ast_Directive_Assert *)node;
+                g_all_assert_directives.append(directive);
                 break;
             }
-
-            case TK_PROC: {
-                Ast_Proc *proc = parse_proc(lexer);
-                if (!proc) {
-                    return nullptr;
-                }
-
-                block->nodes.append(proc);
+            case AST_DIRECTIVE_PRINT: {
+                Ast_Directive_Print *directive = (Ast_Directive_Print *)node;
+                g_all_print_directives.append(directive);
                 break;
             }
-
-            case TK_STRUCT: {
-                Ast_Struct *structure = parse_struct(lexer);
-                if (!structure) {
-                    return nullptr;
-                }
-
-                block->nodes.append(structure);
+            case AST_EMPTY_STATEMENT: {
+                // note(josh): do nothing
                 break;
             }
-
-            case TK_DIRECTIVE_ASSERT: {
-                eat_next_token(lexer);
-                if (!expect_token(lexer, TK_LEFT_PAREN)) {
-                    return nullptr;
-                }
-                Ast_Expr *expr = parse_expr(lexer);
-                if (!expr) {
-                    return nullptr;
-                }
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
-                g_all_assert_directives.append(new Ast_Directive_Assert(expr, root_token.location));
-                break;
-            }
-
-            case TK_DIRECTIVE_PRINT: {
-                eat_next_token(lexer);
-                if (!expect_token(lexer, TK_LEFT_PAREN)) {
-                    return nullptr;
-                }
-                Ast_Expr *expr = parse_expr(lexer);
-                if (!expr) {
-                    return nullptr;
-                }
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
-                g_all_print_directives.append(new Ast_Directive_Print(expr, root_token.location));
-                break;
-            }
-
-            case TK_SEMICOLON: {
-                // note(josh): empty statement
-                eat_next_token(lexer);
-                break;
-            }
-
-            case TK_IF: {
-                eat_next_token(lexer);
-                if (!expect_token(lexer, TK_LEFT_PAREN)) {
-                    return nullptr;
-                }
-                Ast_Expr *condition = parse_expr(lexer);
-                if (!condition) {
-                    return nullptr;
-                }
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
-                Ast_Block *body = parse_block_including_curly_brackets(lexer);
-                if (body == nullptr) {
-                    return nullptr;
-                }
-                Token else_token;
-                if (!peek_next_token(lexer, &else_token)) {
-                    return nullptr;
-                }
-                Ast_Block *else_body = nullptr;
-                if (else_token.kind == TK_ELSE) {
-                    eat_next_token(lexer);
-                    else_body = parse_block_including_curly_brackets(lexer);
-                }
-                block->nodes.append(new Ast_If(condition, body, else_body, root_token.location));
-                break;
-            }
-
-            case TK_RETURN: {
-                eat_next_token(lexer);
-                Token semicolon;
-                if (!peek_next_token(lexer, &semicolon)) {
-                    return nullptr;
-                }
-                Ast_Expr *return_expr = nullptr;
-                if (semicolon.kind == TK_SEMICOLON) {
-                    eat_next_token(lexer);
-                }
-                else {
-                    return_expr = parse_expr(lexer);
-                    if (!return_expr) {
-                        return nullptr;
-                    }
-                }
-                assert(g_currently_parsing_proc != nullptr);
-                block->nodes.append(new Ast_Return(g_currently_parsing_proc, return_expr, root_token.location));
-                break;
-            }
-
             default: {
-                Ast_Expr *expr = parse_expr(lexer);
-                if (expr == nullptr) {
-                    return nullptr;
-                }
-
-                Token next_token;
-                if (!peek_next_token(lexer, &next_token)) {
-                    assert(false);
-                    return nullptr;
-                }
-                switch (next_token.kind) {
-                    case TK_SEMICOLON: {
-                        eat_next_token(lexer);
-                        block->nodes.append(new Ast_Statement_Expr(expr, expr->location));
-                        break;
-                    }
-                    case TK_ASSIGN: {
-                        eat_next_token(lexer);
-                        Ast_Expr *rhs = parse_expr(lexer);
-                        if (rhs == nullptr) {
-                            return nullptr;
-                        }
-                        if (!expect_token(lexer, TK_SEMICOLON)) {
-                            return nullptr;
-                        }
-                        block->nodes.append(new Ast_Assign(expr, rhs, expr->location));
-                        break;
-                    }
-                    default: {
-                        unexpected_token(lexer, next_token);
-                        return nullptr;
-                    }
-                }
+                block->nodes.append(node);
             }
         }
 
@@ -675,67 +691,34 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 return new Expr_Unary(op.kind, rhs, op.location);
             }
             case TK_SIZEOF: {
-                if (!expect_token(lexer, TK_LEFT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
                 Ast_Expr *expr = parse_expr(lexer);
                 if (!expr) {
                     return nullptr;
                 }
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
                 return new Expr_Sizeof(expr, op.location);
             }
             case TK_TYPEOF: {
-                if (!expect_token(lexer, TK_LEFT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
                 Ast_Expr *expr = parse_expr(lexer);
                 if (!expr) {
                     return nullptr;
                 }
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
                 return new Expr_Typeof(expr, op.location);
             }
             case TK_CAST: {
-                if (!expect_token(lexer, TK_LEFT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
                 Ast_Expr *type_expr = parse_expr(lexer);
                 if (!type_expr) {
                     return nullptr;
                 }
-                if (!expect_token(lexer, TK_COMMA)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_COMMA, nullptr);
                 Ast_Expr *rhs = parse_expr(lexer);
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
                 return new Expr_Cast(type_expr, rhs, op.location);
             }
-            // case .Cast: {
-            //     expect(lexer, .LParen);
-            //     typespec := parse_typespec(lexer);
-            //     expect(lexer, .RParen);
-            //     rhs := parse_unary_expr(lexer);
-            //     expr.kind = Expr_Cast{typespec, rhs};
-            // }
-            // case .Size_Of: {
-            //     expect(lexer, .LParen);
-            //     thing_to_get_the_size_of := parse_expr(lexer);
-            //     expect(lexer, .RParen);
-            //     expr.kind = Expr_Size_Of{thing_to_get_the_size_of};
-            // }
-            // case .Type_Of: {
-            //     expect(lexer, .LParen);
-            //     thing_to_get_the_type_of := parse_expr(lexer);
-            //     expect(lexer, .RParen);
-            //     expr.kind = Expr_Type_Of{thing_to_get_the_type_of};
-            // }
             default: {
                 assert(false);
             }
@@ -771,9 +754,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
 
                 while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
                     if (!first) {
-                        if (!expect_token(lexer, TK_COMMA)) {
-                            return nullptr;
-                        }
+                        EXPECT(lexer, TK_COMMA, nullptr);
                     }
                     Ast_Expr *expr = parse_expr(lexer);
                     if (!expr) {
@@ -782,9 +763,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     parameters.append(expr);
                     first = false;
                 }
-                if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
 
                 base_expr = new Expr_Procedure_Call(base_expr, parameters, op.location);
                 break;
@@ -794,9 +773,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 if (!index) {
                     return nullptr;
                 }
-                if (!expect_token(lexer, TK_RIGHT_SQUARE)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
 
                 base_expr = new Expr_Subscript(base_expr, index, op.location);
                 break;
@@ -807,9 +784,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
             }
             case TK_DOT: {
                 Token name_token;
-                if (!expect_token(lexer, TK_IDENTIFIER, &name_token)) {
-                    return nullptr;
-                }
+                EXPECT(lexer, TK_IDENTIFIER, &name_token);
                 base_expr = new Expr_Selector(base_expr, name_token.text, op.location);
                 break;
             }
@@ -859,9 +834,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         case TK_LEFT_PAREN: {
             eat_next_token(lexer);
             Ast_Expr *nested = parse_expr(lexer);
-            if (!expect_token(lexer, TK_RIGHT_PAREN)) {
-                return nullptr;
-            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return new Expr_Paren(nested, token.location);
         }
         case TK_LEFT_SQUARE: {
@@ -870,9 +843,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (!length) {
                 return nullptr;
             }
-            if (!expect_token(lexer, TK_RIGHT_SQUARE)) {
-                return nullptr;
-            }
+            EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
             Ast_Expr *array_of = parse_expr(lexer);
             if (!array_of) {
                 return nullptr;

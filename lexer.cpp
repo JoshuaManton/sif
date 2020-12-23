@@ -33,6 +33,7 @@ void init_lexer_globals() {
 
     token_string_map[TK_DIRECTIVE_PRINT]       = "#print";
     token_string_map[TK_DIRECTIVE_ASSERT]      = "#assert";
+    token_string_map[TK_DIRECTIVE_FOREIGN]     = "#foreign";
 
     token_string_map[TK_ASSIGN]                = "=";
     token_string_map[TK_PLUS]                  = "+";
@@ -160,7 +161,7 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
         text += 1;
     }
     else if (is_one_to_nine(*text)) {
-        while (is_one_to_nine(*text)) {
+        while (is_digit(*text)) {
             text += 1;
         }
     }
@@ -407,6 +408,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "print") == 0) {
             out_token->kind = TK_DIRECTIVE_PRINT;
             out_token->text = "#print";
+        }
+        else if (strcmp(identifier, "foreign") == 0) {
+            out_token->kind = TK_DIRECTIVE_FOREIGN;
+            out_token->text = "#foreign";
         }
         else {
             printf("unknown directive: %s\n", identifier);

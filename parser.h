@@ -13,13 +13,14 @@ enum Ast_Kind {
     AST_VAR,
     AST_STRUCT,
     AST_IF,
-    AST_FOR,
+    AST_FOR_LOOP,
     AST_WHILE,
     AST_RETURN,
     AST_BREAK,
     AST_CONTINUE,
     AST_ASSIGN,
     AST_EXPR,
+    AST_EMPTY_STATEMENT,
     AST_STATEMENT_EXPR,
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
@@ -78,12 +79,14 @@ struct Ast_Proc_Header : public Ast_Node {
     Ast_Expr *return_type_expr = {};
     Type_Procedure *type = nullptr;
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
-    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, Location location)
+    bool is_foreign = {};
+    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
     , procedure_block(procedure_block)
     , parameters(parameters)
     , return_type_expr(return_type_expr)
+    , is_foreign(is_foreign)
     {
         parameters.allocator = default_allocator();
     }
@@ -166,6 +169,20 @@ struct Ast_If : public Ast_Node {
     {}
 };
 
+struct Ast_For_Loop : public Ast_Node {
+    Ast_Node *pre = {};
+    Ast_Expr *condition = {};
+    Ast_Node *post = {};
+    Ast_Block *body = {};
+    Ast_For_Loop(Ast_Node *pre, Ast_Expr *condition, Ast_Node *post, Ast_Block *body, Location location)
+    : Ast_Node(AST_FOR_LOOP, location)
+    , pre(pre)
+    , condition(condition)
+    , post(post)
+    , body(body)
+    {}
+};
+
 struct Ast_Return : public Ast_Node {
     Ast_Proc_Header *matching_procedure = {};
     Ast_Expr *expr = {};
@@ -181,6 +198,12 @@ struct Ast_Statement_Expr : public Ast_Node {
     Ast_Statement_Expr(Ast_Expr *expr, Location location)
     : Ast_Node(AST_STATEMENT_EXPR, location)
     , expr(expr)
+    {}
+};
+
+struct Ast_Empty_Statement : public Ast_Node {
+    Ast_Empty_Statement(Location location)
+    : Ast_Node(AST_EMPTY_STATEMENT, location)
     {}
 };
 
@@ -440,17 +463,19 @@ struct Declaration {
     char *name = {};
     Declaration_Kind kind = {};
     Operand operand = {};
-    Declaration(char *name, Declaration_Kind kind, Ast_Block *parent_block)
+    Location location = {};
+    Declaration(char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)
     , parent_block(parent_block)
+    , location(location)
     {}
 };
 
 struct Type_Declaration : Declaration {
     Type *type = {};
     Type_Declaration(char *name, Type *type, Ast_Block *parent_block)
-    : Declaration(name, DECL_TYPE, parent_block)
+    : Declaration(name, DECL_TYPE, parent_block, {})
     , type(type)
     {}
 };
@@ -458,7 +483,7 @@ struct Type_Declaration : Declaration {
 struct Struct_Declaration : Declaration {
     Ast_Struct *structure = {};
     Struct_Declaration(Ast_Struct *structure, Ast_Block *parent_block)
-    : Declaration(structure->name, DECL_STRUCT, parent_block)
+    : Declaration(structure->name, DECL_STRUCT, parent_block, structure->location)
     , structure(structure)
     {}
 };
@@ -466,7 +491,7 @@ struct Struct_Declaration : Declaration {
 struct Proc_Declaration : Declaration {
     Ast_Proc *procedure = {};
     Proc_Declaration(Ast_Proc *procedure, Ast_Block *parent_block)
-    : Declaration(procedure->header->name, DECL_PROC, parent_block)
+    : Declaration(procedure->header->name, DECL_PROC, parent_block, procedure->header->location)
     , procedure(procedure)
     {}
 };
@@ -474,7 +499,7 @@ struct Proc_Declaration : Declaration {
 struct Var_Declaration : Declaration {
     Ast_Var *var = {};
     Var_Declaration(Ast_Var *var, Ast_Block *parent_block)
-    : Declaration(var->name, DECL_VAR, parent_block)
+    : Declaration(var->name, DECL_VAR, parent_block, var->location)
     , var(var)
     {}
 };

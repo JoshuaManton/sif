@@ -11,13 +11,13 @@
 
 /*
 TODO:
--struct/array literals
--turn most asserts into nice error messages
+-for loops
 -#include
+-while loops
 -#foreign
 -strings
--for loops
--while loops
+-struct/array literals
+-turn most asserts into nice error messages
 -operator overloading
 */
 
@@ -102,7 +102,5 @@ void main(int argc, char **argv) {
     }
 
     String_Builder c_code = generate_c_main_file(global_scope);
-    printf("%s\n", c_code.string());
-
     write_entire_file("output.cpp", c_code.string());
 }

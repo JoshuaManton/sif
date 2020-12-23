@@ -178,7 +178,13 @@ Operand check_declaration(Declaration *decl) {
 
     if (decl->kind == DECL_PROC) {
         Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
-        typecheck_block(proc_decl->procedure->body);
+        if (!proc_decl->procedure->header->is_foreign) {
+            assert(proc_decl->procedure->body != nullptr);
+            typecheck_block(proc_decl->procedure->body);
+        }
+        else {
+            assert(proc_decl->procedure->body == nullptr);
+        }
     }
 
     if (decl->kind != DECL_STRUCT) {
@@ -580,7 +586,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     break;
                 }
                 case TK_LESS_THAN: {
-                    result_operand.type = most_concrete;
+                    result_operand.type = type_bool;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   < rhs_operand->int_value;
@@ -593,7 +599,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     break;
                 }
                 case TK_LESS_THAN_OR_EQUAL: {
-                    result_operand.type = most_concrete;
+                    result_operand.type = type_bool;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   <= rhs_operand->int_value;
@@ -606,7 +612,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     break;
                 }
                 case TK_GREATER_THAN: {
-                    result_operand.type = most_concrete;
+                    result_operand.type = type_bool;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   > rhs_operand->int_value;
@@ -619,7 +625,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     break;
                 }
                 case TK_GREATER_THAN_OR_EQUAL: {
-                    result_operand.type = most_concrete;
+                    result_operand.type = type_bool;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   >= rhs_operand->int_value;
@@ -951,64 +957,85 @@ void do_print_directives() {
     }
 }
 
+void typecheck_node(Ast_Node *node) {
+    switch (node->ast_kind) {
+        case AST_VAR: {
+            Ast_Var *var = (Ast_Var *)node;
+            typecheck_var(var);
+            break;
+        }
+
+        case AST_ASSIGN: {
+            Ast_Assign *assign = (Ast_Assign *)node;
+            Operand *lhs_operand = typecheck_expr(assign->lhs);
+            assert(lhs_operand->flags & OPERAND_LVALUE);
+            assert(lhs_operand->type != nullptr);
+            Operand *rhs_operand = typecheck_expr(assign->rhs, lhs_operand->type);
+            assert(rhs_operand->flags & OPERAND_RVALUE);
+            if (!match_types(rhs_operand, lhs_operand->type)) {
+                assert(false);
+            }
+            break;
+        }
+
+        case AST_STATEMENT_EXPR: {
+            Ast_Statement_Expr *stmt = (Ast_Statement_Expr *)node;
+            typecheck_expr(stmt->expr);
+            // todo(josh): maybe give an error for statements with no side-effects i.e.
+            //             foo == bar;
+            break;
+        }
+
+        case AST_IF: {
+            Ast_If *ast_if = (Ast_If *)node;
+            Operand *condition_operand = typecheck_expr(ast_if->condition);
+            assert(condition_operand->type == type_bool);
+            typecheck_block(ast_if->body);
+            if (ast_if->else_body) {
+                typecheck_block(ast_if->else_body);
+            }
+            break;
+        }
+
+        case AST_FOR_LOOP: {
+            Ast_For_Loop *for_loop = (Ast_For_Loop *)node;
+            assert(for_loop->pre);
+            assert(for_loop->condition);
+            assert(for_loop->post);
+            typecheck_node(for_loop->pre);
+            Operand *condition_operand = typecheck_expr(for_loop->condition);
+            assert(condition_operand->type == type_bool);
+            typecheck_node(for_loop->post);
+            typecheck_block(for_loop->body);
+            break;
+        }
+
+        case AST_RETURN: {
+            Ast_Return *ast_return = (Ast_Return *)node;
+            assert(ast_return->matching_procedure != nullptr);
+            assert(ast_return->matching_procedure->type != nullptr);
+            if (ast_return->matching_procedure->type->return_type != nullptr) {
+                assert(ast_return->expr != nullptr);
+                Operand *return_operand = typecheck_expr(ast_return->expr);
+                assert(match_types(return_operand, ast_return->matching_procedure->type->return_type));
+            }
+            break;
+        }
+
+        case AST_EMPTY_STATEMENT: {
+            break;
+        }
+
+        default: {
+            UNIMPLEMENTED(node->ast_kind);
+            break;
+        }
+    }
+}
+
 void typecheck_block(Ast_Block *block) {
     For (idx, block->nodes) {
         Ast_Node *node = block->nodes[idx];
-        switch (node->ast_kind) {
-            case AST_VAR: {
-                Ast_Var *var = (Ast_Var *)node;
-                typecheck_var(var);
-                break;
-            }
-
-            case AST_ASSIGN: {
-                Ast_Assign *assign = (Ast_Assign *)node;
-                Operand *lhs_operand = typecheck_expr(assign->lhs);
-                assert(lhs_operand->flags & OPERAND_LVALUE);
-                assert(lhs_operand->type != nullptr);
-                Operand *rhs_operand = typecheck_expr(assign->rhs, lhs_operand->type);
-                assert(rhs_operand->flags & OPERAND_RVALUE);
-                if (!match_types(rhs_operand, lhs_operand->type)) {
-                    assert(false);
-                }
-                break;
-            }
-
-            case AST_STATEMENT_EXPR: {
-                Ast_Statement_Expr *stmt = (Ast_Statement_Expr *)node;
-                typecheck_expr(stmt->expr);
-                // todo(josh): maybe give an error for statements with no side-effects i.e.
-                //             foo == bar;
-                break;
-            }
-
-            case AST_IF: {
-                Ast_If *ast_if = (Ast_If *)node;
-                Operand *condition_operand = typecheck_expr(ast_if->condition);
-                assert(condition_operand->type == type_bool);
-                typecheck_block(ast_if->body);
-                if (ast_if->else_body) {
-                    typecheck_block(ast_if->else_body);
-                }
-                break;
-            }
-
-            case AST_RETURN: {
-                Ast_Return *ast_return = (Ast_Return *)node;
-                assert(ast_return->matching_procedure != nullptr);
-                assert(ast_return->matching_procedure->type != nullptr);
-                if (ast_return->matching_procedure->type->return_type != nullptr) {
-                    assert(ast_return->expr != nullptr);
-                    Operand *return_operand = typecheck_expr(ast_return->expr);
-                    assert(match_types(return_operand, ast_return->matching_procedure->type->return_type));
-                }
-                break;
-            }
-
-            default: {
-                UNIMPLEMENTED(node->ast_kind);
-                break;
-            }
-        }
+        typecheck_node(node);
     }
 }

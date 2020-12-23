@@ -193,22 +193,22 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             Expr_Binary *binary = (Expr_Binary *)expr;
             c_print_expr(sb, binary->lhs);
             switch (binary->op) {
-                case TK_PLUS: {
-                    sb->print(" + ");
-                    break;
-                }
-                case TK_MINUS: {
-                    sb->print(" - ");
-                    break;
-                }
-                case TK_MULTIPLY: {
-                    sb->print(" * ");
-                    break;
-                }
-                case TK_DIVIDE: {
-                    sb->print(" / ");
-                    break;
-                }
+                case TK_PLUS:                     { sb->print(" + ");  break; }
+                case TK_MINUS:                    { sb->print(" - ");  break; }
+                case TK_MULTIPLY:                 { sb->print(" * ");  break; }
+                case TK_DIVIDE:                   { sb->print(" / ");  break; }
+                case TK_LESS_THAN:                { sb->print(" < ");  break; }
+                case TK_LESS_THAN_OR_EQUAL:       { sb->print(" <= "); break; }
+                case TK_GREATER_THAN:             { sb->print(" > ");  break; }
+                case TK_GREATER_THAN_OR_EQUAL:    { sb->print(" >= "); break; }
+                case TK_EQUAL_TO:                 { sb->print(" == "); break; }
+                case TK_NOT_EQUAL_TO:             { sb->print(" != "); break; }
+                case TK_AMPERSAND:                { sb->print(" & ");  break; }
+                case TK_BIT_OR:                   { sb->print(" | ");  break; }
+                case TK_BOOLEAN_AND:              { sb->print(" && "); break; }
+                case TK_BOOLEAN_OR:               { sb->print(" || "); break; }
+                case TK_LEFT_SHIFT:               { sb->print(" << "); break; }
+                case TK_RIGHT_SHIFT:              { sb->print(" >> "); break; }
                 default: {
                     assert(false);
                 }
@@ -332,70 +332,97 @@ void print_indents(String_Builder *sb, int indent_level) {
     }
 }
 
+void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level);
+
+void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, bool print_semicolon) {
+    switch (node->ast_kind) {
+        case AST_VAR: {
+            Ast_Var *var = (Ast_Var *)node;
+            c_print_var(sb, var);
+            if (var->expr == nullptr) {
+                sb->printf(" = {}");
+            }
+            if (print_semicolon) {
+                sb->print(";\n");
+            }
+            break;
+        }
+
+        case AST_ASSIGN: {
+            Ast_Assign *assign = (Ast_Assign *)node;
+            c_print_expr(sb, assign->lhs);
+            sb->print(" = ");
+            c_print_expr(sb, assign->rhs);
+            if (print_semicolon) {
+                sb->print(";\n");
+            }
+            break;
+        }
+
+        case AST_STATEMENT_EXPR: {
+            Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
+            c_print_expr(sb, statement->expr);
+            if (print_semicolon) {
+                sb->print(";\n");
+            }
+            break;
+        }
+
+        case AST_IF: {
+            Ast_If *ast_if = (Ast_If *)node;
+            assert(ast_if->condition != nullptr);
+            assert(ast_if->body != nullptr);
+            sb->print("if (");
+            c_print_expr(sb, ast_if->condition);
+            sb->print(") {\n");
+            c_print_block(sb, ast_if->body, indent_level + 1);
+            print_indents(sb, indent_level);
+            sb->print("}\n");
+            if (ast_if->else_body) {
+                sb->print("else ");
+                c_print_block(sb, ast_if->else_body, indent_level + 1);
+            }
+            break;
+        }
+
+        case AST_FOR_LOOP: {
+            Ast_For_Loop *for_loop = (Ast_For_Loop *)node;
+            sb->print("for (");
+            c_print_statement(sb, for_loop->pre, indent_level, false);
+            sb->print("; ");
+            c_print_expr(sb, for_loop->condition);
+            sb->print("; ");
+            c_print_statement(sb, for_loop->post, indent_level, false);
+            sb->print(") {\n");
+            c_print_block(sb, for_loop->body, indent_level + 1);
+            print_indents(sb, indent_level);
+            sb->print("}\n");
+            break;
+        }
+
+        case AST_RETURN: {
+            Ast_Return *ast_return = (Ast_Return *)node;
+            sb->print("return");
+            if (ast_return->expr) {
+                sb->print(" ");
+                c_print_expr(sb, ast_return->expr);
+            }
+            sb->print(";\n");
+            break;
+        }
+
+        default: {
+            assert(false);
+            break;
+        }
+    }
+}
+
 void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level) {
     For (idx, block->nodes) {
         print_indents(sb, indent_level);
         Ast_Node *node = block->nodes[idx];
-        switch (node->ast_kind) {
-            case AST_VAR: {
-                Ast_Var *var = (Ast_Var *)node;
-                c_print_var(sb, var);
-                if (var->expr == nullptr) {
-                    sb->printf(" = {}");
-                }
-                sb->print(";\n");
-                break;
-            }
-
-            case AST_ASSIGN: {
-                Ast_Assign *assign = (Ast_Assign *)node;
-                c_print_expr(sb, assign->lhs);
-                sb->print(" = ");
-                c_print_expr(sb, assign->rhs);
-                sb->print(";\n");
-                break;
-            }
-
-            case AST_STATEMENT_EXPR: {
-                Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
-                c_print_expr(sb, statement->expr);
-                sb->print(";\n");
-                break;
-            }
-
-            case AST_IF: {
-                Ast_If *ast_if = (Ast_If *)node;
-                assert(ast_if->condition != nullptr);
-                assert(ast_if->body != nullptr);
-                sb->print("if (");
-                c_print_expr(sb, ast_if->condition);
-                sb->print(") {\n");
-                c_print_block(sb, ast_if->body, indent_level + 1);
-                print_indents(sb, indent_level);
-                sb->print("}\n");
-                if (ast_if->else_body) {
-                    sb->print("else ");
-                    c_print_block(sb, ast_if->else_body, indent_level + 1);
-                }
-                break;
-            }
-
-            case AST_RETURN: {
-                Ast_Return *ast_return = (Ast_Return *)node;
-                sb->print("return");
-                if (ast_return->expr) {
-                    sb->print(" ");
-                    c_print_expr(sb, ast_return->expr);
-                }
-                sb->print(";\n");
-                break;
-            }
-
-            default: {
-                assert(false);
-                break;
-            }
-        }
+        c_print_statement(sb, node, indent_level, true);
     }
 }
 
@@ -404,18 +431,28 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     //             as this crashes on resize sometimes
     String_Builder sb = make_string_builder(default_allocator(), 10 * 1024);
 
-    sb.printf("#include <stdint.h>\n");
-    sb.printf("#include <stdbool.h>\n");
+    sb.print("#include <stdint.h>\n");
+    sb.print("#include <stdbool.h>\n");
+    sb.print("#include <stdio.h>\n");
 
-    sb.printf("typedef int64_t i64;\n");
+    sb.print("typedef int32_t i32;\n");
+    sb.print("typedef int64_t i64;\n");
 
-    sb.printf("typedef float f32;\n");
-    sb.printf("typedef double f64;\n");
+    sb.print("typedef float f32;\n");
+    sb.print("typedef double f64;\n");
+
+    sb.print("void print_int(int i) {\n");
+    sb.print("    printf(\"%%d\\n\", i);\n");
+    sb.print("}\n");
+
+    sb.print("void print_float(float f) {\n");
+    sb.print("    printf(\"%%f\\n\", f);\n");
+    sb.print("}\n");
 
     // todo(josh): we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather
     // than predeclaring literally everything in the program
-    sb.print("// Forward declarations\n");
+    sb.print("\n// Forward declarations\n");
     For (idx, ordered_declarations) {
         Declaration *decl = ordered_declarations[idx];
         switch (decl->kind) {
@@ -461,11 +498,13 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             }
             case DECL_PROC: {
                 Proc_Declaration *procedure = (Proc_Declaration *)decl;
-                assert(procedure->procedure->body != nullptr);
-                c_print_procedure_header(&sb, procedure->procedure->header);
-                sb.print(" {\n");
-                c_print_block(&sb, procedure->procedure->body, 1);
-                sb.print("}\n");
+                if (!procedure->procedure->header->is_foreign) {
+                    assert(procedure->procedure->body != nullptr);
+                    c_print_procedure_header(&sb, procedure->procedure->header);
+                    sb.print(" {\n");
+                    c_print_block(&sb, procedure->procedure->body, 1);
+                    sb.print("}\n");
+                }
                 break;
             }
         }
