@@ -26,6 +26,7 @@ Type *type_untyped_null;
 Type *type_typeid;
 
 Type *type_string;
+Type *type_rawptr;
 
 Type *type_int;
 Type *type_float;
@@ -38,6 +39,7 @@ void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type);
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Array *get_or_create_type_array_of(Type *type, int count);
+Type_Slice *get_or_create_type_slice_of(Type *type);
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
 void typecheck_block(Ast_Block *block);
 void typecheck_procedure_header(Ast_Proc_Header *header);
@@ -65,8 +67,8 @@ void init_checker() {
     type_bool = new Type_Primitive("bool", 1); all_types.append(type_bool);
 
     type_typeid = new Type_Primitive("typeid", 8); all_types.append(type_typeid);
-
     type_string = new Type_Primitive("string", 16); all_types.append(type_string);
+    type_rawptr = new Type_Primitive("rawptr", 8); all_types.append(type_rawptr); type_rawptr->flags = TF_POINTER;
 
     type_untyped_integer = new Type_Primitive("untyped integer", -1); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
     type_untyped_float   = new Type_Primitive("untyped float", -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
@@ -100,8 +102,8 @@ void add_global_declarations(Ast_Block *block) {
     register_declaration(new Type_Declaration("bool", type_bool, block));
 
     register_declaration(new Type_Declaration("typeid", type_typeid, block));
-
     register_declaration(new Type_Declaration("string", type_string, block));
+    register_declaration(new Type_Declaration("rawptr", type_rawptr, block));
 }
 
 void make_incomplete_types_for_all_structs() {
@@ -121,6 +123,7 @@ void make_incomplete_types_for_all_structs() {
 
 bool is_type_pointer   (Type *type) { return type->flags & TF_POINTER;    }
 bool is_type_array     (Type *type) { return type->flags & TF_ARRAY;      }
+bool is_type_slice     (Type *type) { return type->flags & TF_SLICE;      }
 bool is_type_number    (Type *type) { return type->flags & TF_NUMBER;     }
 bool is_type_integer   (Type *type) { return type->flags & TF_INTEGER;    }
 bool is_type_float     (Type *type) { return type->flags & TF_FLOAT;      }
@@ -394,8 +397,6 @@ bool match_types(Operand *operand, Type *expected_type) {
                 report_error(operand->location, "Expected an integer type, got a float.");
                 return false;
             }
-            // todo(josh): this will truncate floats in the case of:
-            //     var x: int = 1.3;
             operand->type = expected_type;
             return true;
         }
@@ -405,6 +406,10 @@ bool match_types(Operand *operand, Type *expected_type) {
             operand->type = expected_type;
             return true;
         }
+    }
+
+    if ((expected_type == type_rawptr) && (is_type_pointer(operand->type))) {
+        return true;
     }
 
     type_mismatch(operand->location, operand->type, expected_type);
@@ -442,6 +447,23 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     }
     Type_Array *new_type = new Type_Array(array_of, count);
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
+    all_types.append(new_type);
+    return new_type;
+}
+
+Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
+    assert(!is_type_untyped(slice_of));
+    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_slice_types` array
+        Type *other_type = all_types[idx];
+        if (other_type->kind == TYPE_SLICE) {
+            Type_Slice *other_type_slice = (Type_Slice *)other_type;
+            if (other_type_slice->slice_of == slice_of) {
+                return other_type_slice;
+            }
+        }
+    }
+    Type_Slice *new_type = new Type_Slice(slice_of);
+    new_type->flags = TF_SLICE;
     all_types.append(new_type);
     return new_type;
 }
@@ -501,6 +523,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_BINARY: {
             Expr_Binary *binary = (Expr_Binary *)expr;
+            if (is_cmp_op(binary->op)) {
+                expected_type = nullptr;
+            }
             Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
             Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
             assert(!is_type_incomplete(lhs_operand->type));
@@ -749,23 +774,28 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_SUBSCRIPT: {
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
-            Operand *lhs_operand = typecheck_expr(subscript->lhs); // todo(josh): should we pass expected_type down here?
-            assert(is_type_array(lhs_operand->type));
-            assert(lhs_operand->type->kind == TYPE_ARRAY);
-            Type_Array *array_type = (Type_Array *)lhs_operand->type;
-            complete_type(array_type);
-            assert(array_type->size > 0);
-
+            Operand *lhs_operand = typecheck_expr(subscript->lhs);
+            Type *elem_type = nullptr;
+            if (is_type_array(lhs_operand->type)) {
+                Type_Array *array_type = (Type_Array *)lhs_operand->type;
+                complete_type(array_type);
+                assert(array_type->size > 0);
+                elem_type = array_type->array_of;
+            }
+            else if (is_type_slice(lhs_operand->type)) {
+                Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
+                elem_type = slice_type->slice_of;
+            }
             Operand *index_operand = typecheck_expr(subscript->index, type_int); // todo(josh): should we pass expected_type down here?
             assert(is_type_number(index_operand->type));
             assert(is_type_integer(index_operand->type));
-            result_operand.type = array_type->array_of;
+            result_operand.type = elem_type;
             result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             break;
         }
         case EXPR_DEREFERENCE: {
             Expr_Dereference *dereference = (Expr_Dereference *)expr;
-            Operand *lhs_operand = typecheck_expr(dereference->lhs); // todo(josh): should we pass expected_type down here?
+            Operand *lhs_operand = typecheck_expr(dereference->lhs);
             assert(is_type_pointer(lhs_operand->type));
             Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
             result_operand.type = pointer_type->pointer_to;
@@ -835,6 +865,20 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         result_operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
                         result_operand.int_value   = array_type->count;
                         result_operand.float_value = array_type->count;
+                    }
+                    else {
+                        assert(false);
+                    }
+                }
+                else if (lhs_operand->type->kind == TYPE_SLICE) {
+                    Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
+                    if (strcmp(selector->field_name, "data") == 0) {
+                        result_operand.type = get_or_create_type_pointer_to(slice_type->slice_of);
+                        result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                    }
+                    else if (strcmp(selector->field_name, "count") == 0) {
+                        result_operand.type = type_int;
+                        result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
                     }
                     else {
                         assert(false);
@@ -933,6 +977,16 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             result_operand.type = type_typeid;
             result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
+            break;
+        }
+        case EXPR_SLICE_TYPE: {
+            Expr_Slice_Type *expr_slice = (Expr_Slice_Type *)expr;
+            assert(expr_slice->slice_of != nullptr);
+            Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of);
+            assert((slice_of_operand->flags & OPERAND_CONSTANT) && (slice_of_operand->flags & OPERAND_TYPE));
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.type = type_typeid;
+            result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
             break;
         }
         case EXPR_PAREN: {

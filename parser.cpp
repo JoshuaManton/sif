@@ -479,7 +479,10 @@ bool is_or_op(Lexer *lexer) {
 bool is_and_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token))  return false;
-    switch (token.kind) {
+    return is_and_op(token.kind);
+}
+bool is_and_op(Token_Kind kind) {
+    switch (kind) {
         case TK_BOOLEAN_AND: {
             return true;
         }
@@ -490,7 +493,10 @@ bool is_and_op(Lexer *lexer) {
 bool is_cmp_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token))  return false;
-    switch (token.kind) {
+    return is_cmp_op(token.kind);
+}
+bool is_cmp_op(Token_Kind kind) {
+    switch (kind) {
         case TK_NOT_EQUAL_TO:
         case TK_LESS_THAN:
         case TK_LESS_THAN_OR_EQUAL:
@@ -510,7 +516,10 @@ bool is_cmp_op(Lexer *lexer) {
 bool is_add_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token))  return false;
-    switch (token.kind) {
+    return is_add_op(token.kind);
+}
+bool is_add_op(Token_Kind kind) {
+    switch (kind) {
         case TK_PLUS:
         case TK_MINUS: {
             return true;
@@ -522,7 +531,10 @@ bool is_add_op(Lexer *lexer) {
 bool is_mul_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token))  return false;
-    switch (token.kind) {
+    return is_mul_op(token.kind);
+}
+bool is_mul_op(Token_Kind kind) {
+    switch (kind) {
         case TK_MULTIPLY:
         case TK_DIVIDE:
         case TK_AMPERSAND: // bitwise AND
@@ -537,7 +549,10 @@ bool is_mul_op(Lexer *lexer) {
 bool is_unary_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token))  return false;
-    switch (token.kind) {
+    return is_unary_op(token.kind);
+}
+bool is_unary_op(Token_Kind kind) {
+    switch (kind) {
         case TK_MINUS:
         case TK_PLUS:
         case TK_NOT:
@@ -554,7 +569,10 @@ bool is_unary_op(Lexer *lexer) {
 bool is_postfix_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token))  return false;
-    switch (token.kind) {
+    return is_postfix_op(token.kind);
+}
+bool is_postfix_op(Token_Kind kind) {
+    switch (kind) {
         case TK_LEFT_PAREN:
         case TK_LEFT_SQUARE:
         case TK_DOT:
@@ -853,16 +871,32 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_LEFT_SQUARE: {
             eat_next_token(lexer);
-            Ast_Expr *length = parse_expr(lexer);
-            if (!length) {
+            Token maybe_right_square;
+            if (!peek_next_token(lexer, &maybe_right_square)) {
                 return nullptr;
             }
-            EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
-            Ast_Expr *array_of = parse_expr(lexer);
-            if (!array_of) {
-                return nullptr;
+            if (maybe_right_square.kind == TK_RIGHT_SQUARE) {
+                // it's a slice
+                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                Ast_Expr *slice_of = parse_expr(lexer);
+                if (!slice_of) {
+                    return nullptr;
+                }
+                return new Expr_Slice_Type(slice_of, token.location);
             }
-            return new Expr_Array_Type(array_of, length, token.location);
+            else {
+                // it's an array
+                Ast_Expr *length = parse_expr(lexer);
+                if (!length) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                Ast_Expr *array_of = parse_expr(lexer);
+                if (!array_of) {
+                    return nullptr;
+                }
+                return new Expr_Array_Type(array_of, length, token.location);
+            }
         }
         case TK_CARET: {
             eat_next_token(lexer);

@@ -1,3 +1,28 @@
+struct Vector3 {
+    var x: float;
+    var y: float;
+    var z: float;
+}
+
+proc main() {
+    var memory: [4]int;
+    var slice: []int;
+    slice.data = &memory[0];
+    slice.count = 4;
+    slice[2] = 4;
+    print_int(cast(i32, memory[2]));
+    assert(memory[2] == 4);
+
+    var v = cast(^Vector3, alloc(sizeof(Vector3)));
+    v.x = 1;
+    v.y = 4;
+    v.z = 9;
+    print_float(v.x);
+    print_float(v.y);
+    print_float(v.z);
+    free(v);
+}
+
 #c_code "
 void print_int(int i) {
     printf(\"%%d\\\n\", i);
@@ -12,150 +37,163 @@ void print(String string) {
     }
     printf(\"\\\n\");
 }
+char *alloc(int size) {
+    char *memory = (char *)malloc(size);
+    return memory;
+}
+void assert(bool condition) {
+    if (!condition) {
+        printf(\"Assertion failed.\");
+        *((char *)0) = 0;
+    }
+}
 "
 
 proc print_int(var i: i32) #foreign;
 proc print_float(var f: f32) #foreign;
 proc print(var str: string) #foreign;
+proc alloc(var size: int) : rawptr #foreign;
+proc free(var ptr: rawptr) #foreign;
+proc assert(var condition: bool) #foreign;
 
-struct Vector3 {
-    var x: float;
-    var y: float;
-    var z: float;
-}
+// struct Vector3 {
+//     var x: float;
+//     var y: float;
+//     var z: float;
+// }
 
-#assert("foo" == "foo");
-#assert("foo" != "bar");
-#assert("foo" != "foobar");
-#assert("foobar" != "foo");
-#assert(("foo" + "bar") == "foobar");
+// #assert("foo" == "foo");
+// #assert("foo" != "bar");
+// #assert("foo" != "foobar");
+// #assert("foobar" != "foo");
+// #assert(("foo" + "bar") == "foobar");
 
-proc main() {
-    var str = "Hello, " + "World";
-    print(str);
+// proc main() {
+//     var str = "Hello, " + "World";
+//     print(str);
 
-    var arr: [3]int;
-    arr[0] = 1;
-    arr[1] = 4;
-    arr[2] = 9;
-    for (var i = 0; i < arr.count; i = i + 1) {
-        print_int(cast(i32, arr[i]));
-    }
-    var v: Vector3;
-    v.x = 1.5;
-    v.y = 4.4;
-    v.z = 9.3;
-    print_float(v.x);
-    print_float(v.y);
-    print_float(v.z);
+//     var arr: [3]int;
+//     arr[0] = 1;
+//     arr[1] = 4;
+//     arr[2] = 9;
+//     for (var i = 0; i < arr.count; i = i + 1) {
+//         print_int(cast(i32, arr[i]));
+//     }
+//     var v: Vector3;
+//     v.x = 1.5;
+//     v.y = 4.4;
+//     v.z = 9.3;
+//     print_float(v.x);
+//     print_float(v.y);
+//     print_float(v.z);
 
-    var a: [4]int;
-    var x = (&a[2])^;
-    #assert(typeof(x) == int);
+//     var a: [4]int;
+//     var x = (&a[2])^;
+//     #assert(typeof(x) == int);
 
-    var v_ptr = &v;
-    #assert(typeof(v_ptr) == ^Vector3);
-    v_ptr.x = 2;
-    v_ptr.y = cast(float, return_stuff());
+//     var v_ptr = &v;
+//     #assert(typeof(v_ptr) == ^Vector3);
+//     v_ptr.x = 2;
+//     v_ptr.y = cast(float, return_stuff());
 
-    var x_ptr = cast(^float, v_ptr);
-    #assert(typeof(x_ptr) == ^float);
-    x_ptr^ = 149;
+//     var x_ptr = cast(^float, v_ptr);
+//     #assert(typeof(x_ptr) == ^float);
+//     x_ptr^ = 149;
 
-    if (x_ptr^ == 40) {
-        return;
-    }
-}
+//     if (x_ptr^ == 40) {
+//         return;
+//     }
+// }
 
-proc return_stuff() : int {
-    if (1 == 1) {
-        return 123;
-    }
-    return 321;
-}
+// proc return_stuff() : int {
+//     if (1 == 1) {
+//         return 123;
+//     }
+//     return 321;
+// }
 
-var a: [sizeof(typeof(p^))]int;
-var p: ^T;
-struct T {
-    var a: [sizeof(typeof(p))]bool;
-}
+// var a: [sizeof(typeof(p^))]int;
+// var p: ^T;
+// struct T {
+//     var a: [sizeof(typeof(p))]bool;
+// }
 
-struct A {
-    var b: [4]B;
-}
-struct B {
-    var a: ^A;
-}
+// struct A {
+//     var b: [4]B;
+// }
+// struct B {
+//     var a: ^A;
+// }
 
-struct Contains_Pointers1 {
-    var a: ^Contains_Pointers2;
-}
-struct Contains_Pointers2 {
-    var b: ^Contains_Pointers1;
-}
+// struct Contains_Pointers1 {
+//     var a: ^Contains_Pointers2;
+// }
+// struct Contains_Pointers2 {
+//     var b: ^Contains_Pointers1;
+// }
 
-struct Self_Pointer {
-    var b: ^Self_Pointer;
-}
+// struct Self_Pointer {
+//     var b: ^Self_Pointer;
+// }
 
-proc AAA() {
-    var aa: A;
-    var b: B = aa.b[2];
+// proc AAA() {
+//     var aa: A;
+//     var b: B = aa.b[2];
 
-    var c: ^Contains_Pointers1;
-    var d: ^Contains_Pointers2 = c.a;
-    c.a = d;
-    // d.b = c;
+//     var c: ^Contains_Pointers1;
+//     var d: ^Contains_Pointers2 = c.a;
+//     c.a = d;
+//     // d.b = c;
 
-    var e: Self_Pointer;
-}
+//     var e: Self_Pointer;
+// }
 
-var simple: int;
-var pointer: ^int;
-var array: [4]int;
-var pointer_to_pointer: ^^int;
-var array_of_arrays: [4][8]int;
-var pointer_to_array: ^[4]int;
-var array_of_pointers: [4]^int;
-var wack: ^^[4][8]int;
-var more_wack: [4][8]^^int;
-var still_more_wack: ^[4]^[8]int;
-var complicated_garbage: ^^[4]^[8][32]^int;
+// var simple: int;
+// var pointer: ^int;
+// var array: [4]int;
+// var pointer_to_pointer: ^^int;
+// var array_of_arrays: [4][8]int;
+// var pointer_to_array: ^[4]int;
+// var array_of_pointers: [4]^int;
+// var wack: ^^[4][8]int;
+// var more_wack: [4][8]^^int;
+// var still_more_wack: ^[4]^[8]int;
+// var complicated_garbage: ^^[4]^[8][32]^int;
 
-proc recursion() {
-    var b: ^Some_Struct;
-    var x: int = b.x;
-    recursion();
-}
+// proc recursion() {
+//     var b: ^Some_Struct;
+//     var x: int = b.x;
+//     recursion();
+// }
 
-proc duo_recursion1() {
-    duo_recursion2();
-}
-proc duo_recursion2() {
-    var a: Some_Struct;
-    duo_recursion1();
-}
+// proc duo_recursion1() {
+//     duo_recursion2();
+// }
+// proc duo_recursion2() {
+//     var a: Some_Struct;
+//     duo_recursion1();
+// }
 
-proc baz(var x: int) {
-    foo(x);
-}
+// proc baz(var x: int) {
+//     foo(x);
+// }
 
-proc foo(var x: int) {
-    bar(1);
-    global_var;
-    var b: Some_Struct;
-    var z: int;
-    z = 321;
-}
-proc bar(var x: int) {
-    baz(2);
-    var y: ^int;
-    var z: int = y^;
-    z = 123 + z;
-    z = z + 123;
-    z = 12 + 12;
-}
-var global_var: int;
-struct Some_Struct {
-    var x: int;
-}
+// proc foo(var x: int) {
+//     bar(1);
+//     global_var;
+//     var b: Some_Struct;
+//     var z: int;
+//     z = 321;
+// }
+// proc bar(var x: int) {
+//     baz(2);
+//     var y: ^int;
+//     var z: int = y^;
+//     z = 123 + z;
+//     z = z + 123;
+//     z = 12 + 12;
+// }
+// var global_var: int;
+// struct Some_Struct {
+//     var x: int;
+// }

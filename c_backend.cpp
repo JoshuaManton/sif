@@ -16,6 +16,9 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             if (strcmp(type_primitive->name, "string") == 0) {
                 sb->print("String ");
             }
+            else if (strcmp(type_primitive->name, "rawptr") == 0) {
+                sb->print("void *");
+            }
             else {
                 sb->printf("%s ", type_primitive->name);
             }
@@ -36,11 +39,10 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
         case TYPE_ARRAY: {
             Type_Array *type_array = (Type_Array *)type;
             c_print_type_prefix(sb, type_array->array_of);
-            // sb->print("Static_Array<");
-            // c_print_type(sb, type_array->array_of, var_name);
-            // sb->print(", ");
-            // sb->printf("%lld", type_array->count);
-            // sb->print(">");
+            break;
+        }
+        case TYPE_SLICE: {
+            sb->print("Slice ");
             break;
         }
         case TYPE_PROCEDURE: {
@@ -91,6 +93,9 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
                 }
             }
             sb->print(")");
+            break;
+        }
+        case TYPE_SLICE: {
             break;
         }
         default: {
@@ -249,10 +254,22 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
         }
         case EXPR_SUBSCRIPT: {
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
-            c_print_expr(sb, subscript->lhs);
-            sb->print("[");
-            c_print_expr(sb, subscript->index);
-            sb->print("]");
+            if (is_type_slice(subscript->lhs->operand.type)) {
+                Type_Slice *slice_type = (Type_Slice *)subscript->lhs->operand.type;
+                sb->print("((char *)");
+                c_print_expr(sb, subscript->lhs);
+                sb->print(".data)[");
+                c_print_expr(sb, subscript->index);
+                sb->printf(" * %d", slice_type->slice_of->size);
+                sb->print("]");
+            }
+            else {
+                assert(is_type_array(subscript->lhs->operand.type));
+                c_print_expr(sb, subscript->lhs);
+                sb->print("[");
+                c_print_expr(sb, subscript->index);
+                sb->print("]");
+            }
             break;
         }
         case EXPR_DEREFERENCE: {
@@ -270,7 +287,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 sb->print("->");
             }
             else {
-                assert(is_type_struct(selector->lhs->operand.type));
+                assert(is_type_struct(selector->lhs->operand.type) || is_type_slice(selector->lhs->operand.type));
                 sb->print(".");
             }
             sb->print(selector->field_name);
@@ -445,15 +462,28 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
     sb.print("#include <stdio.h>\n");
+    sb.print("#include <cstdlib>\n");
 
+    sb.print("typedef int8_t i8;\n");
+    sb.print("typedef int16_t i16;\n");
     sb.print("typedef int32_t i32;\n");
     sb.print("typedef int64_t i64;\n");
+
+    sb.print("typedef uint8_t u8;\n");
+    sb.print("typedef uint16_t u16;\n");
+    sb.print("typedef uint32_t u32;\n");
+    sb.print("typedef uint64_t u64;\n");
 
     sb.print("typedef float f32;\n");
     sb.print("typedef double f64;\n");
 
     sb.print("struct String {\n");
     sb.print("    char *data;\n");
+    sb.print("    int count;\n");
+    sb.print("};\n");
+
+    sb.print("struct Slice {\n");
+    sb.print("    void *data;\n");
     sb.print("    int count;\n");
     sb.print("};\n");
 

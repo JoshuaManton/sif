@@ -274,6 +274,7 @@ enum Expr_Kind {
 
     EXPR_POINTER_TYPE,
     EXPR_ARRAY_TYPE,
+    EXPR_SLICE_TYPE,
 
     EXPR_PAREN,
 
@@ -460,6 +461,14 @@ struct Expr_Array_Type : public Ast_Expr {
     {}
 };
 
+struct Expr_Slice_Type : public Ast_Expr {
+    Ast_Expr *slice_of = nullptr;
+    Expr_Slice_Type(Ast_Expr *slice_of, Location location)
+    : Ast_Expr(EXPR_SLICE_TYPE, location)
+    , slice_of(slice_of)
+    {}
+};
+
 enum Declaration_Kind {
     DECL_INVALID,
     DECL_TYPE,
@@ -534,3 +543,10 @@ Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false);
 Ast_Node *parse_statement(Lexer *lexer);
+
+bool is_and_op(Token_Kind kind);
+bool is_cmp_op(Token_Kind kind);
+bool is_add_op(Token_Kind kind);
+bool is_mul_op(Token_Kind kind);
+bool is_unary_op(Token_Kind kind);
+bool is_postfix_op(Token_Kind kind);

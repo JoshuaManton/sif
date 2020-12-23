@@ -11,6 +11,7 @@ enum Type_Kind {
     TYPE_STRUCT,
     TYPE_POINTER,
     TYPE_ARRAY,
+    TYPE_SLICE,
     TYPE_PROCEDURE,
 
     TYPE_COUNT,
@@ -28,6 +29,7 @@ enum Type_Flags {
     TF_STRUCT     = 1 << 8,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_INCOMPLETE = 1 << 9,
     TF_PROCEDURE  = 1 << 10, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_SLICE      = 1 << 11, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -91,6 +93,14 @@ struct Type_Array : public Type {
     {}
 };
 
+struct Type_Slice : public Type {
+    Type *slice_of = {};
+    Type_Slice(Type *slice_of)
+    : Type(TYPE_SLICE)
+    , slice_of(slice_of)
+    {}
+};
+
 struct Type_Procedure : public Type {
     Array<Type *> parameter_types = {};
     Type *return_type = {};
@@ -124,11 +134,15 @@ void typecheck_global_scope(Ast_Block *block);
 
 bool is_type_pointer   (Type *type);
 bool is_type_array     (Type *type);
+bool is_type_slice     (Type *type);
 bool is_type_number    (Type *type);
 bool is_type_integer   (Type *type);
 bool is_type_float     (Type *type);
+bool is_type_bool      (Type *type);
 bool is_type_untyped   (Type *type);
 bool is_type_unsigned  (Type *type);
 bool is_type_signed    (Type *type);
 bool is_type_struct    (Type *type);
 bool is_type_incomplete(Type *type);
+bool is_type_typeid    (Type *type);
+bool is_type_string    (Type *type);
