@@ -11,6 +11,7 @@
 
 /*
 TODO:
+-{} blocks at statement level
 -#include
 -error handling in typechecker
 -while loops
@@ -21,8 +22,6 @@ TODO:
 -operator overloading
 -should #foreign procs be showing up in the forward declarations list?
 */
-
-bool g_reported_error = false;
 
 void print_block_contents(Ast_Block *block, int indent = 0) {
     For (idx, block->nodes) {
@@ -85,19 +84,21 @@ void main(int argc, char **argv) {
     Lexer lexer(root_file, root_file_text);
 
     Ast_Block *global_scope = parse_block(&lexer);
-    if (g_reported_error) {
+    if (!global_scope) {
+        printf("There were errors.\n");
         return;
     }
     // print_block_contents(global_scope);
 
     add_global_declarations(global_scope);
-    resolve_identifiers();
-    if (g_reported_error) {
+    bool resolve_identifiers_success = resolve_identifiers();
+    if (!resolve_identifiers_success) {
+        printf("There were errors.\n");
         return;
     }
 
-    typecheck_global_scope(global_scope);
-    if (g_reported_error) {
+    bool check_success = typecheck_global_scope(global_scope);
+    if (!check_success) {
         printf("There were errors.\n");
         return;
     }

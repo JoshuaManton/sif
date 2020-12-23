@@ -517,7 +517,15 @@ void report_error(Location location, const char *fmt, ...) {
     vprintf(fmt, args);
     va_end(args);
     printf("\n");
-    g_reported_error = true;
+}
+
+void report_info(Location location, const char *fmt, ...) {
+    printf("%s(%d:%d)        ", location.filepath, location.line, location.character);
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+    printf("\n");
 }
 
 void unexpected_token(Lexer *lexer, Token token, Token_Kind expected) {

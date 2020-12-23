@@ -340,7 +340,8 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             break;
         }
         case EXPR_NULL: {
-            assert(false && "shouldn't ever get in here with a null because of constant handling above");
+            // todo(josh): should null be a constant? probably
+            sb->print("nullptr");
             break;
         }
         case EXPR_TRUE: {

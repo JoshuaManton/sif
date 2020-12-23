@@ -128,6 +128,7 @@ void print_token(Token token);
 char *token_string(Token_Kind kind);
 
 void report_error(Location location, const char *fmt, ...);
+void report_info(Location location, const char *fmt, ...);
 
 #define UNIMPLEMENTED(val) assert(false && "Unimplemented case: " #val "\n");
 

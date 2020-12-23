@@ -132,7 +132,7 @@ extern Type *type_string;
 
 void init_checker();
 void add_global_declarations(Ast_Block *block);
-void typecheck_global_scope(Ast_Block *block);
+bool typecheck_global_scope(Ast_Block *block);
 
 bool is_type_pointer   (Type *type);
 bool is_type_array     (Type *type);

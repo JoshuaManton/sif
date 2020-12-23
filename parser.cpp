@@ -21,7 +21,7 @@ void init_parser() {
     g_all_c_code_directives.allocator  = default_allocator();
 }
 
-void resolve_identifiers() {
+bool resolve_identifiers() {
     For (idx, g_identifiers_to_resolve) {
         Expr_Identifier *ident = g_identifiers_to_resolve[idx];
         Ast_Block *block = ident->parent_block;
@@ -41,10 +41,11 @@ void resolve_identifiers() {
         }
 
         if (!ident->resolved_declaration) {
-            assert(ident->resolved_declaration != nullptr && "Unresolved identifier");
-            g_reported_error = true;
+            report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
+            return false;
         }
     }
+    return true;
 }
 
 Ast_Block *push_ast_block(Ast_Block *block) {
@@ -57,17 +58,19 @@ void pop_ast_block(Ast_Block *old_block) {
     current_block = old_block;
 }
 
-void register_declaration(Declaration *new_declaration) {
+bool register_declaration(Declaration *new_declaration) {
     assert(new_declaration->parent_block != nullptr);
     For (decl_idx, new_declaration->parent_block->declarations) {
         Declaration *decl = new_declaration->parent_block->declarations[decl_idx];
         if (strcmp(decl->name, new_declaration->name) == 0) {
-            report_error(new_declaration->location, "Name collision.");
-            return;
+            report_error(new_declaration->location, "Name collision with '%s'.", new_declaration->name);
+            report_info(decl->location, "Here is the other declaration.");
+            return false;
         }
     }
     new_declaration->parent_block->declarations.append(new_declaration);
     g_all_declarations.append(new_declaration);
+    return true;
 }
 
 
@@ -107,7 +110,9 @@ Ast_Var *parse_var(Lexer *lexer) {
 
     Ast_Var *var = new Ast_Var(var_name, type_expr, expr, var_token.location);
     var->declaration = new Var_Declaration(var, current_block);
-    register_declaration(var->declaration);
+    if (!register_declaration(var->declaration)) {
+        return nullptr;
+    }
     return var;
 }
 
@@ -193,7 +198,9 @@ Ast_Proc *parse_proc(Lexer *lexer) {
 
     Ast_Proc *proc = new Ast_Proc(header, body, header->location);
     proc->declaration = new Proc_Declaration(proc, current_block);
-    register_declaration(proc->declaration);
+    if (!register_declaration(proc->declaration)) {
+        return nullptr;
+    }
     return proc;
 }
 
@@ -222,7 +229,9 @@ Ast_Struct *parse_struct(Lexer *lexer) {
     }
 
     structure->declaration = new Struct_Declaration(structure, current_block);
-    register_declaration(structure->declaration);
+    if (!register_declaration(structure->declaration)) {
+        return nullptr;
+    }
     return structure;
 }
 
@@ -314,19 +323,37 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
         }
 
         case TK_FOR: {
-            Ast_Block *block = new Ast_Block(lexer->location);
-            Ast_Block *old_block = push_ast_block(block);
+            Ast_Node *pre = {};
+            Ast_Expr *condition = {};
+            Ast_Node *post = {};
+            Ast_Block *body = {};
+            {
+                Ast_Block *block = new Ast_Block(lexer->location);
+                Ast_Block *old_block = push_ast_block(block);
+                defer(pop_ast_block(old_block));
 
-            eat_next_token(lexer);
-            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-            Ast_Node *pre = parse_single_statement(lexer, false);
-            EXPECT(lexer, TK_SEMICOLON, nullptr);
-            Ast_Expr *condition = parse_expr(lexer);
-            EXPECT(lexer, TK_SEMICOLON, nullptr);
-            Ast_Node *post = parse_single_statement(lexer, false);
-            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            Ast_Block *body = parse_block_including_curly_brackets(lexer);
-            pop_ast_block(old_block);
+                eat_next_token(lexer);
+                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+                pre = parse_single_statement(lexer, false);
+                if (!pre) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                condition = parse_expr(lexer);
+                if (!condition) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                post = parse_single_statement(lexer, false);
+                if (!post) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+                body = parse_block_including_curly_brackets(lexer);
+                if (!body) {
+                    return nullptr;
+                }
+            }
 
             return new Ast_For_Loop(pre, condition, post, body, root_token.location);
         }

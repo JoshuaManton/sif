@@ -538,8 +538,8 @@ extern Array<Ast_Directive_Print *>  g_all_print_directives;
 extern Array<Ast_Directive_C_Code *> g_all_c_code_directives;
 
 void init_parser();
-void resolve_identifiers();
-void register_declaration(Declaration *new_declaration);
+bool resolve_identifiers();
+bool register_declaration(Declaration *new_declaration);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false);
