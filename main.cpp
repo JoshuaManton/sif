@@ -11,14 +11,15 @@
 
 /*
 TODO:
--for loops
 -#include
+-error handling in typechecker
 -while loops
 -#foreign
 -strings
 -struct/array literals
 -turn most asserts into nice error messages
 -operator overloading
+-should #foreign procs be showing up in the forward declarations list?
 */
 
 bool g_reported_error = false;

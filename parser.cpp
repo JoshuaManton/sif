@@ -303,7 +303,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
             eat_next_token(lexer);
             Token code;
             EXPECT(lexer, TK_STRING, &code);
-            return new Ast_Directive_C_Code(code.text, root_token.location);
+            return new Ast_Directive_C_Code(code.escaped_text, root_token.location);
         }
 
         case TK_SEMICOLON: {
@@ -843,7 +843,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         case TK_STRING: {
             eat_next_token(lexer);
             // todo(josh): unescape the string
-            return new Expr_String_Literal(token.text, token.location);
+            return new Expr_String_Literal(token.text, token.scanner_length, token.escaped_text, token.escaped_length, token.location);
         }
         case TK_LEFT_PAREN: {
             eat_next_token(lexer);

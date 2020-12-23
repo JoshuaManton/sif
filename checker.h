@@ -116,6 +116,7 @@ extern Type *type_bool;
 extern Type *type_untyped_number;
 extern Type *type_untyped_null;
 extern Type *type_typeid;
+extern Type *type_string;
 
 void init_checker();
 void add_global_declarations(Ast_Block *block);

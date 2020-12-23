@@ -13,7 +13,12 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *type_primitive = (Type_Primitive *)type;
-            sb->printf("%s ", type_primitive->name);
+            if (strcmp(type_primitive->name, "string") == 0) {
+                sb->print("String ");
+            }
+            else {
+                sb->printf("%s ", type_primitive->name);
+            }
             break;
         }
         case TYPE_STRUCT: {
@@ -170,6 +175,12 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
         else if (expr->operand.type == type_bool) {
             sb->print(expr->operand.bool_value ? "true" : "false");
         }
+        else if (expr->operand.type == type_string) {
+            sb->printf("{\"%s\", %d}", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+        }
+        else {
+            assert(false);
+        }
         return;
     }
 
@@ -280,7 +291,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             break;
         }
         case EXPR_STRING_LITERAL: {
-            UNIMPLEMENTED(EXPR_STRING_LITERAL);
+            assert(false && "shouldn't ever get in here with a string literal because of constant handling above");
             break;
         }
         case EXPR_POINTER_TYPE: {
@@ -440,6 +451,11 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
 
     sb.print("typedef float f32;\n");
     sb.print("typedef double f64;\n");
+
+    sb.print("struct String {\n");
+    sb.print("    char *data;\n");
+    sb.print("    int count;\n");
+    sb.print("};\n");
 
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];

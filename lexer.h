@@ -109,9 +109,12 @@ enum Token_Kind {
 
 struct Token {
     char *text = nullptr;
+    char *escaped_text = nullptr;
     Token_Kind kind = TK_INVALID;
     Location location = {};
     bool has_a_dot = false;
+    int escaped_length = {};
+    int scanner_length = {};
 };
 
 void init_lexer_globals();

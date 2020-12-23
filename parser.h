@@ -234,9 +234,12 @@ struct Operand {
 
     i64 int_value      = {};
     f64 float_value    = {};
-    char *string_value = {};
     bool bool_value    = {};
     Type *type_value   = {};
+    char *scanned_string_value = {};
+    int scanned_string_length = {};
+    char *escaped_string_value = {};
+    int escaped_string_length = {};
 
     Operand()
     {}
@@ -336,10 +339,16 @@ struct Expr_Number_Literal : public Ast_Expr {
 };
 
 struct Expr_String_Literal : public Ast_Expr {
-    char *text = nullptr;
-    Expr_String_Literal(char *text, Location location)
+    char *text = {};
+    int scanner_length = {};
+    char *escaped_text = {};
+    int escaped_length = {};
+    Expr_String_Literal(char *text, int scanner_length, char *escaped_text, int escaped_length, Location location)
     : Ast_Expr(EXPR_STRING_LITERAL, location)
     , text(text)
+    , scanner_length(scanner_length)
+    , escaped_text(escaped_text)
+    , escaped_length(escaped_length)
     {}
 };
 

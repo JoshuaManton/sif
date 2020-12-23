@@ -135,19 +135,20 @@ char *scan_identifier(char *text, int *out_length) {
     return result;
 }
 
-char *unescape_string(char *str) {
+char *unescape_string(char *str, int *out_escaped_length) {
     // trim out quotes
-    assert(str[0] == '"');
+    assert(str[0] != '"');
     int string_length = strlen(str);
-    assert(str[string_length-1] == '"');
-    str += 1;
+    assert(str[string_length-1] != '"');
+    int escaped_length = string_length;
 
     bool escape = false;
     String_Builder sb = make_string_builder(default_allocator(), 1024);
-    for (char *c = str; (*c != '"' || escape); c++) {
+    for (char *c = str; (*c != '\0' || escape); c++) {
         if (!escape) {
             if (*c == '\\') {
                 escape = true;
+                escaped_length -= 1;
             }
             else {
                 sb.printf("%c", *c);
@@ -172,29 +173,35 @@ char *unescape_string(char *str) {
         }
     }
     assert(escape == false && "end of string from within escape sequence");
+    *out_escaped_length = escaped_length;
     return sb.string();
 }
 
 // note(josh): returns the string without quotes, out_length includes the quotes though since the lexer needs to know how much to advance by
-char *scan_string(char *text, int *out_length) {
+char *scan_string(char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string) {
     assert(*text == '"');
-    char *start = text;
     text += 1;
+    char *start = text;
     bool escaped = false;
+    int newlines = 0;
     while ((*text != 0) && (*text != '"' || escaped)) {
         escaped = false;
+        if (*text == '\n') {
+            newlines += 1;
+        }
         if (*text == '\\') {
             escaped = true;
         }
         text += 1;
     }
     assert(*text == '"'); // todo(josh): check for EOF
+    int length = (text - start);
     text += 1;
-    int length = text - start;
-    *out_length = length;
+    *out_scanner_length = length + 2; // note(josh): +2 for the quotation marks
+    *out_newlines_in_string = newlines;
     char *duplicate = clone_string(start, length);
-    char *result = unescape_string(duplicate);
-    return result;
+    *escaped_string = unescape_string(duplicate, out_escaped_length);
+    return duplicate;
 }
 
 char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
@@ -287,11 +294,18 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->has_a_dot = has_a_dot;
     }
     else if (lexer->text[lexer->index] == '"') {
-        int length = 0;
-        char *string = scan_string(&lexer->text[lexer->index], &length);
-        advance(lexer, length);
+        int scanner_length = 0;
+        int escaped_length = 0;
+        char *escaped_string = nullptr;
+        int newlines = 0;
+        char *string = scan_string(&lexer->text[lexer->index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        lexer->location.line += newlines;
+        advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
         out_token->text = string;
+        out_token->escaped_text = escaped_string;
+        out_token->escaped_length = escaped_length;
+        out_token->scanner_length = scanner_length-2; // note(josh): -2 for the quotes
     }
     // todo(josh): make a macro for these operators
     else if (lexer->text[lexer->index] == '+') {

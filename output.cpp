@@ -5,6 +5,10 @@ typedef int32_t i32;
 typedef int64_t i64;
 typedef float f32;
 typedef double f64;
+struct String {
+    char *data;
+    int count;
+};
 
 void print_int(int i) {
     printf("%d\n", i);
@@ -12,10 +16,18 @@ void print_int(int i) {
 void print_float(float f) {
     printf("%f\n", f);
 }
+void print(String string) {
+    for (int i = 0; i < string.count; i++) {
+        char c = string.data[i];
+        printf("%c", c);
+    }
+    printf("\n");
+}
 
 // Forward declarations
 void print_int(i32 i);
 void print_float(f32 f);
+void print(String str);
 struct Vector3;
 i64 return_stuff();
 void main();
@@ -47,6 +59,8 @@ i64 return_stuff() {
     return 321;
 }
 void main() {
+    String str = {"Hello, World", 12};
+    print(str);
     i64 arr[3] = {};
     arr[0] = 1;
     arr[1] = 4;
@@ -68,6 +82,9 @@ void main() {
     v_ptr->y = ((f32 )return_stuff());
     f32 (*x_ptr) = ((f32 (*))v_ptr);
     *x_ptr = 149.000000;
+    if (*x_ptr == 40.000000) {
+        return;
+    }
 }
 T (*p) = {};
 struct T {
