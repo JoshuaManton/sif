@@ -37,9 +37,6 @@ char *type_to_string(Type *type);
 void complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type);
-Type_Pointer *get_or_create_type_pointer_to(Type *type);
-Type_Array *get_or_create_type_array_of(Type *type, int count);
-Type_Slice *get_or_create_type_slice_of(Type *type);
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
 void typecheck_block(Ast_Block *block);
 void typecheck_procedure_header(Ast_Proc_Header *header);
@@ -462,7 +459,7 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
             }
         }
     }
-    Type_Slice *new_type = new Type_Slice(slice_of);
+    Type_Slice *new_type = new Type_Slice(slice_of, get_or_create_type_pointer_to(slice_of));
     new_type->flags = TF_SLICE;
     all_types.append(new_type);
     return new_type;
@@ -875,6 +872,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     if (strcmp(selector->field_name, "data") == 0) {
                         result_operand.type = get_or_create_type_pointer_to(slice_type->slice_of);
                         result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                        selector->is_accessing_slice_data_field = true;
                     }
                     else if (strcmp(selector->field_name, "count") == 0) {
                         result_operand.type = type_int;

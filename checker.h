@@ -95,9 +95,11 @@ struct Type_Array : public Type {
 
 struct Type_Slice : public Type {
     Type *slice_of = {};
-    Type_Slice(Type *slice_of)
+    Type *data_pointer_type = {};
+    Type_Slice(Type *slice_of, Type *data_pointer_type)
     : Type(TYPE_SLICE)
     , slice_of(slice_of)
+    , data_pointer_type(data_pointer_type)
     {}
 };
 
@@ -146,3 +148,7 @@ bool is_type_struct    (Type *type);
 bool is_type_incomplete(Type *type);
 bool is_type_typeid    (Type *type);
 bool is_type_string    (Type *type);
+
+Type_Pointer *get_or_create_type_pointer_to(Type *type);
+Type_Array *get_or_create_type_array_of(Type *type, int count);
+Type_Slice *get_or_create_type_slice_of(Type *type);

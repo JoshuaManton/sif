@@ -256,11 +256,12 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
             if (is_type_slice(subscript->lhs->operand.type)) {
                 Type_Slice *slice_type = (Type_Slice *)subscript->lhs->operand.type;
-                sb->print("((char *)");
+                sb->print("((");
+                c_print_type(sb, slice_type->data_pointer_type, "");
+                sb->print(")");
                 c_print_expr(sb, subscript->lhs);
                 sb->print(".data)[");
                 c_print_expr(sb, subscript->index);
-                sb->printf(" * %d", slice_type->slice_of->size);
                 sb->print("]");
             }
             else {
@@ -280,6 +281,13 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
         }
         case EXPR_SELECTOR: {
             Expr_Selector *selector = (Expr_Selector *)expr;
+            if (selector->is_accessing_slice_data_field) {
+                assert(is_type_slice(selector->lhs->operand.type));
+                Type_Slice *slice_type = (Type_Slice *)selector->lhs->operand.type;
+                sb->print("*((");
+                c_print_type(sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
+                sb->print(")&");
+            }
             c_print_expr(sb, selector->lhs);
             if (is_type_pointer(selector->lhs->operand.type)) {
                 Type_Pointer *type_pointer = (Type_Pointer *)selector->lhs->operand.type;
@@ -291,6 +299,9 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 sb->print(".");
             }
             sb->print(selector->field_name);
+            if (selector->is_accessing_slice_data_field) {
+                sb->print(")");
+            }
             break;
         }
         case EXPR_CAST: {

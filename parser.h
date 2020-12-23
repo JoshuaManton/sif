@@ -384,6 +384,7 @@ struct Expr_Procedure_Call : public Ast_Expr {
 struct Expr_Selector : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     char *field_name = nullptr;
+    bool is_accessing_slice_data_field = false; // todo(josh): kinda janky?
     Expr_Selector(Ast_Expr *lhs, char *field_name, Location location)
     : Ast_Expr(EXPR_SELECTOR, location)
     , lhs(lhs)

@@ -5,13 +5,21 @@ struct Vector3 {
 }
 
 proc main() {
-    var memory: [4]int;
-    var slice: []int;
-    slice.data = &memory[0];
-    slice.count = 4;
-    slice[2] = 4;
-    print_int(cast(i32, memory[2]));
-    assert(memory[2] == 4);
+    var memory = cast(^Vector3, alloc(sizeof(Vector3) * 16));
+    var slice: []Vector3;
+    slice.data = memory;
+    slice.count = 16;
+    for (var i = 0; i < slice.count; i = i + 1) {
+        var v = &slice[i];
+        v.x = 9;
+        v.y = 4;
+        v.z = 1;
+    }
+
+    var v_in_slice = slice[9];
+    print_float(v_in_slice.x);
+    print_float(v_in_slice.y);
+    print_float(v_in_slice.z);
 
     var v = cast(^Vector3, alloc(sizeof(Vector3)));
     v.x = 1;

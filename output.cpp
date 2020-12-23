@@ -46,14 +46,14 @@ void assert(bool condition) {
 }
 
 // Forward declarations
-void print_int(i32 i);
-void assert(bool condition);
 void *alloc(i64 size);
 struct Vector3;
 void print_float(f32 f);
 void free(void *ptr);
 void main();
+void print_int(i32 i);
 void print(String str);
+void assert(bool condition);
 
 // Actual declarations
 struct Vector3 {
@@ -62,13 +62,20 @@ struct Vector3 {
     f32 z;
 };
 void main() {
-    i64 memory[4] = {};
+    Vector3 (*memory) = ((Vector3 (*))alloc(192));
     Slice slice = {};
-    slice.data = &memory[0];
-    slice.count = 4;
-    ((char *)slice.data)[2 * 8] = 4;
-    print_int(((i32 )memory[2]));
-    assert(memory[2] == 4);
+    *((Vector3 (*(*)))&slice.data) = memory;
+    slice.count = 16;
+    for (i64 i = 0; i < slice.count; i = i + 1) {
+        Vector3 (*v) = &((Vector3 (*))slice.data)[i];
+        v->x = 9.000000;
+        v->y = 4.000000;
+        v->z = 1.000000;
+    }
+    Vector3 v_in_slice = ((Vector3 (*))slice.data)[9];
+    print_float(v_in_slice.x);
+    print_float(v_in_slice.y);
+    print_float(v_in_slice.z);
     Vector3 (*v) = ((Vector3 (*))alloc(12));
     v->x = 1.000000;
     v->y = 4.000000;
