@@ -153,7 +153,7 @@ char *scan_string(char *text, int *out_length) {
     return result;
 }
 
-char *scan_number(char *text, int *out_length) {
+char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
     char *start = text;
 
     if (*text == '0') {
@@ -170,6 +170,7 @@ char *scan_number(char *text, int *out_length) {
 
     if (*text == '.') {
         text += 1;
+        *out_has_a_dot = true;
         while (is_digit(*text)) {
             text += 1;
         }
@@ -234,10 +235,12 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     }
     else if (is_digit(lexer->text[lexer->index])) {
         int length = 0;
-        char *number = scan_number(&lexer->text[lexer->index], &length);
+        bool has_a_dot = false;
+        char *number = scan_number(&lexer->text[lexer->index], &length, &has_a_dot);
         advance(lexer, length);
         out_token->kind = TK_NUMBER;
         out_token->text = number;
+        out_token->has_a_dot = has_a_dot;
     }
     else if (lexer->text[lexer->index] == '"') {
         int length = 0;
@@ -442,7 +445,7 @@ void eat_next_token(Lexer *lexer) {
 }
 
 void report_error(Location location, const char *fmt, ...) {
-    printf("%s(%d:%d) ", location.filepath, location.line, location.character);
+    printf("%s(%d:%d) Error: ", location.filepath, location.line, location.character);
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);

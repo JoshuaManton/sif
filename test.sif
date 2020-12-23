@@ -10,11 +10,17 @@ proc main() {
     v.y = 4;
     v.z = 9;
 
-    var v_ptr: ^Vector3 = &v;
+    var a: [4]int;
+    var x = (&a[2])^;
+    #assert(typeof(x) == int);
+
+    var v_ptr = &v;
+    #assert(typeof(v_ptr) == ^Vector3);
     v_ptr.x = 2;
     v_ptr.y = cast(float, return_stuff());
 
-    var x_ptr: ^float = cast(^float, v_ptr);
+    var x_ptr = cast(^float, v_ptr);
+    #assert(typeof(x_ptr) == ^float);
     x_ptr^ = 149;
 
     // if (x_ptr == 40) {

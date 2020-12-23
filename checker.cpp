@@ -19,7 +19,8 @@ Type *type_f64;
 
 Type *type_bool;
 
-Type *type_untyped_number;
+Type *type_untyped_integer;
+Type *type_untyped_float;
 Type *type_untyped_null;
 
 Type *type_typeid;
@@ -64,8 +65,9 @@ void init_checker() {
 
     type_typeid = new Type_Primitive("typeid", 8);
 
-    type_untyped_number = new Type_Primitive("untyped number", -1); type_untyped_number->flags = TF_NUMBER | TF_UNTYPED | TF_INTEGER | TF_FLOAT; // todo(josh): having this be both integer and float is kinda goofy
-    type_untyped_null   = new Type_Primitive("untyped null", -1); type_untyped_null->flags   = TF_POINTER | TF_UNTYPED;
+    type_untyped_integer = new Type_Primitive("untyped integer", -1); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
+    type_untyped_float   = new Type_Primitive("untyped float", -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
+    type_untyped_null    = new Type_Primitive("untyped null", -1);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
 
     type_int = type_i64;
     type_float = type_f32;
@@ -116,11 +118,13 @@ bool is_type_array     (Type *type) { return type->flags & TF_ARRAY;      }
 bool is_type_number    (Type *type) { return type->flags & TF_NUMBER;     }
 bool is_type_integer   (Type *type) { return type->flags & TF_INTEGER;    }
 bool is_type_float     (Type *type) { return type->flags & TF_FLOAT;      }
+bool is_type_bool      (Type *type) { return type == type_bool;           }
 bool is_type_untyped   (Type *type) { return type->flags & TF_UNTYPED;    }
 bool is_type_unsigned  (Type *type) { return type->flags & TF_UNSIGNED;   }
 bool is_type_signed    (Type *type) { return type->flags & TF_SIGNED;     }
 bool is_type_struct    (Type *type) { return type->flags & TF_STRUCT;     }
 bool is_type_incomplete(Type *type) { return type->flags & TF_INCOMPLETE; }
+bool is_type_typeid    (Type *type) { return type == type_typeid;         }
 
 Operand check_declaration(Declaration *decl) {
     if (decl->check_state == DCS_CHECKED) {
@@ -305,10 +309,12 @@ bool match_types(Operand *operand, Type *expected_type) {
         return true;
     }
 
-    assert(!(expected_type->flags & TF_UNTYPED));
-
     if (operand->type->flags & TF_UNTYPED) {
         if (is_type_number(operand->type) && is_type_number(expected_type)) {
+            if (is_type_integer(expected_type) && is_type_float(operand->type)) {
+                report_error(operand->location, "Expected an integer type, got a float.");
+                return false;
+            }
             // todo(josh): this will truncate floats in the case of:
             //     var x: int = 1.3;
             operand->type = expected_type;
@@ -395,7 +401,16 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
 Type *get_most_concrete_type(Type *a, Type *b) {
     if (a->flags & TF_UNTYPED) {
         if (b->flags & TF_UNTYPED) {
-            return a;
+            if ((a->flags & TF_FLOAT) && (b->flags & TF_INTEGER)) {
+                return a;
+            }
+            else if ((b->flags & TF_FLOAT) && (a->flags & TF_INTEGER)) {
+                return b;
+            }
+            else {
+                assert(a == b);
+                return a;
+            }
         }
         else {
             return b;
@@ -404,6 +419,21 @@ Type *get_most_concrete_type(Type *a, Type *b) {
     else {
         return a;
     }
+}
+
+Type *try_concretize_type_without_context(Type *type) {
+    if (!(type->flags & TF_UNTYPED)) return type;
+    if (type == type_untyped_integer) {
+        return type_int;
+    }
+    if (type == type_untyped_float) {
+        return type_float;
+    }
+    if (type == type_untyped_null) {
+        return nullptr; // note(josh): nothing we can really do here, up to the caller to handle it
+    }
+    assert(false);
+    return nullptr;
 }
 
 bool can_cast(Ast_Expr *expr, Type *type) {
@@ -439,48 +469,197 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (expected_type != nullptr) {
                 most_concrete = get_most_concrete_type(most_concrete, expected_type);
             }
-            if (most_concrete->flags & TF_UNTYPED) {
-                // note(josh): if the most concrete type was untyped, that should mean that both were
-                //             untyped. in which case make sure they are both the same
-                assert(lhs_operand->type == rhs_operand->type);
-            }
-            else {
-                assert(match_types(lhs_operand, most_concrete));
-                assert(match_types(rhs_operand, most_concrete));
-            }
+            assert(match_types(lhs_operand, most_concrete));
+            assert(match_types(rhs_operand, most_concrete));
 
             switch (binary->op) {
                 case TK_EQUAL_TO: {
-                    assert(lhs_operand->type->flags & TF_INTEGER);
-                    assert(rhs_operand->type->flags & TF_INTEGER);
                     result_operand.type = type_bool;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
-                        result_operand.bool_value = lhs_operand->int_value == rhs_operand->int_value;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value   == rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value == rhs_operand->float_value;
+                        else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value  == rhs_operand->bool_value;
+                        else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value  == rhs_operand->type_value;
+                        else {
+                            report_error(binary->location, "Operator == is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_NOT_EQUAL_TO: {
+                    result_operand.type = type_bool;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value   != rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value != rhs_operand->float_value;
+                        else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value  != rhs_operand->bool_value;
+                        else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value  != rhs_operand->type_value;
+                        else {
+                            report_error(binary->location, "Operator != is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
                     }
                     break;
                 }
                 case TK_PLUS: {
-                    assert(lhs_operand->type->flags & TF_NUMBER);
-                    assert(rhs_operand->type->flags & TF_NUMBER);
                     result_operand.type = most_concrete;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
-                        result_operand.int_value = lhs_operand->int_value + rhs_operand->int_value;
-                        result_operand.float_value = lhs_operand->float_value + rhs_operand->float_value;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   + rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value + rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator + is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
                     }
                     break;
                 }
                 case TK_MINUS: {
-                    assert(lhs_operand->type->flags & TF_NUMBER);
-                    assert(rhs_operand->type->flags & TF_NUMBER);
                     result_operand.type = most_concrete;
                     if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
                         result_operand.flags |= OPERAND_CONSTANT;
-                        result_operand.int_value = lhs_operand->int_value - rhs_operand->int_value;
-                        result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   - rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator - is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
                     }
                     break;
+                }
+                case TK_MULTIPLY: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   * rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value * rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator * is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_DIVIDE: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   / rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value / rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator / is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_AMPERSAND: { // note(josh): BIT_AND
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value & rhs_operand->int_value;
+                        else {
+                            report_error(binary->location, "Operator / is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_BIT_OR: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value | rhs_operand->int_value;
+                        else {
+                            report_error(binary->location, "Operator / is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_LESS_THAN: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   < rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value < rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator < is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_LESS_THAN_OR_EQUAL: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   <= rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value <= rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator <= is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_GREATER_THAN: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   > rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value > rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator > is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_GREATER_THAN_OR_EQUAL: {
+                    result_operand.type = most_concrete;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   >= rhs_operand->int_value;
+                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value >= rhs_operand->float_value;
+                        else {
+                            report_error(binary->location, "Operator >= is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_BOOLEAN_AND: {
+                    result_operand.type = type_bool;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value && rhs_operand->bool_value;
+                        else {
+                            report_error(binary->location, "Operator && is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_BOOLEAN_OR: {
+                    result_operand.type = type_bool;
+                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                        result_operand.flags |= OPERAND_CONSTANT;
+                             if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value || rhs_operand->bool_value;
+                        else {
+                            report_error(binary->location, "Operator || is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            assert(false);
+                        }
+                    }
+                    break;
+                }
+                case TK_LEFT_SHIFT: {
+                    UNIMPLEMENTED(TK_LEFT_SHIFT);
+                }
+                case TK_RIGHT_SHIFT: {
+                    UNIMPLEMENTED(TK_RIGHT_SHIFT);
                 }
                 default: {
                     printf("Unhandled operator: %s\n", token_string(binary->op));
@@ -598,8 +777,13 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_NUMBER_LITERAL: {
             Expr_Number_Literal *number = (Expr_Number_Literal *)expr;
+            if (number->has_a_dot) {
+                result_operand.type = type_untyped_float;
+            }
+            else {
+                result_operand.type = type_untyped_integer;
+            }
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.type = type_untyped_number;
             result_operand.int_value   = atoi(number->number_string);
             result_operand.float_value = atof(number->number_string);
             break;
@@ -633,7 +817,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             complete_type(expr_operand->type_value);
             assert(!is_type_incomplete(expr_operand->type_value));
             assert(expr_operand->type_value->size > 0);
-            result_operand.type = type_untyped_number;
+            result_operand.type = type_untyped_integer;
             result_operand.int_value = expr_operand->type_value->size;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             break;
@@ -692,28 +876,36 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
 }
 
 void typecheck_var(Ast_Var *var) {
-    Operand *type_operand = typecheck_expr(var->type_expr, type_typeid);
-    assert(type_operand->flags & OPERAND_TYPE);
-    assert(type_operand->type_value);
-    var->type = type_operand->type_value;
-
-    if (var->expr) {
-        Operand *expr_operand = typecheck_expr(var->expr, var->type);
-        if (!match_types(expr_operand, var->type)) {
-            assert(false);
-        }
-        assert(var->type == expr_operand->type);
+    Type *declared_type = nullptr;
+    if (var->type_expr) {
+        Operand *type_operand = typecheck_expr(var->type_expr, type_typeid);
+        assert(type_operand->flags & OPERAND_TYPE);
+        assert(type_operand->type_value);
+        declared_type = type_operand->type_value;
     }
 
+    if (var->expr) {
+        Operand *expr_operand = typecheck_expr(var->expr, declared_type);
+        if (declared_type) {
+            if (!match_types(expr_operand, declared_type)) {
+                assert(false);
+            }
+        }
+        else {
+            declared_type = try_concretize_type_without_context(expr_operand->type);
+            expr_operand->type = declared_type;
+            if (declared_type == nullptr) {
+                assert(expr_operand->type == type_untyped_null);
+                report_error(var->location, "Cannot infer type from expression `null`.");
+            }
+        }
+    }
+
+    var->type = declared_type;
     complete_type(var->type);
 }
 
 void typecheck_procedure_header(Ast_Proc_Header *header) {
-    if (header->type != nullptr) {
-        // note(josh): typecheck_procedure() calls this, but also
-        // the normal declaration resolving does. hmmmmm.
-        return;
-    }
     assert(header->type == nullptr);
     Array<Type *> parameter_types = {};
     parameter_types.allocator = default_allocator();

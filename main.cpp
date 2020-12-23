@@ -9,6 +9,19 @@
 #include "checker.h"
 #include "c_backend.h"
 
+/*
+TODO:
+-type inference
+-struct/array literals
+-turn most asserts into nice error messages
+-#include
+-#foreign
+-strings
+-for loops
+-while loops
+-operator overloading
+*/
+
 bool g_reported_error = false;
 
 void print_block_contents(Ast_Block *block, int indent = 0) {

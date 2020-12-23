@@ -133,8 +133,11 @@ struct Ast_Var : public Ast_Node {
     Ast_Expr *expr = nullptr;
     Type *type = nullptr;
     Var_Declaration *declaration = {};
-    Ast_Var(Location location)
+    Ast_Var(char *name, Ast_Expr *type_expr, Ast_Expr *expr, Location location)
     : Ast_Node(AST_VAR, location)
+    , name(name)
+    , type_expr(type_expr)
+    , expr(expr)
     {}
 };
 
@@ -292,9 +295,11 @@ struct Expr_Identifier : public Ast_Expr {
 
 struct Expr_Number_Literal : public Ast_Expr {
     char *number_string = nullptr;
-    Expr_Number_Literal(char *number_string, Location location)
+    bool has_a_dot = false;
+    Expr_Number_Literal(char *number_string, bool has_a_dot, Location location)
     : Ast_Expr(EXPR_NUMBER_LITERAL, location)
     , number_string(number_string)
+    , has_a_dot(has_a_dot)
     {}
 };
 

@@ -39,6 +39,8 @@ void main() {
     v.x = 1.500000;
     v.y = 4.000000;
     v.z = 9.000000;
+    i64 a[4] = {};
+    i64 x = *(&a[2]);
     Vector3 (*v_ptr) = &v;
     v_ptr->x = 2.000000;
     v_ptr->y = ((f32 )return_stuff());

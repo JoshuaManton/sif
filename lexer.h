@@ -109,6 +109,7 @@ struct Token {
     char *text = nullptr;
     Token_Kind kind = TK_INVALID;
     Location location = {};
+    bool has_a_dot = false;
 };
 
 void init_lexer_globals();
