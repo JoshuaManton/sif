@@ -24,6 +24,7 @@ enum Ast_Kind {
     AST_STATEMENT_EXPR,
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
+    AST_DIRECTIVE_C_CODE,
 };
 
 struct Ast_Expr;
@@ -127,6 +128,14 @@ struct Ast_Directive_Print : public Ast_Node {
     Ast_Directive_Print(Ast_Expr *expr, Location location)
     : Ast_Node(AST_DIRECTIVE_PRINT, location)
     , expr(expr)
+    {}
+};
+
+struct Ast_Directive_C_Code : public Ast_Node {
+    char *text = {};
+    Ast_Directive_C_Code(char *text, Location location)
+    : Ast_Node(AST_DIRECTIVE_C_CODE, location)
+    , text(text)
     {}
 };
 
@@ -504,9 +513,10 @@ struct Var_Declaration : Declaration {
     {}
 };
 
-extern Array<Declaration *> g_all_declarations;
+extern Array<Declaration *>          g_all_declarations;
 extern Array<Ast_Directive_Assert *> g_all_assert_directives;
 extern Array<Ast_Directive_Print *>  g_all_print_directives;
+extern Array<Ast_Directive_C_Code *> g_all_c_code_directives;
 
 void init_parser();
 void resolve_identifiers();

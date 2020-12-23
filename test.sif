@@ -1,3 +1,12 @@
+#c_code "
+void print_int(int i) {
+    printf(\"%%d\\\n\", i);
+}
+void print_float(float f) {
+    printf(\"%%f\\\n\", f);
+}
+"
+
 proc print_int(var i: i32) #foreign;
 proc print_float(var f: f32) #foreign;
 
@@ -35,10 +44,6 @@ proc main() {
     var x_ptr = cast(^float, v_ptr);
     #assert(typeof(x_ptr) == ^float);
     x_ptr^ = 149;
-
-    for (var i = 0; i < 10; i = i + 1) {
-
-    }
 
     // if (x_ptr == 40) {
     //     return;

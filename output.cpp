@@ -5,6 +5,7 @@ typedef int32_t i32;
 typedef int64_t i64;
 typedef float f32;
 typedef double f64;
+
 void print_int(int i) {
     printf("%d\n", i);
 }
@@ -67,8 +68,6 @@ void main() {
     v_ptr->y = ((f32 )return_stuff());
     f32 (*x_ptr) = ((f32 (*))v_ptr);
     *x_ptr = 149.000000;
-    for (i64 i = 0; i < 10; i = i + 1) {
-    }
 }
 T (*p) = {};
 struct T {

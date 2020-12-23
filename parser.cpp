@@ -5,18 +5,20 @@
 
 #include "parser.h"
 
-Array<Expr_Identifier *> g_identifiers_to_resolve;
-Array<Declaration *> g_all_declarations;
+Array<Expr_Identifier *>      g_identifiers_to_resolve;
+Array<Declaration *>          g_all_declarations;
 Array<Ast_Directive_Assert *> g_all_assert_directives;
 Array<Ast_Directive_Print *>  g_all_print_directives;
+Array<Ast_Directive_C_Code *> g_all_c_code_directives;
 
 Ast_Proc_Header *g_currently_parsing_proc;
 
 void init_parser() {
     g_identifiers_to_resolve.allocator = default_allocator();
-    g_all_declarations.allocator = default_allocator();
-    g_all_assert_directives.allocator = default_allocator();
-    g_all_print_directives.allocator = default_allocator();
+    g_all_declarations.allocator       = default_allocator();
+    g_all_assert_directives.allocator  = default_allocator();
+    g_all_print_directives.allocator   = default_allocator();
+    g_all_c_code_directives.allocator  = default_allocator();
 }
 
 void resolve_identifiers() {
@@ -297,6 +299,13 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
             return new Ast_Directive_Print(expr, root_token.location);
         }
 
+        case TK_DIRECTIVE_C_CODE: {
+            eat_next_token(lexer);
+            Token code;
+            EXPECT(lexer, TK_STRING, &code);
+            return new Ast_Directive_C_Code(code.text, root_token.location);
+        }
+
         case TK_SEMICOLON: {
             if (eat_semicolon) {
                 eat_next_token(lexer);
@@ -431,6 +440,11 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
             case AST_DIRECTIVE_PRINT: {
                 Ast_Directive_Print *directive = (Ast_Directive_Print *)node;
                 g_all_print_directives.append(directive);
+                break;
+            }
+            case AST_DIRECTIVE_C_CODE: {
+                Ast_Directive_C_Code *directive = (Ast_Directive_C_Code *)node;
+                g_all_c_code_directives.append(directive);
                 break;
             }
             case AST_EMPTY_STATEMENT: {

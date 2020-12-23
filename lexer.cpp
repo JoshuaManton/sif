@@ -4,6 +4,7 @@
 #include <cassert>
 #include <stdarg.h>
 
+#include "basic.h"
 #include "lexer.h"
 
 static char *token_string_map[TK_COUNT];
@@ -34,6 +35,7 @@ void init_lexer_globals() {
     token_string_map[TK_DIRECTIVE_PRINT]       = "#print";
     token_string_map[TK_DIRECTIVE_ASSERT]      = "#assert";
     token_string_map[TK_DIRECTIVE_FOREIGN]     = "#foreign";
+    token_string_map[TK_DIRECTIVE_C_CODE]      = "#c_code";
 
     token_string_map[TK_ASSIGN]                = "=";
     token_string_map[TK_PLUS]                  = "+";
@@ -133,6 +135,46 @@ char *scan_identifier(char *text, int *out_length) {
     return result;
 }
 
+char *unescape_string(char *str) {
+    // trim out quotes
+    assert(str[0] == '"');
+    int string_length = strlen(str);
+    assert(str[string_length-1] == '"');
+    str += 1;
+
+    bool escape = false;
+    String_Builder sb = make_string_builder(default_allocator(), 1024);
+    for (char *c = str; (*c != '"' || escape); c++) {
+        if (!escape) {
+            if (*c == '\\') {
+                escape = true;
+            }
+            else {
+                sb.printf("%c", *c);
+            }
+        }
+        else {
+            escape = false;
+            switch (*c) {
+                case '"':  sb.printf("%c", '\"'); break;
+                case '\\': sb.printf("%c", '\\\\'); break;
+                case 'b':  sb.printf("%c", '\\b');  break;
+                case 'f':  sb.printf("%c", '\\f');  break;
+                case 'n':  sb.printf("%c", '\\n');  break;
+                case 'r':  sb.printf("%c", '\\r');  break;
+                case 't':  sb.printf("%c", '\\t');  break;
+                // case 'u':  fmt.sbprint(&sb, '\u'); // todo(josh): unicode
+                default: {
+                    printf("Unexpected escape character: %c\n", *c);
+                    assert(false);
+                }
+            }
+        }
+    }
+    assert(escape == false && "end of string from within escape sequence");
+    return sb.string();
+}
+
 // note(josh): returns the string without quotes, out_length includes the quotes though since the lexer needs to know how much to advance by
 char *scan_string(char *text, int *out_length) {
     assert(*text == '"');
@@ -150,7 +192,8 @@ char *scan_string(char *text, int *out_length) {
     text += 1;
     int length = text - start;
     *out_length = length;
-    char *result = clone_string(start+1, length-2);
+    char *duplicate = clone_string(start, length);
+    char *result = unescape_string(duplicate);
     return result;
 }
 
@@ -412,6 +455,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "foreign") == 0) {
             out_token->kind = TK_DIRECTIVE_FOREIGN;
             out_token->text = "#foreign";
+        }
+        else if (strcmp(identifier, "c_code") == 0) {
+            out_token->kind = TK_DIRECTIVE_C_CODE;
+            out_token->text = "#c_code";
         }
         else {
             printf("unknown directive: %s\n", identifier);

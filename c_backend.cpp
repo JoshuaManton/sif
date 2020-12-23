@@ -441,13 +441,10 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("typedef float f32;\n");
     sb.print("typedef double f64;\n");
 
-    sb.print("void print_int(int i) {\n");
-    sb.print("    printf(\"%%d\\n\", i);\n");
-    sb.print("}\n");
-
-    sb.print("void print_float(float f) {\n");
-    sb.print("    printf(\"%%f\\n\", f);\n");
-    sb.print("}\n");
+    For (idx, g_all_c_code_directives) {
+        Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];
+        sb.print(directive->text);
+    }
 
     // todo(josh): we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather
