@@ -11,7 +11,6 @@
 
 /*
 TODO:
--type inference
 -struct/array literals
 -turn most asserts into nice error messages
 -#include
