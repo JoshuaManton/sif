@@ -694,6 +694,95 @@ bool can_cast(Ast_Expr *expr, Type *type) {
     return false;
 }
 
+bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
+    switch (op) {
+        case TK_EQUAL_TO: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            else if (is_type_bool(lhs)    && is_type_bool(rhs))     return true;
+            else if (is_type_typeid(lhs)  && is_type_typeid(rhs))   return true;
+            else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
+            break;
+        }
+        case TK_NOT_EQUAL_TO: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            else if (is_type_bool(lhs)    && is_type_bool(rhs))     return true;
+            else if (is_type_typeid(lhs)  && is_type_typeid(rhs))   return true;
+            else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
+            break;
+        }
+        case TK_PLUS: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
+            break;
+        }
+        case TK_MINUS: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_MULTIPLY: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_DIVIDE: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_AMPERSAND: { // note(josh): BIT_AND
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            break;
+        }
+        case TK_BIT_OR: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            break;
+        }
+        case TK_LESS_THAN: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_LESS_THAN_OR_EQUAL: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_GREATER_THAN: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_GREATER_THAN_OR_EQUAL: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
+        case TK_BOOLEAN_AND: {
+                 if (is_type_bool(lhs) && is_type_bool(rhs))        return true;
+            break;
+        }
+        case TK_BOOLEAN_OR: {
+                 if (is_type_bool(lhs) && is_type_bool(rhs))        return true;
+            break;
+        }
+        case TK_LEFT_SHIFT: {
+            UNIMPLEMENTED(TK_LEFT_SHIFT);
+        }
+        case TK_RIGHT_SHIFT: {
+            UNIMPLEMENTED(TK_RIGHT_SHIFT);
+        }
+        default: {
+            printf("Unhandled operator: %s\n", token_string(op));
+            assert(false);
+        }
+    }
+    return false;
+}
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -1414,6 +1503,35 @@ bool typecheck_node(Ast_Node *node) {
             if (!rhs_operand) {
                 return false;
             }
+
+            Token_Kind binary_operation = TK_INVALID;
+            switch (assign->op) {
+                case TK_ASSIGN:             binary_operation = TK_INVALID;     break;
+                case TK_PLUS_ASSIGN:        binary_operation = TK_PLUS;        break;
+                case TK_MINUS_ASSIGN:       binary_operation = TK_MINUS;       break;
+                case TK_MULTIPLY_ASSIGN:    binary_operation = TK_MULTIPLY;    break;
+                case TK_DIVIDE_ASSIGN:      binary_operation = TK_DIVIDE;      break;
+                case TK_LEFT_SHIFT_ASSIGN:  binary_operation = TK_LEFT_SHIFT;  break;
+                case TK_RIGHT_SHIFT_ASSIGN: binary_operation = TK_RIGHT_SHIFT; break;
+                case TK_BIT_AND_ASSIGN:     binary_operation = TK_AMPERSAND;   break;
+                case TK_BIT_OR_ASSIGN:      binary_operation = TK_BIT_OR;      break;
+                case TK_BOOLEAN_AND_ASSIGN: binary_operation = TK_BOOLEAN_AND; break;
+                case TK_BOOLEAN_OR_ASSIGN:  binary_operation = TK_BOOLEAN_OR;  break;
+                default: {
+                    assert(false);
+                }
+            }
+
+            if (binary_operation == TK_INVALID) {
+                assert(assign->op = TK_ASSIGN);
+            }
+            else {
+                if (!operator_is_defined(lhs_operand->type, rhs_operand->type, binary_operation)) {
+                    report_error(assign->location, "Operator '%s' is not defined for types '%s and '%s'.", token_string(assign->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                    return false;
+                }
+            }
+
             assert(rhs_operand->flags & OPERAND_RVALUE);
             if (!match_types(rhs_operand, lhs_operand->type)) {
                 return false;

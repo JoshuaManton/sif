@@ -11,12 +11,11 @@
 
 /*
 TODO:
--+=, -=, etc
+-implicit `var` in structs and procedure parameters
 -{} blocks at statement level
 -enum field expressions
 -foreach loops
 -switch statements
--struct/array literals
 -function pointers
 -operator overloading
 -polymorphism

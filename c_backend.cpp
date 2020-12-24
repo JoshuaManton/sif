@@ -561,7 +561,22 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
             Ast_Assign *assign = (Ast_Assign *)node;
             c_emit_compound_literal_temporaries(sb, assign->rhs, indent_level);
             c_print_expr(sb, assign->lhs);
-            sb->print(" = ");
+            switch (assign->op) {
+                case TK_ASSIGN:             sb->print(" = "); break;
+                case TK_PLUS_ASSIGN:        sb->print(" += "); break;
+                case TK_MINUS_ASSIGN:       sb->print(" -= "); break;
+                case TK_MULTIPLY_ASSIGN:    sb->print(" *= "); break;
+                case TK_DIVIDE_ASSIGN:      sb->print(" /= "); break;
+                case TK_LEFT_SHIFT_ASSIGN:  sb->print(" <<= "); break;
+                case TK_RIGHT_SHIFT_ASSIGN: sb->print(" >>= "); break;
+                case TK_BIT_AND_ASSIGN:     sb->print(" &= "); break;
+                case TK_BIT_OR_ASSIGN:      sb->print(" |= "); break;
+                case TK_BOOLEAN_AND_ASSIGN: sb->print(" &&= "); break;
+                case TK_BOOLEAN_OR_ASSIGN:  sb->print(" ||= "); break;
+                default: {
+                    assert(false);
+                }
+            }
             c_print_expr(sb, assign->rhs);
             if (print_semicolon) {
                 sb->print(";\n");

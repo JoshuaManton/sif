@@ -73,7 +73,7 @@ void main() {
     __generated_compound_literal_0.elements[2] = 3.000000;
     __generated_compound_literal_0.elements[3] = 4.000000;
     Static_Array<f32 , 4> arr = __generated_compound_literal_0;
-    for (i64 i = 0; i < 4; i = i + 1) {
+    for (i64 i = 0; i < 4; i += 1) {
         print_float(arr.elements[i]);
     }
 }

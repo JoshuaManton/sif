@@ -322,6 +322,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->kind = TK_PLUS;
         out_token->text = "+";
         if (lexer->text[lexer->index] == '=') {
+            advance(lexer, 1);
             out_token->kind = TK_PLUS_ASSIGN;
             out_token->text = "+=";
         }
