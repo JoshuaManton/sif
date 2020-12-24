@@ -1,6 +1,6 @@
 #c_code "
-void print_int(long i) {
-    printf(\"%%d\\\n\", i);
+void print_int(i64 i) {
+    printf(\"%%lld\\\n\", i);
 }
 void print_float(float f) {
     printf(\"%%f\\\n\", f);
@@ -12,7 +12,7 @@ void print(String string) {
     }
     printf(\"\\\n\");
 }
-char *alloc(long size) {
+void *alloc(i64 size) {
     char *memory = (char *)malloc(size);
     return memory;
 }
@@ -50,12 +50,13 @@ enum My_Enum {
     BAZ;
 }
 
+
 proc main() {
     var an_enum = My_Enum.FOO;
     an_enum = My_Enum.BAR;
     an_enum = My_Enum.BAZ;
 
-    var asd = Vector3.WOW_A_CONSTANT;
+    var asd = an_enum.BAZ;
 
     const N = 16;
     #assert(N == 16);

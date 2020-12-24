@@ -27,8 +27,8 @@ struct Slice {
     i64 count;
 };
 
-void print_int(long i) {
-    printf("%d\n", i);
+void print_int(i64 i) {
+    printf("%lld\n", i);
 }
 void print_float(float f) {
     printf("%f\n", f);
@@ -40,7 +40,7 @@ void print(String string) {
     }
     printf("\n");
 }
-char *alloc(long size) {
+void *alloc(i64 size) {
     char *memory = (char *)malloc(size);
     return memory;
 }
@@ -92,7 +92,7 @@ void main() {
     i64 an_enum = 0;
     an_enum = 1;
     an_enum = 2;
-    i64 asd = 123;
+    i64 asd = 2;
     // constant declaration omitted: N
     // constant declaration omitted: My_Int_Type
     // constant declaration omitted: MY_INT
@@ -103,22 +103,22 @@ void main() {
         value = value + 1;
     }
     print_int(123);
-    Vector3 (*memory) = ((Vector3 (*))alloc(192));
+    Vector3 *memory = ((Vector3 *)alloc(192));
     Slice slice = {};
-    *((Vector3 (*(*)))&slice.data) = memory;
+    *((Vector3 **)&slice.data) = memory;
     slice.count = 16;
     for (i64 i = 0; i < slice.count; i = i + 1) {
-        Vector3 (*v) = &((Vector3 (*))slice.data)[i];
+        Vector3 *v = &((Vector3 *)slice.data)[i];
         v->x = 9.000000;
         v->y = 4.000000;
         v->z = 1.000000;
     }
     print(MAKE_STRING("Hello, World!", 13));
-    Vector3 v_in_slice = ((Vector3 (*))slice.data)[9];
+    Vector3 v_in_slice = ((Vector3 *)slice.data)[9];
     print_float(v_in_slice.x);
     print_float(v_in_slice.y);
     print_float(v_in_slice.z);
-    Vector3 (*v_ptr) = ((Vector3 (*))alloc(12));
+    Vector3 *v_ptr = ((Vector3 *)alloc(12));
     v_ptr->x = 1.000000;
     v_ptr->y = 4.000000;
     v_ptr->z = 9.000000;
@@ -146,56 +146,56 @@ void main() {
     bool neato[123] = {};
     i64 a[4] = {};
     i64 x = *(&a[2]);
-    Vector3 (*v_ptr2) = &v;
+    Vector3 *v_ptr2 = &v;
     v_ptr2->x = 2.000000;
     v_ptr2->y = ((f32 )return_stuff());
-    f32 (*x_ptr) = ((f32 (*))v_ptr2);
+    f32 *x_ptr = ((f32 *)v_ptr2);
     *x_ptr = 149.000000;
     if (*x_ptr == 40.000000) {
         return;
     }
 }
-T (*p) = {};
+T *p = {};
 struct T {
     bool a[8];
 };
 i64 a[8] = {};
 struct B {
-    A (*a);
+    A *a;
 };
 struct A {
     B b[4];
 };
 struct Contains_Pointers1 {
-    Contains_Pointers2 (*a);
+    Contains_Pointers2 *a;
 };
 struct Self_Pointer {
-    Self_Pointer (*b);
+    Self_Pointer *b;
 };
 void AAA() {
     A aa = {};
     B b = aa.b[2];
-    Contains_Pointers1 (*c) = {};
-    Contains_Pointers2 (*d) = c->a;
+    Contains_Pointers1 *c = {};
+    Contains_Pointers2 *d = c->a;
     c->a = d;
     Self_Pointer e = {};
 }
 i64 simple = {};
-i64 (*pointer) = {};
+i64 *pointer = {};
 i64 array[4] = {};
-i64 (*(*pointer_to_pointer)) = {};
+i64 **pointer_to_pointer = {};
 i64 array_of_arrays[4][8] = {};
 i64 (*pointer_to_array)[4] = {};
-i64 (*array_of_pointers[4]) = {};
-i64 (*(*wack))[4][8] = {};
-i64 (*(*more_wack[4][8])) = {};
+i64 *array_of_pointers[4] = {};
+i64 (**wack)[4][8] = {};
+i64 **more_wack[4][8] = {};
 i64 (*(*still_more_wack)[4])[8] = {};
-i64 (*(*(*(*complicated_garbage))[4])[8][32]) = {};
+i64 *(*(**complicated_garbage)[4])[8][32] = {};
 struct Some_Struct {
     i64 x;
 };
 void recursion() {
-    Some_Struct (*b) = {};
+    Some_Struct *b = {};
     i64 x = b->x;
     recursion();
 }
@@ -208,7 +208,7 @@ void duo_recursion1() {
 }
 void bar(i64 x) {
     baz(2);
-    i64 (*y) = {};
+    i64 *y = {};
     i64 z = *y;
     z = 123 + z;
     z = z + 123;
@@ -225,5 +225,5 @@ void baz(i64 x) {
 }
 i64 global_var = {};
 struct Contains_Pointers2 {
-    Contains_Pointers1 (*b);
+    Contains_Pointers1 *b;
 };

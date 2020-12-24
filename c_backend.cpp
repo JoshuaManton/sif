@@ -3,6 +3,36 @@
 void c_print_type(String_Builder *sb, Type *type, char *var_name);
 void c_print_expr(String_Builder *sb, Ast_Expr *expr);
 
+bool has_a_nested_type_array_before_another_pointer(Type *type) {
+    switch (type->kind) {
+        case TYPE_PRIMITIVE: {
+            return false;
+        }
+        case TYPE_STRUCT: {
+            return false;
+        }
+        case TYPE_ENUM: {
+            return false;
+        }
+        case TYPE_POINTER: {
+            return false;
+        }
+        case TYPE_ARRAY: {
+            return true;
+        }
+        case TYPE_SLICE: {
+            return false;
+        }
+        case TYPE_PROCEDURE: {
+            return false;
+        }
+        default: {
+            assert(false);
+            return false;
+        }
+    }
+}
+
 void c_print_type_prefix(String_Builder *sb, Type *type) {
     if (type == nullptr) {
         sb->printf("void ");
@@ -36,7 +66,9 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
         case TYPE_POINTER: {
             Type_Pointer *type_pointer = (Type_Pointer *)type;
             c_print_type_prefix(sb, type_pointer->pointer_to);
-            sb->print("(");
+            if (has_a_nested_type_array_before_another_pointer(type_pointer->pointer_to)) {
+                sb->print("(");
+            }
             sb->print("*");
             break;
         }
@@ -75,7 +107,9 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
         }
         case TYPE_POINTER: {
             Type_Pointer *type_pointer = (Type_Pointer *)type;
-            sb->print(")");
+            if (has_a_nested_type_array_before_another_pointer(type_pointer->pointer_to)) {
+                sb->print(")");
+            }
             c_print_type_postfix(sb, type_pointer->pointer_to);
             break;
         }
