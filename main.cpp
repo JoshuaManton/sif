@@ -11,60 +11,16 @@
 
 /*
 TODO:
+-+=, -=, etc
 -{} blocks at statement level
 -#include
 -enums
 -while loops
--#foreign
--strings
+-foreach loops
 -struct/array literals
--turn most asserts into nice error messages
+-function pointers
 -operator overloading
--should #foreign procs be showing up in the forward declarations list?
 */
-
-void print_block_contents(Ast_Block *block, int indent = 0) {
-    For (idx, block->nodes) {
-        for (int i = 0; i < indent; i++) {
-            printf(" ");
-        }
-        indent += 4;
-        Ast_Node *node = block->nodes[idx];
-        switch (node->ast_kind) {
-            case AST_VAR: {
-                Ast_Var *thing = (Ast_Var *)node;
-                printf("var %s\n", thing->name);
-                break;
-            }
-
-            case AST_PROC: {
-                Ast_Proc *thing = (Ast_Proc *)node;
-                printf("proc %s\n", thing->header->name);
-                For (param_idx, thing->header->parameters) {
-                    printf("    param %s\n", thing->header->parameters[param_idx]->name);
-                }
-                print_block_contents(thing->body, indent);
-                break;
-            }
-
-            case AST_STRUCT: {
-                Ast_Struct *thing = (Ast_Struct *)node;
-                printf("struct %s\n", thing->name);
-                For (param_idx, thing->fields) {
-                    printf("    field %s\n", thing->fields[param_idx]->name);
-                }
-                break;
-            }
-
-            case AST_BLOCK: {
-                indent += 4;
-                print_block_contents((Ast_Block *)node, indent);
-                break;
-            }
-        }
-        indent -= 4;
-    }
-}
 
 void main(int argc, char **argv) {
     if (argc <= 1) {
@@ -88,7 +44,6 @@ void main(int argc, char **argv) {
         printf("There were errors.\n");
         return;
     }
-    // print_block_contents(global_scope);
 
     add_global_declarations(global_scope);
     bool resolve_identifiers_success = resolve_identifiers();

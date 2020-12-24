@@ -384,6 +384,21 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
             return new Ast_For_Loop(pre, condition, post, body, root_token.location);
         }
 
+        case TK_WHILE: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *condition = parse_expr(lexer);
+            if (!condition) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            Ast_Block *body = parse_block_including_curly_brackets(lexer);
+            if (!body) {
+                return nullptr;
+            }
+            return new Ast_While_Loop(condition, body, root_token.location);
+        }
+
         case TK_IF: {
             eat_next_token(lexer);
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);

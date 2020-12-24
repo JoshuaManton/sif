@@ -93,6 +93,11 @@ void main() {
     // constant declaration omitted: My_Int_Type
     // constant declaration omitted: MY_INT
     i64 my_int = 321;
+    i64 value = 0;
+    while (value < 10) {
+        print_int(((i32 )value));
+        value = value + 1;
+    }
     Vector3 (*memory) = ((Vector3 (*))alloc(192));
     Slice slice = {};
     *((Vector3 (*(*)))&slice.data) = memory;

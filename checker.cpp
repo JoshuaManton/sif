@@ -998,10 +998,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
 
-            if (type_with_fields->kind == TYPE_SLICE && (strcmp(selector->field_name, "data") == 0)) {
-                selector->is_accessing_slice_data_field = true;
-            }
-
+            selector->type_with_field = type_with_fields;
             break;
         }
         case EXPR_IDENTIFIER: {
@@ -1299,11 +1296,30 @@ bool typecheck_node(Ast_Node *node) {
             if (!condition_operand) {
                 return false;
             }
-            assert(condition_operand->type == type_bool);
+            if (condition_operand->type != type_bool) {
+                report_error(for_loop->condition->location, "For loop condition must be of type bool.");
+                return false;
+            }
             if (!typecheck_node(for_loop->post)) {
                 return false;
             }
             if (!typecheck_block(for_loop->body)) {
+                return false;
+            }
+            break;
+        }
+
+        case AST_WHILE_LOOP: {
+            Ast_While_Loop *while_loop = (Ast_While_Loop *)node;
+            Operand *condition_operand = typecheck_expr(while_loop->condition);
+            if (!condition_operand) {
+                return false;
+            }
+            if (condition_operand->type != type_bool) {
+                report_error(while_loop->condition->location, "While loop condition must be of type bool.");
+                return false;
+            }
+            if (!typecheck_block(while_loop->body)) {
                 return false;
             }
             break;

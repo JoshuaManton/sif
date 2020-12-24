@@ -52,6 +52,12 @@ proc main() {
     var my_int = MY_INT;
     #assert(typeof(my_int) == My_Int_Type);
 
+    var value = 0;
+    while (value < 10) {
+        print_int(cast(i32, value));
+        value = value + 1;
+    }
+
     // todo(josh)
     // print_int(Vector3.WOW_A_CONSTANT);
 

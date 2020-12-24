@@ -14,7 +14,7 @@ enum Ast_Kind {
     AST_STRUCT,
     AST_IF,
     AST_FOR_LOOP,
-    AST_WHILE,
+    AST_WHILE_LOOP,
     AST_RETURN,
     AST_BREAK,
     AST_CONTINUE,
@@ -226,6 +226,16 @@ struct Ast_For_Loop : public Ast_Node {
     {}
 };
 
+struct Ast_While_Loop : public Ast_Node {
+    Ast_Expr *condition = {};
+    Ast_Block *body = {};
+    Ast_While_Loop(Ast_Expr *condition, Ast_Block *body, Location location)
+    : Ast_Node(AST_WHILE_LOOP, location)
+    , condition(condition)
+    , body(body)
+    {}
+};
+
 struct Ast_Return : public Ast_Node {
     Ast_Proc_Header *matching_procedure = {};
     Ast_Expr *expr = {};
@@ -387,7 +397,7 @@ struct Expr_Procedure_Call : public Ast_Expr {
 struct Expr_Selector : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     char *field_name = nullptr;
-    bool is_accessing_slice_data_field = false; // todo(josh): kinda janky?
+    Type *type_with_field = nullptr;
     Expr_Selector(Ast_Expr *lhs, char *field_name, Location location)
     : Ast_Expr(EXPR_SELECTOR, location)
     , lhs(lhs)

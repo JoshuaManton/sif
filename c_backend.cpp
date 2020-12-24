@@ -283,11 +283,12 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
         }
         case EXPR_SELECTOR: {
             Expr_Selector *selector = (Expr_Selector *)expr;
-            if (selector->is_accessing_slice_data_field) {
-                assert(is_type_slice(selector->lhs->operand.type));
-                Type_Slice *slice_type = (Type_Slice *)selector->lhs->operand.type;
+            bool is_accessing_slice_data_field = false;
+            if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
+                is_accessing_slice_data_field = true;
+                Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
                 sb->print("*((");
-                c_print_type(sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
+                c_print_type(sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), ""); // todo(josh): @Speed we should be able to cache a pointer-to-pointer-to-element-type
                 sb->print(")&");
             }
             c_print_expr(sb, selector->lhs);
@@ -298,7 +299,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 sb->print(".");
             }
             sb->print(selector->field_name);
-            if (selector->is_accessing_slice_data_field) {
+            if (is_accessing_slice_data_field) {
                 sb->print(")");
             }
             break;
@@ -439,6 +440,17 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
             c_print_statement(sb, for_loop->post, indent_level, false);
             sb->print(") {\n");
             c_print_block(sb, for_loop->body, indent_level + 1);
+            print_indents(sb, indent_level);
+            sb->print("}\n");
+            break;
+        }
+
+        case AST_WHILE_LOOP: {
+            Ast_While_Loop *while_loop = (Ast_While_Loop *)node;
+            sb->print("while (");
+            c_print_expr(sb, while_loop->condition);
+            sb->print(") {\n");
+            c_print_block(sb, while_loop->body, indent_level + 1);
             print_indents(sb, indent_level);
             sb->print("}\n");
             break;
