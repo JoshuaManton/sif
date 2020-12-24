@@ -440,6 +440,8 @@ struct Expr_Selector : public Ast_Expr {
 struct Expr_Compound_Literal : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Array<Ast_Expr *> exprs = {};
+
+    const char *generated_temporary_variable_name = {};
     Expr_Compound_Literal(Ast_Expr *type_expr, Array<Ast_Expr *> exprs, Location location)
     : Ast_Expr(EXPR_COMPOUND_LITERAL, location)
     , type_expr(type_expr)

@@ -86,7 +86,8 @@ Ast_Var *parse_var(Lexer *lexer) {
     }
     if (root_token.kind != TK_VAR) {
         if (root_token.kind != TK_CONST) {
-            assert(false);
+            report_error(root_token.location, "Unexpected token %s, expected `var` or `const`.", token_string(root_token.kind));
+            return nullptr;
         }
     }
     eat_next_token(lexer);

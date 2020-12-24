@@ -1120,32 +1120,59 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
 
-            if (compound_literal->exprs.count != 0) {
-                if (compound_literal->exprs.count != target_type->num_variable_fields) {
-                    report_error(compound_literal->location, "Field count for compound literal doesn't match the type. Expected %d, got %d.", target_type->fields.count, compound_literal->exprs.count);
-                    return nullptr;
+            if (is_type_array(target_type)) {
+                Type_Array *array_type = (Type_Array *)target_type;
+                assert(array_type->count > 0);
+                if (compound_literal->exprs.count != 0) {
+                    if (compound_literal->exprs.count != array_type->count) {
+                        report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
+                        return nullptr;
+                    }
+
+                    Type *element_type = array_type->array_of;
+                    For (idx, compound_literal->exprs) {
+                        Ast_Expr *expr = compound_literal->exprs[idx];
+                        Operand *expr_operand = typecheck_expr(expr);
+                        if (!expr_operand) {
+                            return nullptr;
+                        }
+                        if (!match_types(expr_operand, element_type, false)) {
+                            report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                            report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
+                            return nullptr;
+                        }
+                    }
                 }
             }
-            int variable_field_index = -1;
-            For (idx, compound_literal->exprs) {
-                variable_field_index += 1;
-                while (target_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
-                    variable_field_index += 1;
-                }
+            else {
+                if (compound_literal->exprs.count != 0) {
+                    if (compound_literal->exprs.count != target_type->num_variable_fields) {
+                        report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->fields.count, compound_literal->exprs.count);
+                        return nullptr;
+                    }
+                    int variable_field_index = -1;
+                    For (idx, compound_literal->exprs) {
+                        variable_field_index += 1;
+                        while (target_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
+                            variable_field_index += 1;
+                        }
 
-                Struct_Field target_field = target_type->fields[variable_field_index];
+                        Type *element_type = target_type->fields[variable_field_index].operand.type;
 
-                Ast_Expr *expr = compound_literal->exprs[idx];
-                Operand *expr_operand = typecheck_expr(expr);
-                if (!expr_operand) {
-                    return nullptr;
-                }
-                if (!match_types(expr_operand, target_field.operand.type, false)) {
-                    report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                    report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(target_field.operand.type), type_to_string(expr_operand->type));
-                    return nullptr;
+                        Ast_Expr *expr = compound_literal->exprs[idx];
+                        Operand *expr_operand = typecheck_expr(expr);
+                        if (!expr_operand) {
+                            return nullptr;
+                        }
+                        if (!match_types(expr_operand, element_type, false)) {
+                            report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                            report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
+                            return nullptr;
+                        }
+                    }
                 }
             }
+
             result_operand.type = type_operand->type_value;
             result_operand.flags = OPERAND_RVALUE;
 
