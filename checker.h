@@ -38,18 +38,26 @@ enum Check_State {
     CS_CHECKED,
 };
 
+struct Struct_Field {
+    const char *name = {};
+    Operand operand = {};
+    int offset = {}; // -1 if is_constant
+};
 struct Type {
     Type_Kind kind = {};
     int size = {};
     u64 flags = {};
     Check_State check_state = {};
+    Array<Struct_Field> fields = {};
     Type(Type_Kind kind)
     : kind(kind)
-    {}
+    {
+        fields.allocator = default_allocator();
+    }
 };
 
 struct Type_Primitive : public Type {
-    char *name = nullptr;
+    const char *name = nullptr;
     Type_Primitive(char *name, int size)
     : Type(TYPE_PRIMITIVE)
     , name(name)
@@ -58,18 +66,9 @@ struct Type_Primitive : public Type {
     }
 };
 
-struct Struct_Field {
-    char *name = {};
-    Type *type = {};
-    int offset = {};
-    Operand constant_operand = {};
-    bool is_constant = {};
-};
 struct Type_Struct : public Type {
-    char *name = nullptr;
-    Array<Struct_Field> fields = {};
+    const char *name = nullptr;
     Ast_Struct *ast_struct = {};
-
     Type_Struct(Ast_Struct *structure)
     : Type(TYPE_STRUCT)
     , name(structure->name)

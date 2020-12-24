@@ -14,11 +14,17 @@ typedef float f32;
 typedef double f64;
 struct String {
     char *data;
-    int count;
+    i64 count;
+};
+String MAKE_STRING(char *data, i64 count) {
+    String string;
+    string.data = data;
+    string.count = count;
+    return string;
 };
 struct Slice {
     void *data;
-    int count;
+    i64 count;
 };
 
 void print_int(int i) {
@@ -84,6 +90,9 @@ i64 return_stuff() {
 }
 void main() {
     // constant declaration omitted: N
+    // constant declaration omitted: My_Int_Type
+    // constant declaration omitted: MY_INT
+    i64 my_int = 321;
     Vector3 (*memory) = ((Vector3 (*))alloc(192));
     Slice slice = {};
     *((Vector3 (*(*)))&slice.data) = memory;
@@ -94,7 +103,7 @@ void main() {
         v->y = 4.000000;
         v->z = 1.000000;
     }
-    print({"Hello, World!", 13});
+    print(MAKE_STRING("Hello, World!", 13));
     Vector3 v_in_slice = ((Vector3 (*))slice.data)[9];
     print_float(v_in_slice.x);
     print_float(v_in_slice.y);
@@ -107,8 +116,9 @@ void main() {
     print_float(v_ptr->y);
     print_float(v_ptr->z);
     free(v_ptr);
-    String str = {"Hello, World", 12};
+    String str = MAKE_STRING("Hello, World", 12);
     print(str);
+    print_int(((i32 )MAKE_STRING("asd123", 6).count));
     i64 arr[3] = {};
     arr[0] = 1;
     arr[1] = 4;

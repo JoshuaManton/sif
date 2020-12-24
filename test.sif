@@ -47,6 +47,10 @@ struct Vector3 {
 proc main() {
     const N = 16;
     #assert(N == 16);
+    const My_Int_Type = int;
+    const MY_INT: My_Int_Type = 321;
+    var my_int = MY_INT;
+    #assert(typeof(my_int) == My_Int_Type);
 
     // todo(josh)
     // print_int(Vector3.WOW_A_CONSTANT);
@@ -80,6 +84,7 @@ proc main() {
 
     var str = "Hello, " + "World";
     print(str);
+    print_int(cast(i32, "asd123".count));
 
     var arr: [3]int;
     arr[0] = 1;

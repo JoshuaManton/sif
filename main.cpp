@@ -13,7 +13,7 @@
 TODO:
 -{} blocks at statement level
 -#include
--error handling in typechecker
+-enums
 -while loops
 -#foreign
 -strings

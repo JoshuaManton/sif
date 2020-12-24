@@ -44,6 +44,27 @@ bool typecheck_procedure(Ast_Proc *procedure);
 bool do_assert_directives();
 bool do_print_directives();
 
+void add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset) {
+    assert(variable_type != nullptr);
+    assert(!is_type_untyped(variable_type));
+    Struct_Field field = {};
+    field.name = name;
+    field.offset = offset;
+    field.operand.type = variable_type;
+    field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+    type->fields.append(field);
+}
+
+void add_constant_type_field(Type *type, const char *name, Operand operand) {
+    assert(operand.type != nullptr);
+    assert(!is_type_untyped(operand.type));
+    Struct_Field field = {};
+    field.name = name;
+    field.offset = -1;
+    field.operand = operand;
+    type->fields.append(field);
+}
+
 void init_checker() {
     all_types.allocator = default_allocator();
     ordered_declarations.allocator = default_allocator();
@@ -71,9 +92,13 @@ void init_checker() {
     type_untyped_float   = new Type_Primitive("untyped float", -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
     type_untyped_null    = new Type_Primitive("untyped null", -1);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
 
-
     type_int = type_i64;
     type_float = type_f32;
+
+
+
+    add_variable_type_field(type_string, "data", get_or_create_type_pointer_to(type_u8), 0);
+    add_variable_type_field(type_string, "count", type_int, 8);
 }
 
 void add_global_declarations(Ast_Block *block) {
@@ -245,6 +270,7 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
                     }
                     else {
                         decl_operand = *expr_operand;
+                        var->constant_operand = decl_operand;
                     }
                 }
             }
@@ -341,6 +367,7 @@ bool typecheck_global_scope(Ast_Block *block) {
 }
 
 char *type_to_string(Type *type) {
+    // todo(josh): janky allocation
     char *buffer = (char *)alloc(default_allocator(), 64);
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
@@ -362,6 +389,14 @@ char *type_to_string(Type *type) {
             Type_Array *array = (Type_Array *)type;
             sprintf(buffer, "[%d]%s", array->count, type_to_string(array->array_of));
             break;
+        }
+        case TYPE_SLICE: {
+            Type_Slice *slice = (Type_Slice *)type;
+            sprintf(buffer, "[]%s", type_to_string(slice->slice_of));
+            break;
+        }
+        default: {
+            assert(false);
         }
     }
     return buffer;
@@ -388,42 +423,34 @@ bool complete_type(Type *type) {
                     return false;
                 }
                 int size = 0;
-                Array<Struct_Field> fields = {};
-                fields.allocator = default_allocator();
                 if (structure->fields.count == 0) {
                     size = 1;
                 }
                 else {
                     For (idx, structure->fields) {
                         Ast_Var *var = structure->fields[idx];
+                        check_declaration(var->declaration);
                         if (!complete_type(var->type)) {
                             return false;
                         }
 
-                        Struct_Field field = {};
-                        field.name = var->name;
-                        field.type = var->type;
                         if (var->is_constant) {
                             assert(var->expr != nullptr);
-                            Operand *constant_operand = typecheck_expr(var->expr);
-                            if (!constant_operand) {
-                                return nullptr;
-                            }
-                            field.constant_operand = *constant_operand;
-                            field.is_constant = true;
+                            assert(var->constant_operand.type != nullptr);
+                            assert(var->constant_operand.flags & OPERAND_CONSTANT);
+                            add_constant_type_field(struct_type, var->name, var->constant_operand);
                         }
                         else {
                             assert(var->type->size > 0);
-                            field.offset = size; // todo(josh): alignment and everything
-                            size += field.type->size;
+                            // todo(josh): alignment
+                            add_variable_type_field(struct_type, var->name, var->type, size);
+                            size += var->type->size;
                         }
-                        fields.append(field);
                     }
                 }
 
                 assert(size > 0);
                 struct_type->size = size;
-                struct_type->fields = fields;
                 struct_type->flags &= ~(TF_INCOMPLETE);
 
                 assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE); // todo(josh): locally scoped structs and procs
@@ -503,19 +530,24 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     return new_type;
 }
 
-Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
+Type_Array *get_or_create_type_array_of(Type *array_of, Operand *count_operand) {
+    assert(array_of != nullptr);
     assert(!is_type_untyped(array_of));
+    assert(count_operand->flags & OPERAND_CONSTANT);
+    assert(is_type_integer(count_operand->type));
     For (idx, all_types) { // todo(josh): @Speed maybe have an `all_array_types` array
         Type *other_type = all_types[idx];
         if (other_type->kind == TYPE_ARRAY) {
             Type_Array *other_type_array = (Type_Array *)other_type;
-            if (other_type_array->array_of == array_of && other_type_array->count == count) {
+            if (other_type_array->array_of == array_of && other_type_array->count == count_operand->int_value) {
                 return other_type_array;
             }
         }
     }
-    Type_Array *new_type = new Type_Array(array_of, count);
+    Type_Array *new_type = new Type_Array(array_of, count_operand->int_value);
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
+    add_variable_type_field(new_type, "data", type_rawptr, 0);
+    add_constant_type_field(new_type, "count", *count_operand);
     all_types.append(new_type);
     return new_type;
 }
@@ -531,8 +563,11 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
             }
         }
     }
-    Type_Slice *new_type = new Type_Slice(slice_of, get_or_create_type_pointer_to(slice_of));
+    Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(slice_of);
+    Type_Slice *new_type = new Type_Slice(slice_of, pointer_to_element_type);
     new_type->flags = TF_SLICE;
+    add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
+    add_variable_type_field(new_type, "count", type_int, 8);
     all_types.append(new_type);
     return new_type;
 }
@@ -935,80 +970,38 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!complete_type(lhs_operand->type)) {
                 return nullptr;
             }
-            Type_Struct *struct_type = nullptr;
+
+            assert(lhs_operand->type != nullptr);
+            Type *type_with_fields = lhs_operand->type;
             if (is_type_pointer(lhs_operand->type)) {
-                if (lhs_operand->type == type_rawptr) {
-                    report_error(selector->location, "rawptr doesn't have any fields.");
+                Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
+                assert(pointer_type->pointer_to != nullptr);
+                type_with_fields = pointer_type->pointer_to;
+                if (!complete_type(type_with_fields)) {
                     return nullptr;
                 }
-                else {
-                    Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
-                    assert(pointer_type->pointer_to != nullptr);
-                    assert(is_type_struct(pointer_type->pointer_to));
-                    if (!complete_type(pointer_type->pointer_to)) {
-                        return nullptr;
-                    }
-                    struct_type = (Type_Struct *)pointer_type->pointer_to;
+            }
+            assert(type_with_fields != nullptr);
+
+            bool found_field = false;
+            For (idx, type_with_fields->fields) {
+                Struct_Field field = type_with_fields->fields[idx];
+                if (strcmp(field.name, selector->field_name) == 0) {
+                    found_field = true;
+                    result_operand = field.operand;
+                    result_operand.location = selector->location;
+                    break;
                 }
             }
-            else if (is_type_struct(lhs_operand->type)) {
-                struct_type = (Type_Struct *)lhs_operand->type;
+            if (!found_field) {
+                report_error(selector->location, "Type %s doesn't have field %s.", type_to_string(lhs_operand->type), selector->field_name);
+                return nullptr;
             }
 
-            if (struct_type != nullptr) {
-                assert(!is_type_incomplete(struct_type));
-                bool found_field = false;
-                For (field_idx, struct_type->fields) {
-                    Struct_Field field = struct_type->fields[field_idx];
-                    if (strcmp(field.name, selector->field_name) == 0) {
-                        found_field = true;
-                        result_operand.type = field.type;
-                        if (field.is_constant) {
-                            assert(field.constant_operand.flags & OPERAND_CONSTANT);
-                            result_operand = field.constant_operand;
-                        }
-                        else {
-                            result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-                        }
-                        break;
-                    }
-                }
-                if (!found_field) {
-                    report_error(selector->location, "Type %s doesn't have field %s.", type_to_string(lhs_operand->type), selector->field_name);
-                    return nullptr;
-                }
+            if (type_with_fields->kind == TYPE_SLICE && (strcmp(selector->field_name, "data") == 0)) {
+                selector->is_accessing_slice_data_field = true;
             }
-            else {
-                if (lhs_operand->type->kind == TYPE_ARRAY) {
-                    Type_Array *array_type = (Type_Array *)lhs_operand->type;
-                    if (strcmp(selector->field_name, "count") == 0) {
-                        result_operand.type = type_untyped_integer;
-                        result_operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
-                        result_operand.int_value   = array_type->count;
-                        result_operand.float_value = array_type->count;
-                    }
-                    else {
-                        report_error(selector->location, "Array types don't have field %s.", type_to_string(lhs_operand->type), selector->field_name);
-                        return nullptr;
-                    }
-                }
-                else if (lhs_operand->type->kind == TYPE_SLICE) {
-                    Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
-                    if (strcmp(selector->field_name, "data") == 0) {
-                        result_operand.type = get_or_create_type_pointer_to(slice_type->slice_of);
-                        result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-                        selector->is_accessing_slice_data_field = true;
-                    }
-                    else if (strcmp(selector->field_name, "count") == 0) {
-                        result_operand.type = type_int;
-                        result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-                    }
-                    else {
-                        report_error(selector->location, "Array types don't have field %s.", type_to_string(lhs_operand->type), selector->field_name);
-                        return nullptr;
-                    }
-                }
-            }
+
             break;
         }
         case EXPR_IDENTIFIER: {
@@ -1111,7 +1104,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             assert((array_of_operand->flags & OPERAND_CONSTANT) && (array_of_operand->flags & OPERAND_TYPE));
-            Operand *count_operand = typecheck_expr(expr_array->count_expr);
+            Operand *count_operand = typecheck_expr(expr_array->count_expr, type_int);
             if (!count_operand) {
                 return nullptr;
             }
@@ -1119,7 +1112,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(count_operand->int_value > 0);
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
+            result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand);
             break;
         }
         case EXPR_SLICE_TYPE: {

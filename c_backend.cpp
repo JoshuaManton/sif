@@ -183,7 +183,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             sb->print(expr->operand.bool_value ? "true" : "false");
         }
         else if (expr->operand.type == type_string) {
-            sb->printf("{\"%s\", %d}", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+            sb->printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
         }
         else {
             assert(false);
@@ -292,12 +292,9 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             }
             c_print_expr(sb, selector->lhs);
             if (is_type_pointer(selector->lhs->operand.type)) {
-                Type_Pointer *type_pointer = (Type_Pointer *)selector->lhs->operand.type;
-                assert(type_pointer->pointer_to->kind == TYPE_STRUCT);
                 sb->print("->");
             }
             else {
-                assert(is_type_struct(selector->lhs->operand.type) || is_type_slice(selector->lhs->operand.type));
                 sb->print(".");
             }
             sb->print(selector->field_name);
@@ -498,12 +495,18 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
 
     sb.print("struct String {\n");
     sb.print("    char *data;\n");
-    sb.print("    int count;\n");
+    sb.print("    i64 count;\n");
+    sb.print("};\n");
+    sb.print("String MAKE_STRING(char *data, i64 count) {\n");
+    sb.print("    String string;\n");
+    sb.print("    string.data = data;\n");
+    sb.print("    string.count = count;\n");
+    sb.print("    return string;\n");
     sb.print("};\n");
 
     sb.print("struct Slice {\n");
     sb.print("    void *data;\n");
-    sb.print("    int count;\n");
+    sb.print("    i64 count;\n");
     sb.print("};\n");
 
     For (idx, g_all_c_code_directives) {

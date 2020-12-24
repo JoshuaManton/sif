@@ -47,6 +47,37 @@ struct Type_Array;
 
 static Ast_Block *current_block;
 
+enum Operand_Flags {
+    OPERAND_CONSTANT = 1 << 0,
+    OPERAND_TYPE     = 1 << 1,
+    OPERAND_LVALUE   = 1 << 2,
+    OPERAND_RVALUE   = 1 << 3,
+    OPERAND_NO_VALUE = 1 << 4, // note(josh): procedures that don't return anything
+};
+
+struct Operand {
+    Location location = {};
+
+    u64 flags = {};
+    Type *type = {};
+
+    i64 int_value      = {};
+    f64 float_value    = {};
+    bool bool_value    = {};
+    Type *type_value   = {};
+    char *scanned_string_value = {};
+    int scanned_string_length = {};
+    char *escaped_string_value = {};
+    int escaped_string_length = {};
+
+    Operand()
+    {}
+
+    Operand(Location location)
+    : location(location)
+    {}
+};
+
 struct Ast_Node {
     Ast_Block *parent_block = {};
     Ast_Kind ast_kind = AST_INVALID;
@@ -146,6 +177,7 @@ struct Ast_Var : public Ast_Node {
     Type *type = {};
     bool is_constant = {};
     Var_Declaration *declaration = {};
+    Operand constant_operand = {};
     Ast_Var(char *name, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
@@ -219,37 +251,6 @@ struct Ast_Empty_Statement : public Ast_Node {
 };
 
 
-
-enum Operand_Flags {
-    OPERAND_CONSTANT = 1 << 0,
-    OPERAND_TYPE     = 1 << 1,
-    OPERAND_LVALUE   = 1 << 2,
-    OPERAND_RVALUE   = 1 << 3,
-    OPERAND_NO_VALUE = 1 << 4, // note(josh): procedures that don't return anything
-};
-
-struct Operand {
-    Location location = {};
-
-    u64 flags = {};
-    Type *type = {};
-
-    i64 int_value      = {};
-    f64 float_value    = {};
-    bool bool_value    = {};
-    Type *type_value   = {};
-    char *scanned_string_value = {};
-    int scanned_string_length = {};
-    char *escaped_string_value = {};
-    int escaped_string_length = {};
-
-    Operand()
-    {}
-
-    Operand(Location location)
-    : location(location)
-    {}
-};
 
 enum Expr_Kind {
     EXPR_INVALID,
