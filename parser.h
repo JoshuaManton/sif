@@ -303,6 +303,8 @@ enum Expr_Kind {
     EXPR_PROCEDURE_CALL,
     EXPR_SELECTOR,
 
+    EXPR_COMPOUND_LITERAL,
+
     EXPR_IDENTIFIER,
     EXPR_NUMBER_LITERAL,
     EXPR_STRING_LITERAL,
@@ -432,6 +434,16 @@ struct Expr_Selector : public Ast_Expr {
     : Ast_Expr(EXPR_SELECTOR, location)
     , lhs(lhs)
     , field_name(field_name)
+    {}
+};
+
+struct Expr_Compound_Literal : public Ast_Expr {
+    Ast_Expr *type_expr = {};
+    Array<Ast_Expr *> exprs = {};
+    Expr_Compound_Literal(Ast_Expr *type_expr, Array<Ast_Expr *> exprs, Location location)
+    : Ast_Expr(EXPR_COMPOUND_LITERAL, location)
+    , type_expr(type_expr)
+    , exprs(exprs)
     {}
 };
 

@@ -53,6 +53,7 @@ void add_variable_type_field(Type *type, const char *name, Type *variable_type, 
     field.operand.type = variable_type;
     field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
     type->fields.append(field);
+    type->num_variable_fields += 1;
 }
 
 void add_constant_type_field(Type *type, const char *name, Operand operand) {
@@ -63,34 +64,35 @@ void add_constant_type_field(Type *type, const char *name, Operand operand) {
     field.offset = -1;
     field.operand = operand;
     type->fields.append(field);
+    type->num_constant_fields += 1;
 }
 
 void init_checker() {
     all_types.allocator = default_allocator();
     ordered_declarations.allocator = default_allocator();
 
-    type_i8  = new Type_Primitive("i8", 1);  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8);
-    type_i16 = new Type_Primitive("i16", 2); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16);
-    type_i32 = new Type_Primitive("i32", 4); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32);
-    type_i64 = new Type_Primitive("i64", 8); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64);
+    type_i8  = new Type_Primitive("i8", 1, 1);  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8);
+    type_i16 = new Type_Primitive("i16", 2, 2); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16);
+    type_i32 = new Type_Primitive("i32", 4, 4); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32);
+    type_i64 = new Type_Primitive("i64", 8, 8); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64);
 
-    type_u8  = new Type_Primitive("u8", 1);  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8);
-    type_u16 = new Type_Primitive("u16", 2); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16);
-    type_u32 = new Type_Primitive("u32", 4); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32);
-    type_u64 = new Type_Primitive("u64", 8); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64);
+    type_u8  = new Type_Primitive("u8", 1, 1);  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8);
+    type_u16 = new Type_Primitive("u16", 2, 2); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16);
+    type_u32 = new Type_Primitive("u32", 4, 4); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32);
+    type_u64 = new Type_Primitive("u64", 8, 8); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64);
 
-    type_f32 = new Type_Primitive("f32", 4); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32);
-    type_f64 = new Type_Primitive("f64", 8); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64);
+    type_f32 = new Type_Primitive("f32", 4, 4); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32);
+    type_f64 = new Type_Primitive("f64", 8, 8); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64);
 
-    type_bool = new Type_Primitive("bool", 1); all_types.append(type_bool);
+    type_bool = new Type_Primitive("bool", 1, 1); all_types.append(type_bool);
 
-    type_typeid = new Type_Primitive("typeid", 8); all_types.append(type_typeid);
-    type_string = new Type_Primitive("string", 16); all_types.append(type_string);
-    type_rawptr = new Type_Primitive("rawptr", 8); all_types.append(type_rawptr); type_rawptr->flags = TF_POINTER;
+    type_typeid = new Type_Primitive("typeid", 8, 8); all_types.append(type_typeid);
+    type_string = new Type_Primitive("string", 16, 8); all_types.append(type_string);
+    type_rawptr = new Type_Primitive("rawptr", 8, 8); all_types.append(type_rawptr); type_rawptr->flags = TF_POINTER;
 
-    type_untyped_integer = new Type_Primitive("untyped integer", -1); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
-    type_untyped_float   = new Type_Primitive("untyped float", -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
-    type_untyped_null    = new Type_Primitive("untyped null", -1);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
+    type_untyped_integer = new Type_Primitive("untyped integer", -1, -1); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
+    type_untyped_float   = new Type_Primitive("untyped float", -1, -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
+    type_untyped_null    = new Type_Primitive("untyped null", -1, -1);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
 
     type_int = type_i64;
     type_float = type_f32;
@@ -473,6 +475,7 @@ bool complete_type(Type *type) {
                     return false;
                 }
                 int size = 0;
+                int largest_alignment = 1;
                 if (structure->fields.count == 0) {
                     size = 1;
                 }
@@ -483,7 +486,10 @@ bool complete_type(Type *type) {
                         if (!complete_type(var->type)) {
                             return false;
                         }
+                    }
 
+                    For (idx, structure->fields) {
+                        Ast_Var *var = structure->fields[idx];
                         if (var->is_constant) {
                             assert(var->expr != nullptr);
                             assert(var->constant_operand.type != nullptr);
@@ -493,14 +499,30 @@ bool complete_type(Type *type) {
                         else {
                             assert(var->type->size > 0);
                             // todo(josh): alignment
+                            int next_alignment = -1;
+                            for (int i = idx; i < (structure->fields.count-1); i++) {
+                                Ast_Var *next_var = structure->fields[i+1];
+                                if (!var->is_constant) {
+                                    next_alignment = next_var->type->align;
+                                    assert(next_alignment > 0);
+                                    break;
+                                }
+                            }
                             add_variable_type_field(struct_type, var->name, var->type, size);
-                            size += var->type->size;
+
+                            int size_delta = var->type->size;
+                            if (next_alignment != -1) {
+                                size_delta += modulo((next_alignment - var->type->size), next_alignment);
+                            }
+                            size += size_delta;
+                            largest_alignment = max(largest_alignment, var->type->align);
                         }
                     }
                 }
 
                 assert(size > 0);
-                struct_type->size = size;
+                struct_type->size = (int)align_forward((uintptr_t)size, (uintptr_t)largest_alignment);
+                struct_type->align = largest_alignment;
                 struct_type->flags &= ~(TF_INCOMPLETE);
 
                 assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE); // todo(josh): locally scoped structs and procs
@@ -512,8 +534,11 @@ bool complete_type(Type *type) {
                 if (!complete_type(array_type->array_of)) {
                     return false; // todo(josh): error message
                 }
+                assert(array_type->count > 0);
                 assert(array_type->array_of->size > 0);
+                assert(array_type->array_of->align > 0);
                 array_type->size = array_type->array_of->size * array_type->count;
+                array_type->align = array_type->array_of->align;
                 assert(array_type->size > 0);
                 array_type->flags &= ~(TF_INCOMPLETE);
                 break;
@@ -576,6 +601,7 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     Type_Pointer *new_type = new Type_Pointer(pointer_to);
     new_type->flags = TF_POINTER;
     new_type->size = POINTER_SIZE;
+    new_type->align = POINTER_SIZE;
     all_types.append(new_type);
     return new_type;
 }
@@ -616,6 +642,8 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(slice_of);
     Type_Slice *new_type = new Type_Slice(slice_of, pointer_to_element_type);
     new_type->flags = TF_SLICE;
+    new_type->size  = 16;
+    new_type->align = 8;
     add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
     add_variable_type_field(new_type, "count", type_int, 8);
     all_types.append(new_type);
@@ -649,6 +677,7 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
     Type_Procedure *new_type = new Type_Procedure(parameter_types, return_type);
     new_type->flags = TF_PROCEDURE;
     new_type->size = POINTER_SIZE;
+    new_type->align = POINTER_SIZE;
     all_types.append(new_type);
     return new_type;
 }
@@ -1076,6 +1105,52 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.location = ident->location;
             break;
         }
+        case EXPR_COMPOUND_LITERAL: {
+            Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
+            Operand *type_operand = typecheck_expr(compound_literal->type_expr);
+            if (!type_operand) {
+                return nullptr;
+            }
+            if (!is_type_typeid(type_operand->type)) {
+                report_error(compound_literal->type_expr->location, "Compound literals require a constant type.");
+                return nullptr;
+            }
+            Type *target_type = type_operand->type_value;
+            if (!complete_type(target_type)) {
+                return nullptr;
+            }
+
+            if (compound_literal->exprs.count != 0) {
+                if (compound_literal->exprs.count != target_type->num_variable_fields) {
+                    report_error(compound_literal->location, "Field count for compound literal doesn't match the type. Expected %d, got %d.", target_type->fields.count, compound_literal->exprs.count);
+                    return nullptr;
+                }
+            }
+            int variable_field_index = -1;
+            For (idx, compound_literal->exprs) {
+                variable_field_index += 1;
+                while (target_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
+                    variable_field_index += 1;
+                }
+
+                Struct_Field target_field = target_type->fields[variable_field_index];
+
+                Ast_Expr *expr = compound_literal->exprs[idx];
+                Operand *expr_operand = typecheck_expr(expr);
+                if (!expr_operand) {
+                    return nullptr;
+                }
+                if (!match_types(expr_operand, target_field.operand.type, false)) {
+                    report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                    report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(target_field.operand.type), type_to_string(expr_operand->type));
+                    return nullptr;
+                }
+            }
+            result_operand.type = type_operand->type_value;
+            result_operand.flags = OPERAND_RVALUE;
+
+            break;
+        }
         case EXPR_NUMBER_LITERAL: {
             Expr_Number_Literal *number = (Expr_Number_Literal *)expr;
             if (number->has_a_dot) {
@@ -1172,7 +1247,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             assert((count_operand->flags & OPERAND_CONSTANT) && is_type_integer(count_operand->type));
-            assert(count_operand->int_value > 0);
+            if (count_operand->int_value <= 0) {
+                report_error(expr_array->count_expr->location, "Array size must be greater than 0.");
+                return nullptr;
+            }
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             result_operand.type = type_typeid;
             result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand);

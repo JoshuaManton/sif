@@ -11,6 +11,7 @@
 
 /*
 TODO:
+-array-by-value semantics
 -+=, -=, etc
 -{} blocks at statement level
 -enum field expressions
@@ -19,6 +20,7 @@ TODO:
 -struct/array literals
 -function pointers
 -operator overloading
+-polymorphism
 */
 
 void main(int argc, char **argv) {

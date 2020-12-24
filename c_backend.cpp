@@ -402,6 +402,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             break;
         }
         default: {
+            printf("unhandled case: %d\n", expr->expr_kind);
             assert(false);
         }
     }

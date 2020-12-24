@@ -13,6 +13,7 @@ struct Lexer {
     int index = 0;
     Location location = {};
     bool errored = false;
+    bool allow_compound_literals = true;
     Lexer(const char *filepath, char *text)
     : text(text)
     {

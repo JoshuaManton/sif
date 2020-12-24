@@ -43,6 +43,35 @@ void zero_memory(void *memory_void, int length) {
 
 
 
+float min(float a, float b) {
+    if (a < b)  return a;
+    return b;
+}
+
+float max(float a, float b) {
+    if (a > b)  return a;
+    return b;
+}
+
+int min(int a, int b) {
+    if (a < b)  return a;
+    return b;
+}
+
+int max(int a, int b) {
+    if (a > b)  return a;
+    return b;
+}
+
+
+
+int modulo(int a, int b) {
+    int r = a % b;
+    return r < 0 ? r + b : r;
+}
+
+
+
 void *alloc(Allocator allocator, int size, int alignment) {
     assert(allocator.alloc_proc != nullptr && "Alloc proc was nullptr for allocator");
     void *ptr = allocator.alloc_proc(allocator.data, size, alignment);

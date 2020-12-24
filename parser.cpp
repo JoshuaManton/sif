@@ -173,7 +173,10 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     }
     if (colon.kind == TK_COLON) {
         eat_next_token(lexer);
+        assert(lexer->allow_compound_literals);
+        lexer->allow_compound_literals = false;
         return_type_expr = parse_expr(lexer);
+        lexer->allow_compound_literals = true;
         if (!return_type_expr) {
             return nullptr;
         }
@@ -762,6 +765,7 @@ bool is_postfix_op(Token_Kind kind) {
     switch (kind) {
         case TK_LEFT_PAREN:
         case TK_LEFT_SQUARE:
+        case TK_LEFT_CURLY:
         case TK_DOT:
         case TK_CARET: { // dereference
             return true;
@@ -960,17 +964,15 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
 
     while (is_postfix_op(lexer)) {
         Token op = {};
-        if (!get_next_token(lexer, &op)) {
-            return nullptr;
-        }
+        assert(peek_next_token(lexer, &op));
 
         switch (op.kind) {
             case TK_LEFT_PAREN: {
+                eat_next_token(lexer);
                 Array<Ast_Expr *> parameters = {};
                 parameters.allocator = default_allocator();
-                Token token;
                 bool first = true;
-
+                Token token;
                 while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
                     if (!first) {
                         EXPECT(lexer, TK_COMMA, nullptr);
@@ -983,11 +985,36 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     first = false;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-
                 base_expr = new Expr_Procedure_Call(base_expr, parameters, op.location);
                 break;
             }
+            case TK_LEFT_CURLY: {
+                if (!lexer->allow_compound_literals) {
+                    return base_expr; // todo(josh): this feels a bit sketchy, maybe it's fine
+                }
+                eat_next_token(lexer);
+                Array<Ast_Expr *> exprs = {};
+                exprs.allocator = default_allocator();
+                bool first = true;
+                Token token;
+                while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
+                    if (!first) {
+                        EXPECT(lexer, TK_COMMA, nullptr);
+                    }
+                    Ast_Expr *expr = parse_expr(lexer);
+                    if (!expr) {
+                        return nullptr;
+                    }
+                    exprs.append(expr);
+                    first = false;
+                }
+                EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
+                assert(base_expr != nullptr);
+                base_expr = new Expr_Compound_Literal(base_expr, exprs, base_expr->location);
+                break;
+            }
             case TK_LEFT_SQUARE: {
+                eat_next_token(lexer);
                 Ast_Expr *index = parse_expr(lexer);
                 if (!index) {
                     return nullptr;
@@ -998,10 +1025,12 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 break;
             }
             case TK_CARET: {
+                eat_next_token(lexer);
                 base_expr = new Expr_Dereference(base_expr, op.location);
                 break;
             }
             case TK_DOT: {
+                eat_next_token(lexer);
                 Token name_token;
                 EXPECT(lexer, TK_IDENTIFIER, &name_token);
                 base_expr = new Expr_Selector(base_expr, name_token.text, op.location);
@@ -1013,6 +1042,8 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
             }
         }
     }
+    // hey future Josh if you add code down here be sure to check the
+    // early-out in the TK_LEFT_CURLY for handling compound literals
     return base_expr;
 }
 

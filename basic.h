@@ -53,6 +53,16 @@ static void bounds__check(int index, int min, int max_plus_one, char *file, int 
 
 
 
+bool is_power_of_two(uintptr_t n);
+uintptr_t align_forward(uintptr_t p, uintptr_t align);
+uintptr_t align_backward(uintptr_t p, uintptr_t align);
+float min(float a, float b);
+float max(float a, float b);
+int min(int a, int b);
+int max(int a, int b);
+int modulo(int a, int b);
+
+
 byte *buffer_allocate(byte *buffer, int buffer_len, int *offset, int size, int alignment, bool panic_on_oom = true);
 
 #ifndef DEFAULT_ALIGNMENT

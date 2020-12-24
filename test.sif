@@ -1,5 +1,11 @@
 #include "basic.sif"
 
+struct Size_Test {
+    var x: u8;
+    var y: i32;
+    var z: u8;
+}
+
 struct Vector3 {
     const WOW_A_CONSTANT = 123;
     var x: float;
@@ -20,6 +26,14 @@ enum My_Enum {
 }
 
 proc main() {
+    // var my_vector = Vector3{2, 8, 18};
+    // assert(my_vector.x == 2);
+    // assert(my_vector.y == 8);
+    // assert(my_vector.z == 18);
+    // print_float(my_vector.x);
+    // print_float(my_vector.y);
+    // print_float(my_vector.z);
+
     var an_enum = My_Enum.FOO;
     an_enum = My_Enum.BAR;
     an_enum = My_Enum.BAZ;

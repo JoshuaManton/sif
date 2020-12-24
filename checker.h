@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 
+#include "basic.h"
 #include "common.h"
 #include "parser.h"
 
@@ -47,9 +48,12 @@ struct Struct_Field {
 struct Type {
     Type_Kind kind = {};
     int size = {};
+    int align = {};
     u64 flags = {};
     Check_State check_state = {};
     Array<Struct_Field> fields = {};
+    int num_variable_fields = {};
+    int num_constant_fields = {};
     Type(Type_Kind kind)
     : kind(kind)
     {
@@ -59,11 +63,12 @@ struct Type {
 
 struct Type_Primitive : public Type {
     const char *name = nullptr;
-    Type_Primitive(char *name, int size)
+    Type_Primitive(char *name, int size, int align)
     : Type(TYPE_PRIMITIVE)
     , name(name)
     {
         this->size = size;
+        this->align = align;
     }
 };
 

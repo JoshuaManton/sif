@@ -74,6 +74,7 @@ void duo_recursion1();
 void bar(i64 x);
 void foo(i64 x);
 void baz(i64 x);
+struct Size_Test;
 struct Contains_Pointers2;
 
 // Actual declarations
@@ -224,6 +225,11 @@ void baz(i64 x) {
     foo(x);
 }
 i64 global_var = {};
+struct Size_Test {
+    u8 x;
+    i32 y;
+    u8 z;
+};
 struct Contains_Pointers2 {
     Contains_Pointers1 *b;
 };
