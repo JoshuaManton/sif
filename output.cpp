@@ -67,10 +67,7 @@ void main();
 
 // Actual declarations
 void takes_an_array(Static_Array<f32 , 4> arr) {
-    print(MAKE_STRING("before", 6));
-    print_float(arr.elements[2]);
     arr.elements[2] = 2.000000;
-    print(MAKE_STRING("after", 5));
     print_float(arr.elements[2]);
 }
 void main() {
@@ -83,5 +80,14 @@ void main() {
     takes_an_array(arr);
     for (i64 i = 0; i < 4; i += 1) {
         print_float(arr.elements[i]);
+    }
+    {
+        Static_Array<f32 , 2> __generated_compound_literal_1 = {};
+        __generated_compound_literal_1.elements[0] = 5.000000;
+        __generated_compound_literal_1.elements[1] = 6.000000;
+        Static_Array<f32 , 2> arr = __generated_compound_literal_1;
+        for (i64 i = 0; i < 2; i += 1) {
+            print_float(arr.elements[i]);
+        }
     }
 }

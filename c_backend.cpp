@@ -594,6 +594,15 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
             break;
         }
 
+        case AST_BLOCK_STATEMENT: {
+            Ast_Block_Statement *block_statement = (Ast_Block_Statement *)node;
+            sb->print("{\n");
+            c_print_block(sb, block_statement->block, indent_level + 1);
+            print_indents(sb, indent_level);
+            sb->print("}\n");
+            break;
+        }
+
         case AST_IF: {
             Ast_If *ast_if = (Ast_If *)node;
             c_emit_compound_literal_temporaries(sb, ast_if->condition, indent_level);

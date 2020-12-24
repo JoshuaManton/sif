@@ -11,13 +11,15 @@
 
 /*
 TODO:
--{} blocks at statement level
 -enum field expressions
 -foreach loops
 -switch statements
 -function pointers
+-unions
+-tagged unions
 -operator overloading
 -polymorphism
+-figure out if I should allow shadowing (maybe with a keyword?)
 */
 
 void main(int argc, char **argv) {

@@ -23,6 +23,7 @@ enum Ast_Kind {
     AST_EXPR,
     AST_EMPTY_STATEMENT,
     AST_STATEMENT_EXPR,
+    AST_BLOCK_STATEMENT,
     AST_DIRECTIVE_INCLUDE,
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
@@ -281,6 +282,14 @@ struct Ast_Statement_Expr : public Ast_Node {
     Ast_Statement_Expr(Ast_Expr *expr, Location location)
     : Ast_Node(AST_STATEMENT_EXPR, location)
     , expr(expr)
+    {}
+};
+
+struct Ast_Block_Statement : public Ast_Node {
+    Ast_Block *block = {};
+    Ast_Block_Statement(Ast_Block *block, Location location)
+    : Ast_Node(AST_BLOCK_STATEMENT, location)
+    , block(block)
     {}
 };
 

@@ -1552,6 +1552,14 @@ bool typecheck_node(Ast_Node *node) {
             break;
         }
 
+        case AST_BLOCK_STATEMENT: {
+            Ast_Block_Statement *block_statement = (Ast_Block_Statement *)node;
+            if (!typecheck_block(block_statement->block)) {
+                return false;
+            }
+            break;
+        }
+
         case AST_IF: {
             Ast_If *ast_if = (Ast_If *)node;
             Operand *condition_operand = typecheck_expr(ast_if->condition);

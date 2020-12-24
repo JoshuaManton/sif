@@ -398,6 +398,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
             return ast_enum;
         }
 
+        case TK_LEFT_CURLY: {
+            Ast_Block *block = parse_block_including_curly_brackets(lexer);
+            if (!block) {
+                return nullptr;
+            }
+            return new Ast_Block_Statement(block, block->location);
+        }
+
         case TK_DIRECTIVE_INCLUDE: {
             eat_next_token(lexer);
             Token filename_token;
