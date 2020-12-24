@@ -1340,7 +1340,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         case EXPR_POINTER_TYPE: {
             Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
             assert(expr_pointer->pointer_to != nullptr);
-            Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to);
+            Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to, type_typeid);
             if (!pointer_to_operand) {
                 return nullptr;
             }
@@ -1353,7 +1353,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         case EXPR_ARRAY_TYPE: {
             Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
             assert(expr_array->array_of != nullptr);
-            Operand *array_of_operand = typecheck_expr(expr_array->array_of);
+            Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
             if (!array_of_operand) {
                 return nullptr;
             }
@@ -1375,7 +1375,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         case EXPR_SLICE_TYPE: {
             Expr_Slice_Type *expr_slice = (Expr_Slice_Type *)expr;
             assert(expr_slice->slice_of != nullptr);
-            Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of);
+            Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of, type_typeid);
             if (!slice_of_operand) {
                 return nullptr;
             }
@@ -1387,7 +1387,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_PAREN: {
             Expr_Paren *paren = (Expr_Paren *)expr;
-            Operand *expr_operand = typecheck_expr(paren->nested);
+            Operand *expr_operand = typecheck_expr(paren->nested, expected_type);
             if (!expr_operand) {
                 return nullptr;
             }

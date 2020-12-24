@@ -11,7 +11,6 @@
 
 /*
 TODO:
--implicit `var` in structs and procedure parameters
 -{} blocks at statement level
 -enum field expressions
 -foreach loops

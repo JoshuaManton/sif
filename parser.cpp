@@ -79,18 +79,26 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true);
 
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
 
-Ast_Var *parse_var(Lexer *lexer) {
+Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
         return nullptr;
     }
+    bool had_var_or_const = true;
     if (root_token.kind != TK_VAR) {
         if (root_token.kind != TK_CONST) {
-            report_error(root_token.location, "Unexpected token %s, expected `var` or `const`.", token_string(root_token.kind));
-            return nullptr;
+            if (require_var) {
+                report_error(root_token.location, "Unexpected token %s, expected `var` or `const`.", token_string(root_token.kind));
+                return nullptr;
+            }
+            else {
+                had_var_or_const = false;
+            }
         }
     }
-    eat_next_token(lexer);
+    if (had_var_or_const) {
+        eat_next_token(lexer);
+    }
 
     bool is_constant = root_token.kind == TK_CONST;
 
@@ -157,7 +165,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
             EXPECT(lexer, TK_COMMA, nullptr);
         }
 
-        Ast_Var *var = parse_var(lexer);
+        Ast_Var *var = parse_var(lexer, false);
         if (!var) {
             return nullptr;
         }
@@ -345,7 +353,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
 
     switch (root_token.kind) {
         case TK_VAR: {
-            Ast_Var *var = parse_var(lexer);
+            Ast_Var *var = parse_var(lexer, true);
             if (!var) {
                 return nullptr;
             }
@@ -356,7 +364,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
         }
 
         case TK_CONST: {
-            Ast_Var *var = parse_var(lexer);
+            Ast_Var *var = parse_var(lexer, true);
             if (!var) {
                 return nullptr;
             }

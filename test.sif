@@ -2,13 +2,15 @@
 
 proc main() {
     var arr = ([4]float){1, 2, 3, 4};
+    takes_an_array(arr);
     for (var i = 0; i < arr.count; i += 1) {
         print_float(arr[i]);
     }
 }
 
-proc takes_an_array(var arr: [4]float) {
+proc takes_an_array(arr: [4]float) {
     arr[2] = 2;
+    print_float(arr[2]);
 }
 
 // struct Size_Test {

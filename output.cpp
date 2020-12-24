@@ -62,10 +62,17 @@ void print(String str);
 void *alloc(i64 size);
 void free(void *ptr);
 void assert(bool condition);
-void main();
 void takes_an_array(Static_Array<f32 , 4> arr);
+void main();
 
 // Actual declarations
+void takes_an_array(Static_Array<f32 , 4> arr) {
+    print(MAKE_STRING("before", 6));
+    print_float(arr.elements[2]);
+    arr.elements[2] = 2.000000;
+    print(MAKE_STRING("after", 5));
+    print_float(arr.elements[2]);
+}
 void main() {
     Static_Array<f32 , 4> __generated_compound_literal_0 = {};
     __generated_compound_literal_0.elements[0] = 1.000000;
@@ -73,10 +80,8 @@ void main() {
     __generated_compound_literal_0.elements[2] = 3.000000;
     __generated_compound_literal_0.elements[3] = 4.000000;
     Static_Array<f32 , 4> arr = __generated_compound_literal_0;
+    takes_an_array(arr);
     for (i64 i = 0; i < 4; i += 1) {
         print_float(arr.elements[i]);
     }
-}
-void takes_an_array(Static_Array<f32 , 4> arr) {
-    arr.elements[2] = 2.000000;
 }
