@@ -27,7 +27,7 @@ struct Slice {
     i64 count;
 };
 
-void print_int(int i) {
+void print_int(long i) {
     printf("%d\n", i);
 }
 void print_float(float f) {
@@ -40,7 +40,7 @@ void print(String string) {
     }
     printf("\n");
 }
-char *alloc(int size) {
+char *alloc(long size) {
     char *memory = (char *)malloc(size);
     return memory;
 }
@@ -52,7 +52,7 @@ void assert(bool condition) {
 }
 
 // Forward declarations
-void print_int(i32 i);
+void print_int(i64 i);
 void print_float(f32 f);
 void print(String str);
 void *alloc(i64 size);
@@ -89,15 +89,20 @@ i64 return_stuff() {
     return 321;
 }
 void main() {
+    i64 an_enum = 0;
+    an_enum = 1;
+    an_enum = 2;
+    i64 asd = 123;
     // constant declaration omitted: N
     // constant declaration omitted: My_Int_Type
     // constant declaration omitted: MY_INT
     i64 my_int = 321;
     i64 value = 0;
     while (value < 10) {
-        print_int(((i32 )value));
+        print_int(value);
         value = value + 1;
     }
+    print_int(123);
     Vector3 (*memory) = ((Vector3 (*))alloc(192));
     Slice slice = {};
     *((Vector3 (*(*)))&slice.data) = memory;
@@ -123,13 +128,13 @@ void main() {
     free(v_ptr);
     String str = MAKE_STRING("Hello, World", 12);
     print(str);
-    print_int(((i32 )MAKE_STRING("asd123", 6).count));
+    print_int(MAKE_STRING("asd123", 6).count);
     i64 arr[3] = {};
     arr[0] = 1;
     arr[1] = 4;
     arr[2] = 9;
     for (i64 i = 0; i < 3; i = i + 1) {
-        print_int(((i32 )arr[i]));
+        print_int(arr[i]);
     }
     Vector3 v = {};
     v.x = 1.500000;

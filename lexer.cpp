@@ -19,6 +19,7 @@ void init_lexer_globals() {
     token_string_map[TK_CONST]                 = "const";
     token_string_map[TK_PROC]                  = "proc";
     token_string_map[TK_STRUCT]                = "struct";
+    token_string_map[TK_ENUM]                  = "enum";
     token_string_map[TK_RETURN]                = "return";
     token_string_map[TK_NULL]                  = "null";
     token_string_map[TK_TRUE]                  = "true";
@@ -40,21 +41,21 @@ void init_lexer_globals() {
 
     token_string_map[TK_ASSIGN]                = "=";
     token_string_map[TK_PLUS]                  = "+";
-    token_string_map[TK_PLUS_EQUALS]           = "+=";
+    token_string_map[TK_PLUS_ASSIGN]           = "+=";
     token_string_map[TK_MINUS]                 = "-";
-    token_string_map[TK_MINUS_EQUALS]          = "-=";
+    token_string_map[TK_MINUS_ASSIGN]          = "-=";
     token_string_map[TK_MULTIPLY]              = "*";
-    token_string_map[TK_MULTIPLY_EQUALS]       = "*=";
+    token_string_map[TK_MULTIPLY_ASSIGN]       = "*=";
     token_string_map[TK_DIVIDE]                = "/";
-    token_string_map[TK_DIVIDE_EQUALS]         = "/=";
+    token_string_map[TK_DIVIDE_ASSIGN]         = "/=";
     token_string_map[TK_LEFT_SHIFT]            = "<<";
-    token_string_map[TK_LEFT_SHIFT_EQUALS]     = "<<=";
+    token_string_map[TK_LEFT_SHIFT_ASSIGN]     = "<<=";
     token_string_map[TK_RIGHT_SHIFT]           = ">>";
-    token_string_map[TK_RIGHT_SHIFT_EQUALS]    = ">>=";
+    token_string_map[TK_RIGHT_SHIFT_ASSIGN]    = ">>=";
     token_string_map[TK_AMPERSAND]             = "&";
-    token_string_map[TK_BIT_AND_EQUALS]        = "&=";
+    token_string_map[TK_BIT_AND_ASSIGN]        = "&=";
     token_string_map[TK_BIT_OR]                = "|";
-    token_string_map[TK_BIT_OR_EQUALS]         = "|=";
+    token_string_map[TK_BIT_OR_ASSIGN]         = "|=";
 
     token_string_map[TK_NOT]                   = "!";
     token_string_map[TK_NOT_EQUAL_TO]          = "!=";
@@ -64,9 +65,9 @@ void init_lexer_globals() {
     token_string_map[TK_GREATER_THAN_OR_EQUAL] = ">=";
     token_string_map[TK_EQUAL_TO]              = "==";
     token_string_map[TK_BOOLEAN_AND]           = "&&";
-    token_string_map[TK_BOOLEAN_AND_EQUALS]    = "&&=";
+    token_string_map[TK_BOOLEAN_AND_ASSIGN]    = "&&=";
     token_string_map[TK_BOOLEAN_OR]            = "||";
-    token_string_map[TK_BOOLEAN_OR_EQUALS]     = "||=";
+    token_string_map[TK_BOOLEAN_OR_ASSIGN]     = "||=";
 
     token_string_map[TK_LEFT_CURLY]            = "{";
     token_string_map[TK_RIGHT_CURLY]           = "}";
@@ -273,6 +274,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("const", TK_CONST)
         else CHECK_KEYWORD("proc", TK_PROC)
         else CHECK_KEYWORD("struct", TK_STRUCT)
+        else CHECK_KEYWORD("enum", TK_ENUM)
         else CHECK_KEYWORD("null", TK_NULL)
         else CHECK_KEYWORD("true", TK_TRUE)
         else CHECK_KEYWORD("false", TK_FALSE)
@@ -315,7 +317,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->kind = TK_PLUS;
         out_token->text = "+";
         if (lexer->text[lexer->index] == '=') {
-            out_token->kind = TK_PLUS_EQUALS;
+            out_token->kind = TK_PLUS_ASSIGN;
             out_token->text = "+=";
         }
     }
@@ -325,7 +327,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = "-";
         if (lexer->text[lexer->index] == '=') {
             advance(lexer, 1);
-            out_token->kind = TK_MINUS_EQUALS;
+            out_token->kind = TK_MINUS_ASSIGN;
             out_token->text = "-=";
         }
     }
@@ -335,7 +337,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = "*";
         if (lexer->text[lexer->index] == '=') {
             advance(lexer, 1);
-            out_token->kind = TK_MULTIPLY_EQUALS;
+            out_token->kind = TK_MULTIPLY_ASSIGN;
             out_token->text = "*=";
         }
     }
@@ -345,7 +347,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = "/";
         if (lexer->text[lexer->index] == '=') {
             advance(lexer, 1);
-            out_token->kind = TK_DIVIDE_EQUALS;
+            out_token->kind = TK_DIVIDE_ASSIGN;
             out_token->text = "/=";
         }
         else if (lexer->text[lexer->index] == '/') {
@@ -385,7 +387,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             out_token->text = "<<";
             if (lexer->text[lexer->index] == '=') {
                 advance(lexer, 1);
-                out_token->kind = TK_LEFT_SHIFT_EQUALS;
+                out_token->kind = TK_LEFT_SHIFT_ASSIGN;
                 out_token->text = "<<=";
             }
         }
@@ -405,7 +407,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             out_token->text = ">>";
             if (lexer->text[lexer->index] == '=') {
                 advance(lexer, 1);
-                out_token->kind = TK_RIGHT_SHIFT_EQUALS;
+                out_token->kind = TK_RIGHT_SHIFT_ASSIGN;
                 out_token->text = ">>=";
             }
         }
@@ -425,13 +427,13 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             out_token->text = "&&";
             if (lexer->text[lexer->index] == '=') {
                 advance(lexer, 1);
-                out_token->kind = TK_BOOLEAN_AND_EQUALS;
+                out_token->kind = TK_BOOLEAN_AND_ASSIGN;
                 out_token->text = "&&=";
             }
         }
         else if (lexer->text[lexer->index] == '=') {
             advance(lexer, 1);
-            out_token->kind = TK_BIT_AND_EQUALS;
+            out_token->kind = TK_BIT_AND_ASSIGN;
             out_token->text = "&=";
         }
     }
@@ -445,13 +447,13 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             out_token->text = "||";
             if (lexer->text[lexer->index] == '=') {
                 advance(lexer, 1);
-                out_token->kind = TK_BOOLEAN_OR_EQUALS;
+                out_token->kind = TK_BOOLEAN_OR_ASSIGN;
                 out_token->text = "||=";
             }
         }
         else if (lexer->text[lexer->index] == '=') {
             advance(lexer, 1);
-            out_token->kind = TK_BIT_OR_EQUALS;
+            out_token->kind = TK_BIT_OR_ASSIGN;
             out_token->text = "|=";
         }
     }

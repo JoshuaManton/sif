@@ -1,5 +1,5 @@
 #c_code "
-void print_int(int i) {
+void print_int(long i) {
     printf(\"%%d\\\n\", i);
 }
 void print_float(float f) {
@@ -12,7 +12,7 @@ void print(String string) {
     }
     printf(\"\\\n\");
 }
-char *alloc(int size) {
+char *alloc(long size) {
     char *memory = (char *)malloc(size);
     return memory;
 }
@@ -24,8 +24,8 @@ void assert(bool condition) {
 }
 "
 
-proc print_int(var i: i32) #foreign;
-proc print_float(var f: f32) #foreign;
+proc print_int(var i: int) #foreign;
+proc print_float(var f: float) #foreign;
 proc print(var str: string) #foreign;
 proc alloc(var size: int) : rawptr #foreign;
 proc free(var ptr: rawptr) #foreign;
@@ -44,7 +44,19 @@ struct Vector3 {
 #assert("foobar" != "foo");
 #assert(("foo" + "bar") == "foobar");
 
+enum My_Enum {
+    FOO;
+    BAR;
+    BAZ;
+}
+
 proc main() {
+    var an_enum = My_Enum.FOO;
+    an_enum = My_Enum.BAR;
+    an_enum = My_Enum.BAZ;
+
+    var asd = Vector3.WOW_A_CONSTANT;
+
     const N = 16;
     #assert(N == 16);
     const My_Int_Type = int;
@@ -54,12 +66,11 @@ proc main() {
 
     var value = 0;
     while (value < 10) {
-        print_int(cast(i32, value));
+        print_int(value);
         value = value + 1;
     }
 
-    // todo(josh)
-    // print_int(Vector3.WOW_A_CONSTANT);
+    print_int(Vector3.WOW_A_CONSTANT);
 
     var memory = cast(^Vector3, alloc(sizeof(Vector3) * N));
     var slice: []Vector3;
@@ -90,14 +101,14 @@ proc main() {
 
     var str = "Hello, " + "World";
     print(str);
-    print_int(cast(i32, "asd123".count));
+    print_int("asd123".count);
 
     var arr: [3]int;
     arr[0] = 1;
     arr[1] = 4;
     arr[2] = 9;
     for (var i = 0; i < arr.count; i = i + 1) {
-        print_int(cast(i32, arr[i]));
+        print_int(arr[i]);
     }
     var v: Vector3;
     v.x = 1.5;

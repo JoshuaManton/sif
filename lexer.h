@@ -31,6 +31,7 @@ enum Token_Kind {
     TK_CONST,
     TK_PROC,
     TK_STRUCT,
+    TK_ENUM,
     TK_RETURN,
     TK_NULL,
     TK_TRUE,
@@ -55,23 +56,23 @@ enum Token_Kind {
     TK_ASSIGN,
 
     TK_PLUS,
-    TK_PLUS_EQUALS,
+    TK_PLUS_ASSIGN,
     TK_MINUS,
-    TK_MINUS_EQUALS,
+    TK_MINUS_ASSIGN,
     TK_MULTIPLY,
-    TK_MULTIPLY_EQUALS,
+    TK_MULTIPLY_ASSIGN,
     TK_DIVIDE,
-    TK_DIVIDE_EQUALS,
+    TK_DIVIDE_ASSIGN,
     TK_LEFT_SHIFT,
-    TK_LEFT_SHIFT_EQUALS,
+    TK_LEFT_SHIFT_ASSIGN,
     TK_RIGHT_SHIFT,
-    TK_RIGHT_SHIFT_EQUALS,
+    TK_RIGHT_SHIFT_ASSIGN,
 
     TK_AMPERSAND, // bitwise AND and address-of
 
-    TK_BIT_AND_EQUALS,
+    TK_BIT_AND_ASSIGN,
     TK_BIT_OR,
-    TK_BIT_OR_EQUALS,
+    TK_BIT_OR_ASSIGN,
 
     // todo(josh): bitwise XOR
     // todo(josh): bitwise NOR
@@ -86,9 +87,9 @@ enum Token_Kind {
     TK_GREATER_THAN_OR_EQUAL,
 
     TK_BOOLEAN_AND,
-    TK_BOOLEAN_AND_EQUALS,
+    TK_BOOLEAN_AND_ASSIGN,
     TK_BOOLEAN_OR,
-    TK_BOOLEAN_OR_EQUALS,
+    TK_BOOLEAN_OR_ASSIGN,
 
     TK_LEFT_CURLY,
     TK_RIGHT_CURLY,

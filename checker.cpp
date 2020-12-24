@@ -228,6 +228,47 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             break;
         }
+        case DECL_ENUM: {
+            Enum_Declaration *enum_decl = (Enum_Declaration *)decl;
+            Type_Enum *enum_type = new Type_Enum(enum_decl->name);
+            enum_decl->ast_enum->type = enum_type;
+            int enum_field_value = 0;
+            For (idx, enum_decl->ast_enum->fields) {
+                Enum_Field field = enum_decl->ast_enum->fields[idx];
+                Operand *expr_operand = nullptr;
+                if (field.expr) {
+                    report_error(field.expr->location, "Enum field expressions are not yet supported.");
+                    return false;
+                    expr_operand = typecheck_expr(field.expr);
+                    if (!expr_operand) {
+                        return false;
+                    }
+                }
+                Operand field_operand; // todo(josh): location info?
+                field_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                field_operand.type = enum_type;
+                if (expr_operand) {
+                    if (!(expr_operand->flags & OPERAND_CONSTANT)) {
+                        report_error(expr_operand->location, "Enum fields must be constant.");
+                        return false;
+                    }
+                    if (!is_type_integer(expr_operand->type)) {
+                        report_error(expr_operand->location, "Enum fields must be integers.");
+                        return false;
+                    }
+                    field_operand.int_value = expr_operand->int_value;
+                }
+                else {
+                    field_operand.int_value = enum_field_value;
+                    enum_field_value += 1;
+                }
+                add_constant_type_field(enum_type, field.name, field_operand);
+            }
+            decl_operand.type = type_typeid;
+            decl_operand.type_value = enum_decl->ast_enum->type;
+            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            break;
+        }
         case DECL_VAR: {
             Var_Declaration *var_decl = (Var_Declaration *)decl;
             // todo(josh): check for use-before-declaration
@@ -308,6 +349,10 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
             decl_operand.type = proc_decl->procedure->header->type;
             decl_operand.flags = OPERAND_RVALUE;
             break;
+        }
+        default: {
+            printf("unhandled case: %d\n", decl->kind);
+            assert(false);
         }
     }
     decl->operand = decl_operand;
@@ -395,6 +440,11 @@ char *type_to_string(Type *type) {
             sprintf(buffer, "[]%s", type_to_string(slice->slice_of));
             break;
         }
+        case TYPE_ENUM: {
+            Type_Enum *enum_type = (Type_Enum *)type;
+            sprintf(buffer, "%s", enum_type->name);
+            break;
+        }
         default: {
             assert(false);
         }
@@ -474,7 +524,7 @@ bool complete_type(Type *type) {
 }
 
 void type_mismatch(Location location, Type *got, Type *expected) {
-    report_error(location, "Type mismatch. Expected %s, got %s.", type_to_string(expected), type_to_string(got));
+    report_error(location, "Type mismatch. Expected '%s', got '%s'.", type_to_string(expected), type_to_string(got));
 }
 
 bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
@@ -660,7 +710,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value   == rhs_operand->type_value;
                         else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length == rhs_operand->escaped_string_length) && (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) == 0);
                         else {
-                            report_error(binary->location, "Operator == is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator == is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -676,7 +726,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value  != rhs_operand->type_value;
                         else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length != rhs_operand->escaped_string_length) || (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) != 0);
                         else {
-                            report_error(binary->location, "Operator != is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator != is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -705,7 +755,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                             result_operand.escaped_string_length = total_length_escaped;
                         }
                         else {
-                            report_error(binary->location, "Operator + is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator + is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -718,7 +768,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   - rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator - is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator - is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -731,7 +781,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   * rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value * rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator * is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator * is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -744,7 +794,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   / rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value / rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator / is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -756,7 +806,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value & rhs_operand->int_value;
                         else {
-                            report_error(binary->location, "Operator / is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -768,7 +818,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value | rhs_operand->int_value;
                         else {
-                            report_error(binary->location, "Operator / is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -781,7 +831,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   < rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value < rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator < is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator < is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -794,7 +844,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   <= rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value <= rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator <= is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator <= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -807,7 +857,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   > rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value > rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator > is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator > is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -820,7 +870,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                              if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   >= rhs_operand->int_value;
                         else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value >= rhs_operand->float_value;
                         else {
-                            report_error(binary->location, "Operator >= is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator >= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -832,7 +882,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value && rhs_operand->bool_value;
                         else {
-                            report_error(binary->location, "Operator && is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator && is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -844,7 +894,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         result_operand.flags |= OPERAND_CONSTANT;
                              if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value || rhs_operand->bool_value;
                         else {
-                            report_error(binary->location, "Operator || is unsupported for types %s and %s.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                            report_error(binary->location, "Operator || is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                             return nullptr;
                         }
                     }
@@ -911,6 +961,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
                 elem_type = slice_type->slice_of;
             }
+            else {
+                report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
+                return nullptr;
+            }
             Operand *index_operand = typecheck_expr(subscript->index, type_int); // todo(josh): should we pass expected_type down here?
             if (!index_operand) {
                 return nullptr;
@@ -971,22 +1025,34 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
 
+            bool is_instance_of_type_rather_that_a_type_itself = true;
             assert(lhs_operand->type != nullptr);
             Type *type_with_fields = lhs_operand->type;
             if (is_type_pointer(lhs_operand->type)) {
                 Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
                 assert(pointer_type->pointer_to != nullptr);
                 type_with_fields = pointer_type->pointer_to;
-                if (!complete_type(type_with_fields)) {
-                    return nullptr;
-                }
+            }
+            else if (is_type_typeid(lhs_operand->type)) {
+                assert(lhs_operand->type_value);
+                type_with_fields = lhs_operand->type_value;
+                is_instance_of_type_rather_that_a_type_itself = false;
             }
             assert(type_with_fields != nullptr);
-
+            if (!complete_type(type_with_fields)) {
+                return nullptr;
+            }
             bool found_field = false;
             For (idx, type_with_fields->fields) {
                 Struct_Field field = type_with_fields->fields[idx];
                 if (strcmp(field.name, selector->field_name) == 0) {
+                    if (!is_instance_of_type_rather_that_a_type_itself) {
+                        if (!(field.operand.flags & OPERAND_CONSTANT)) {
+                            // todo(josh): there's no real reason why we _can't_ support this, it's just weird
+                            report_error(selector->location, "Cannot access instance fields from type.");
+                            return nullptr;
+                        }
+                    }
                     found_field = true;
                     result_operand = field.operand;
                     result_operand.location = selector->location;
@@ -994,7 +1060,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
             }
             if (!found_field) {
-                report_error(selector->location, "Type %s doesn't have field %s.", type_to_string(lhs_operand->type), selector->field_name);
+                report_error(selector->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), selector->field_name);
                 return nullptr;
             }
 
@@ -1331,7 +1397,7 @@ bool typecheck_node(Ast_Node *node) {
             assert(ast_return->matching_procedure->type != nullptr);
             if (ast_return->matching_procedure->type->return_type != nullptr) {
                 if (ast_return->expr == nullptr) {
-                    report_error(ast_return->location, "Return statement missing expression. Expected expression with type %s.", type_to_string(ast_return->matching_procedure->type->return_type));
+                    report_error(ast_return->location, "Return statement missing expression. Expected expression with type '%s'.", type_to_string(ast_return->matching_procedure->type->return_type));
                     return nullptr;
                 }
                 Operand *return_operand = typecheck_expr(ast_return->expr);
@@ -1339,7 +1405,7 @@ bool typecheck_node(Ast_Node *node) {
                     return nullptr;
                 }
                 if (!match_types(return_operand, ast_return->matching_procedure->type->return_type, false)) {
-                    report_error(ast_return->expr->location, "Return expression didn't match procedure return type. Expected %s, got %s.", type_to_string(ast_return->matching_procedure->type->return_type), type_to_string(return_operand->type));
+                    report_error(ast_return->expr->location, "Return expression didn't match procedure return type. Expected '%s', got '%s'.", type_to_string(ast_return->matching_procedure->type->return_type), type_to_string(return_operand->type));
                     return nullptr;
                 }
             }

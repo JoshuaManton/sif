@@ -9,6 +9,7 @@ enum Type_Kind {
     TYPE_INVALID,
     TYPE_PRIMITIVE,
     TYPE_STRUCT,
+    TYPE_ENUM,
     TYPE_POINTER,
     TYPE_ARRAY,
     TYPE_SLICE,
@@ -74,6 +75,16 @@ struct Type_Struct : public Type {
     , name(structure->name)
     , ast_struct(structure)
     {}
+};
+
+struct Type_Enum : public Type {
+    const char *name = nullptr;
+    Type_Enum(char *name)
+    : Type(TYPE_ENUM)
+    , name(name)
+    {
+        flags |= TF_INTEGER;
+    }
 };
 
 struct Type_Pointer : public Type {

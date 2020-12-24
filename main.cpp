@@ -14,9 +14,9 @@ TODO:
 -+=, -=, etc
 -{} blocks at statement level
 -#include
--enums
--while loops
+-enum field expressions
 -foreach loops
+-switch statements
 -struct/array literals
 -function pointers
 -operator overloading

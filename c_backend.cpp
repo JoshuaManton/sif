@@ -29,6 +29,10 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             sb->printf("%s ", type_struct->name);
             break;
         }
+        case TYPE_ENUM: {
+            sb->printf("i64 ");
+            break;
+        }
         case TYPE_POINTER: {
             Type_Pointer *type_pointer = (Type_Pointer *)type;
             c_print_type_prefix(sb, type_pointer->pointer_to);
@@ -64,6 +68,9 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
             break;
         }
         case TYPE_STRUCT: {
+            break;
+        }
+        case TYPE_ENUM: {
             break;
         }
         case TYPE_POINTER: {

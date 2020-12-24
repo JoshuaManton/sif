@@ -12,6 +12,7 @@ enum Ast_Kind {
     AST_PROC,
     AST_VAR,
     AST_STRUCT,
+    AST_ENUM,
     AST_IF,
     AST_FOR_LOOP,
     AST_WHILE_LOOP,
@@ -37,13 +38,16 @@ struct Ast_Statement_Expr;
 struct Declaration;
 struct Type_Declaration;
 struct Struct_Declaration;
+struct Enum_Declaration;
 struct Proc_Declaration;
 struct Var_Declaration;
+struct Enum_Value_Declaration;
 
 struct Type;
 struct Type_Procedure;
 struct Type_Struct;
 struct Type_Array;
+struct Type_Enum;
 
 static Ast_Block *current_block;
 
@@ -136,11 +140,12 @@ struct Ast_Proc : public Ast_Node {
 };
 
 struct Ast_Assign : public Ast_Node {
+    Token_Kind op = {};
     Ast_Expr *lhs = {};
     Ast_Expr *rhs = {};
-    // todo(josh): +=, -=, etc
-    Ast_Assign(Ast_Expr *lhs, Ast_Expr *rhs, Location location)
+    Ast_Assign(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs, Location location)
     : Ast_Node(AST_ASSIGN, location)
+    , op(op)
     , lhs(lhs)
     , rhs(rhs)
     {}
@@ -189,7 +194,7 @@ struct Ast_Var : public Ast_Node {
 
 struct Ast_Struct : public Ast_Node {
     char *name = nullptr;
-    Type *type = nullptr;
+    Type *type = nullptr; // todo(josh): this can probably be a Type_Struct *?
     Array<Ast_Var *> fields = {};
     Ast_Block *body = {};
     Struct_Declaration *declaration = {};
@@ -233,6 +238,22 @@ struct Ast_While_Loop : public Ast_Node {
     : Ast_Node(AST_WHILE_LOOP, location)
     , condition(condition)
     , body(body)
+    {}
+};
+
+struct Enum_Field {
+    char *name = {};
+    Ast_Expr *expr = {};
+    Enum_Value_Declaration *declaration = {};
+};
+struct Ast_Enum : public Ast_Node {
+    char *name = {};
+    Array<Enum_Field> fields = {};
+    Type_Enum *type = nullptr;
+    Enum_Declaration *declaration = {};
+    Ast_Enum(char *name, Location location)
+    : Ast_Node(AST_ENUM, location)
+    , name(name)
     {}
 };
 
@@ -487,6 +508,7 @@ enum Declaration_Kind {
     DECL_INVALID,
     DECL_TYPE,
     DECL_STRUCT,
+    DECL_ENUM,
     DECL_VAR,
     DECL_PROC,
     DECL_COUNT,
@@ -526,6 +548,14 @@ struct Struct_Declaration : Declaration {
     Struct_Declaration(Ast_Struct *structure, Ast_Block *parent_block)
     : Declaration(structure->name, DECL_STRUCT, parent_block, structure->location)
     , structure(structure)
+    {}
+};
+
+struct Enum_Declaration : Declaration {
+    Ast_Enum *ast_enum = {};
+    Enum_Declaration(Ast_Enum *ast_enum, Ast_Block *parent_block)
+    : Declaration(ast_enum->name, DECL_ENUM, parent_block, ast_enum->location)
+    , ast_enum(ast_enum)
     {}
 };
 

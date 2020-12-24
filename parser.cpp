@@ -75,6 +75,8 @@ bool register_declaration(Declaration *new_declaration) {
 
 
 
+Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true);
+
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
 
 Ast_Var *parse_var(Lexer *lexer) {
@@ -229,7 +231,7 @@ Ast_Struct *parse_struct(Lexer *lexer) {
     structure->name = token.text;
 
     // fields
-    EXPECT(lexer, TK_LEFT_CURLY, &token);
+    EXPECT(lexer, TK_LEFT_CURLY, nullptr);
 
     structure->body = parse_block(lexer);
     if (!structure->body) {
@@ -238,7 +240,10 @@ Ast_Struct *parse_struct(Lexer *lexer) {
     EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
     For (idx, structure->body->nodes) {
         Ast_Node *node = structure->body->nodes[idx];
-        assert(node->ast_kind == AST_VAR);
+        if (node->ast_kind != AST_VAR) {
+            report_error(node->location, "Only variable declarations are allowed in structs.");
+            return nullptr;
+        }
         Ast_Var *var = (Ast_Var *)node;
         structure->fields.append(var);
     }
@@ -248,6 +253,64 @@ Ast_Struct *parse_struct(Lexer *lexer) {
         return nullptr;
     }
     return structure;
+}
+
+Ast_Enum *parse_enum(Lexer *lexer) {
+    Token root_token;
+    EXPECT(lexer, TK_ENUM, &root_token);
+
+    Token name_token;
+    EXPECT(lexer, TK_IDENTIFIER, &name_token);
+
+    Ast_Enum *ast_enum = new Ast_Enum(name_token.text, root_token.location);
+
+    Array<Enum_Field> enum_fields = {};
+    enum_fields.allocator = default_allocator();
+
+    EXPECT(lexer, TK_LEFT_CURLY, nullptr);
+    {
+        Ast_Block *enum_block = new Ast_Block(lexer->location);
+        Ast_Block *old_block = push_ast_block(enum_block);
+        defer(pop_ast_block(old_block));
+
+        Token right_curly;
+        while (peek_next_token(lexer, &right_curly) && right_curly.kind != TK_RIGHT_CURLY) {
+            Token ident_token;
+            EXPECT(lexer, TK_IDENTIFIER, &ident_token);
+
+            Token maybe_equals;
+            if (!peek_next_token(lexer, &maybe_equals)) {
+                return nullptr;
+            }
+
+            Ast_Expr *expr = nullptr;
+            if (maybe_equals.kind == TK_ASSIGN) {
+                eat_next_token(lexer);
+                expr = parse_expr(lexer);
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+            }
+            else if (maybe_equals.kind == TK_SEMICOLON) {
+                eat_next_token(lexer);
+            }
+            else {
+                report_error(maybe_equals.location, "Enums may only contain statements of the form `FOO;` and `FOO = <constant numeric expression>;`.");
+                return nullptr;
+            }
+
+            Enum_Field field = {};
+            field.name = ident_token.text;
+            field.expr = expr;
+            enum_fields.append(field);
+        }
+    }
+    EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
+
+    ast_enum->fields = enum_fields;
+    ast_enum->declaration = new Enum_Declaration(ast_enum, current_block);
+    if (!register_declaration(ast_enum->declaration)) {
+        return nullptr;
+    }
+    return ast_enum;
 }
 
 Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
@@ -267,7 +330,7 @@ Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
     return body;
 }
 
-Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
+Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
         return nullptr;
@@ -310,6 +373,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
                 return nullptr;
             }
             return structure;
+        }
+
+        case TK_ENUM: {
+            Ast_Enum *ast_enum = parse_enum(lexer);
+            if (!ast_enum) {
+                return nullptr;
+            }
+            return ast_enum;
         }
 
         case TK_DIRECTIVE_ASSERT: {
@@ -462,8 +533,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
                     }
                     return new Ast_Statement_Expr(expr, expr->location);
                 }
-                case TK_ASSIGN: {
-                    eat_next_token(lexer);
+
+                case TK_PLUS_ASSIGN:     // fallthrough
+                case TK_MINUS_ASSIGN:    // fallthrough
+                case TK_MULTIPLY_ASSIGN: // fallthrough
+                case TK_DIVIDE_ASSIGN:   // fallthrough
+                case TK_ASSIGN: { // todo(josh): <<=, &&=, etc
+                    Token op;
+                    assert(get_next_token(lexer, &op));
                     Ast_Expr *rhs = parse_expr(lexer);
                     if (rhs == nullptr) {
                         return nullptr;
@@ -471,7 +548,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true) {
                     if (eat_semicolon) {
                         EXPECT(lexer, TK_SEMICOLON, nullptr);
                     }
-                    return new Ast_Assign(expr, rhs, expr->location);
+                    return new Ast_Assign(op.kind, expr, rhs, expr->location);
                 }
                 default: {
                     unexpected_token(lexer, next_token);
@@ -572,9 +649,9 @@ bool is_cmp_op(Token_Kind kind) {
         case TK_GREATER_THAN_OR_EQUAL:
         case TK_EQUAL_TO:
         case TK_BOOLEAN_AND:
-        case TK_BOOLEAN_AND_EQUALS:
+        case TK_BOOLEAN_AND_ASSIGN:
         case TK_BOOLEAN_OR:
-        case TK_BOOLEAN_OR_EQUALS: {
+        case TK_BOOLEAN_OR_ASSIGN: {
             return true;
         }
     }
