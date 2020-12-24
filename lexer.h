@@ -3,7 +3,7 @@
 #include "common.h"
 
 struct Location {
-    char *filepath = nullptr;
+    const char *filepath = nullptr;
     int line = 0;
     int character = 0;
 };
@@ -12,7 +12,8 @@ struct Lexer {
     char *text = nullptr;
     int index = 0;
     Location location = {};
-    Lexer(char *filepath, char *text)
+    bool errored = false;
+    Lexer(const char *filepath, char *text)
     : text(text)
     {
         location.filepath = filepath;
@@ -52,6 +53,7 @@ enum Token_Kind {
     TK_DIRECTIVE_ASSERT,
     TK_DIRECTIVE_FOREIGN,
     TK_DIRECTIVE_C_CODE,
+    TK_DIRECTIVE_INCLUDE,
 
     TK_ASSIGN,
 

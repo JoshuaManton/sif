@@ -13,7 +13,6 @@
 TODO:
 -+=, -=, etc
 -{} blocks at statement level
--#include
 -enum field expressions
 -foreach loops
 -switch statements
@@ -28,18 +27,11 @@ void main(int argc, char **argv) {
         return;
     }
 
-    char *root_file = argv[1];
-    int len = 0;
-    char *root_file_text = read_entire_file(root_file, &len);
-    defer(free(root_file_text));
-
     init_lexer_globals();
     init_parser();
     init_checker();
 
-    Lexer lexer(root_file, root_file_text);
-
-    Ast_Block *global_scope = parse_block(&lexer);
+    Ast_Block *global_scope = begin_parsing(argv[1]);
     if (!global_scope) {
         printf("There were errors.\n");
         return;

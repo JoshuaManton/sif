@@ -195,6 +195,9 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
 
 Ast_Proc *parse_proc(Lexer *lexer) {
     Ast_Proc_Header *header = parse_proc_header(lexer);
+    if (!header) {
+        return nullptr;
+    }
 
     Ast_Block *body = nullptr;
     if (!header->is_foreign) {
@@ -383,6 +386,17 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
             return ast_enum;
         }
 
+        case TK_DIRECTIVE_INCLUDE: {
+            eat_next_token(lexer);
+            Token filename_token;
+            EXPECT(lexer, TK_STRING, &filename_token);
+            bool ok = parse_file(filename_token.text);
+            if (!ok) {
+                return nullptr;
+            }
+            return new Ast_Directive_Include(filename_token.text, root_token.location);
+        }
+
         case TK_DIRECTIVE_ASSERT: {
             eat_next_token(lexer);
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);
@@ -561,14 +575,15 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
     return nullptr;
 }
 
-Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
-    Ast_Block *block = new Ast_Block(lexer->location);
-    Ast_Block *old_block = push_ast_block(block);
-    defer(pop_ast_block(old_block));
-
-    if (old_block == nullptr) {
-        block->flags |= BF_IS_GLOBAL_SCOPE;
+Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_new_block) {
+    Ast_Block *old_block = nullptr;
+    if (push_new_block) {
+        Ast_Block *block = new Ast_Block(lexer->location);
+        old_block = push_ast_block(block);
     }
+    defer(if (push_new_block) {
+        pop_ast_block(old_block);
+    });
 
     Token root_token;
     while (peek_next_token(lexer, &root_token) && root_token.kind != TK_RIGHT_CURLY) {
@@ -597,7 +612,7 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
                 break;
             }
             default: {
-                block->nodes.append(node);
+                current_block->nodes.append(node);
             }
         }
 
@@ -605,7 +620,34 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
             break;
         }
     }
-    return block;
+    return current_block;
+}
+
+bool parse_file(const char *filename) {
+    int len = 0;
+    char *root_file_text = read_entire_file(filename, &len);
+    defer(free(root_file_text));
+    Lexer lexer(filename, root_file_text);
+    Ast_Block *block = parse_block(&lexer, false, false);
+    if (!block) {
+        return false;
+    }
+    return true;
+}
+
+Ast_Block *begin_parsing(const char *filename) {
+    assert(current_block == nullptr);
+    Ast_Block *global_scope = new Ast_Block({});
+    global_scope->flags |= BF_IS_GLOBAL_SCOPE;
+    Ast_Block *old_block = push_ast_block(global_scope);
+
+    bool ok = parse_file(filename);
+
+    pop_ast_block(old_block);
+    if (!ok) {
+        return nullptr;
+    }
+    return global_scope;
 }
 
 

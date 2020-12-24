@@ -23,6 +23,7 @@ enum Ast_Kind {
     AST_EXPR,
     AST_EMPTY_STATEMENT,
     AST_STATEMENT_EXPR,
+    AST_DIRECTIVE_INCLUDE,
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
     AST_DIRECTIVE_C_CODE,
@@ -148,6 +149,14 @@ struct Ast_Assign : public Ast_Node {
     , op(op)
     , lhs(lhs)
     , rhs(rhs)
+    {}
+};
+
+struct Ast_Directive_Include : public Ast_Node {
+    char *filename = {};
+    Ast_Directive_Include(char *filename, Location location)
+    : Ast_Node(AST_DIRECTIVE_INCLUDE, location)
+    , filename(filename)
     {}
 };
 
@@ -583,9 +592,11 @@ extern Array<Ast_Directive_C_Code *> g_all_c_code_directives;
 void init_parser();
 bool resolve_identifiers();
 bool register_declaration(Declaration *new_declaration);
+bool parse_file(const char *filename);
+Ast_Block *begin_parsing(const char *filename);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
-Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false);
+Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false, bool push_new_block = true);
 Ast_Node *parse_statement(Lexer *lexer);
 
 bool is_and_op(Token_Kind kind);

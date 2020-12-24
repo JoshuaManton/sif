@@ -1,35 +1,4 @@
-#c_code "
-void print_int(i64 i) {
-    printf(\"%%lld\\\n\", i);
-}
-void print_float(float f) {
-    printf(\"%%f\\\n\", f);
-}
-void print(String string) {
-    for (int i = 0; i < string.count; i++) {
-        char c = string.data[i];
-        printf(\"%%c\", c);
-    }
-    printf(\"\\\n\");
-}
-void *alloc(i64 size) {
-    char *memory = (char *)malloc(size);
-    return memory;
-}
-void assert(bool condition) {
-    if (!condition) {
-        printf(\"Assertion failed.\");
-        *((char *)0) = 0;
-    }
-}
-"
-
-proc print_int(var i: int) #foreign;
-proc print_float(var f: float) #foreign;
-proc print(var str: string) #foreign;
-proc alloc(var size: int) : rawptr #foreign;
-proc free(var ptr: rawptr) #foreign;
-proc assert(var condition: bool) #foreign;
+#include "basic.sif"
 
 struct Vector3 {
     const WOW_A_CONSTANT = 123;
@@ -49,7 +18,6 @@ enum My_Enum {
     BAR;
     BAZ;
 }
-
 
 proc main() {
     var an_enum = My_Enum.FOO;

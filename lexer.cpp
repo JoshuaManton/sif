@@ -38,6 +38,7 @@ void init_lexer_globals() {
     token_string_map[TK_DIRECTIVE_ASSERT]      = "#assert";
     token_string_map[TK_DIRECTIVE_FOREIGN]     = "#foreign";
     token_string_map[TK_DIRECTIVE_C_CODE]      = "#c_code";
+    token_string_map[TK_DIRECTIVE_INCLUDE]     = "#include";
 
     token_string_map[TK_ASSIGN]                = "=";
     token_string_map[TK_PLUS]                  = "+";
@@ -236,6 +237,10 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
 }
 
 bool get_next_token(Lexer *lexer, Token *out_token) {
+    if (lexer->errored) {
+        return false;
+    }
+
     *out_token = {};
 
     while (is_whitespace(lexer->text[lexer->index])) {
@@ -478,9 +483,14 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             out_token->kind = TK_DIRECTIVE_C_CODE;
             out_token->text = "#c_code";
         }
+        else if (strcmp(identifier, "include") == 0) {
+            out_token->kind = TK_DIRECTIVE_INCLUDE;
+            out_token->text = "#include";
+        }
         else {
-            printf("unknown directive: %s\n", identifier);
-            assert(false);
+            lexer->errored = true;
+            report_error(token_location, "Unknown directive: %s", identifier);
+            return false;
         }
     }
     else SIMPLE_TOKEN('(', TK_LEFT_PAREN)
@@ -495,7 +505,9 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else SIMPLE_TOKEN(',', TK_COMMA)
     else SIMPLE_TOKEN('^', TK_CARET)
     else {
-        assert(false);
+        lexer->errored = true;
+        report_error(token_location, "Unknown character: %c.", lexer->text[lexer->index]);
+        return false;
     }
 
     out_token->location = token_location;
