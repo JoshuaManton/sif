@@ -62,32 +62,58 @@ void print(String str);
 void *alloc(i64 size);
 void free(void *ptr);
 void assert(bool condition);
-void takes_an_array(Static_Array<f32 , 4> arr);
+struct Dynamic_Array_Int;
+void maybe_grow(Dynamic_Array_Int *dyn);
+void append(Dynamic_Array_Int *dyn, i64 value);
+i64 pop(Dynamic_Array_Int *dyn);
+void clear_dynamic_array(Dynamic_Array_Int *dyn);
+void destroy_dynamic_array(Dynamic_Array_Int *dyn);
 void main();
 
 // Actual declarations
-void takes_an_array(Static_Array<f32 , 4> arr) {
-    arr.elements[2] = 2.000000;
-    print_float(arr.elements[2]);
+struct Dynamic_Array_Int {
+    Slice array;
+    i64 count;
+};
+void maybe_grow(Dynamic_Array_Int *dyn) {
+    if (dyn->count == dyn->array.count) {
+        if (*((i64 **)&dyn->array.data) != nullptr) {
+            free(*((i64 **)&dyn->array.data));
+        }
+        i64 new_cap = 8 + dyn->array.count * 2;
+        *((i64 **)&dyn->array.data) = ((i64 *)alloc(new_cap * 8));
+        dyn->array.count = new_cap;
+    }
+}
+void append(Dynamic_Array_Int *dyn, i64 value) {
+    maybe_grow(dyn);
+    assert(dyn->count < dyn->array.count);
+    ((i64 *)dyn->array.data)[dyn->count] = value;
+    dyn->count += 1;
+}
+i64 pop(Dynamic_Array_Int *dyn) {
+    assert(dyn->count > 0);
+    i64 value = ((i64 *)dyn->array.data)[dyn->count - 1];
+    dyn->count -= 1;
+    return value;
+}
+void clear_dynamic_array(Dynamic_Array_Int *dyn) {
+    dyn->count = 0;
+}
+void destroy_dynamic_array(Dynamic_Array_Int *dyn) {
+    if (*((i64 **)&dyn->array.data) != nullptr) {
+        free(*((i64 **)&dyn->array.data));
+    }
 }
 void main() {
-    Static_Array<f32 , 4> __generated_compound_literal_0 = {};
-    __generated_compound_literal_0.elements[0] = 1.000000;
-    __generated_compound_literal_0.elements[1] = 2.000000;
-    __generated_compound_literal_0.elements[2] = 3.000000;
-    __generated_compound_literal_0.elements[3] = 4.000000;
-    Static_Array<f32 , 4> arr = __generated_compound_literal_0;
-    takes_an_array(arr);
-    for (i64 i = 0; i < 4; i += 1) {
-        print_float(arr.elements[i]);
+    Dynamic_Array_Int arr = {};
+    append(&arr, 1);
+    append(&arr, 4);
+    append(&arr, 9);
+    for (i64 i = 0; i < arr.count; i += 1) {
+        print_int(((i64 *)arr.array.data)[i]);
     }
-    {
-        Static_Array<f32 , 2> __generated_compound_literal_1 = {};
-        __generated_compound_literal_1.elements[0] = 5.000000;
-        __generated_compound_literal_1.elements[1] = 6.000000;
-        Static_Array<f32 , 2> arr = __generated_compound_literal_1;
-        for (i64 i = 0; i < 2; i += 1) {
-            print_float(arr.elements[i]);
-        }
-    }
+    i64 value = pop(&arr);
+    print_int(value);
+    destroy_dynamic_array(&arr);
 }

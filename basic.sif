@@ -30,3 +30,4 @@ proc print      (var str: string)              #foreign;
 proc alloc      (var size: int)       : rawptr #foreign;
 proc free       (var ptr: rawptr)              #foreign;
 proc assert     (var condition: bool)          #foreign;
+

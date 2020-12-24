@@ -1,23 +1,17 @@
 #include "basic.sif"
+#include "dynamic_array.sif"
 
 proc main() {
-    var arr = ([4]float){1, 2, 3, 4};
-    takes_an_array(arr);
+    var arr: Dynamic_Array_Int;
+    append(&arr, 1);
+    append(&arr, 4);
+    append(&arr, 9);
     for (var i = 0; i < arr.count; i += 1) {
-        print_float(arr[i]);
+        print_int(arr.array[i]); // need operator overloading!
     }
-
-    {
-        var arr = ([2]float){5, 6}; // shadows outer scope
-        for (var i = 0; i < arr.count; i += 1) {
-            print_float(arr[i]);
-        }
-    }
-}
-
-proc takes_an_array(arr: [4]float) {
-    arr[2] = 2;
-    print_float(arr[2]);
+    var value = pop(&arr);
+    print_int(value);
+    destroy_dynamic_array(&arr);
 }
 
 // struct Size_Test {

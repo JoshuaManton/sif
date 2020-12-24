@@ -1,0 +1,39 @@
+struct Dynamic_Array_Int {
+    var array: []int;
+    var count: int;
+}
+
+proc append(dyn: ^Dynamic_Array_Int, value: int) {
+    maybe_grow(dyn);
+    assert(dyn.count < dyn.array.count);
+    dyn.array[dyn.count] = value;
+    dyn.count += 1;
+}
+
+proc maybe_grow(dyn: ^Dynamic_Array_Int) {
+    if (dyn.count == dyn.array.count) {
+        if (dyn.array.data != null) {
+            free(dyn.array.data);
+        }
+        var new_cap = 8 + dyn.array.count * 2;
+        dyn.array.data = cast(^int, alloc(new_cap * sizeof(int)));
+        dyn.array.count = new_cap;
+    }
+}
+
+proc pop(dyn: ^Dynamic_Array_Int) : int {
+    assert(dyn.count > 0);
+    var value = dyn.array[dyn.count-1];
+    dyn.count -= 1;
+    return value;
+}
+
+proc clear_dynamic_array(dyn: ^Dynamic_Array_Int) {
+    dyn.count = 0;
+}
+
+proc destroy_dynamic_array(dyn: ^Dynamic_Array_Int) {
+    if (dyn.array.data != null) {
+        free(dyn.array.data);
+    }
+}
