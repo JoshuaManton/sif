@@ -342,7 +342,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
     assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
 
     if ((!(expr->operand.flags & OPERAND_NO_VALUE)) && is_type_reference(expr->operand.type)) {
-        sb->print("*");
+        sb->print("(*");
     }
 
     if (expr->resolved_operator_overload != nullptr) {
@@ -356,190 +356,194 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
             }
         }
         sb->print(")");
-        return;
     }
+    else {
+        // todo(josh): should this be above the operator overload stuff?
+        if (target_type) {
+            if (is_type_reference(target_type)) {
+                sb->print("&");
+            }
+        }
 
-    // todo(josh): should this be above the operator overload stuff?
-    if (target_type) {
-        if (is_type_reference(target_type)) {
-            sb->print("&");
-        }
-    }
-
-    switch (expr->expr_kind) {
-        case EXPR_IDENTIFIER: {
-            Expr_Identifier *identifier = (Expr_Identifier *)expr;
-            sb->print(identifier->name);
-            break;
-        }
-        case EXPR_UNARY: {
-            UNIMPLEMENTED(EXPR_UNARY);
-            Expr_Unary *unary = (Expr_Unary *)expr;
-            break;
-        }
-        case EXPR_BINARY: {
-            Expr_Binary *binary = (Expr_Binary *)expr;
-            c_print_expr(sb, binary->lhs);
-            switch (binary->op) {
-                case TK_PLUS:                     { sb->print(" + ");  break; }
-                case TK_MINUS:                    { sb->print(" - ");  break; }
-                case TK_MULTIPLY:                 { sb->print(" * ");  break; }
-                case TK_DIVIDE:                   { sb->print(" / ");  break; }
-                case TK_LESS_THAN:                { sb->print(" < ");  break; }
-                case TK_LESS_THAN_OR_EQUAL:       { sb->print(" <= "); break; }
-                case TK_GREATER_THAN:             { sb->print(" > ");  break; }
-                case TK_GREATER_THAN_OR_EQUAL:    { sb->print(" >= "); break; }
-                case TK_EQUAL_TO:                 { sb->print(" == "); break; }
-                case TK_NOT_EQUAL_TO:             { sb->print(" != "); break; }
-                case TK_AMPERSAND:                { sb->print(" & ");  break; }
-                case TK_BIT_OR:                   { sb->print(" | ");  break; }
-                case TK_BOOLEAN_AND:              { sb->print(" && "); break; }
-                case TK_BOOLEAN_OR:               { sb->print(" || "); break; }
-                case TK_LEFT_SHIFT:               { sb->print(" << "); break; }
-                case TK_RIGHT_SHIFT:              { sb->print(" >> "); break; }
-                default: {
+        switch (expr->expr_kind) {
+            case EXPR_IDENTIFIER: {
+                Expr_Identifier *identifier = (Expr_Identifier *)expr;
+                sb->print(identifier->name);
+                break;
+            }
+            case EXPR_UNARY: {
+                UNIMPLEMENTED(EXPR_UNARY);
+                Expr_Unary *unary = (Expr_Unary *)expr;
+                break;
+            }
+            case EXPR_BINARY: {
+                Expr_Binary *binary = (Expr_Binary *)expr;
+                c_print_expr(sb, binary->lhs);
+                switch (binary->op) {
+                    case TK_PLUS:                     { sb->print(" + ");  break; }
+                    case TK_MINUS:                    { sb->print(" - ");  break; }
+                    case TK_MULTIPLY:                 { sb->print(" * ");  break; }
+                    case TK_DIVIDE:                   { sb->print(" / ");  break; }
+                    case TK_LESS_THAN:                { sb->print(" < ");  break; }
+                    case TK_LESS_THAN_OR_EQUAL:       { sb->print(" <= "); break; }
+                    case TK_GREATER_THAN:             { sb->print(" > ");  break; }
+                    case TK_GREATER_THAN_OR_EQUAL:    { sb->print(" >= "); break; }
+                    case TK_EQUAL_TO:                 { sb->print(" == "); break; }
+                    case TK_NOT_EQUAL_TO:             { sb->print(" != "); break; }
+                    case TK_AMPERSAND:                { sb->print(" & ");  break; }
+                    case TK_BIT_OR:                   { sb->print(" | ");  break; }
+                    case TK_BOOLEAN_AND:              { sb->print(" && "); break; }
+                    case TK_BOOLEAN_OR:               { sb->print(" || "); break; }
+                    case TK_LEFT_SHIFT:               { sb->print(" << "); break; }
+                    case TK_RIGHT_SHIFT:              { sb->print(" >> "); break; }
+                    default: {
+                        assert(false);
+                    }
+                }
+                c_print_expr(sb, binary->rhs);
+                break;
+            }
+            case EXPR_PROCEDURE_CALL: {
+                Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+                assert(call->target_procedure_type != nullptr);
+                c_print_expr(sb, call->lhs);
+                sb->print("(");
+                assert(call->parameters.count == call->target_procedure_type->parameter_types.count);
+                For (idx, call->parameters) {
+                    Ast_Expr *parameter = call->parameters[idx];
+                    c_print_expr(sb, parameter, call->target_procedure_type->parameter_types[idx]);
+                    if (idx != (call->parameters.count-1)) {
+                        sb->print(", ");
+                    }
+                }
+                sb->print(")");
+                break;
+            }
+            case EXPR_ADDRESS_OF: {
+                Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
+                sb->print("&");
+                c_print_expr(sb, address_of->rhs);
+                break;
+            }
+            case EXPR_SUBSCRIPT: {
+                Expr_Subscript *subscript = (Expr_Subscript *)expr;
+                if (is_type_slice(subscript->lhs->operand.type)) {
+                    Type_Slice *slice_type = (Type_Slice *)subscript->lhs->operand.type;
+                    sb->print("((");
+                    c_print_type(sb, slice_type->data_pointer_type, "");
+                    sb->print(")");
+                    c_print_expr(sb, subscript->lhs);
+                    sb->print(".data)[");
+                    c_print_expr(sb, subscript->index);
+                    sb->print("]");
+                }
+                else if (is_type_array(subscript->lhs->operand.type)) {
+                    c_print_expr(sb, subscript->lhs);
+                    sb->print(".elements[");
+                    c_print_expr(sb, subscript->index);
+                    sb->print("]");
+                }
+                else {
                     assert(false);
                 }
+                break;
             }
-            c_print_expr(sb, binary->rhs);
-            break;
-        }
-        case EXPR_PROCEDURE_CALL: {
-            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-            assert(call->target_procedure_type != nullptr);
-            c_print_expr(sb, call->lhs);
-            sb->print("(");
-            assert(call->parameters.count == call->target_procedure_type->parameter_types.count);
-            For (idx, call->parameters) {
-                Ast_Expr *parameter = call->parameters[idx];
-                c_print_expr(sb, parameter, call->target_procedure_type->parameter_types[idx]);
-                if (idx != (call->parameters.count-1)) {
-                    sb->print(", ");
+            case EXPR_DEREFERENCE: {
+                Expr_Dereference *dereference = (Expr_Dereference *)expr;
+                sb->print("*");
+                c_print_expr(sb, dereference->lhs);
+                break;
+            }
+            case EXPR_SELECTOR: {
+                Expr_Selector *selector = (Expr_Selector *)expr;
+                bool is_accessing_slice_data_field = false;
+                if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
+                    is_accessing_slice_data_field = true;
+                    Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
+                    sb->print("*((");
+                    c_print_type(sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), ""); // todo(josh): @Speed we should be able to cache a pointer-to-pointer-to-element-type
+                    sb->print(")&");
                 }
+                c_print_expr(sb, selector->lhs);
+                if (is_type_pointer(selector->lhs->operand.type)) {
+                    sb->print("->");
+                }
+                else {
+                    sb->print(".");
+                }
+                sb->print(selector->field_name);
+                if (is_accessing_slice_data_field) {
+                    sb->print(")");
+                }
+                break;
             }
-            sb->print(")");
-            break;
-        }
-        case EXPR_ADDRESS_OF: {
-            Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
-            sb->print("&");
-            c_print_expr(sb, address_of->rhs);
-            break;
-        }
-        case EXPR_SUBSCRIPT: {
-            Expr_Subscript *subscript = (Expr_Subscript *)expr;
-            if (is_type_slice(subscript->lhs->operand.type)) {
-                Type_Slice *slice_type = (Type_Slice *)subscript->lhs->operand.type;
-                sb->print("((");
-                c_print_type(sb, slice_type->data_pointer_type, "");
+            case EXPR_CAST: {
+                Expr_Cast *expr_cast = (Expr_Cast *)expr;
+                sb->print("(");
+                sb->print("(");
+                c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
                 sb->print(")");
-                c_print_expr(sb, subscript->lhs);
-                sb->print(".data)[");
-                c_print_expr(sb, subscript->index);
-                sb->print("]");
+                c_print_expr(sb, expr_cast->rhs);
+                sb->print(")");
+                break;
             }
-            else if (is_type_array(subscript->lhs->operand.type)) {
-                c_print_expr(sb, subscript->lhs);
-                sb->print(".elements[");
-                c_print_expr(sb, subscript->index);
-                sb->print("]");
+            case EXPR_COMPOUND_LITERAL: {
+                Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
+                assert(compound_literal->generated_temporary_variable_name != nullptr);
+                sb->print(compound_literal->generated_temporary_variable_name);
+                break;
             }
-            else {
+            case EXPR_NUMBER_LITERAL: {
+                assert(false && "shouldn't ever get in here with a number literal because of constant handling above");
+                break;
+            }
+            case EXPR_STRING_LITERAL: {
+                assert(false && "shouldn't ever get in here with a string literal because of constant handling above");
+                break;
+            }
+            case EXPR_POINTER_TYPE: {
+                Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
+                UNIMPLEMENTED(EXPR_STRING_LITERAL);
+                break;
+            }
+            case EXPR_ARRAY_TYPE: {
+                Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
+                UNIMPLEMENTED(EXPR_STRING_LITERAL);
+                break;
+            }
+            case EXPR_PAREN: {
+                assert(false && "handled above");
+            }
+            case EXPR_NULL: {
+                // todo(josh): should null be a constant? probably
+                sb->print("nullptr");
+                break;
+            }
+            case EXPR_TRUE: {
+                assert(false && "shouldn't ever get in here with a true because of constant handling above");
+                break;
+            }
+            case EXPR_FALSE: {
+                assert(false && "shouldn't ever get in here with a false because of constant handling above");
+                break;
+            }
+            case EXPR_SIZEOF: {
+                assert(false && "shouldn't ever get in here with a sizeof because of constant handling above");
+                break;
+            }
+            case EXPR_TYPEOF: {
+                assert(false && "shouldn't ever get in here with a typeof because of constant handling above");
+                break;
+            }
+            default: {
+                printf("unhandled case: %d\n", expr->expr_kind);
                 assert(false);
             }
-            break;
         }
-        case EXPR_DEREFERENCE: {
-            Expr_Dereference *dereference = (Expr_Dereference *)expr;
-            sb->print("*");
-            c_print_expr(sb, dereference->lhs);
-            break;
-        }
-        case EXPR_SELECTOR: {
-            Expr_Selector *selector = (Expr_Selector *)expr;
-            bool is_accessing_slice_data_field = false;
-            if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
-                is_accessing_slice_data_field = true;
-                Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
-                sb->print("*((");
-                c_print_type(sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), ""); // todo(josh): @Speed we should be able to cache a pointer-to-pointer-to-element-type
-                sb->print(")&");
-            }
-            c_print_expr(sb, selector->lhs);
-            if (is_type_pointer(selector->lhs->operand.type)) {
-                sb->print("->");
-            }
-            else {
-                sb->print(".");
-            }
-            sb->print(selector->field_name);
-            if (is_accessing_slice_data_field) {
-                sb->print(")");
-            }
-            break;
-        }
-        case EXPR_CAST: {
-            Expr_Cast *expr_cast = (Expr_Cast *)expr;
-            sb->print("(");
-            sb->print("(");
-            c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
-            sb->print(")");
-            c_print_expr(sb, expr_cast->rhs);
-            sb->print(")");
-            break;
-        }
-        case EXPR_COMPOUND_LITERAL: {
-            Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
-            assert(compound_literal->generated_temporary_variable_name != nullptr);
-            sb->print(compound_literal->generated_temporary_variable_name);
-            break;
-        }
-        case EXPR_NUMBER_LITERAL: {
-            assert(false && "shouldn't ever get in here with a number literal because of constant handling above");
-            break;
-        }
-        case EXPR_STRING_LITERAL: {
-            assert(false && "shouldn't ever get in here with a string literal because of constant handling above");
-            break;
-        }
-        case EXPR_POINTER_TYPE: {
-            Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
-            UNIMPLEMENTED(EXPR_STRING_LITERAL);
-            break;
-        }
-        case EXPR_ARRAY_TYPE: {
-            Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
-            UNIMPLEMENTED(EXPR_STRING_LITERAL);
-            break;
-        }
-        case EXPR_PAREN: {
-            assert(false && "handled above");
-        }
-        case EXPR_NULL: {
-            // todo(josh): should null be a constant? probably
-            sb->print("nullptr");
-            break;
-        }
-        case EXPR_TRUE: {
-            assert(false && "shouldn't ever get in here with a true because of constant handling above");
-            break;
-        }
-        case EXPR_FALSE: {
-            assert(false && "shouldn't ever get in here with a false because of constant handling above");
-            break;
-        }
-        case EXPR_SIZEOF: {
-            assert(false && "shouldn't ever get in here with a sizeof because of constant handling above");
-            break;
-        }
-        case EXPR_TYPEOF: {
-            assert(false && "shouldn't ever get in here with a typeof because of constant handling above");
-            break;
-        }
-        default: {
-            printf("unhandled case: %d\n", expr->expr_kind);
-            assert(false);
-        }
+    }
+
+    if ((!(expr->operand.flags & OPERAND_NO_VALUE)) && is_type_reference(expr->operand.type)) {
+        sb->print(")");
     }
 }
 

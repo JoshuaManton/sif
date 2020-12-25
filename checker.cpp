@@ -1295,6 +1295,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 assert(pointer_type->pointer_to != nullptr);
                 type_with_fields = pointer_type->pointer_to;
             }
+            else if (is_type_reference(lhs_operand->type)) {
+                Type_Reference *reference_type = (Type_Reference *)lhs_operand->type;
+                assert(reference_type->reference_to != nullptr);
+                type_with_fields = reference_type->reference_to;
+            }
             else if (is_type_typeid(lhs_operand->type)) {
                 assert(lhs_operand->type_value);
                 type_with_fields = lhs_operand->type_value;
@@ -1587,7 +1592,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     }
     if (expected_type) {
         if (!match_types(&result_operand, expected_type)) {
-            return nullptr; // note(josh): match_types issues an error message
+            return nullptr;
         }
         assert(!(result_operand.type->flags & TF_UNTYPED));
     }

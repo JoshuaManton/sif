@@ -1,5 +1,5 @@
 #include "basic.sif"
-// #include "dynamic_array.sif"
+#include "dynamic_array.sif"
 
 proc foo(a: >int) {
     a = 149;
@@ -13,40 +13,52 @@ proc main() {
         print_int(cc);
         foo(cc);
         print_int(cc);
+        var cref: >int = cc;
+        cref += 20;
+        print_int(cref);
+        print("--------------");
+        var v = Vector3{1, 4, 9};
+        var vref: >Vector3 = v;
+        vref.x = 1;
+        vref.y = 2;
+        vref.z = 3;
+        print_float(vref.x);
+        print_float(vref.y);
+        print_float(vref.z);
     }
 
     {
-        // var arr: Dynamic_Array_Int;
-        // append(&arr, 1);
-        // append(&arr, 4);
-        // append(&arr, 9);
-        // print_int(arr[1]);
-        // arr[1] = 334;
-        // print_int(arr[1]);
+        var arr: Dynamic_Array_Int;
+        append(&arr, 1);
+        append(&arr, 4);
+        append(&arr, 9);
+        print_int(arr[1]);
+        arr[1] = 334;
+        print_int(arr[1]);
     }
 }
 
-// struct Vector3 {
-//     var x: float;
-//     var y: float;
-//     var z: float;
-//     operator +(a: Vector3, b: Vector3) : Vector3 {
-//         return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
-//     }
-//     operator -(a: Vector3, b: Vector3) : Vector3 {
-//         return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
-//     }
-//     operator *(a: Vector3, b: Vector3) : Vector3 {
-//         return Vector3{a.x * b.x, a.y * b.y, a.z * b.z};
-//     }
-//     operator /(a: Vector3, b: Vector3) : Vector3 {
-//         return Vector3{a.x / b.x, a.y / b.y, a.z / b.z};
-//     }
+struct Vector3 {
+    var x: float;
+    var y: float;
+    var z: float;
+    operator +(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+    }
+    operator -(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
+    }
+    operator *(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x * b.x, a.y * b.y, a.z * b.z};
+    }
+    operator /(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x / b.x, a.y / b.y, a.z / b.z};
+    }
 
-//     operator *(a: Vector3, f: float) : Vector3 {
-//         return Vector3{a.x * f, a.y * f, a.z * f};
-//     }
-// }
+    operator *(a: Vector3, f: float) : Vector3 {
+        return Vector3{a.x * f, a.y * f, a.z * f};
+    }
+}
 
 // proc main() {
 //     {
