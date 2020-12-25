@@ -873,11 +873,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (is_cmp_op(binary->op)) {
                 expected_type = nullptr;
             }
-            Operand *lhs_operand = typecheck_expr(binary->lhs); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
+            Operand *lhs_operand = typecheck_expr(binary->lhs);
             if (!lhs_operand) {
                 return nullptr;
             }
-            Operand *rhs_operand = typecheck_expr(binary->rhs); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
+            Operand *rhs_operand = typecheck_expr(binary->rhs);
             if (!rhs_operand) {
                 return nullptr;
             }
@@ -897,11 +897,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             types_matched = types_matched && match_types(&rhs_operand_copy, most_concrete, false);
 
             if (types_matched && operator_is_defined(lhs_operand_copy.type, rhs_operand_copy.type, binary->op)) {
-                Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
+                Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
                 if (!lhs_operand) {
                     return nullptr;
                 }
-                Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
+                Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
                 if (!rhs_operand) {
                     return nullptr;
                 }
