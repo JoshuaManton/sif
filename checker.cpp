@@ -715,6 +715,7 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
             else if (is_type_bool(lhs)    && is_type_bool(rhs))     return true;
             else if (is_type_typeid(lhs)  && is_type_typeid(rhs))   return true;
             else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
+            else if (is_type_pointer(lhs) && is_type_pointer(rhs))  return true;
             break;
         }
         case TK_NOT_EQUAL_TO: {
@@ -723,6 +724,7 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
             else if (is_type_bool(lhs)    && is_type_bool(rhs))     return true;
             else if (is_type_typeid(lhs)  && is_type_typeid(rhs))   return true;
             else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
+            else if (is_type_pointer(lhs) && is_type_pointer(rhs))  return true;
             break;
         }
         case TK_PLUS: {
@@ -821,6 +823,40 @@ bool typecheck_procedure_call(Location location, Operand procedure_operand, Arra
     return true;
 }
 
+Ast_Proc *find_operator_overload(Ast_Struct *structure, Array<Ast_Expr *> exprs, Token_Kind op) {
+    For (overload_idx, structure->operator_overloads) {
+        Ast_Proc *proc = structure->operator_overloads[overload_idx];
+        assert(proc->header->operator_to_overload != TK_INVALID);
+        if (proc->header->operator_to_overload != op) {
+            continue;
+        }
+        if (proc->header->parameters.count != exprs.count) {
+            continue;
+        }
+        bool all_matched = true;
+        For (expr_idx, exprs) {
+            Ast_Expr *expr = exprs[expr_idx];
+            assert(expr->operand.type != nullptr);
+            assert(proc->header->parameters[expr_idx]->type != nullptr);
+            // speculatively try to match the types
+            Operand operand_copy_for_types_match = expr->operand;
+            if (!match_types(&operand_copy_for_types_match, proc->header->parameters[expr_idx]->type, false)) {
+                all_matched = false;
+                break;
+            }
+        }
+        if (all_matched) {
+            // actually match the types
+            For (expr_idx, exprs) {
+                Ast_Expr *expr = exprs[expr_idx];
+                assert(match_types(&expr->operand, proc->header->parameters[expr_idx]->type, false));
+            }
+            return proc;
+        }
+    }
+    return nullptr;
+}
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -837,11 +873,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (is_cmp_op(binary->op)) {
                 expected_type = nullptr;
             }
-            Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
+            Operand *lhs_operand = typecheck_expr(binary->lhs); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
             if (!lhs_operand) {
                 return nullptr;
             }
-            Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
+            Operand *rhs_operand = typecheck_expr(binary->rhs); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
             if (!rhs_operand) {
                 return nullptr;
             }
@@ -852,221 +888,269 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (expected_type != nullptr) {
                 most_concrete = get_most_concrete_type(most_concrete, expected_type);
             }
-            assert(match_types(lhs_operand, most_concrete));
-            assert(match_types(rhs_operand, most_concrete));
 
-            switch (binary->op) {
-                case TK_EQUAL_TO: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value    == rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value  == rhs_operand->float_value;
-                        else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value   == rhs_operand->bool_value;
-                        else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value   == rhs_operand->type_value;
-                        else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length == rhs_operand->escaped_string_length) && (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) == 0);
-                        else {
-                            report_error(binary->location, "Operator == is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+            // speculatively try to match the types to see if we should go into the
+            // normal binop path or the operator overload path
+            Operand lhs_operand_copy = *lhs_operand;
+            Operand rhs_operand_copy = *rhs_operand;
+            bool types_matched = match_types(&lhs_operand_copy, most_concrete, false);
+            types_matched = types_matched && match_types(&rhs_operand_copy, most_concrete, false);
+
+            if (types_matched && operator_is_defined(lhs_operand_copy.type, rhs_operand_copy.type, binary->op)) {
+                Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
+                if (!lhs_operand) {
+                    return nullptr;
+                }
+                Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type); // todo(josh): removing the expected_type here makes op overloading work but breaks some other constant folding stuff???
+                if (!rhs_operand) {
+                    return nullptr;
+                }
+
+                assert(match_types(lhs_operand, most_concrete));
+                assert(match_types(rhs_operand, most_concrete));
+                switch (binary->op) {
+                    case TK_EQUAL_TO: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value    == rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value  == rhs_operand->float_value;
+                            else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value   == rhs_operand->bool_value;
+                            else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value   == rhs_operand->type_value;
+                            else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length == rhs_operand->escaped_string_length) && (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) == 0);
+                            else {
+                                report_error(binary->location, "Operator == is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_NOT_EQUAL_TO: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value   != rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value != rhs_operand->float_value;
-                        else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value  != rhs_operand->bool_value;
-                        else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value  != rhs_operand->type_value;
-                        else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length != rhs_operand->escaped_string_length) || (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) != 0);
-                        else {
-                            report_error(binary->location, "Operator != is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_NOT_EQUAL_TO: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value   != rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value != rhs_operand->float_value;
+                            else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value  != rhs_operand->bool_value;
+                            else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value  != rhs_operand->type_value;
+                            else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length != rhs_operand->escaped_string_length) || (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) != 0);
+                            else {
+                                report_error(binary->location, "Operator != is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_PLUS: {
-                    result_operand.type = most_concrete;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   + rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value + rhs_operand->float_value;
-                        else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type)) {
-                            int total_length_scanned = (lhs_operand->scanned_string_length + rhs_operand->scanned_string_length);
-                            int total_length_escaped = (lhs_operand->escaped_string_length + rhs_operand->escaped_string_length);
-                            char *new_scanned_string = (char *)alloc(default_allocator(), total_length_scanned+1);
-                            memcpy(new_scanned_string, lhs_operand->scanned_string_value, lhs_operand->scanned_string_length);
-                            memcpy(new_scanned_string+lhs_operand->scanned_string_length, rhs_operand->scanned_string_value, rhs_operand->scanned_string_length);
-                            char *new_escaped_string = (char *)alloc(default_allocator(), total_length_escaped+1);
-                            memcpy(new_escaped_string, lhs_operand->escaped_string_value, lhs_operand->escaped_string_length);
-                            memcpy(new_escaped_string+lhs_operand->escaped_string_length, rhs_operand->escaped_string_value, rhs_operand->escaped_string_length);
-                            new_scanned_string[total_length_scanned] = '\0';
-                            new_escaped_string[total_length_escaped] = '\0';
-                            result_operand.scanned_string_value = new_scanned_string;
-                            result_operand.scanned_string_length = total_length_scanned;
-                            result_operand.escaped_string_value = new_escaped_string;
-                            result_operand.escaped_string_length = total_length_escaped;
+                    case TK_PLUS: {
+                        result_operand.type = most_concrete;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   + rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value + rhs_operand->float_value;
+                            else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type)) {
+                                int total_length_scanned = (lhs_operand->scanned_string_length + rhs_operand->scanned_string_length);
+                                int total_length_escaped = (lhs_operand->escaped_string_length + rhs_operand->escaped_string_length);
+                                char *new_scanned_string = (char *)alloc(default_allocator(), total_length_scanned+1);
+                                memcpy(new_scanned_string, lhs_operand->scanned_string_value, lhs_operand->scanned_string_length);
+                                memcpy(new_scanned_string+lhs_operand->scanned_string_length, rhs_operand->scanned_string_value, rhs_operand->scanned_string_length);
+                                char *new_escaped_string = (char *)alloc(default_allocator(), total_length_escaped+1);
+                                memcpy(new_escaped_string, lhs_operand->escaped_string_value, lhs_operand->escaped_string_length);
+                                memcpy(new_escaped_string+lhs_operand->escaped_string_length, rhs_operand->escaped_string_value, rhs_operand->escaped_string_length);
+                                new_scanned_string[total_length_scanned] = '\0';
+                                new_escaped_string[total_length_escaped] = '\0';
+                                result_operand.scanned_string_value = new_scanned_string;
+                                result_operand.scanned_string_length = total_length_scanned;
+                                result_operand.escaped_string_value = new_escaped_string;
+                                result_operand.escaped_string_length = total_length_escaped;
+                            }
+                            else {
+                                report_error(binary->location, "Operator + is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
-                        else {
-                            report_error(binary->location, "Operator + is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
-                        }
+                        break;
                     }
-                    break;
-                }
-                case TK_MINUS: {
-                    result_operand.type = most_concrete;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   - rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator - is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_MINUS: {
+                        result_operand.type = most_concrete;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   - rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator - is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_MULTIPLY: {
-                    result_operand.type = most_concrete;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   * rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value * rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator * is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_MULTIPLY: {
+                        result_operand.type = most_concrete;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   * rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value * rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator * is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_DIVIDE: {
-                    result_operand.type = most_concrete;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   / rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value / rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_DIVIDE: {
+                        result_operand.type = most_concrete;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   / rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value / rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_AMPERSAND: { // note(josh): BIT_AND
-                    result_operand.type = most_concrete;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value & rhs_operand->int_value;
-                        else {
-                            report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_AMPERSAND: { // note(josh): BIT_AND
+                        result_operand.type = most_concrete;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value & rhs_operand->int_value;
+                            else {
+                                report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_BIT_OR: {
-                    result_operand.type = most_concrete;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value | rhs_operand->int_value;
-                        else {
-                            report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_BIT_OR: {
+                        result_operand.type = most_concrete;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value | rhs_operand->int_value;
+                            else {
+                                report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_LESS_THAN: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   < rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value < rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator < is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_LESS_THAN: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   < rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value < rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator < is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_LESS_THAN_OR_EQUAL: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   <= rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value <= rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator <= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_LESS_THAN_OR_EQUAL: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   <= rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value <= rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator <= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_GREATER_THAN: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   > rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value > rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator > is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_GREATER_THAN: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   > rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value > rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator > is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_GREATER_THAN_OR_EQUAL: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   >= rhs_operand->int_value;
-                        else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value >= rhs_operand->float_value;
-                        else {
-                            report_error(binary->location, "Operator >= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_GREATER_THAN_OR_EQUAL: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   >= rhs_operand->int_value;
+                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value >= rhs_operand->float_value;
+                            else {
+                                report_error(binary->location, "Operator >= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_BOOLEAN_AND: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value && rhs_operand->bool_value;
-                        else {
-                            report_error(binary->location, "Operator && is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_BOOLEAN_AND: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value && rhs_operand->bool_value;
+                            else {
+                                report_error(binary->location, "Operator && is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_BOOLEAN_OR: {
-                    result_operand.type = type_bool;
-                    if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                        result_operand.flags |= OPERAND_CONSTANT;
-                             if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value || rhs_operand->bool_value;
-                        else {
-                            report_error(binary->location, "Operator || is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                            return nullptr;
+                    case TK_BOOLEAN_OR: {
+                        result_operand.type = type_bool;
+                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
+                            result_operand.flags |= OPERAND_CONSTANT;
+                                 if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value || rhs_operand->bool_value;
+                            else {
+                                report_error(binary->location, "Operator || is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                                return nullptr;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                case TK_LEFT_SHIFT: {
-                    UNIMPLEMENTED(TK_LEFT_SHIFT);
-                }
-                case TK_RIGHT_SHIFT: {
-                    UNIMPLEMENTED(TK_RIGHT_SHIFT);
-                }
-                default: {
-                    printf("Unhandled operator: %s\n", token_string(binary->op));
-                    assert(false);
+                    case TK_LEFT_SHIFT: {
+                        UNIMPLEMENTED(TK_LEFT_SHIFT);
+                    }
+                    case TK_RIGHT_SHIFT: {
+                        UNIMPLEMENTED(TK_RIGHT_SHIFT);
+                    }
+                    default: {
+                        printf("Unhandled operator: %s\n", token_string(binary->op));
+                        assert(false);
+                    }
                 }
             }
+            else {
+                // check for overloads!
+                // todo(josh): this is pretty crude but maybe fine. means that for operator overloads
+                // the struct type has to be the first argument. again, maybe fine
+                if (is_type_struct(lhs_operand->type)) {
+                    Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
+                    Array<Ast_Expr *> parameters = {};
+                    parameters.allocator = default_allocator();
+                    parameters.append(binary->lhs);
+                    parameters.append(binary->rhs);
+                    Ast_Proc *overload_proc = find_operator_overload(struct_type->ast_struct, parameters, binary->op);
+                    if (!overload_proc) {
+                        report_error(binary->location, "Operator '%s' is unsupported for types '%s' and '%s'.", token_string(binary->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                        return nullptr;
+                    }
+                    else {
+                        assert(overload_proc->header->operand.type != nullptr);
+                        if (!typecheck_procedure_call(binary->location, overload_proc->header->operand, parameters, &result_operand)) {
+                            return nullptr;
+                        }
+                        binary->resolved_operator_overload = overload_proc;
+                        binary->operator_overload_parameters = parameters;
+                    }
+                }
+                else {
+                    report_error(binary->location, "Operator '%s' is unsupported for types '%s' and '%s'.", token_string(binary->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                    return nullptr;
+                }
+            }
+
             assert(result_operand.type != nullptr);
             break;
         }
@@ -1131,27 +1215,17 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             else if (is_type_struct(lhs_operand->type)) {
                 Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
-                Ast_Proc *overload_proc = nullptr;
-                For (idx, struct_type->ast_struct->operator_overloads) {
-                    Ast_Proc *proc = struct_type->ast_struct->operator_overloads[idx];
-                    assert(proc->header->operator_to_overload != TK_INVALID);
-                    if (proc->header->operator_to_overload == TK_LEFT_SQUARE) {
-                        // todo(josh): make sure there is only one of each overload
-                        overload_proc = proc;
-                        break;
-                    }
-                }
-
+                Array<Ast_Expr *> parameters = {};
+                parameters.allocator = default_allocator();
+                parameters.append(subscript->lhs);
+                parameters.append(subscript->index);
+                Ast_Proc *overload_proc = find_operator_overload(struct_type->ast_struct, parameters, TK_LEFT_SQUARE);
                 if (overload_proc == nullptr) {
                     report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
                     return nullptr;
                 }
                 else {
                     assert(overload_proc->header->operand.type != nullptr);
-                    Array<Ast_Expr *> parameters = {};
-                    parameters.allocator = default_allocator();
-                    parameters.append(subscript->lhs);
-                    parameters.append(subscript->index);
                     if (!typecheck_procedure_call(subscript->location, overload_proc->header->operand, parameters, &result_operand)) {
                         return nullptr;
                     }

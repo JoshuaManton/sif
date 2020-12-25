@@ -353,6 +353,20 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
     }
     assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
 
+    if (expr->resolved_operator_overload != nullptr) {
+        assert(expr->resolved_operator_overload != nullptr);
+        assert(expr->resolved_operator_overload->header->name != nullptr);
+        sb->printf("%s(", expr->resolved_operator_overload->header->name);
+        For (idx, expr->operator_overload_parameters) {
+            c_print_expr(sb, expr->operator_overload_parameters[idx]);
+            if (idx != (expr->operator_overload_parameters.count-1)) {
+                sb->print(", ");
+            }
+        }
+        sb->print(")");
+        return;
+    }
+
     switch (expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             Expr_Identifier *identifier = (Expr_Identifier *)expr;
@@ -428,20 +442,6 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 sb->print(".elements[");
                 c_print_expr(sb, subscript->index);
                 sb->print("]");
-            }
-            else if (is_type_struct(subscript->lhs->operand.type)) {
-                assert(subscript->resolved_operator_overload != nullptr);
-                // operator overload!
-                assert(subscript->resolved_operator_overload->header->name != nullptr);
-                sb->printf("%s(", subscript->resolved_operator_overload->header->name);
-                For (idx, subscript->operator_overload_parameters) {
-                    // todo(josh): pre-print compound literals
-                    c_print_expr(sb, subscript->operator_overload_parameters[idx]);
-                    if (idx != (subscript->operator_overload_parameters.count-1)) {
-                        sb->print(", ");
-                    }
-                }
-                sb->print(")");
             }
             else {
                 assert(false);

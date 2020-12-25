@@ -1,26 +1,59 @@
 #include "basic.sif"
 #include "dynamic_array.sif"
 
+struct Vector3 {
+    var x: float;
+    var y: float;
+    var z: float;
+    operator +(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+    }
+    operator -(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
+    }
+    operator *(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x * b.x, a.y * b.y, a.z * b.z};
+    }
+    operator /(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x / b.x, a.y / b.y, a.z / b.z};
+    }
+
+    operator *(a: Vector3, f: float) : Vector3 {
+        return Vector3{a.x * f, a.y * f, a.z * f};
+    }
+}
+
 proc main() {
+    var a = Vector3{1, 4, 9};
+    var b = Vector3{1, 2, 3};
+    var c = a * 2;
+    print_float(c.x);
+    print_float(c.y);
+    print_float(c.z);
+    c = c * 2;
+    print_float(c.x);
+    print_float(c.y);
+    print_float(c.z);
+
+    var aa: float;
+    var f: float = 2;
+    f = 2 + 3 + 2;
+    f = aa + aa;
+    f = aa + 2;
+
     var arr: Dynamic_Array_Int;
     append(&arr, 1);
     append(&arr, 4);
     append(&arr, 9);
     print_int(arr[1]);
 
-    // for (var i = 0; i < arr.count; i += 1) {
-    //     print_int(arr[i]);
-    // }
-    // var value = pop(&arr);
-    // print_int(value);
-    // destroy_dynamic_array(&arr);
+    for (var i = 0; i < arr.count; i += 1) {
+        print_int(arr[i]);
+    }
+    var value = pop(&arr);
+    print_int(value);
+    destroy_dynamic_array(&arr);
 }
-
-// struct Size_Test {
-//     var x: u8;
-//     var y: i32;
-//     var z: u8;
-// }
 
 // struct Vector3 {
 //     const WOW_A_CONSTANT = 123;

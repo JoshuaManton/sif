@@ -344,6 +344,8 @@ enum Expr_Kind {
 struct Ast_Expr : public Ast_Node {
     Expr_Kind expr_kind = EXPR_INVALID;
     Operand operand = {};
+    Ast_Proc *resolved_operator_overload = {};
+    Array<Ast_Expr *> operator_overload_parameters = {};
     Ast_Expr(Expr_Kind kind, Location location)
     : Ast_Node(AST_EXPR, location)
     , expr_kind(kind)
@@ -416,8 +418,6 @@ struct Expr_String_Literal : public Ast_Expr {
 struct Expr_Subscript : public Ast_Expr {
     Ast_Expr *lhs = {};
     Ast_Expr *index = {};
-    Ast_Proc *resolved_operator_overload = {};
-    Array<Ast_Expr *> operator_overload_parameters = {};
     Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index, Location location)
     : Ast_Expr(EXPR_SUBSCRIPT, location)
     , lhs(lhs)
