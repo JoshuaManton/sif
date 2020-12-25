@@ -75,6 +75,9 @@ struct Dynamic_Array_Int {
     Slice array;
     i64 count;
 };
+i64 __operator_overload_Dynamic_Array_Int_TK_LEFT_SQUARE(Dynamic_Array_Int dyn, i64 index) {
+    return ((i64 *)dyn.array.data)[index];
+}
 void maybe_grow(Dynamic_Array_Int *dyn) {
     if (dyn->count == dyn->array.count) {
         if (*((i64 **)&dyn->array.data) != nullptr) {
@@ -110,10 +113,5 @@ void main() {
     append(&arr, 1);
     append(&arr, 4);
     append(&arr, 9);
-    for (i64 i = 0; i < arr.count; i += 1) {
-        print_int(((i64 *)arr.array.data)[i]);
-    }
-    i64 value = pop(&arr);
-    print_int(value);
-    destroy_dynamic_array(&arr);
+    print_int(__operator_overload_Dynamic_Array_Int_TK_LEFT_SQUARE(arr, 1));
 }

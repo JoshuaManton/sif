@@ -40,7 +40,6 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error = t
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
 bool typecheck_block(Ast_Block *block);
 bool typecheck_procedure_header(Ast_Proc_Header *header);
-bool typecheck_procedure(Ast_Proc *procedure);
 bool do_assert_directives();
 bool do_print_directives();
 
@@ -348,8 +347,7 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
                 return false;
             }
             assert(proc_decl->procedure->header->type != nullptr);
-            decl_operand.type = proc_decl->procedure->header->type;
-            decl_operand.flags = OPERAND_RVALUE;
+            decl_operand = proc_decl->procedure->header->operand;
             break;
         }
         default: {
@@ -373,7 +371,21 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
         }
     }
 
-    if (decl->kind != DECL_STRUCT) {
+    if (decl->kind == DECL_STRUCT) {
+        Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
+        For (idx, struct_decl->structure->operator_overloads) {
+            Ast_Proc *proc = struct_decl->structure->operator_overloads[idx];
+            assert(!proc->header->is_foreign);
+            assert(proc->body != nullptr);
+            if (!typecheck_procedure_header(proc->header)) {
+                return false;
+            }
+            if (!typecheck_block(proc->body)) {
+                return false;
+            }
+        }
+    }
+    else {
         if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
             ordered_declarations.append(decl);
         }
@@ -427,6 +439,10 @@ char *type_to_string(Type *type) {
             sprintf(buffer, structure->name);
             break;
         }
+        case TYPE_PROCEDURE: {
+            assert(false && "unimplemented");
+            break;
+        }
         case TYPE_POINTER: {
             Type_Pointer *pointer = (Type_Pointer *)type;
             sprintf(buffer, "^%s", type_to_string(pointer->pointer_to));
@@ -471,9 +487,6 @@ bool complete_type(Type *type) {
                 Type_Struct *struct_type = (Type_Struct *)type;
                 assert(struct_type->ast_struct != nullptr);
                 Ast_Struct *structure = struct_type->ast_struct;
-                if (!typecheck_block(structure->body)) {
-                    return false;
-                }
                 int size = 0;
                 int largest_alignment = 1;
                 if (structure->fields.count == 0) {
@@ -783,6 +796,31 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
     return false;
 }
 
+bool typecheck_procedure_call(Location location, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand) {
+    assert(procedure_operand.type->kind == TYPE_PROCEDURE);
+    Type_Procedure *target_procedure_type = (Type_Procedure *)procedure_operand.type;
+    assert(target_procedure_type->parameter_types.count == parameters.count);
+    For (idx, parameters) {
+        Ast_Expr *parameter = parameters[idx];
+        assert(target_procedure_type->parameter_types[idx] != nullptr);
+        Operand *parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
+        if (!parameter_operand) {
+            return false;
+        }
+        assert(parameter_operand->type != nullptr);
+    }
+    Operand result_operand(location);
+    result_operand.type = target_procedure_type->return_type;
+    if (result_operand.type) {
+        result_operand.flags = OPERAND_RVALUE;
+    }
+    else {
+        result_operand.flags = OPERAND_NO_VALUE;
+    }
+    *out_operand = result_operand;
+    return true;
+}
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -1066,71 +1104,66 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!lhs_operand) {
                 return nullptr;
             }
-            Type *elem_type = nullptr;
-            if (is_type_array(lhs_operand->type)) {
-                Type_Array *array_type = (Type_Array *)lhs_operand->type;
-                if (!complete_type(array_type)) {
-                    return nullptr;
-                }
-                assert(array_type->size > 0);
-                elem_type = array_type->array_of;
-            }
-            else if (is_type_slice(lhs_operand->type)) {
-                Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
-                elem_type = slice_type->slice_of;
-            }
-            else {
-                report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
+            if (!complete_type(lhs_operand->type)) {
                 return nullptr;
             }
-            Operand *index_operand = typecheck_expr(subscript->index, type_int); // todo(josh): should we pass expected_type down here?
+
+            Operand *index_operand = typecheck_expr(subscript->index, type_int);
             if (!index_operand) {
                 return nullptr;
             }
             assert(is_type_number(index_operand->type));
             assert(is_type_integer(index_operand->type));
-            result_operand.type = elem_type;
-            result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            break;
-        }
-        case EXPR_DEREFERENCE: {
-            Expr_Dereference *dereference = (Expr_Dereference *)expr;
-            Operand *lhs_operand = typecheck_expr(dereference->lhs);
-            if (!lhs_operand) {
-                return nullptr;
+
+            Type *elem_type = nullptr;
+            if (is_type_array(lhs_operand->type)) {
+                Type_Array *array_type = (Type_Array *)lhs_operand->type;
+                assert(array_type->size > 0);
+                elem_type = array_type->array_of;
+                result_operand.type = elem_type;
+                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             }
-            assert(is_type_pointer(lhs_operand->type));
-            Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
-            result_operand.type = pointer_type->pointer_to;
-            result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            break;
-        }
-        case EXPR_PROCEDURE_CALL: {
-            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-            Operand *procedure_operand = typecheck_expr(call->lhs);
-            if (!procedure_operand) {
-                return nullptr;
+            else if (is_type_slice(lhs_operand->type)) {
+                Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
+                elem_type = slice_type->slice_of;
+                result_operand.type = elem_type;
+                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             }
-            assert(procedure_operand->type->kind == TYPE_PROCEDURE);
-            Type_Procedure *target_procedure_type = (Type_Procedure *)procedure_operand->type;
-            assert(target_procedure_type->parameter_types.count == call->parameters.count);
-            For (idx, call->parameters) {
-                Ast_Expr *parameter = call->parameters[idx];
-                assert(target_procedure_type->parameter_types[idx] != nullptr);
-                Operand *parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
-                if (!parameter_operand) {
+            else if (is_type_struct(lhs_operand->type)) {
+                Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
+                Ast_Proc *overload_proc = nullptr;
+                For (idx, struct_type->ast_struct->operator_overloads) {
+                    Ast_Proc *proc = struct_type->ast_struct->operator_overloads[idx];
+                    assert(proc->header->operator_to_overload != TK_INVALID);
+                    if (proc->header->operator_to_overload == TK_LEFT_SQUARE) {
+                        // todo(josh): make sure there is only one of each overload
+                        overload_proc = proc;
+                        break;
+                    }
+                }
+
+                if (overload_proc == nullptr) {
+                    report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
                     return nullptr;
                 }
-                assert(parameter_operand->type != nullptr);
-            }
-            result_operand.type = target_procedure_type->return_type;
-            if (result_operand.type) {
-                result_operand.flags = OPERAND_RVALUE;
+                else {
+                    assert(overload_proc->header->operand.type != nullptr);
+                    Array<Ast_Expr *> parameters = {};
+                    parameters.allocator = default_allocator();
+                    parameters.append(subscript->lhs);
+                    parameters.append(subscript->index);
+                    if (!typecheck_procedure_call(subscript->location, overload_proc->header->operand, parameters, &result_operand)) {
+                        return nullptr;
+                    }
+                    subscript->resolved_operator_overload = overload_proc;
+                    subscript->operator_overload_parameters = parameters;
+                }
             }
             else {
-                result_operand.flags = OPERAND_NO_VALUE;
+                report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
+                return nullptr;
             }
-            // todo(josh): constant stuff? procedures are a bit weird in that way in that the name is constant but the value isn't
+            assert(result_operand.flags != 0);
             break;
         }
         case EXPR_SELECTOR: {
@@ -1183,6 +1216,30 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
 
             selector->type_with_field = type_with_fields;
+            break;
+        }
+        case EXPR_DEREFERENCE: {
+            Expr_Dereference *dereference = (Expr_Dereference *)expr;
+            Operand *lhs_operand = typecheck_expr(dereference->lhs);
+            if (!lhs_operand) {
+                return nullptr;
+            }
+            assert(is_type_pointer(lhs_operand->type));
+            Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
+            result_operand.type = pointer_type->pointer_to;
+            result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+            break;
+        }
+        case EXPR_PROCEDURE_CALL: {
+            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+            Operand *procedure_operand = typecheck_expr(call->lhs);
+            if (!procedure_operand) {
+                return nullptr;
+            }
+            if (!typecheck_procedure_call(call->location, *procedure_operand, call->parameters, &result_operand)) {
+                return nullptr;
+            }
+            // todo(josh): constant stuff? procedures are a bit weird in that way in that the name is constant but the value isn't
             break;
         }
         case EXPR_IDENTIFIER: {
@@ -1441,6 +1498,21 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
         return_type = return_type_operand->type_value;
     }
     header->type = get_or_create_type_procedure(parameter_types, return_type);
+    if (header->name == nullptr) {
+        assert(header->operator_to_overload != TK_INVALID);
+        char *name = (char *)alloc(default_allocator(), 64);
+        // todo(josh): put the parameter types in the name too probably?
+        assert(header->struct_to_operator_overload != nullptr);
+        sprintf(name, "__operator_overload_%s_%s", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
+        header->name = name;
+    }
+    else {
+        assert(header->operator_to_overload == TK_INVALID);
+    }
+    Operand operand = {};
+    operand.type = header->type;
+    operand.flags = OPERAND_RVALUE;
+    header->operand = operand;
     return true;
 }
 
@@ -1642,6 +1714,7 @@ bool typecheck_node(Ast_Node *node) {
             }
             else {
                 if (ast_return->expr) {
+                    assert(ast_return->matching_procedure->name != nullptr); // todo(josh): handle operator overloads since they don't have names
                     report_error(ast_return->expr->location, "Procedure '%s' doesn't have a return value.", ast_return->matching_procedure->name);
                     return nullptr;
                 }

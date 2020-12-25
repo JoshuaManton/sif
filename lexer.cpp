@@ -8,6 +8,7 @@
 #include "lexer.h"
 
 static char *token_string_map[TK_COUNT];
+static char *token_name_map[TK_COUNT];
 
 void init_lexer_globals() {
     token_string_map[TK_INVALID]               = "INVALID";
@@ -18,6 +19,7 @@ void init_lexer_globals() {
     token_string_map[TK_VAR]                   = "var";
     token_string_map[TK_CONST]                 = "const";
     token_string_map[TK_PROC]                  = "proc";
+    token_string_map[TK_OPERATOR]              = "operator";
     token_string_map[TK_STRUCT]                = "struct";
     token_string_map[TK_ENUM]                  = "enum";
     token_string_map[TK_RETURN]                = "return";
@@ -84,9 +86,88 @@ void init_lexer_globals() {
 
     token_string_map[TK_COMMENT]               = "COMMENT";
 
+    token_name_map[TK_INVALID]               = "TK_INVALID";
+    token_name_map[TK_IDENTIFIER]            = "TK_IDENTIFIER";
+    token_name_map[TK_NUMBER]                = "TK_NUMBER";
+    token_name_map[TK_STRING]                = "TK_STRING";
+
+    token_name_map[TK_VAR]                   = "TK_VAR";
+    token_name_map[TK_CONST]                 = "TK_CONST";
+    token_name_map[TK_PROC]                  = "TK_PROC";
+    token_name_map[TK_OPERATOR]              = "TK_OPERATOR";
+    token_name_map[TK_STRUCT]                = "TK_STRUCT";
+    token_name_map[TK_ENUM]                  = "TK_ENUM";
+    token_name_map[TK_RETURN]                = "TK_RETURN";
+    token_name_map[TK_NULL]                  = "TK_NULL";
+    token_name_map[TK_TRUE]                  = "TK_TRUE";
+    token_name_map[TK_FALSE]                 = "TK_FALSE";
+    token_name_map[TK_SIZEOF]                = "TK_SIZEOF";
+    token_name_map[TK_TYPEOF]                = "TK_TYPEOF";
+    token_name_map[TK_IF]                    = "TK_IF";
+    token_name_map[TK_ELSE]                  = "TK_ELSE";
+    token_name_map[TK_FOR]                   = "TK_FOR";
+    token_name_map[TK_WHILE]                 = "TK_WHILE";
+    token_name_map[TK_BREAK]                 = "TK_BREAK";
+    token_name_map[TK_CONTINUE]              = "TK_CONTINUE";
+    token_name_map[TK_CAST]                  = "TK_CAST";
+
+    token_name_map[TK_DIRECTIVE_PRINT]       = "TK_DIRECTIVE_PRINT";
+    token_name_map[TK_DIRECTIVE_ASSERT]      = "TK_DIRECTIVE_ASSERT";
+    token_name_map[TK_DIRECTIVE_FOREIGN]     = "TK_DIRECTIVE_FOREIGN";
+    token_name_map[TK_DIRECTIVE_C_CODE]      = "TK_DIRECTIVE_C_CODE";
+    token_name_map[TK_DIRECTIVE_INCLUDE]     = "TK_DIRECTIVE_INCLUDE";
+
+    token_name_map[TK_ASSIGN]                = "TK_ASSIGN";
+    token_name_map[TK_PLUS]                  = "TK_PLUS";
+    token_name_map[TK_PLUS_ASSIGN]           = "TK_PLUS_ASSIGN";
+    token_name_map[TK_MINUS]                 = "TK_MINUS";
+    token_name_map[TK_MINUS_ASSIGN]          = "TK_MINUS_ASSIGN";
+    token_name_map[TK_MULTIPLY]              = "TK_MULTIPLY";
+    token_name_map[TK_MULTIPLY_ASSIGN]       = "TK_MULTIPLY_ASSIGN";
+    token_name_map[TK_DIVIDE]                = "TK_DIVIDE";
+    token_name_map[TK_DIVIDE_ASSIGN]         = "TK_DIVIDE_ASSIGN";
+    token_name_map[TK_LEFT_SHIFT]            = "TK_LEFT_SHIFT";
+    token_name_map[TK_LEFT_SHIFT_ASSIGN]     = "TK_LEFT_SHIFT_ASSIGN";
+    token_name_map[TK_RIGHT_SHIFT]           = "TK_RIGHT_SHIFT";
+    token_name_map[TK_RIGHT_SHIFT_ASSIGN]    = "TK_RIGHT_SHIFT_ASSIGN";
+    token_name_map[TK_AMPERSAND]             = "TK_AMPERSAND";
+    token_name_map[TK_BIT_AND_ASSIGN]        = "TK_BIT_AND_ASSIGN";
+    token_name_map[TK_BIT_OR]                = "TK_BIT_OR";
+    token_name_map[TK_BIT_OR_ASSIGN]         = "TK_BIT_OR_ASSIGN";
+
+    token_name_map[TK_NOT]                   = "TK_NOT";
+    token_name_map[TK_NOT_EQUAL_TO]          = "TK_NOT_EQUAL_TO";
+    token_name_map[TK_LESS_THAN]             = "TK_LESS_THAN";
+    token_name_map[TK_LESS_THAN_OR_EQUAL]    = "TK_LESS_THAN_OR_EQUAL";
+    token_name_map[TK_GREATER_THAN]          = "TK_GREATER_THAN";
+    token_name_map[TK_GREATER_THAN_OR_EQUAL] = "TK_GREATER_THAN_OR_EQUAL";
+    token_name_map[TK_EQUAL_TO]              = "TK_EQUAL_TO";
+    token_name_map[TK_BOOLEAN_AND]           = "TK_BOOLEAN_AND";
+    token_name_map[TK_BOOLEAN_AND_ASSIGN]    = "TK_BOOLEAN_AND_ASSIGN";
+    token_name_map[TK_BOOLEAN_OR]            = "TK_BOOLEAN_OR";
+    token_name_map[TK_BOOLEAN_OR_ASSIGN]     = "TK_BOOLEAN_OR_ASSIGN";
+
+    token_name_map[TK_LEFT_CURLY]            = "TK_LEFT_CURLY";
+    token_name_map[TK_RIGHT_CURLY]           = "TK_RIGHT_CURLY";
+    token_name_map[TK_LEFT_SQUARE]           = "TK_LEFT_SQUARE";
+    token_name_map[TK_RIGHT_SQUARE]          = "TK_RIGHT_SQUARE";
+    token_name_map[TK_LEFT_PAREN]            = "TK_LEFT_PAREN";
+    token_name_map[TK_RIGHT_PAREN]           = "TK_RIGHT_PAREN";
+    token_name_map[TK_SEMICOLON]             = "TK_SEMICOLON";
+    token_name_map[TK_COLON]                 = "TK_COLON";
+    token_name_map[TK_DOT]                   = "TK_DOT";
+    token_name_map[TK_COMMA]                 = "TK_COMMA";
+    token_name_map[TK_CARET]                 = "TK_CARET";
+
+    token_name_map[TK_COMMENT]               = "TK_COMMENT";
+
     for (int i = 0; i < TK_COUNT; i++) {
         if (token_string_map[i] == nullptr) {
             printf("No token string for token: %d\n", i);
+            assert(false);
+        }
+        if (token_name_map[i] == nullptr) {
+            printf("No token name for token: %d\n", i);
             assert(false);
         }
     }
@@ -278,6 +359,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("var", TK_VAR)
         else CHECK_KEYWORD("const", TK_CONST)
         else CHECK_KEYWORD("proc", TK_PROC)
+        else CHECK_KEYWORD("operator", TK_OPERATOR)
         else CHECK_KEYWORD("struct", TK_STRUCT)
         else CHECK_KEYWORD("enum", TK_ENUM)
         else CHECK_KEYWORD("null", TK_NULL)
@@ -521,9 +603,12 @@ bool peek_next_token(Lexer *lexer, Token *out_token) {
     return ok;
 }
 
-void eat_next_token(Lexer *lexer) {
+void eat_next_token(Lexer *lexer, Token *out_token) {
     Token token;
-    bool ok = get_next_token(lexer, &token);
+    if (out_token == nullptr) {
+        out_token = &token;
+    }
+    bool ok = get_next_token(lexer, out_token);
     assert(ok);
 }
 
@@ -569,4 +654,8 @@ bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token) {
 
 char *token_string(Token_Kind kind) {
     return token_string_map[kind];
+}
+
+char *token_name(Token_Kind kind) {
+    return token_name_map[kind];
 }

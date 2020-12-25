@@ -1,6 +1,9 @@
 struct Dynamic_Array_Int {
     var array: []int;
     var count: int;
+    operator [](dyn: Dynamic_Array_Int, index: int) : int {
+        return dyn.array[index];
+    }
 }
 
 proc append(dyn: ^Dynamic_Array_Int, value: int) {

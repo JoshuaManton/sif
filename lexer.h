@@ -32,6 +32,7 @@ enum Token_Kind {
     TK_VAR,
     TK_CONST,
     TK_PROC,
+    TK_OPERATOR,
     TK_STRUCT,
     TK_ENUM,
     TK_RETURN,
@@ -125,12 +126,13 @@ struct Token {
 void init_lexer_globals();
 
 bool get_next_token(Lexer *lexer, Token *out_token);
-void eat_next_token(Lexer *lexer);
+void eat_next_token(Lexer *lexer, Token *out_token = nullptr);
 bool peek_next_token(Lexer *lexer, Token *out_token);
 void unexpected_token(Lexer *lexer, Token token, Token_Kind expected = TK_INVALID);
 bool expect_token(Lexer *lexer, Token_Kind kind, Token *out_token = nullptr);
 void print_token(Token token);
 char *token_string(Token_Kind kind);
+char *token_name(Token_Kind kind);
 
 void report_error(Location location, const char *fmt, ...);
 void report_info(Location location, const char *fmt, ...);

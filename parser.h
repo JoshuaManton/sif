@@ -118,13 +118,17 @@ struct Ast_Proc_Header : public Ast_Node {
     Type_Procedure *type = nullptr;
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
     bool is_foreign = {};
-    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Location location)
+    Operand operand = {};
+    Token_Kind operator_to_overload = {};
+    Ast_Struct *struct_to_operator_overload = {};
+    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
     , procedure_block(procedure_block)
     , parameters(parameters)
     , return_type_expr(return_type_expr)
     , is_foreign(is_foreign)
+    , operator_to_overload(operator_to_overload)
     {
         parameters.allocator = default_allocator();
     }
@@ -208,10 +212,12 @@ struct Ast_Struct : public Ast_Node {
     Array<Ast_Var *> fields = {};
     Ast_Block *body = {};
     Struct_Declaration *declaration = {};
+    Array<Ast_Proc *> operator_overloads = {};
     Ast_Struct(Location location)
     : Ast_Node(AST_STRUCT, location)
     {
         fields.allocator = default_allocator();
+        operator_overloads.allocator = default_allocator();
     }
 };
 
@@ -408,8 +414,10 @@ struct Expr_String_Literal : public Ast_Expr {
 };
 
 struct Expr_Subscript : public Ast_Expr {
-    Ast_Expr *lhs = nullptr;
-    Ast_Expr *index = nullptr;
+    Ast_Expr *lhs = {};
+    Ast_Expr *index = {};
+    Ast_Proc *resolved_operator_overload = {};
+    Array<Ast_Expr *> operator_overload_parameters = {};
     Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index, Location location)
     : Ast_Expr(EXPR_SUBSCRIPT, location)
     , lhs(lhs)

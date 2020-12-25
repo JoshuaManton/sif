@@ -167,6 +167,7 @@ void c_print_var(String_Builder *sb, Ast_Var *var) {
 }
 
 void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
+    assert(header->name != nullptr);
     c_print_type(sb, header->type->return_type, header->name);
     sb->print("(");
     For (idx, header->parameters) {
@@ -422,12 +423,28 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
                 c_print_expr(sb, subscript->index);
                 sb->print("]");
             }
-            else {
-                assert(is_type_array(subscript->lhs->operand.type));
+            else if (is_type_array(subscript->lhs->operand.type)) {
                 c_print_expr(sb, subscript->lhs);
                 sb->print(".elements[");
                 c_print_expr(sb, subscript->index);
                 sb->print("]");
+            }
+            else if (is_type_struct(subscript->lhs->operand.type)) {
+                assert(subscript->resolved_operator_overload != nullptr);
+                // operator overload!
+                assert(subscript->resolved_operator_overload->header->name != nullptr);
+                sb->printf("%s(", subscript->resolved_operator_overload->header->name);
+                For (idx, subscript->operator_overload_parameters) {
+                    // todo(josh): pre-print compound literals
+                    c_print_expr(sb, subscript->operator_overload_parameters[idx]);
+                    if (idx != (subscript->operator_overload_parameters.count-1)) {
+                        sb->print(", ");
+                    }
+                }
+                sb->print(")");
+            }
+            else {
+                assert(false);
             }
             break;
         }
@@ -676,6 +693,32 @@ void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level) {
     }
 }
 
+void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
+    assert(proc->body != nullptr);
+    assert(!proc->header->is_foreign);
+    c_print_procedure_header(sb, proc->header);
+    sb->print(" {\n");
+    c_print_block(sb, proc->body, 1);
+    sb->print("}\n");
+}
+
+void c_print_struct(String_Builder *sb, Ast_Struct *structure) {
+    sb->printf("struct %s {\n", structure->name);
+    For (idx, structure->fields) {
+        Ast_Var *var = structure->fields[idx];
+        if (var->is_constant) {
+            continue;
+        }
+        sb->print("    ");
+        c_print_var(sb, var);
+        sb->print(";\n");
+    }
+    sb->print("};\n");
+    For (idx, structure->operator_overloads) {
+        c_print_procedure(sb, structure->operator_overloads[idx]);
+    }
+}
+
 String_Builder generate_c_main_file(Ast_Block *global_scope) {
     // todo(josh): I think there's a bug in my String_Buffer implementation
     //             as this crashes on resize sometimes
@@ -753,17 +796,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
         switch (decl->kind) {
             case DECL_STRUCT: {
                 Struct_Declaration *structure = (Struct_Declaration *)decl;
-                sb.printf("struct %s {\n", decl->name);
-                For (idx, structure->structure->fields) {
-                    Ast_Var *var = structure->structure->fields[idx];
-                    if (var->is_constant) {
-                        continue;
-                    }
-                    sb.print("    ");
-                    c_print_var(&sb, var);
-                    sb.print(";\n");
-                }
-                sb.print("};\n");
+                c_print_struct(&sb, structure->structure);
                 break;
             }
             case DECL_VAR: {
@@ -780,11 +813,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_PROC: {
                 Proc_Declaration *procedure = (Proc_Declaration *)decl;
                 if (!procedure->procedure->header->is_foreign) {
-                    assert(procedure->procedure->body != nullptr);
-                    c_print_procedure_header(&sb, procedure->procedure->header);
-                    sb.print(" {\n");
-                    c_print_block(&sb, procedure->procedure->body, 1);
-                    sb.print("}\n");
+                    c_print_procedure(&sb, procedure->procedure);
                 }
                 break;
             }

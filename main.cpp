@@ -11,6 +11,7 @@
 
 /*
 TODO:
+-bounds checks
 -enum field expressions
 -foreach loops
 -switch statements
@@ -20,6 +21,7 @@ TODO:
 -operator overloading
 -polymorphism
 -figure out if I should allow shadowing (maybe with a keyword?)
+-generate C instead of C++
 */
 
 void main(int argc, char **argv) {

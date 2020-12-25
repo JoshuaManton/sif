@@ -144,16 +144,63 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
 Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     Token token;
-    EXPECT(lexer, TK_PROC, &token);
+    if (!peek_next_token(lexer, &token)) {
+        return nullptr;
+    }
+
     Location proc_location = token.location;
     Ast_Block *procedure_block = new Ast_Block(token.location);
     Ast_Block *old_block = push_ast_block(procedure_block);
     defer(pop_ast_block(old_block));
 
-    // name
-    EXPECT(lexer, TK_IDENTIFIER, &token);
-
-    char *proc_name = token.text;
+    bool is_operator_overload = false;
+    Token_Kind operator_to_overload = TK_INVALID;
+    char *proc_name = nullptr;
+    if (token.kind == TK_PROC) {
+        eat_next_token(lexer, &token);
+        // name
+        EXPECT(lexer, TK_IDENTIFIER, &token);
+        proc_name = token.text;
+    }
+    else if (token.kind == TK_OPERATOR) {
+        eat_next_token(lexer, &token);
+        Token operator_token;
+        if (!peek_next_token(lexer, &operator_token)) {
+            return nullptr;
+        }
+        switch (operator_token.kind) {
+            case TK_PLUS: {
+                eat_next_token(lexer);
+                break;
+            }
+            case TK_MINUS: {
+                eat_next_token(lexer);
+                break;
+            }
+            case TK_MULTIPLY: {
+                eat_next_token(lexer);
+                break;
+            }
+            case TK_DIVIDE: {
+                eat_next_token(lexer);
+                break;
+            }
+            case TK_LEFT_SQUARE: {
+                eat_next_token(lexer);
+                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                break;
+            }
+            default: {
+                report_error(operator_token.location, "Cannot overload operator '%s'.", token_string(operator_token.kind));
+                return nullptr;
+            }
+        }
+        is_operator_overload = true;
+        operator_to_overload = operator_token.kind;
+    }
+    else {
+        assert(false);
+    }
 
     // parameter list
     EXPECT(lexer, TK_LEFT_PAREN, nullptr);
@@ -202,7 +249,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
         EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
     }
 
-    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, proc_location);
+    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, proc_location);
 }
 
 Ast_Proc *parse_proc(Lexer *lexer) {
@@ -229,9 +276,15 @@ Ast_Proc *parse_proc(Lexer *lexer) {
     }
 
     Ast_Proc *proc = new Ast_Proc(header, body, header->location);
-    proc->declaration = new Proc_Declaration(proc, current_block);
-    if (!register_declaration(proc->declaration)) {
-        return nullptr;
+    if (header->operator_to_overload == TK_INVALID) {
+        assert(header->name != nullptr);
+        proc->declaration = new Proc_Declaration(proc, current_block);
+        if (!register_declaration(proc->declaration)) {
+            return nullptr;
+        }
+    }
+    else {
+        assert(header->name == nullptr);
     }
     return proc;
 }
@@ -255,12 +308,31 @@ Ast_Struct *parse_struct(Lexer *lexer) {
     EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
     For (idx, structure->body->nodes) {
         Ast_Node *node = structure->body->nodes[idx];
-        if (node->ast_kind != AST_VAR) {
-            report_error(node->location, "Only variable declarations are allowed in structs.");
-            return nullptr;
+        switch (node->ast_kind) {
+            case AST_VAR: {
+                Ast_Var *var = (Ast_Var *)node;
+                structure->fields.append(var);
+                break;
+            }
+            case AST_PROC: {
+                Ast_Proc *proc = (Ast_Proc *)node;
+                if (proc->header->operator_to_overload != TK_INVALID) {
+                    assert(proc->header->name == nullptr);
+                    proc->header->struct_to_operator_overload = structure;
+                    structure->operator_overloads.append(proc);
+                    break;
+                }
+                else {
+                    assert(proc->header->name != nullptr);
+                    // note(josh): fallthrough
+                }
+            }
+            default: {
+                report_error(node->location, "Only variable declarations and operator overloads are allowed in structs.");
+                return nullptr;
+            }
         }
-        Ast_Var *var = (Ast_Var *)node;
-        structure->fields.append(var);
+
     }
 
     structure->declaration = new Struct_Declaration(structure, current_block);
@@ -375,6 +447,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
         }
 
         case TK_PROC: {
+            Ast_Proc *proc = parse_proc(lexer);
+            if (!proc) {
+                return nullptr;
+            }
+            return proc;
+        }
+
+        case TK_OPERATOR: {
             Ast_Proc *proc = parse_proc(lexer);
             if (!proc) {
                 return nullptr;
