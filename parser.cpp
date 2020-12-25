@@ -82,6 +82,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true);
 Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
     bool had_var_or_const = true;
@@ -108,6 +109,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     Token colon;
     if (!peek_next_token(lexer, &colon)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
     Ast_Expr *type_expr = nullptr;
@@ -145,6 +147,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
 
@@ -163,9 +166,11 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
         proc_name = token.text;
     }
     else if (token.kind == TK_OPERATOR) {
+        is_operator_overload = true;
         eat_next_token(lexer, &token);
         Token operator_token;
         if (!peek_next_token(lexer, &operator_token)) {
+            assert(false && "unexpected EOF");
             return nullptr;
         }
         switch (operator_token.kind) {
@@ -195,7 +200,6 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
                 return nullptr;
             }
         }
-        is_operator_overload = true;
         operator_to_overload = operator_token.kind;
     }
     else {
@@ -225,6 +229,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     Ast_Expr *return_type_expr = {};
     Token colon = {};
     if (!peek_next_token(lexer, &colon)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
     if (colon.kind == TK_COLON) {
@@ -241,6 +246,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
     Token foreign;
     bool is_foreign = false;
     if (!peek_next_token(lexer, &foreign)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
     if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
@@ -367,6 +373,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
             Token maybe_equals;
             if (!peek_next_token(lexer, &maybe_equals)) {
+                assert(false && "unexpected EOF");
                 return nullptr;
             }
 
@@ -403,6 +410,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
     Token open_curly;
     if (!peek_next_token(lexer, &open_curly)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
     bool only_parse_one_statement = true;
@@ -420,6 +428,7 @@ Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
 
@@ -598,6 +607,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
             }
             Token else_token;
             if (!peek_next_token(lexer, &else_token)) {
+                assert(false && "unexpected EOF");
                 return nullptr;
             }
             Ast_Block *else_body = nullptr;
@@ -612,6 +622,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
             eat_next_token(lexer);
             Token semicolon;
             if (!peek_next_token(lexer, &semicolon)) {
+                assert(false && "unexpected EOF");
                 return nullptr;
             }
             Ast_Expr *return_expr = nullptr;
@@ -637,7 +648,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
 
             Token next_token;
             if (!peek_next_token(lexer, &next_token)) {
-                assert(false);
+                assert(false && "unexpected EOF");
                 return nullptr;
             }
             switch (next_token.kind) {
@@ -754,7 +765,10 @@ Ast_Block *begin_parsing(const char *filename) {
 
 bool is_or_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     switch (token.kind) {
         case TK_BOOLEAN_OR: {
             return true;
@@ -765,7 +779,10 @@ bool is_or_op(Lexer *lexer) {
 
 bool is_and_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     return is_and_op(token.kind);
 }
 bool is_and_op(Token_Kind kind) {
@@ -779,7 +796,10 @@ bool is_and_op(Token_Kind kind) {
 
 bool is_cmp_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     return is_cmp_op(token.kind);
 }
 bool is_cmp_op(Token_Kind kind) {
@@ -802,7 +822,10 @@ bool is_cmp_op(Token_Kind kind) {
 
 bool is_add_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     return is_add_op(token.kind);
 }
 bool is_add_op(Token_Kind kind) {
@@ -817,7 +840,10 @@ bool is_add_op(Token_Kind kind) {
 
 bool is_mul_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     return is_mul_op(token.kind);
 }
 bool is_mul_op(Token_Kind kind) {
@@ -835,7 +861,10 @@ bool is_mul_op(Token_Kind kind) {
 
 bool is_unary_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     return is_unary_op(token.kind);
 }
 bool is_unary_op(Token_Kind kind) {
@@ -855,7 +884,10 @@ bool is_unary_op(Token_Kind kind) {
 
 bool is_postfix_op(Lexer *lexer) {
     Token token;
-    if (!peek_next_token(lexer, &token))  return false;
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return false;
+    }
     return is_postfix_op(token.kind);
 }
 bool is_postfix_op(Token_Kind kind) {
@@ -1051,6 +1083,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
 Ast_Expr *parse_postfix_expr(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
 
@@ -1147,6 +1180,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
 Ast_Expr *parse_base_expr(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
         return nullptr;
     }
 
@@ -1187,6 +1221,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             eat_next_token(lexer);
             Token maybe_right_square;
             if (!peek_next_token(lexer, &maybe_right_square)) {
+                assert(false && "unexpected EOF");
                 return nullptr;
             }
             if (maybe_right_square.kind == TK_RIGHT_SQUARE) {
