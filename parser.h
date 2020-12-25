@@ -333,6 +333,7 @@ enum Expr_Kind {
     EXPR_CAST,
 
     EXPR_POINTER_TYPE,
+    EXPR_REFERENCE_TYPE,
     EXPR_ARRAY_TYPE,
     EXPR_SLICE_TYPE,
 
@@ -436,6 +437,7 @@ struct Expr_Dereference : public Ast_Expr {
 struct Expr_Procedure_Call : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Array<Ast_Expr *> parameters = {};
+    Type_Procedure *target_procedure_type = {};
     Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters, Location location)
     : Ast_Expr(EXPR_PROCEDURE_CALL, location)
     , lhs(lhs)
@@ -523,6 +525,14 @@ struct Expr_Pointer_Type : public Ast_Expr {
     Expr_Pointer_Type(Ast_Expr *pointer_to, Location location)
     : Ast_Expr(EXPR_POINTER_TYPE, location)
     , pointer_to(pointer_to)
+    {}
+};
+
+struct Expr_Reference_Type : public Ast_Expr {
+    Ast_Expr *reference_to = nullptr;
+    Expr_Reference_Type(Ast_Expr *reference_to, Location location)
+    : Ast_Expr(EXPR_REFERENCE_TYPE, location)
+    , reference_to(reference_to)
     {}
 };
 

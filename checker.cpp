@@ -145,6 +145,8 @@ void make_incomplete_types_for_all_structs() {
 }
 
 bool is_type_pointer   (Type *type) { return type->flags & TF_POINTER;    }
+bool is_type_reference (Type *type) { return type->flags & TF_REFERENCE;  }
+bool is_type_procedure (Type *type) { return type->flags & TF_PROCEDURE;  }
 bool is_type_array     (Type *type) { return type->flags & TF_ARRAY;      }
 bool is_type_slice     (Type *type) { return type->flags & TF_SLICE;      }
 bool is_type_number    (Type *type) { return type->flags & TF_NUMBER;     }
@@ -448,6 +450,11 @@ char *type_to_string(Type *type) {
             sprintf(buffer, "^%s", type_to_string(pointer->pointer_to));
             break;
         }
+        case TYPE_REFERENCE: {
+            Type_Reference *reference = (Type_Reference *)type;
+            sprintf(buffer, ">%s", type_to_string(reference->reference_to));
+            break;
+        }
         case TYPE_ARRAY: {
             Type_Array *array = (Type_Array *)type;
             sprintf(buffer, "[%d]%s", array->count, type_to_string(array->array_of));
@@ -573,6 +580,17 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
         return true;
     }
 
+    if (is_type_reference(expected_type) && (operand->flags & OPERAND_LVALUE)) {
+        return true;
+    }
+
+    if (is_type_reference(operand->type)) {
+        Type_Reference *reference_type = (Type_Reference *)operand->type;
+        if (reference_type->reference_to == expected_type) {
+            return true;
+        }
+    }
+
     if (operand->type->flags & TF_UNTYPED) {
         if (is_type_number(operand->type) && is_type_number(expected_type)) {
             if (is_type_integer(expected_type) && is_type_float(operand->type)) {
@@ -613,6 +631,25 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     }
     Type_Pointer *new_type = new Type_Pointer(pointer_to);
     new_type->flags = TF_POINTER;
+    new_type->size = POINTER_SIZE;
+    new_type->align = POINTER_SIZE;
+    all_types.append(new_type);
+    return new_type;
+}
+
+Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
+    assert(!is_type_untyped(reference_to));
+    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_reference_types` array
+        Type *other_type = all_types[idx];
+        if (other_type->kind == TYPE_REFERENCE) {
+            Type_Reference *other_type_reference = (Type_Reference *)other_type;
+            if (other_type_reference->reference_to == reference_to) {
+                return other_type_reference;
+            }
+        }
+    }
+    Type_Reference *new_type = new Type_Reference(reference_to);
+    new_type->flags = TF_REFERENCE;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     all_types.append(new_type);
@@ -1310,9 +1347,14 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!procedure_operand) {
                 return nullptr;
             }
+            if (!is_type_procedure(procedure_operand->type)) {
+                report_error(call->location, "Attempted to call a non-procedure type.");
+                return nullptr;
+            }
             if (!typecheck_procedure_call(call->location, *procedure_operand, call->parameters, &result_operand)) {
                 return nullptr;
             }
+            call->target_procedure_type = (Type_Procedure *)procedure_operand->type;
             // todo(josh): constant stuff? procedures are a bit weird in that way in that the name is constant but the value isn't
             break;
         }
@@ -1481,6 +1523,19 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.type_value = get_or_create_type_pointer_to(pointer_to_operand->type_value);
             break;
         }
+        case EXPR_REFERENCE_TYPE: {
+            Expr_Reference_Type *expr_reference = (Expr_Reference_Type *)expr;
+            assert(expr_reference->reference_to != nullptr);
+            Operand *reference_to_operand = typecheck_expr(expr_reference->reference_to, type_typeid);
+            if (!reference_to_operand) {
+                return nullptr;
+            }
+            assert((reference_to_operand->flags & OPERAND_CONSTANT) && (reference_to_operand->flags & OPERAND_TYPE));
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.type = type_typeid;
+            result_operand.type_value = get_or_create_type_reference_to(reference_to_operand->type_value);
+            break;
+        }
         case EXPR_ARRAY_TYPE: {
             Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
             assert(expr_array->array_of != nullptr);
@@ -1537,6 +1592,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         assert(!(result_operand.type->flags & TF_UNTYPED));
     }
 
+    if ((!(result_operand.flags & OPERAND_NO_VALUE)) && is_type_reference(result_operand.type)) {
+        result_operand.flags |= OPERAND_LVALUE;
+    }
     expr->operand = result_operand;
     return &expr->operand;
 }
@@ -1644,8 +1702,13 @@ bool typecheck_node(Ast_Node *node) {
                 report_error(assign->location, "Cannot assign to non-lvalue.");
                 return false;
             }
-            assert(lhs_operand->type != nullptr);
-            Operand *rhs_operand = typecheck_expr(assign->rhs, lhs_operand->type);
+            Type *expected_lhs_type = lhs_operand->type;
+            if (is_type_reference(expected_lhs_type)) {
+                Type_Reference *type_reference = (Type_Reference *)expected_lhs_type;
+                expected_lhs_type = type_reference->reference_to;
+            }
+            assert(expected_lhs_type != nullptr);
+            Operand *rhs_operand = typecheck_expr(assign->rhs, expected_lhs_type);
             if (!rhs_operand) {
                 return false;
             }
@@ -1672,14 +1735,14 @@ bool typecheck_node(Ast_Node *node) {
                 assert(assign->op = TK_ASSIGN);
             }
             else {
-                if (!operator_is_defined(lhs_operand->type, rhs_operand->type, binary_operation)) {
-                    report_error(assign->location, "Operator '%s' is not defined for types '%s and '%s'.", token_string(assign->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                if (!operator_is_defined(expected_lhs_type, rhs_operand->type, binary_operation)) {
+                    report_error(assign->location, "Operator '%s' is not defined for types '%s and '%s'.", token_string(assign->op), type_to_string(expected_lhs_type), type_to_string(rhs_operand->type));
                     return false;
                 }
             }
 
             assert(rhs_operand->flags & OPERAND_RVALUE);
-            if (!match_types(rhs_operand, lhs_operand->type)) {
+            if (!match_types(rhs_operand, expected_lhs_type)) {
                 return false;
             }
             break;

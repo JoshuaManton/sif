@@ -11,6 +11,7 @@
 
 /*
 TODO:
+-operator overloading
 -bounds checks
 -enum field expressions
 -foreach loops
@@ -18,7 +19,7 @@ TODO:
 -function pointers
 -unions
 -tagged unions
--operator overloading
+-defer
 -polymorphism
 -figure out if I should allow shadowing (maybe with a keyword?)
 -generate C instead of C++

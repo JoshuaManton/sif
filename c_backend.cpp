@@ -1,38 +1,8 @@
 #include "c_backend.h"
 
 void c_print_type(String_Builder *sb, Type *type, const char *var_name);
-void c_print_expr(String_Builder *sb, Ast_Expr *expr);
+void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type = nullptr);
 void print_indents(String_Builder *sb, int indent_level);
-
-bool has_a_nested_type_array_before_another_pointer(Type *type) {
-    switch (type->kind) {
-        case TYPE_PRIMITIVE: {
-            return false;
-        }
-        case TYPE_STRUCT: {
-            return false;
-        }
-        case TYPE_ENUM: {
-            return false;
-        }
-        case TYPE_POINTER: {
-            return false;
-        }
-        case TYPE_ARRAY: {
-            return true;
-        }
-        case TYPE_SLICE: {
-            return false;
-        }
-        case TYPE_PROCEDURE: {
-            return false;
-        }
-        default: {
-            assert(false);
-            return false;
-        }
-    }
-}
 
 void c_print_type_prefix(String_Builder *sb, Type *type) {
     if (type == nullptr) {
@@ -64,12 +34,19 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             sb->printf("i64 ");
             break;
         }
+        case TYPE_REFERENCE: {
+            // note(josh): copypasted from TYPE_POINTER
+            Type_Reference *type_reference = (Type_Reference *)type;
+            c_print_type_prefix(sb, type_reference->reference_to);
+            sb->print("*");
+            break;
+        }
         case TYPE_POINTER: {
+            // note(josh): identical to TYPE_REFERENCE
+            // note(josh): identical to TYPE_REFERENCE
+            // note(josh): identical to TYPE_REFERENCE
             Type_Pointer *type_pointer = (Type_Pointer *)type;
             c_print_type_prefix(sb, type_pointer->pointer_to);
-            if (has_a_nested_type_array_before_another_pointer(type_pointer->pointer_to)) {
-                sb->print("(");
-            }
             sb->print("*");
             break;
         }
@@ -108,11 +85,13 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
         case TYPE_ENUM: {
             break;
         }
+        case TYPE_REFERENCE: {
+            Type_Reference *type_reference = (Type_Reference *)type;
+            c_print_type_postfix(sb, type_reference->reference_to);
+            break;
+        }
         case TYPE_POINTER: {
             Type_Pointer *type_pointer = (Type_Pointer *)type;
-            if (has_a_nested_type_array_before_another_pointer(type_pointer->pointer_to)) {
-                sb->print(")");
-            }
             c_print_type_postfix(sb, type_pointer->pointer_to);
             break;
         }
@@ -157,7 +136,7 @@ void c_print_var(String_Builder *sb, const char *var_name, Type *type, Ast_Expr 
     c_print_type(sb, type, var_name);
     if (expr != nullptr) {
         sb->print(" = ");
-        c_print_expr(sb, expr);
+        c_print_expr(sb, expr, type);
     }
 }
 
@@ -206,10 +185,11 @@ void c_emit_compound_literal_temporaries(String_Builder *sb, Ast_Expr *expr, int
             compound_literal->generated_temporary_variable_name = var_name;
             Type *compound_literal_type = compound_literal->operand.type;
             if (is_type_array(compound_literal_type)) {
+                Type_Array *array_type = (Type_Array *)compound_literal_type;
                 For (idx, compound_literal->exprs) {
                     Ast_Expr *nested = compound_literal->exprs[idx];
                     sb->printf("%s.elements[%d] = ", compound_literal->generated_temporary_variable_name, idx);
-                    c_print_expr(sb, nested);
+                    c_print_expr(sb, nested, array_type->array_of);
                     sb->printf(";\n");
                     print_indents(sb, indent_level);
                 }
@@ -226,7 +206,7 @@ void c_emit_compound_literal_temporaries(String_Builder *sb, Ast_Expr *expr, int
                     assert(target_field.operand.flags & OPERAND_LVALUE);
                     sb->printf("%s.%s = ", compound_literal->generated_temporary_variable_name, target_field.name);
                     Ast_Expr *nested = compound_literal->exprs[idx];
-                    c_print_expr(sb, nested);
+                    c_print_expr(sb, nested, target_field.operand.type);
                     sb->printf(";\n");
                     print_indents(sb, indent_level);
                 }
@@ -328,7 +308,15 @@ void c_emit_compound_literal_temporaries(String_Builder *sb, Ast_Expr *expr, int
     }
 }
 
-void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
+void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
+    if (expr->expr_kind == EXPR_PAREN) {
+        Expr_Paren *paren = (Expr_Paren *)expr;
+        sb->print("(");
+        c_print_expr(sb, paren->nested, target_type);
+        sb->print(")");
+        return;
+    }
+
     if (expr->operand.flags & OPERAND_CONSTANT) {
         if (is_type_float(expr->operand.type)) {
             sb->printf("%f", expr->operand.float_value);
@@ -353,18 +341,29 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
     }
     assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
 
+    if ((!(expr->operand.flags & OPERAND_NO_VALUE)) && is_type_reference(expr->operand.type)) {
+        sb->print("*");
+    }
+
     if (expr->resolved_operator_overload != nullptr) {
         assert(expr->resolved_operator_overload != nullptr);
         assert(expr->resolved_operator_overload->header->name != nullptr);
         sb->printf("%s(", expr->resolved_operator_overload->header->name);
         For (idx, expr->operator_overload_parameters) {
-            c_print_expr(sb, expr->operator_overload_parameters[idx]);
+            c_print_expr(sb, expr->operator_overload_parameters[idx], expr->resolved_operator_overload->header->type->parameter_types[idx]);
             if (idx != (expr->operator_overload_parameters.count-1)) {
                 sb->print(", ");
             }
         }
         sb->print(")");
         return;
+    }
+
+    // todo(josh): should this be above the operator overload stuff?
+    if (target_type) {
+        if (is_type_reference(target_type)) {
+            sb->print("&");
+        }
     }
 
     switch (expr->expr_kind) {
@@ -407,11 +406,13 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
         }
         case EXPR_PROCEDURE_CALL: {
             Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+            assert(call->target_procedure_type != nullptr);
             c_print_expr(sb, call->lhs);
             sb->print("(");
+            assert(call->parameters.count == call->target_procedure_type->parameter_types.count);
             For (idx, call->parameters) {
                 Ast_Expr *parameter = call->parameters[idx];
-                c_print_expr(sb, parameter);
+                c_print_expr(sb, parameter, call->target_procedure_type->parameter_types[idx]);
                 if (idx != (call->parameters.count-1)) {
                     sb->print(", ");
                 }
@@ -512,11 +513,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr) {
             break;
         }
         case EXPR_PAREN: {
-            Expr_Paren *paren = (Expr_Paren *)expr;
-            sb->print("(");
-            c_print_expr(sb, paren->nested);
-            sb->print(")");
-            break;
+            assert(false && "handled above");
         }
         case EXPR_NULL: {
             // todo(josh): should null be a constant? probably
@@ -673,7 +670,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
             sb->print("return");
             if (ast_return->expr) {
                 sb->print(" ");
-                c_print_expr(sb, ast_return->expr);
+                c_print_expr(sb, ast_return->expr, ast_return->matching_procedure->type->return_type);
             }
             sb->print(";\n");
             break;

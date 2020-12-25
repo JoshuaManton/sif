@@ -12,6 +12,7 @@ enum Type_Kind {
     TYPE_STRUCT,
     TYPE_ENUM,
     TYPE_POINTER,
+    TYPE_REFERENCE,
     TYPE_ARRAY,
     TYPE_SLICE,
     TYPE_PROCEDURE,
@@ -32,6 +33,7 @@ enum Type_Flags {
     TF_INCOMPLETE = 1 << 9,
     TF_PROCEDURE  = 1 << 10, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_SLICE      = 1 << 11, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_REFERENCE  = 1 << 12, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -100,6 +102,14 @@ struct Type_Pointer : public Type {
     {}
 };
 
+struct Type_Reference : public Type {
+    Type *reference_to = {};
+    Type_Reference(Type *reference_to)
+    : Type(TYPE_REFERENCE)
+    , reference_to(reference_to)
+    {}
+};
+
 struct Type_Array : public Type {
     Type *array_of = {};
     int count = {};
@@ -152,6 +162,7 @@ void add_global_declarations(Ast_Block *block);
 bool typecheck_global_scope(Ast_Block *block);
 
 bool is_type_pointer   (Type *type);
+bool is_type_reference (Type *type);
 bool is_type_array     (Type *type);
 bool is_type_slice     (Type *type);
 bool is_type_number    (Type *type);
@@ -167,5 +178,6 @@ bool is_type_typeid    (Type *type);
 bool is_type_string    (Type *type);
 
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
+Type_Reference *get_or_create_type_reference_to(Type *type);
 Type_Array *get_or_create_type_array_of(Type *type, int count);
 Type_Slice *get_or_create_type_slice_of(Type *type);

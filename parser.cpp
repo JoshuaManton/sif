@@ -1115,7 +1115,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     first = false;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                base_expr = new Expr_Procedure_Call(base_expr, parameters, op.location);
+                base_expr = new Expr_Procedure_Call(base_expr, parameters, base_expr->location);
                 break;
             }
             case TK_LEFT_CURLY: {
@@ -1151,19 +1151,19 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 }
                 EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
 
-                base_expr = new Expr_Subscript(base_expr, index, op.location);
+                base_expr = new Expr_Subscript(base_expr, index, base_expr->location);
                 break;
             }
             case TK_CARET: {
                 eat_next_token(lexer);
-                base_expr = new Expr_Dereference(base_expr, op.location);
+                base_expr = new Expr_Dereference(base_expr, base_expr->location);
                 break;
             }
             case TK_DOT: {
                 eat_next_token(lexer);
                 Token name_token;
                 EXPECT(lexer, TK_IDENTIFIER, &name_token);
-                base_expr = new Expr_Selector(base_expr, name_token.text, op.location);
+                base_expr = new Expr_Selector(base_expr, name_token.text, base_expr->location);
                 break;
             }
             default: {
@@ -1246,6 +1246,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 }
                 return new Expr_Array_Type(array_of, length, token.location);
             }
+            assert(false && "unreachable");
         }
         case TK_CARET: {
             eat_next_token(lexer);
@@ -1254,6 +1255,14 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 return nullptr;
             }
             return new Expr_Pointer_Type(pointer_to, token.location);
+        }
+        case TK_GREATER_THAN: {
+            eat_next_token(lexer);
+            Ast_Expr *reference_to = parse_expr(lexer);
+            if (!reference_to) {
+                return nullptr;
+            }
+            return new Expr_Reference_Type(reference_to, token.location);
         }
         default: {
             unexpected_token(lexer, token);
