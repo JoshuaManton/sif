@@ -576,6 +576,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
         case AST_ASSIGN: {
             Ast_Assign *assign = (Ast_Assign *)node;
+            c_emit_compound_literal_temporaries(sb, assign->lhs, indent_level);
             c_emit_compound_literal_temporaries(sb, assign->rhs, indent_level);
             c_print_expr(sb, assign->lhs);
             switch (assign->op) {
