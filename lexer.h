@@ -4,6 +4,7 @@
 
 struct Location {
     const char *filepath = nullptr;
+    char *text = nullptr;
     int line = 0;
     int character = 0;
 };

@@ -66,7 +66,7 @@ struct Type {
 };
 
 struct Type_Primitive : public Type {
-    const char *name = nullptr;
+    char *name = nullptr;
     Type_Primitive(char *name, int size, int align)
     : Type(TYPE_PRIMITIVE)
     , name(name)
@@ -77,7 +77,7 @@ struct Type_Primitive : public Type {
 };
 
 struct Type_Struct : public Type {
-    const char *name = nullptr;
+    char *name = nullptr;
     Ast_Struct *ast_struct = {};
     Type_Struct(Ast_Struct *structure)
     : Type(TYPE_STRUCT)
@@ -87,7 +87,7 @@ struct Type_Struct : public Type {
 };
 
 struct Type_Enum : public Type {
-    const char *name = nullptr;
+    char *name = nullptr;
     Type_Enum(char *name)
     : Type(TYPE_ENUM)
     , name(name)
@@ -123,8 +123,9 @@ struct Type_Array : public Type {
 };
 
 struct Type_Polymorphic : public Type {
-    const char *name = nullptr;
-    Type_Polymorphic(const char *name)
+    char *name = nullptr;
+    Type *matched_type = nullptr;
+    Type_Polymorphic(char *name)
     : Type(TYPE_POLYMORPHIC)
     , name(name)
     {}
@@ -171,21 +172,22 @@ void init_checker();
 void add_global_declarations(Ast_Block *block);
 bool typecheck_global_scope(Ast_Block *block);
 
-bool is_type_pointer   (Type *type);
-bool is_type_reference (Type *type);
-bool is_type_array     (Type *type);
-bool is_type_slice     (Type *type);
-bool is_type_number    (Type *type);
-bool is_type_integer   (Type *type);
-bool is_type_float     (Type *type);
-bool is_type_bool      (Type *type);
-bool is_type_untyped   (Type *type);
-bool is_type_unsigned  (Type *type);
-bool is_type_signed    (Type *type);
-bool is_type_struct    (Type *type);
-bool is_type_incomplete(Type *type);
-bool is_type_typeid    (Type *type);
-bool is_type_string    (Type *type);
+bool is_type_pointer    (Type *type);
+bool is_type_polymorphic(Type *type);
+bool is_type_reference  (Type *type);
+bool is_type_array      (Type *type);
+bool is_type_slice      (Type *type);
+bool is_type_number     (Type *type);
+bool is_type_integer    (Type *type);
+bool is_type_float      (Type *type);
+bool is_type_bool       (Type *type);
+bool is_type_untyped    (Type *type);
+bool is_type_unsigned   (Type *type);
+bool is_type_signed     (Type *type);
+bool is_type_struct     (Type *type);
+bool is_type_incomplete (Type *type);
+bool is_type_typeid     (Type *type);
+bool is_type_string     (Type *type);
 
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Reference *get_or_create_type_reference_to(Type *type);

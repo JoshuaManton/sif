@@ -117,7 +117,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     return var;
 }
 
-Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
+Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
         assert(false && "unexpected EOF");
@@ -228,11 +228,15 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer) {
         EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
     }
 
+    if (name_override != nullptr) {
+        proc_name = name_override;
+    }
+
     return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, proc_location);
 }
 
-Ast_Proc *parse_proc(Lexer *lexer) {
-    Ast_Proc_Header *header = parse_proc_header(lexer);
+Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
+    Ast_Proc_Header *header = parse_proc_header(lexer, name_override);
     if (!header) {
         return nullptr;
     }
@@ -710,7 +714,6 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
 bool parse_file(const char *filename) {
     int len = 0;
     char *root_file_text = read_entire_file(filename, &len);
-    defer(free(root_file_text));
     Lexer lexer(filename, root_file_text);
     Ast_Block *block = parse_block(&lexer, false, false);
     if (!block) {

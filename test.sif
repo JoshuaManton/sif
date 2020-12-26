@@ -1,10 +1,18 @@
 #include "basic.sif"
 
-proc bar(a: $T, b: T) : int {
+proc foo_proc(a: $T, b: T) : T {
     return a + b;
 }
 
 proc main() {
-    var a = bar(1, 2);
-    assert(a == 3);
+    var i1 = 1;
+    var i2 = 2;
+    var i3 = foo_proc(i1, i2);
+    i3 = foo_proc(i1, i2);
+    print_int(i3);
+
+    var f1: float = 1;
+    var f2: float = 2;
+    var f3 = foo_proc(f1, f2);
+    print_float(f3);
 }

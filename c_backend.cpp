@@ -67,6 +67,11 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             sb->print("(*");
             break;
         }
+        case TYPE_POLYMORPHIC: {
+            Type_Polymorphic *poly = (Type_Polymorphic *)type;
+            c_print_type_prefix(sb, poly->matched_type);
+            break;
+        }
         default: {
             assert(false);
         }
@@ -111,6 +116,11 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
             break;
         }
         case TYPE_SLICE: {
+            break;
+        }
+        case TYPE_POLYMORPHIC: {
+            Type_Polymorphic *poly = (Type_Polymorphic *)type;
+            c_print_type_postfix(sb, poly->matched_type);
             break;
         }
         default: {
@@ -413,7 +423,13 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
             case EXPR_PROCEDURE_CALL: {
                 Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
                 assert(call->target_procedure_type != nullptr);
-                c_print_expr(sb, call->lhs);
+                assert(!is_type_polymorphic(call->target_procedure_type));
+                if (expr->operand.referenced_procedure != nullptr) {
+                    sb->print(expr->operand.referenced_procedure->header->name);
+                }
+                else {
+                    c_print_expr(sb, call->lhs);
+                }
                 sb->print("(");
                 assert(call->parameters.count == call->target_procedure_type->parameter_types.count);
                 For (idx, call->parameters) {

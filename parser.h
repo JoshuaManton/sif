@@ -75,6 +75,7 @@ struct Operand {
     int scanned_string_length = {};
     char *escaped_string_value = {};
     int escaped_string_length = {};
+    Ast_Proc *referenced_procedure = {};
 
     Type *reference_type = {};
 
@@ -123,7 +124,7 @@ struct Ast_Proc_Header : public Ast_Node {
     Operand operand = {};
     Token_Kind operator_to_overload = {};
     Ast_Struct *struct_to_operator_overload = {};
-    bool is_polymorphic = false;
+    Array<Ast_Proc *> polymorphs = {};
     Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
@@ -134,6 +135,7 @@ struct Ast_Proc_Header : public Ast_Node {
     , operator_to_overload(operator_to_overload)
     {
         parameters.allocator = default_allocator();
+        polymorphs.allocator = default_allocator();
     }
 };
 
@@ -574,6 +576,7 @@ enum Declaration_Kind {
     DECL_STRUCT,
     DECL_ENUM,
     DECL_VAR,
+    DECL_POLYMORPHIC_INSERTION,
     DECL_PROC,
     DECL_COUNT,
 };
@@ -591,6 +594,7 @@ struct Declaration {
     Declaration_Kind kind = {};
     Operand operand = {};
     Location location = {};
+    bool is_polymorphic = {};
     Declaration(char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)
@@ -639,17 +643,28 @@ struct Var_Declaration : Declaration {
     {}
 };
 
+struct Polymorphic_Insertion_Declaration : Declaration {
+    Declaration *declaration = {};
+    Polymorphic_Insertion_Declaration(Declaration *decl)
+    : Declaration(decl->name, DECL_POLYMORPHIC_INSERTION, decl->parent_block, decl->location)
+    , declaration(decl)
+    {}
+};
+
 extern Array<Declaration *>          g_all_declarations;
 extern Array<Ast_Directive_Assert *> g_all_assert_directives;
 extern Array<Ast_Directive_Print *>  g_all_print_directives;
 extern Array<Ast_Directive_C_Code *> g_all_c_code_directives;
 
 void init_parser();
+Ast_Block *push_ast_block(Ast_Block *block);
+void pop_ast_block(Ast_Block *old_block);
 bool register_declaration(Declaration *new_declaration);
 bool parse_file(const char *filename);
 Ast_Block *begin_parsing(const char *filename);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
+Ast_Proc *parse_proc(Lexer *lexer, char *name_override = nullptr);
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false, bool push_new_block = true);
 Ast_Node *parse_statement(Lexer *lexer);
 

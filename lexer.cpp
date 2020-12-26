@@ -347,6 +347,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     }
 
     Location token_location = lexer->location;
+    token_location.text = &lexer->text[lexer->index];
 
     if (is_letter_or_underscore(lexer->text[lexer->index])) {
         int length = 0;
