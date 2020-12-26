@@ -21,33 +21,6 @@ void init_parser() {
     g_all_c_code_directives.allocator  = default_allocator();
 }
 
-bool resolve_identifiers() {
-    For (idx, g_identifiers_to_resolve) {
-        Expr_Identifier *ident = g_identifiers_to_resolve[idx];
-        Ast_Block *block = ident->parent_block;
-        while (block != nullptr) {
-            For (decl_idx, block->declarations) {
-                Declaration *decl = block->declarations[decl_idx];
-                if (strcmp(decl->name, ident->name) == 0) {
-                    ident->resolved_declaration = decl;
-                    break;
-                }
-            }
-
-            if (ident->resolved_declaration) {
-                break;
-            }
-            block = block->parent_block;
-        }
-
-        if (!ident->resolved_declaration) {
-            report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
-            return false;
-        }
-    }
-    return true;
-}
-
 Ast_Block *push_ast_block(Ast_Block *block) {
     Ast_Block *old_block = current_block;
     current_block = block;
@@ -1216,6 +1189,15 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Ast_Expr *nested = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return new Expr_Paren(nested, token.location);
+        }
+        case TK_DOLLAR: {
+            eat_next_token(lexer);
+            Ast_Expr *ident = parse_expr(lexer);
+            if (ident->expr_kind != EXPR_IDENTIFIER) {
+                report_error(ident->location, "Polymorphic variable must be an identifier.");
+                return nullptr;
+            }
+            return new Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location);
         }
         case TK_LEFT_SQUARE: {
             eat_next_token(lexer);

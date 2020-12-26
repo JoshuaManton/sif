@@ -144,22 +144,23 @@ void make_incomplete_types_for_all_structs() {
     }
 }
 
-bool is_type_pointer   (Type *type) { return type->flags & TF_POINTER;    }
-bool is_type_reference (Type *type) { return type->flags & TF_REFERENCE;  }
-bool is_type_procedure (Type *type) { return type->flags & TF_PROCEDURE;  }
-bool is_type_array     (Type *type) { return type->flags & TF_ARRAY;      }
-bool is_type_slice     (Type *type) { return type->flags & TF_SLICE;      }
-bool is_type_number    (Type *type) { return type->flags & TF_NUMBER;     }
-bool is_type_integer   (Type *type) { return type->flags & TF_INTEGER;    }
-bool is_type_float     (Type *type) { return type->flags & TF_FLOAT;      }
-bool is_type_bool      (Type *type) { return type == type_bool;           }
-bool is_type_untyped   (Type *type) { return type->flags & TF_UNTYPED;    }
-bool is_type_unsigned  (Type *type) { return type->flags & TF_UNSIGNED;   }
-bool is_type_signed    (Type *type) { return type->flags & TF_SIGNED;     }
-bool is_type_struct    (Type *type) { return type->flags & TF_STRUCT;     }
-bool is_type_incomplete(Type *type) { return type->flags & TF_INCOMPLETE; }
-bool is_type_typeid    (Type *type) { return type == type_typeid;         }
-bool is_type_string    (Type *type) { return type == type_string;         }
+bool is_type_pointer    (Type *type) { return type->flags & TF_POINTER;     }
+bool is_type_polymorphic(Type *type) { return type->flags & TF_POLYMORPHIC; }
+bool is_type_reference  (Type *type) { return type->flags & TF_REFERENCE;   }
+bool is_type_procedure  (Type *type) { return type->flags & TF_PROCEDURE;   }
+bool is_type_array      (Type *type) { return type->flags & TF_ARRAY;       }
+bool is_type_slice      (Type *type) { return type->flags & TF_SLICE;       }
+bool is_type_number     (Type *type) { return type->flags & TF_NUMBER;      }
+bool is_type_integer    (Type *type) { return type->flags & TF_INTEGER;     }
+bool is_type_float      (Type *type) { return type->flags & TF_FLOAT;       }
+bool is_type_bool       (Type *type) { return type == type_bool;            }
+bool is_type_untyped    (Type *type) { return type->flags & TF_UNTYPED;     }
+bool is_type_unsigned   (Type *type) { return type->flags & TF_UNSIGNED;    }
+bool is_type_signed     (Type *type) { return type->flags & TF_SIGNED;      }
+bool is_type_struct     (Type *type) { return type->flags & TF_STRUCT;      }
+bool is_type_incomplete (Type *type) { return type->flags & TF_INCOMPLETE;  }
+bool is_type_typeid     (Type *type) { return type == type_typeid;          }
+bool is_type_string     (Type *type) { return type == type_string;          }
 
 Type *get_most_concrete_type(Type *a, Type *b) {
     if (a->flags & TF_UNTYPED) {
@@ -376,6 +377,7 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
     if (decl->kind == DECL_STRUCT) {
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
         For (idx, struct_decl->structure->operator_overloads) {
+            // todo(josh): this should just go through the normal check_declaration() path. having it copy pasted here is dumb
             Ast_Proc *proc = struct_decl->structure->operator_overloads[idx];
             assert(!proc->header->is_foreign);
             assert(proc->body != nullptr);
@@ -468,6 +470,11 @@ char *type_to_string(Type *type) {
         case TYPE_ENUM: {
             Type_Enum *enum_type = (Type_Enum *)type;
             sprintf(buffer, "%s", enum_type->name);
+            break;
+        }
+        case TYPE_POLYMORPHIC: {
+            Type_Polymorphic *poly = (Type_Polymorphic *)type;
+            sprintf(buffer, "%s", poly->name);
             break;
         }
         default: {
@@ -580,8 +587,12 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
         return true;
     }
 
-    if (is_type_reference(expected_type) && (operand->flags & OPERAND_LVALUE)) {
-        return true;
+    if (is_type_reference(expected_type)) {
+        if ((operand->flags & OPERAND_LVALUE)) {
+            return true;
+        }
+        Type_Reference *reference = (Type_Reference *)expected_type;
+        return match_types(operand, reference->reference_to, do_report_error);
     }
 
     if (is_type_reference(operand->type)) {
@@ -848,6 +859,21 @@ bool typecheck_procedure_call(Location location, Operand procedure_operand, Arra
         }
         assert(parameter_operand->type != nullptr);
     }
+    if (is_type_polymorphic(target_procedure_type)) {
+        For (idx, parameters) {
+            Ast_Expr *param = parameters[idx];
+            Type *concrete_type = try_concretize_type_without_context(param->operand.type);
+            if (!concrete_type) {
+                assert(false && "todo(josh): error message");
+            }
+            param->operand.type = concrete_type;
+        }
+        assert(parameters.count == target_procedure_type->parameter_types.count);
+        For (idx, parameters) {
+            Ast_Expr *param = parameters[idx];
+        }
+        assert(false && "unimplemented: insert type declarations and re-typecheck the procedure?");
+    }
     Operand result_operand(location);
     result_operand.type = target_procedure_type->return_type;
     if (result_operand.type) {
@@ -892,6 +918,15 @@ Ast_Proc *find_operator_overload(Ast_Struct *structure, Array<Ast_Expr *> exprs,
         }
     }
     return nullptr;
+}
+
+Type *unwrap_references(Type *type) {
+    assert(type != nullptr);
+    if (type->kind == TYPE_REFERENCE) {
+        Type_Reference *reference = (Type_Reference *)type;
+        return unwrap_references(reference->reference_to);
+    }
+    return type;
 }
 
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
@@ -1365,6 +1400,24 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_IDENTIFIER: {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
+            Ast_Block *block = ident->parent_block;
+            while (block != nullptr) {
+                For (decl_idx, block->declarations) {
+                    Declaration *decl = block->declarations[decl_idx];
+                    if (strcmp(decl->name, ident->name) == 0) {
+                        ident->resolved_declaration = decl;
+                        break;
+                    }
+                }
+                if (ident->resolved_declaration) {
+                    break;
+                }
+                block = block->parent_block;
+            }
+            if (!ident->resolved_declaration) {
+                report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
+                return nullptr;
+            }
             assert(ident->resolved_declaration != nullptr);
             if (!check_declaration(ident->resolved_declaration, &result_operand)) {
                 return nullptr;
@@ -1576,6 +1629,15 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
             break;
         }
+        case EXPR_POLYMORPHIC_VARIABLE: {
+            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.type = type_typeid;
+            result_operand.type_value = new Type_Polymorphic(poly->ident->name);
+            result_operand.type_value->flags |= TF_POLYMORPHIC;
+            register_declaration(new Type_Declaration(poly->ident->name, result_operand.type_value, poly->parent_block));
+            break;
+        }
         case EXPR_PAREN: {
             Expr_Paren *paren = (Expr_Paren *)expr;
             Operand *expr_operand = typecheck_expr(paren->nested, expected_type);
@@ -1590,6 +1652,15 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(false);
         }
     }
+
+    if ((!(result_operand.flags & OPERAND_NO_VALUE))) {
+        if (is_type_reference(result_operand.type)) {
+            result_operand.flags |= OPERAND_LVALUE;
+            result_operand.reference_type = result_operand.type;
+            result_operand.type = unwrap_references(result_operand.type);
+        }
+    }
+
     if (expected_type) {
         if (!match_types(&result_operand, expected_type)) {
             return nullptr;
@@ -1597,9 +1668,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         assert(!(result_operand.type->flags & TF_UNTYPED));
     }
 
-    if ((!(result_operand.flags & OPERAND_NO_VALUE)) && is_type_reference(result_operand.type)) {
-        result_operand.flags |= OPERAND_LVALUE;
-    }
     expr->operand = result_operand;
     return &expr->operand;
 }

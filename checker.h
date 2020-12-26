@@ -14,6 +14,7 @@ enum Type_Kind {
     TYPE_POINTER,
     TYPE_REFERENCE,
     TYPE_ARRAY,
+    TYPE_POLYMORPHIC,
     TYPE_SLICE,
     TYPE_PROCEDURE,
 
@@ -21,19 +22,20 @@ enum Type_Kind {
 };
 
 enum Type_Flags {
-    TF_INTEGER    = 1 << 0,
-    TF_FLOAT      = 1 << 1,
-    TF_SIGNED     = 1 << 2,
-    TF_UNSIGNED   = 1 << 3,
-    TF_UNTYPED    = 1 << 4,
-    TF_NUMBER     = 1 << 5,
-    TF_POINTER    = 1 << 6,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_ARRAY      = 1 << 7,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_STRUCT     = 1 << 8,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_INCOMPLETE = 1 << 9,
-    TF_PROCEDURE  = 1 << 10, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_SLICE      = 1 << 11, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_REFERENCE  = 1 << 12, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_INTEGER      = 1 << 0,
+    TF_FLOAT        = 1 << 1,
+    TF_SIGNED       = 1 << 2,
+    TF_UNSIGNED     = 1 << 3,
+    TF_UNTYPED      = 1 << 4,
+    TF_NUMBER       = 1 << 5,
+    TF_POINTER      = 1 << 6,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_ARRAY        = 1 << 7,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_STRUCT       = 1 << 8,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_INCOMPLETE   = 1 << 9,
+    TF_PROCEDURE    = 1 << 10, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_SLICE        = 1 << 11, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_REFERENCE    = 1 << 12, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_POLYMORPHIC  = 1 << 13, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -117,6 +119,14 @@ struct Type_Array : public Type {
     : Type(TYPE_ARRAY)
     , array_of(array_of)
     , count(count)
+    {}
+};
+
+struct Type_Polymorphic : public Type {
+    const char *name = nullptr;
+    Type_Polymorphic(const char *name)
+    : Type(TYPE_POLYMORPHIC)
+    , name(name)
     {}
 };
 

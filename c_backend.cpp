@@ -341,8 +341,15 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
     }
     assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
 
-    if ((!(expr->operand.flags & OPERAND_NO_VALUE)) && is_type_reference(expr->operand.type)) {
-        sb->print("(*");
+    if (expr->operand.reference_type != nullptr) {
+        assert(is_type_reference(expr->operand.reference_type));
+        sb->print("(");
+        Type *type = expr->operand.reference_type;
+        while (is_type_reference(type)) {
+            sb->print("*");
+            Type_Reference *reference = (Type_Reference *)type;
+            type = reference->reference_to;
+        }
     }
 
     if (expr->resolved_operator_overload != nullptr) {
@@ -542,7 +549,8 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
         }
     }
 
-    if ((!(expr->operand.flags & OPERAND_NO_VALUE)) && is_type_reference(expr->operand.type)) {
+    if (expr->operand.reference_type != nullptr) {
+        assert(is_type_reference(expr->operand.reference_type));
         sb->print(")");
     }
 }

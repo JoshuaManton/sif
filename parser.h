@@ -76,6 +76,8 @@ struct Operand {
     char *escaped_string_value = {};
     int escaped_string_length = {};
 
+    Type *reference_type = {};
+
     Operand()
     {}
 
@@ -121,6 +123,7 @@ struct Ast_Proc_Header : public Ast_Node {
     Operand operand = {};
     Token_Kind operator_to_overload = {};
     Ast_Struct *struct_to_operator_overload = {};
+    bool is_polymorphic = false;
     Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
@@ -324,6 +327,8 @@ enum Expr_Kind {
     EXPR_NUMBER_LITERAL,
     EXPR_STRING_LITERAL,
 
+    EXPR_POLYMORPHIC_VARIABLE,
+
     EXPR_NULL,
     EXPR_TRUE,
     EXPR_FALSE,
@@ -423,6 +428,14 @@ struct Expr_Subscript : public Ast_Expr {
     : Ast_Expr(EXPR_SUBSCRIPT, location)
     , lhs(lhs)
     , index(index)
+    {}
+};
+
+struct Expr_Polymorphic_Variable : public Ast_Expr {
+    Expr_Identifier *ident = {};
+    Expr_Polymorphic_Variable(Expr_Identifier *ident, Location location)
+    : Ast_Expr(EXPR_POLYMORPHIC_VARIABLE, location)
+    , ident(ident)
     {}
 };
 
@@ -557,6 +570,7 @@ struct Expr_Slice_Type : public Ast_Expr {
 enum Declaration_Kind {
     DECL_INVALID,
     DECL_TYPE,
+    DECL_POLYMORPHIC_TYPE,
     DECL_STRUCT,
     DECL_ENUM,
     DECL_VAR,
@@ -631,7 +645,6 @@ extern Array<Ast_Directive_Print *>  g_all_print_directives;
 extern Array<Ast_Directive_C_Code *> g_all_c_code_directives;
 
 void init_parser();
-bool resolve_identifiers();
 bool register_declaration(Declaration *new_declaration);
 bool parse_file(const char *filename);
 Ast_Block *begin_parsing(const char *filename);

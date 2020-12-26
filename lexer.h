@@ -72,6 +72,8 @@ enum Token_Kind {
     TK_RIGHT_SHIFT,
     TK_RIGHT_SHIFT_ASSIGN,
 
+    TK_DOLLAR,
+
     TK_AMPERSAND, // bitwise AND and address-of
 
     TK_BIT_AND_ASSIGN,

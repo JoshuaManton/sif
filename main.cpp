@@ -18,6 +18,7 @@ TODO:
 -enum field expressions
 -foreach loops
 -slicing
+-transmute
 -switch statements
 -function pointers
 -unions
@@ -45,11 +46,6 @@ void main(int argc, char **argv) {
     }
 
     add_global_declarations(global_scope);
-    bool resolve_identifiers_success = resolve_identifiers();
-    if (!resolve_identifiers_success) {
-        printf("There were errors.\n");
-        return;
-    }
 
     bool check_success = typecheck_global_scope(global_scope);
     if (!check_success) {

@@ -60,6 +60,8 @@ void init_lexer_globals() {
     token_string_map[TK_BIT_OR]                = "|";
     token_string_map[TK_BIT_OR_ASSIGN]         = "|=";
 
+    token_string_map[TK_DOLLAR]                = "$";
+
     token_string_map[TK_NOT]                   = "!";
     token_string_map[TK_NOT_EQUAL_TO]          = "!=";
     token_string_map[TK_LESS_THAN]             = "<";
@@ -134,6 +136,8 @@ void init_lexer_globals() {
     token_name_map[TK_BIT_AND_ASSIGN]        = "TK_BIT_AND_ASSIGN";
     token_name_map[TK_BIT_OR]                = "TK_BIT_OR";
     token_name_map[TK_BIT_OR_ASSIGN]         = "TK_BIT_OR_ASSIGN";
+
+    token_name_map[TK_DOLLAR]                = "TK_DOLLAR";
 
     token_name_map[TK_NOT]                   = "TK_NOT";
     token_name_map[TK_NOT_EQUAL_TO]          = "TK_NOT_EQUAL_TO";
@@ -587,6 +591,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else SIMPLE_TOKEN('.', TK_DOT)
     else SIMPLE_TOKEN(',', TK_COMMA)
     else SIMPLE_TOKEN('^', TK_CARET)
+    else SIMPLE_TOKEN('$', TK_DOLLAR)
     else {
         lexer->errored = true;
         report_error(token_location, "Unknown character: %c.", lexer->text[lexer->index]);
