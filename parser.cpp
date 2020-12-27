@@ -48,8 +48,6 @@ bool register_declaration(Declaration *new_declaration) {
 
 
 
-Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true);
-
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
 
 Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
@@ -468,7 +466,7 @@ Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
     return body;
 }
 
-Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
+Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_override) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
         assert(false && "unexpected EOF");
@@ -499,7 +497,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
         }
 
         case TK_PROC: {
-            Ast_Proc *proc = parse_proc(lexer);
+            Ast_Proc *proc = parse_proc(lexer, name_override);
             if (!proc) {
                 return nullptr;
             }
@@ -515,7 +513,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon) {
         }
 
         case TK_STRUCT: {
-            Ast_Struct *structure = parse_struct(lexer);
+            Ast_Struct *structure = parse_struct(lexer, name_override);
             if (!structure) {
                 return nullptr;
             }

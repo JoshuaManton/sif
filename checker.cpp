@@ -945,21 +945,37 @@ bool maybe_create_polymorph_value_declaration(Ast_Var *var, Ast_Expr *parameter,
     return true;
 }
 
-Ast_Proc *polymorph_procedure(Ast_Proc *proc, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
+Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name) {
     // re-parse the procedure to be polymorphed
-    Ast_Proc *original_procedure = proc;
-    Lexer lexer(proc->location.filepath, proc->location.text);
-    lexer.location = proc->location;
+    Lexer lexer(node_to_polymorph->location.filepath, node_to_polymorph->location.text);
+    lexer.location = node_to_polymorph->location;
     lexer.location.index = 0;
-    Ast_Block *old_block = push_ast_block(proc->parent_block);
+    Ast_Block *old_block = push_ast_block(node_to_polymorph->parent_block);
     defer(pop_ast_block(old_block));
     String_Builder sb = make_string_builder(default_allocator());
-    sb.print(proc->header->name);
+    sb.print(original_name);
     sb.printf("__polymorph_%d", total_num_polymorphs);
     total_num_polymorphs += 1;
-    Ast_Proc *procedure_polymorph = parse_proc(&lexer, sb.string());
-    assert(procedure_polymorph != nullptr);
-    original_procedure->header->polymorphs.append(procedure_polymorph);
+    Ast_Node *new_parse = parse_single_statement(&lexer, true, sb.string());
+    switch (new_parse->ast_kind) {
+        case AST_PROC:
+        case AST_STRUCT: {
+            // all good
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+    return new_parse;
+}
+
+Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
+    Ast_Node *procedure_polymorph_node = polymorph_node(proc_to_polymorph, proc_to_polymorph->header->name);
+    assert(procedure_polymorph_node != nullptr);
+    assert(procedure_polymorph_node->ast_kind == AST_PROC);
+    Ast_Proc *procedure_polymorph = (Ast_Proc *)procedure_polymorph_node;
+    proc_to_polymorph->header->polymorphs.append(procedure_polymorph);
 
     // go through the parameters and fill in polymorphic declarations
     For (idx, procedure_polymorph->header->parameters) {
