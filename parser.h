@@ -44,6 +44,7 @@ struct Enum_Declaration;
 struct Proc_Declaration;
 struct Var_Declaration;
 struct Enum_Value_Declaration;
+struct Polymorphic_Declaration;
 
 struct Type;
 struct Type_Procedure;
@@ -440,9 +441,11 @@ struct Expr_Subscript : public Ast_Expr {
 
 struct Expr_Polymorphic_Variable : public Ast_Expr {
     Expr_Identifier *ident = {};
-    Expr_Polymorphic_Variable(Expr_Identifier *ident, Location location)
+    Polymorphic_Declaration *poly_decl = {};
+    Expr_Polymorphic_Variable(Expr_Identifier *ident, Polymorphic_Declaration *poly_decl, Location location)
     : Ast_Expr(EXPR_POLYMORPHIC_VARIABLE, location)
     , ident(ident)
+    , poly_decl(poly_decl)
     {}
 };
 

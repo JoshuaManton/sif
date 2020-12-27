@@ -204,7 +204,7 @@ Type *try_concretize_type_without_context(Type *type) {
     return nullptr;
 }
 
-bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
+bool check_declaration(Declaration *decl, Location usage_location, Operand *out_operand = nullptr) {
     assert(!decl->is_polymorphic);
     if (decl->check_state == DCS_CHECKED) {
         if (out_operand) {
@@ -239,8 +239,12 @@ bool check_declaration(Declaration *decl, Operand *out_operand = nullptr) {
         }
         case DECL_POLYMORPHIC: {
             Polymorphic_Declaration *poly = (Polymorphic_Declaration *)decl;
+            if (!poly->declaration) {
+                report_error(usage_location, "Internal compiler error: polymorphic declaration has not yet been filled. todo(josh): do iterative solver.");
+                return false;
+            }
             assert(poly->declaration);
-            if (!check_declaration(poly->declaration)) {
+            if (!check_declaration(poly->declaration, usage_location)) {
                 return false;
             }
             decl_operand = poly->declaration->operand;
@@ -436,7 +440,7 @@ bool typecheck_global_scope(Ast_Block *block) {
         if (decl->is_polymorphic) {
             continue;
         }
-        if (!check_declaration(decl)) {
+        if (!check_declaration(decl, decl->location)) {
             return false;
         }
     }
@@ -534,7 +538,7 @@ bool complete_type(Type *type) {
                 else {
                     For (idx, structure->fields) {
                         Ast_Var *var = structure->fields[idx];
-                        assert(check_declaration(var->declaration));
+                        assert(check_declaration(var->declaration, var->location));
                         if (!complete_type(var->type)) {
                             return false;
                         }
@@ -888,10 +892,12 @@ bool type_declares_polymorphic_variable(Ast_Expr *expr) {
 
 int total_num_polymorphs = 0;
 
-Ast_Proc *polymorph_procedure(Ast_Proc *proc, Array<Declaration *> replacements) {
+Ast_Proc *polymorph_procedure(Ast_Proc *proc, Location polymorph_location, Array<Declaration *> replacements) {
     // re-parse the procedure to be polymorphed
     Ast_Proc *original_procedure = proc;
     Lexer lexer(proc->location.filepath, proc->location.text);
+    lexer.location = proc->location;
+    lexer.location.index = 0;
     Ast_Block *old_block = push_ast_block(proc->parent_block);
     defer(pop_ast_block(old_block));
     String_Builder sb = make_string_builder(default_allocator());
@@ -902,7 +908,7 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc, Array<Declaration *> replacements)
     assert(procedure_polymorph != nullptr);
     original_procedure->header->polymorphs.append(procedure_polymorph);
 
-
+    // insert the declaration replacements
     For (idx, replacements) {
         Declaration *replacement = replacements[idx];
         assert(replacement->parent_block == nullptr);
@@ -928,53 +934,74 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc, Array<Declaration *> replacements)
     }
 
     procedure_polymorph->declaration->is_polymorphic = false;
-    assert(check_declaration(procedure_polymorph->declaration));
+    if (!check_declaration(procedure_polymorph->declaration, polymorph_location)) {
+        return nullptr;
+    }
 
     return procedure_polymorph;
 }
 
-Declaration *maybe_create_polymorph_type_declaration(Ast_Expr *expr, Ast_Expr *parameter) {
-    switch (expr->expr_kind) {
+bool maybe_create_polymorph_type_declaration(Ast_Var *var, Ast_Expr *parameter, Declaration **out_declaration) {
+    switch (var->type_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             break;
         }
         case EXPR_POLYMORPHIC_VARIABLE: {
-            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
+            // name: $T
+            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)var->type_expr;
+            assert(poly->poly_decl->declaration == nullptr);
             Operand *parameter_operand = typecheck_expr(parameter);
             assert(parameter_operand->type != nullptr);
             Type *concrete_type = try_concretize_type_without_context(parameter_operand->type);
             if (!concrete_type) {
                 assert(false && "todo(josh): error message");
             }
-            return new Type_Declaration(poly->ident->name, concrete_type, nullptr);
+            *out_declaration = new Type_Declaration(poly->ident->name, concrete_type, nullptr);
+            return true;
         }
         default: {
             assert(false);
         }
     }
-    return nullptr;
+    return true;
 }
 
-Declaration *maybe_create_polymorph_value_declaration(Ast_Expr *expr, Ast_Expr *parameter) {
-    switch (expr->expr_kind) {
+bool maybe_create_polymorph_value_declaration(Ast_Var *var, Ast_Expr *parameter, Declaration **out_declaration) {
+    switch (var->name_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             break;
         }
         case EXPR_POLYMORPHIC_VARIABLE: {
-            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
-            Operand *parameter_operand = typecheck_expr(parameter);
+            // $name: T
+            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)var->name_expr;
+            assert(poly->poly_decl->declaration == nullptr);
+            Operand *type_operand = typecheck_expr(var->type_expr);
+            Operand *parameter_operand = nullptr;
+            if (!is_type_polymorphic(type_operand->type)) {
+                parameter_operand = typecheck_expr(parameter, type_operand->type_value);
+                if (!parameter_operand) {
+                    return false;
+                }
+            }
+            else {
+                parameter_operand = typecheck_expr(parameter);
+            }
             assert(parameter_operand->type != nullptr);
-            assert(parameter_operand->flags & OPERAND_CONSTANT);
-            return new Constant_Declaration(poly->ident->name, *parameter_operand, nullptr, parameter->location);
+            if (!(parameter_operand->flags & OPERAND_CONSTANT)) {
+                report_error(parameter->location, "Parameter must be constant for polymorphic variable.");
+                return false;
+            }
+            *out_declaration = new Constant_Declaration(poly->ident->name, *parameter_operand, nullptr, parameter->location);
+            return true;
         }
         default: {
             assert(false);
         }
     }
-    return nullptr;
+    return true;
 }
 
-bool typecheck_procedure_call(Location location, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand, Array<Ast_Expr *> *out_params_to_emit) {
+bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand, Array<Ast_Expr *> *out_params_to_emit) {
     out_params_to_emit->allocator = default_allocator();
 
     // copy all the exprs into out_params_to_emit
@@ -998,8 +1025,14 @@ bool typecheck_procedure_call(Location location, Operand procedure_operand, Arra
             Ast_Var *param_decl = procedure_operand.referenced_procedure->header->parameters[idx];
             Operand *parameter_operand = nullptr;
             Ast_Expr *parameter = parameters[idx];
-            Declaration *poly_type_decl  = maybe_create_polymorph_type_declaration (param_decl->type_expr, parameter);
-            Declaration *poly_value_decl = maybe_create_polymorph_value_declaration(param_decl->name_expr, parameter);
+            Declaration *poly_type_decl = nullptr;
+            Declaration *poly_value_decl = nullptr;
+            bool ok = false;
+            ok = maybe_create_polymorph_type_declaration (param_decl, parameter, &poly_type_decl);
+            ok &= maybe_create_polymorph_value_declaration(param_decl, parameter, &poly_value_decl);
+            if (!ok) {
+                return false;
+            }
 
             if (poly_type_decl) {
                 replacements.append(poly_type_decl);
@@ -1011,7 +1044,11 @@ bool typecheck_procedure_call(Location location, Operand procedure_operand, Arra
             }
         }
 
-        procedure_polymorph = polymorph_procedure(procedure_operand.referenced_procedure, replacements);
+        procedure_polymorph = polymorph_procedure(procedure_operand.referenced_procedure, expr->location, replacements);
+        if (procedure_polymorph == nullptr) {
+            report_info(expr->location, "This polymorph was generated here.");
+            return false;
+        }
 
         assert(!is_type_polymorphic(procedure_polymorph->declaration->operand.type));
         procedure_operand = procedure_polymorph->declaration->operand;
@@ -1036,7 +1073,7 @@ bool typecheck_procedure_call(Location location, Operand procedure_operand, Arra
         }
     }
 
-    Operand result_operand(location);
+    Operand result_operand(expr->location);
     result_operand.type = target_procedure_type->return_type;
     if (result_operand.type) {
         result_operand.flags = OPERAND_RVALUE;
@@ -1393,7 +1430,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     else {
                         assert(overload_proc->header->operand.type != nullptr);
                         Array<Ast_Expr *> params_to_emit;
-                        if (!typecheck_procedure_call(binary->location, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
+                        if (!typecheck_procedure_call(binary, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
                             return nullptr;
                         }
                         binary->resolved_operator_overload = overload_proc;
@@ -1482,7 +1519,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 else {
                     assert(overload_proc->header->operand.type != nullptr);
                     Array<Ast_Expr *> params_to_emit;
-                    if (!typecheck_procedure_call(subscript->location, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
+                    if (!typecheck_procedure_call(subscript, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
                         return nullptr;
                     }
                     subscript->resolved_operator_overload = overload_proc;
@@ -1578,7 +1615,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
             }
             Array<Ast_Expr *> params_to_emit;
-            if (!typecheck_procedure_call(call->location, *procedure_operand, call->parameters, &result_operand, &params_to_emit)) {
+            if (!typecheck_procedure_call(call, *procedure_operand, call->parameters, &result_operand, &params_to_emit)) {
                 return nullptr;
             }
             call->parameters_to_emit = params_to_emit;
@@ -1620,7 +1657,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 result_operand.referenced_procedure = ((Proc_Declaration *)ident->resolved_declaration)->procedure;
             }
             else {
-                if (!check_declaration(ident->resolved_declaration, &result_operand)) {
+                if (!check_declaration(ident->resolved_declaration, ident->location, &result_operand)) {
                     return nullptr;
                 }
             }
@@ -1833,9 +1870,15 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_POLYMORPHIC_VARIABLE: {
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
-            Operand *operand = typecheck_expr(poly->ident);
-            assert(operand != nullptr);
-            result_operand = *operand;
+            assert(poly->poly_decl != nullptr);
+            if (poly->poly_decl->declaration) {
+                if (!check_declaration(poly->poly_decl->declaration, poly->location, &result_operand)) {
+                    return nullptr;
+                }
+            }
+            else {
+                result_operand.type = type_polymorphic;
+            }
             break;
         }
         case EXPR_PAREN: {
@@ -1887,7 +1930,7 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
             report_error(parameter->expr->location, "Default values for procedure parameters are not yet supported.");
             return false;
         }
-        if (!check_declaration(parameter->declaration)) {
+        if (!check_declaration(parameter->declaration, parameter->location)) {
             return false;
         }
         assert(parameter->type != nullptr);
@@ -1960,7 +2003,7 @@ bool typecheck_node(Ast_Node *node) {
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
-            if (!check_declaration(var->declaration)) {
+            if (!check_declaration(var->declaration, var->location)) {
                 return false;
             }
             break;

@@ -1235,10 +1235,11 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             }
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
             did_parse_polymorphic_thing = true;
-            if (!register_declaration(new Polymorphic_Declaration(ident->name, nullptr, current_block, token.location))) {
+            Polymorphic_Declaration *poly_decl = new Polymorphic_Declaration(ident->name, nullptr, current_block, token.location);
+            if (!register_declaration(poly_decl)) {
                 return nullptr;
             }
-            return new Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location);
+            return new Expr_Polymorphic_Variable((Expr_Identifier *)ident, poly_decl, token.location);
         }
         case TK_LEFT_SQUARE: {
             eat_next_token(lexer);

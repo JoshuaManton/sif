@@ -1,11 +1,9 @@
 #include "basic.sif"
 
-proc holy_wow($val: $T) : T {
-    var a = val + val;
-    return a;
+proc holy_wow($a: T, b: $T) : T {
+    return a + b;
 }
 
 proc main() {
-    var aaa = holy_wow(123);
-    print_int(aaa);
+    print_float(holy_wow(1, 2.2));
 }

@@ -5,13 +5,13 @@
 struct Location {
     const char *filepath = nullptr;
     char *text = nullptr;
+    int index = 0;
     int line = 0;
     int character = 0;
 };
 
 struct Lexer {
     char *text = nullptr;
-    int index = 0;
     Location location = {};
     bool errored = false;
     bool allow_compound_literals = true;

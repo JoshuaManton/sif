@@ -184,7 +184,7 @@ void print_token(Token token) {
 
 
 void advance(Lexer *lexer, int count) {
-    lexer->index += count;
+    lexer->location.index += count;
     lexer->location.character += count;
 }
 
@@ -328,30 +328,30 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
 
     *out_token = {};
 
-    while (is_whitespace(lexer->text[lexer->index])) {
-        if (lexer->text[lexer->index] == '\n') {
+    while (is_whitespace(lexer->text[lexer->location.index])) {
+        if (lexer->text[lexer->location.index] == '\n') {
             lexer->location.line += 1;
             lexer->location.character = 0; // advance() directly below will make this 1
         }
         advance(lexer, 1);
     }
 
-    if (lexer->text[lexer->index] == 0) {
+    if (lexer->text[lexer->location.index] == 0) {
         return false;
     }
 
-    #define SIMPLE_TOKEN(c, t) if (lexer->text[lexer->index] == c) { \
+    #define SIMPLE_TOKEN(c, t) if (lexer->text[lexer->location.index] == c) { \
         advance(lexer, 1); \
         out_token->kind = t; \
         out_token->text = token_string_map[t]; \
     }
 
     Location token_location = lexer->location;
-    token_location.text = &lexer->text[lexer->index];
+    token_location.text = &lexer->text[lexer->location.index];
 
-    if (is_letter_or_underscore(lexer->text[lexer->index])) {
+    if (is_letter_or_underscore(lexer->text[lexer->location.index])) {
         int length = 0;
-        char *identifier = scan_identifier(&lexer->text[lexer->index], &length);
+        char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length);
         advance(lexer, length);
         out_token->kind = TK_IDENTIFIER;
         out_token->text = identifier;
@@ -380,21 +380,21 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("continue", TK_CONTINUE)
         else CHECK_KEYWORD("cast", TK_CAST)
     }
-    else if (is_digit(lexer->text[lexer->index])) {
+    else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;
         bool has_a_dot = false;
-        char *number = scan_number(&lexer->text[lexer->index], &length, &has_a_dot);
+        char *number = scan_number(&lexer->text[lexer->location.index], &length, &has_a_dot);
         advance(lexer, length);
         out_token->kind = TK_NUMBER;
         out_token->text = number;
         out_token->has_a_dot = has_a_dot;
     }
-    else if (lexer->text[lexer->index] == '"') {
+    else if (lexer->text[lexer->location.index] == '"') {
         int scanner_length = 0;
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string(&lexer->text[lexer->index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        char *string = scan_string(&lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
         lexer->location.line += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
@@ -404,156 +404,156 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->scanner_length = scanner_length-2; // note(josh): -2 for the quotes
     }
     // todo(josh): make a macro for these operators
-    else if (lexer->text[lexer->index] == '+') {
+    else if (lexer->text[lexer->location.index] == '+') {
         advance(lexer, 1);
         out_token->kind = TK_PLUS;
         out_token->text = "+";
-        if (lexer->text[lexer->index] == '=') {
+        if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_PLUS_ASSIGN;
             out_token->text = "+=";
         }
     }
-    else if (lexer->text[lexer->index] == '-') {
+    else if (lexer->text[lexer->location.index] == '-') {
         advance(lexer, 1);
         out_token->kind = TK_MINUS;
         out_token->text = "-";
-        if (lexer->text[lexer->index] == '=') {
+        if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_MINUS_ASSIGN;
             out_token->text = "-=";
         }
     }
-    else if (lexer->text[lexer->index] == '*') {
+    else if (lexer->text[lexer->location.index] == '*') {
         advance(lexer, 1);
         out_token->kind = TK_MULTIPLY;
         out_token->text = "*";
-        if (lexer->text[lexer->index] == '=') {
+        if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_MULTIPLY_ASSIGN;
             out_token->text = "*=";
         }
     }
-    else if (lexer->text[lexer->index] == '/') {
+    else if (lexer->text[lexer->location.index] == '/') {
         advance(lexer, 1);
         out_token->kind = TK_DIVIDE;
         out_token->text = "/";
-        if (lexer->text[lexer->index] == '=') {
+        if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_DIVIDE_ASSIGN;
             out_token->text = "/=";
         }
-        else if (lexer->text[lexer->index] == '/') {
-            while ((lexer->text[lexer->index] != '\n') && (lexer->text[lexer->index] != 0)) {
+        else if (lexer->text[lexer->location.index] == '/') {
+            while ((lexer->text[lexer->location.index] != '\n') && (lexer->text[lexer->location.index] != 0)) {
                 advance(lexer, 1);
             }
             return get_next_token(lexer, out_token);
         }
     }
-    else if (lexer->text[lexer->index] == '=') {
+    else if (lexer->text[lexer->location.index] == '=') {
         advance(lexer, 1);
         out_token->kind = TK_ASSIGN;
         out_token->text = "=";
-        if (lexer->text[lexer->index] == '=') {
+        if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_EQUAL_TO;
             out_token->text = "==";
         }
     }
-    else if (lexer->text[lexer->index] == '!') {
+    else if (lexer->text[lexer->location.index] == '!') {
         advance(lexer, 1);
         out_token->kind = TK_NOT;
         out_token->text = "!";
-        if (lexer->text[lexer->index] == '=') {
+        if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_NOT_EQUAL_TO;
             out_token->text = "!=";
         }
     }
-    else if (lexer->text[lexer->index] == '<') {
+    else if (lexer->text[lexer->location.index] == '<') {
         advance(lexer, 1);
         out_token->kind = TK_LESS_THAN;
         out_token->text = "<";
-        if (lexer->text[lexer->index] == '<') {
+        if (lexer->text[lexer->location.index] == '<') {
             advance(lexer, 1);
             out_token->kind = TK_LEFT_SHIFT;
             out_token->text = "<<";
-            if (lexer->text[lexer->index] == '=') {
+            if (lexer->text[lexer->location.index] == '=') {
                 advance(lexer, 1);
                 out_token->kind = TK_LEFT_SHIFT_ASSIGN;
                 out_token->text = "<<=";
             }
         }
-        else if (lexer->text[lexer->index] == '=') {
+        else if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_LESS_THAN_OR_EQUAL;
             out_token->text = "<=";
         }
     }
-    else if (lexer->text[lexer->index] == '>') {
+    else if (lexer->text[lexer->location.index] == '>') {
         advance(lexer, 1);
         out_token->kind = TK_GREATER_THAN;
         out_token->text = ">";
-        if (lexer->text[lexer->index] == '>') {
+        if (lexer->text[lexer->location.index] == '>') {
             advance(lexer, 1);
             out_token->kind = TK_RIGHT_SHIFT;
             out_token->text = ">>";
-            if (lexer->text[lexer->index] == '=') {
+            if (lexer->text[lexer->location.index] == '=') {
                 advance(lexer, 1);
                 out_token->kind = TK_RIGHT_SHIFT_ASSIGN;
                 out_token->text = ">>=";
             }
         }
-        else if (lexer->text[lexer->index] == '=') {
+        else if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_GREATER_THAN_OR_EQUAL;
             out_token->text = ">=";
         }
     }
-    else if (lexer->text[lexer->index] == '&') {
+    else if (lexer->text[lexer->location.index] == '&') {
         advance(lexer, 1);
         out_token->kind = TK_AMPERSAND;
         out_token->text = "&";
-        if (lexer->text[lexer->index] == '&') {
+        if (lexer->text[lexer->location.index] == '&') {
             advance(lexer, 1);
             out_token->kind = TK_BOOLEAN_AND;
             out_token->text = "&&";
-            if (lexer->text[lexer->index] == '=') {
+            if (lexer->text[lexer->location.index] == '=') {
                 advance(lexer, 1);
                 out_token->kind = TK_BOOLEAN_AND_ASSIGN;
                 out_token->text = "&&=";
             }
         }
-        else if (lexer->text[lexer->index] == '=') {
+        else if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_BIT_AND_ASSIGN;
             out_token->text = "&=";
         }
     }
-    else if (lexer->text[lexer->index] == '|') {
+    else if (lexer->text[lexer->location.index] == '|') {
         advance(lexer, 1);
         out_token->kind = TK_BIT_OR;
         out_token->text = "|";
-        if (lexer->text[lexer->index] == '|') {
+        if (lexer->text[lexer->location.index] == '|') {
             advance(lexer, 1);
             out_token->kind = TK_BOOLEAN_OR;
             out_token->text = "||";
-            if (lexer->text[lexer->index] == '=') {
+            if (lexer->text[lexer->location.index] == '=') {
                 advance(lexer, 1);
                 out_token->kind = TK_BOOLEAN_OR_ASSIGN;
                 out_token->text = "||=";
             }
         }
-        else if (lexer->text[lexer->index] == '=') {
+        else if (lexer->text[lexer->location.index] == '=') {
             advance(lexer, 1);
             out_token->kind = TK_BIT_OR_ASSIGN;
             out_token->text = "|=";
         }
     }
-    else if (lexer->text[lexer->index] == '#') {
+    else if (lexer->text[lexer->location.index] == '#') {
         advance(lexer, 1);
         int length = 0;
-        char *identifier = scan_identifier(&lexer->text[lexer->index], &length);
+        char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length);
         advance(lexer, length);
         if (strcmp(identifier, "assert") == 0) {
             out_token->kind = TK_DIRECTIVE_ASSERT;
@@ -595,7 +595,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else SIMPLE_TOKEN('$', TK_DOLLAR)
     else {
         lexer->errored = true;
-        report_error(token_location, "Unknown character: %c.", lexer->text[lexer->index]);
+        report_error(token_location, "Unknown character: %c.", lexer->text[lexer->location.index]);
         return false;
     }
 
