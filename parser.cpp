@@ -76,9 +76,27 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     bool is_constant = root_token.kind == TK_CONST;
 
-    Token var_name_token;
-    EXPECT(lexer, TK_IDENTIFIER, &var_name_token);
-    char *var_name = var_name_token.text;
+    Ast_Expr *name_expr = parse_expr(lexer);
+    bool is_polymorphic_value = false;
+    char *var_name = nullptr;
+    switch (name_expr->expr_kind) {
+        case EXPR_IDENTIFIER: {
+            Expr_Identifier *ident = (Expr_Identifier *)name_expr;
+            var_name = ident->name;
+            break;
+        }
+        case EXPR_POLYMORPHIC_VARIABLE: {
+            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)name_expr;
+            var_name = poly->ident->name;
+            is_polymorphic_value = true;
+            break;
+        }
+        default: {
+            report_error(name_expr->location, "Bad variable name."); // todo(josh): @ErrorHandling
+            return nullptr;
+        }
+    }
+    assert(var_name != nullptr);
 
     Token colon;
     if (!peek_next_token(lexer, &colon)) {
@@ -111,11 +129,14 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     Ast_Var *var = new Ast_Var(var_name, type_expr, expr, is_constant, root_token.location);
     var->declaration = new Var_Declaration(var, current_block);
+    var->is_polymorphic_value = is_polymorphic_value;
     if (!register_declaration(var->declaration)) {
         return nullptr;
     }
     return var;
 }
+
+bool did_parse_polymorphic_thing = false;
 
 Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Token token;
@@ -128,6 +149,10 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Ast_Block *procedure_block = new Ast_Block(token.location);
     Ast_Block *old_block = push_ast_block(procedure_block);
     defer(pop_ast_block(old_block));
+
+    bool old_value = did_parse_polymorphic_thing;
+    did_parse_polymorphic_thing = false;
+    defer(did_parse_polymorphic_thing = old_value);
 
     bool is_operator_overload = false;
     Token_Kind operator_to_overload = TK_INVALID;
@@ -232,7 +257,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         proc_name = name_override;
     }
 
-    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, proc_location);
+    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, did_parse_polymorphic_thing, proc_location);
 }
 
 Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
@@ -272,14 +297,19 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     return proc;
 }
 
-Ast_Struct *parse_struct(Lexer *lexer) {
+Ast_Struct *parse_struct(Lexer *lexer, char *name_override) {
     Token token;
     EXPECT(lexer, TK_STRUCT, &token);
     Ast_Struct *structure = new Ast_Struct(token.location);
 
     // name
     EXPECT(lexer, TK_IDENTIFIER, &token);
-    structure->name = token.text;
+    if (name_override == nullptr) {
+        structure->name = token.text;
+    }
+    else {
+        structure->name = name_override;
+    }
 
     // fields
     EXPECT(lexer, TK_LEFT_CURLY, nullptr);
@@ -1200,6 +1230,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 report_error(ident->location, "Polymorphic variable must be an identifier.");
                 return nullptr;
             }
+            did_parse_polymorphic_thing = true;
             return new Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location);
         }
         case TK_LEFT_SQUARE: {

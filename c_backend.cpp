@@ -162,10 +162,11 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
         assert(!parameter->is_constant);
-        c_print_var(sb, parameter);
-        if (idx != (header->parameters.count-1)) {
+        assert(!parameter->is_polymorphic_value);
+        if (idx != 0) {
             sb->print(", ");
         }
+        c_print_var(sb, parameter);
     }
     sb->print(")");
 }
@@ -239,8 +240,8 @@ void c_emit_compound_literal_temporaries(String_Builder *sb, Ast_Expr *expr, int
         }
         case EXPR_PROCEDURE_CALL: {
             Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-            For (idx, call->parameters) {
-                Ast_Expr *parameter = call->parameters[idx];
+            For (idx, call->parameters_to_emit) {
+                Ast_Expr *parameter = call->parameters_to_emit[idx];
                 c_emit_compound_literal_temporaries(sb, parameter, indent_level);
             }
         }
@@ -431,13 +432,14 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
                     c_print_expr(sb, call->lhs);
                 }
                 sb->print("(");
-                assert(call->parameters.count == call->target_procedure_type->parameter_types.count);
-                For (idx, call->parameters) {
-                    Ast_Expr *parameter = call->parameters[idx];
-                    c_print_expr(sb, parameter, call->target_procedure_type->parameter_types[idx]);
-                    if (idx != (call->parameters.count-1)) {
+                assert(call->parameters_to_emit.count == call->target_procedure_type->parameter_types.count);
+                For (idx, call->parameters_to_emit) {
+                    Ast_Expr *parameter = call->parameters_to_emit[idx];
+                    Type *parameter_type = call->target_procedure_type->parameter_types[idx];
+                    if (idx != 0) {
                         sb->print(", ");
                     }
+                    c_print_expr(sb, parameter, parameter_type);
                 }
                 sb->print(")");
                 break;

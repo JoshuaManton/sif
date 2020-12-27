@@ -4,6 +4,10 @@ proc foo_proc(a: $T, b: T) : T {
     return a + b;
 }
 
+// proc sqr($T: typeid, val: T) : T {
+//     return val * val;
+// }
+
 proc main() {
     var i1 = 1;
     var i2 = 2;

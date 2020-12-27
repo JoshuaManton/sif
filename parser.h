@@ -125,7 +125,8 @@ struct Ast_Proc_Header : public Ast_Node {
     Token_Kind operator_to_overload = {};
     Ast_Struct *struct_to_operator_overload = {};
     Array<Ast_Proc *> polymorphs = {};
-    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Location location)
+    bool is_polymorphic = {};
+    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, bool is_polymorphic, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
     , procedure_block(procedure_block)
@@ -133,6 +134,7 @@ struct Ast_Proc_Header : public Ast_Node {
     , return_type_expr(return_type_expr)
     , is_foreign(is_foreign)
     , operator_to_overload(operator_to_overload)
+    , is_polymorphic(is_polymorphic)
     {
         parameters.allocator = default_allocator();
         polymorphs.allocator = default_allocator();
@@ -202,6 +204,7 @@ struct Ast_Var : public Ast_Node {
     bool is_constant = {};
     Var_Declaration *declaration = {};
     Operand constant_operand = {};
+    bool is_polymorphic_value = {};
     Ast_Var(char *name, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
@@ -452,12 +455,15 @@ struct Expr_Dereference : public Ast_Expr {
 struct Expr_Procedure_Call : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Array<Ast_Expr *> parameters = {};
+    Array<Ast_Expr *> parameters_to_emit = {};
     Type_Procedure *target_procedure_type = {};
     Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters, Location location)
     : Ast_Expr(EXPR_PROCEDURE_CALL, location)
     , lhs(lhs)
     , parameters(parameters)
-    {}
+    {
+        parameters_to_emit.allocator = default_allocator();
+    }
 };
 
 struct Expr_Selector : public Ast_Expr {
@@ -577,6 +583,7 @@ enum Declaration_Kind {
     DECL_ENUM,
     DECL_VAR,
     DECL_POLYMORPHIC_INSERTION,
+    DECL_CONSTANT_VALUE,
     DECL_PROC,
     DECL_COUNT,
 };
@@ -588,7 +595,7 @@ enum Declaration_Check_State {
 };
 
 struct Declaration {
-    Ast_Block *parent_block = {};
+    Ast_Block *parent_block = {}; // note(josh): temporarily null while doing polymorphism
     Declaration_Check_State check_state = {};
     char *name = {};
     Declaration_Kind kind = {};
@@ -651,6 +658,14 @@ struct Polymorphic_Insertion_Declaration : Declaration {
     {}
 };
 
+struct Constant_Declaration : Declaration {
+    Operand operand = {};
+    Constant_Declaration(char *name, Operand operand, Ast_Block *block, Location location)
+    : Declaration(name, DECL_CONSTANT_VALUE, block, location)
+    , operand(operand)
+    {}
+};
+
 extern Array<Declaration *>          g_all_declarations;
 extern Array<Ast_Directive_Assert *> g_all_assert_directives;
 extern Array<Ast_Directive_Print *>  g_all_print_directives;
@@ -665,6 +680,7 @@ Ast_Block *begin_parsing(const char *filename);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Proc *parse_proc(Lexer *lexer, char *name_override = nullptr);
+Ast_Struct *parse_struct(Lexer *lexer, char *name_override = nullptr);
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false, bool push_new_block = true);
 Ast_Node *parse_statement(Lexer *lexer);
 
