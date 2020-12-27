@@ -198,6 +198,7 @@ struct Ast_Directive_C_Code : public Ast_Node {
 
 struct Ast_Var : public Ast_Node {
     char *name = {};
+    Ast_Expr *name_expr = {};
     Ast_Expr *type_expr = {};
     Ast_Expr *expr = {};
     Type *type = {};
@@ -205,9 +206,10 @@ struct Ast_Var : public Ast_Node {
     Var_Declaration *declaration = {};
     Operand constant_operand = {};
     bool is_polymorphic_value = {};
-    Ast_Var(char *name, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, Location location)
+    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
+    , name_expr(name_expr)
     , type_expr(type_expr)
     , expr(expr)
     , is_constant(is_constant)
@@ -578,11 +580,10 @@ struct Expr_Slice_Type : public Ast_Expr {
 enum Declaration_Kind {
     DECL_INVALID,
     DECL_TYPE,
-    DECL_POLYMORPHIC_TYPE,
     DECL_STRUCT,
     DECL_ENUM,
     DECL_VAR,
-    DECL_POLYMORPHIC_INSERTION,
+    DECL_POLYMORPHIC,
     DECL_CONSTANT_VALUE,
     DECL_PROC,
     DECL_COUNT,
@@ -650,10 +651,10 @@ struct Var_Declaration : Declaration {
     {}
 };
 
-struct Polymorphic_Insertion_Declaration : Declaration {
+struct Polymorphic_Declaration : Declaration {
     Declaration *declaration = {};
-    Polymorphic_Insertion_Declaration(Declaration *decl)
-    : Declaration(decl->name, DECL_POLYMORPHIC_INSERTION, decl->parent_block, decl->location)
+    Polymorphic_Declaration(char *name, Declaration *decl, Ast_Block *block, Location location)
+    : Declaration(name, DECL_POLYMORPHIC, block, location)
     , declaration(decl)
     {}
 };

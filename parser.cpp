@@ -127,11 +127,13 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         return nullptr;
     }
 
-    Ast_Var *var = new Ast_Var(var_name, type_expr, expr, is_constant, root_token.location);
+    Ast_Var *var = new Ast_Var(var_name, name_expr, type_expr, expr, is_constant, root_token.location);
     var->declaration = new Var_Declaration(var, current_block);
     var->is_polymorphic_value = is_polymorphic_value;
-    if (!register_declaration(var->declaration)) {
-        return nullptr;
+    if (!var->is_polymorphic_value) {
+        if (!register_declaration(var->declaration)) {
+            return nullptr;
+        }
     }
     return var;
 }
@@ -287,6 +289,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     if (header->operator_to_overload == TK_INVALID) {
         assert(header->name != nullptr);
         proc->declaration = new Proc_Declaration(proc, current_block);
+        proc->declaration->is_polymorphic = header->is_polymorphic;
         if (!register_declaration(proc->declaration)) {
             return nullptr;
         }
@@ -1225,12 +1228,16 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_DOLLAR: {
             eat_next_token(lexer);
-            Ast_Expr *ident = parse_expr(lexer);
-            if (ident->expr_kind != EXPR_IDENTIFIER) {
-                report_error(ident->location, "Polymorphic variable must be an identifier.");
+            Ast_Expr *ident_expr = parse_expr(lexer);
+            if (ident_expr->expr_kind != EXPR_IDENTIFIER) {
+                report_error(ident_expr->location, "Polymorphic variable must be an identifier.");
                 return nullptr;
             }
+            Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
             did_parse_polymorphic_thing = true;
+            if (!register_declaration(new Polymorphic_Declaration(ident->name, nullptr, current_block, token.location))) {
+                return nullptr;
+            }
             return new Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location);
         }
         case TK_LEFT_SQUARE: {

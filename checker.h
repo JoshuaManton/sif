@@ -122,15 +122,6 @@ struct Type_Array : public Type {
     {}
 };
 
-struct Type_Polymorphic : public Type {
-    char *name = nullptr;
-    Type *matched_type = nullptr;
-    Type_Polymorphic(char *name)
-    : Type(TYPE_POLYMORPHIC)
-    , name(name)
-    {}
-};
-
 struct Type_Slice : public Type {
     Type *slice_of = {};
     Type *data_pointer_type = {};

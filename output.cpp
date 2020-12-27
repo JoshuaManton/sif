@@ -62,29 +62,15 @@ void print(String str);
 void *alloc(i64 size);
 void free(void *ptr);
 void assert(bool condition);
-i64 foo_proc__polymorph_0(i64 a, i64 b);
-i64 foo_proc__polymorph_1(i64 a, i64 b);
-f32 foo_proc__polymorph_2(f32 a, f32 b);
+i64 holy_wow__polymorph_0();
 void main();
 
 // Actual declarations
-i64 foo_proc__polymorph_0(i64 a, i64 b) {
-    return a + b;
-}
-i64 foo_proc__polymorph_1(i64 a, i64 b) {
-    return a + b;
-}
-f32 foo_proc__polymorph_2(f32 a, f32 b) {
-    return a + b;
+i64 holy_wow__polymorph_0() {
+    i64 a = 246;
+    return a;
 }
 void main() {
-    i64 i1 = 1;
-    i64 i2 = 2;
-    i64 i3 = foo_proc__polymorph_0(i1, i2);
-    i3 = foo_proc__polymorph_1(i1, i2);
-    print_int(i3);
-    f32 f1 = 1.000000;
-    f32 f2 = 2.000000;
-    f32 f3 = foo_proc__polymorph_2(f1, f2);
-    print_float(f3);
+    i64 aaa = holy_wow__polymorph_0();
+    print_int(aaa);
 }

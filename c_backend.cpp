@@ -67,11 +67,6 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             sb->print("(*");
             break;
         }
-        case TYPE_POLYMORPHIC: {
-            Type_Polymorphic *poly = (Type_Polymorphic *)type;
-            c_print_type_prefix(sb, poly->matched_type);
-            break;
-        }
         default: {
             assert(false);
         }
@@ -116,11 +111,6 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
             break;
         }
         case TYPE_SLICE: {
-            break;
-        }
-        case TYPE_POLYMORPHIC: {
-            Type_Polymorphic *poly = (Type_Polymorphic *)type;
-            c_print_type_postfix(sb, poly->matched_type);
             break;
         }
         default: {
