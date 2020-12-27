@@ -76,7 +76,7 @@ struct Operand {
     int scanned_string_length = {};
     char *escaped_string_value = {};
     int escaped_string_length = {};
-    Ast_Proc *referenced_procedure = {};
+    Declaration *referenced_declaration = {};
 
     Type *reference_type = {};
 

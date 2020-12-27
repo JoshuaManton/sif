@@ -1,6 +1,56 @@
 #include "basic.sif"
 #include "dynamic_array.sif"
 
+proc main() {
+    basic_stuff();
+    arrays();
+    slices();
+    operator_overloading();
+    procedural_polymorphism();
+    references();
+}
+
+
+
+proc basic_stuff() {
+    // todo(josh)
+    // variables, procedures, types, recursion, order independence
+}
+
+
+
+proc arrays_by_value(arr: [4]int) {
+    arr[2] = 738;
+}
+proc arrays() {
+    print("\n\n---- arrays ----");
+    var my_array: [4]int;
+    my_array[0] = 1;
+    my_array[1] = 2;
+    my_array[2] = 3;
+    my_array[3] = 4;
+    print_int(my_array[0]);
+    print_int(my_array[1]);
+    print_int(my_array[2]);
+    print_int(my_array[3]);
+    assert(my_array[0] == 1);
+    assert(my_array[1] == 2);
+    assert(my_array[2] == 3);
+    assert(my_array[3] == 4);
+    arrays_by_value(my_array);
+    print_int(my_array[2]);
+    assert(my_array[2] == 3);
+}
+
+
+
+proc slices() {
+    // todo(josh)
+    // print("\n\n---- slices todo(josh) ----");
+}
+
+
+
 struct Vector3 {
     var x: float;
     var y: float;
@@ -22,31 +72,75 @@ struct Vector3 {
         return Vector3{a.x * f, a.y * f, a.z * f};
     }
 }
+proc operator_overloading() {
+    print("\n\n---- operator_overloading ----");
 
-proc foo(a: >int) {
-    a = 149;
-    var b: int = 45768;
-    a = b;
+    var v1 = Vector3{1, 2, 3};
+    var v2 = Vector3{1, 4, 9};
+    var v3 = v1 + v2;
+    var v4 = v3 * 5;
+    print_float(v4.x);
+    print_float(v4.y);
+    print_float(v4.z);
+    assert(v4.x == 10);
+    assert(v4.y == 30);
+    assert(v4.z == 60);
+}
+
+
+
+proc value_poly($a: int) : int {
+    return a * a;
+}
+proc type_poly(a: $T) : T {
+    return a * a;
+}
+proc value_and_type_poly($a: $T) : T {
+    return a * a;
+}
+proc procedural_polymorphism() {
+    print("\n\n---- procedural_polymorphism ----");
+
+    print_int(value_poly(2));
+    assert(value_poly(2) == 4);
+
+    print_int(type_poly(3));
+    assert(type_poly(3) == 9);
+    print_float(type_poly(4.0));
+    assert(type_poly(4.0) == 16);
+
+    var a: int = 5;
+    var f: float = 6;
+    print_int(type_poly(a));
+    print_float(type_poly(f));
+    assert(type_poly(a) == 25);
+    assert(type_poly(f) == 36);
+
+    print_int(value_and_type_poly(7));
+    print_float(value_and_type_poly(8.0));
+    assert(value_and_type_poly(7) == 49);
+    assert(value_and_type_poly(8.0) == 64);
+}
+
+
+
+proc change_by_reference(a: >int, value: int) {
+    a = value;
 }
 proc references() {
-    {
-        var cc = 332;
-        print_int(cc);
-        foo(cc);
-        print_int(cc);
-        var cref: >int = cc;
-        cref += 20;
-        print_int(cref);
-        print("--------------");
-        var v = Vector3{1, 4, 9};
-        var vref: >Vector3 = v;
-        vref.x = 1;
-        vref.y = 2;
-        vref.z = 3;
-        print_float(vref.x);
-        print_float(vref.y);
-        print_float(vref.z);
-    }
+    print("\n\n---- references ----");
+    var my_int = 123;
+    print_int(my_int);
+    assert(my_int == 123);
+    change_by_reference(my_int, 456);
+    print_int(my_int);
+    assert(my_int == 456);
+
+    var int_reference: >int = my_int;
+    int_reference = 789;
+    assert(int_reference == 789);
+    assert(my_int == 789);
+    print_int(int_reference);
 
     {
         var arr: Dynamic_Array_Int;
@@ -80,106 +174,106 @@ proc vector_proc(var v: Vector3) {
 
 }
 
-proc main() {
-    var xx: float = 1;
-    var yy: float = 4;
-    var zz: float = 9;
-    var some_float = Vector3{Vector3{xx, yy, zz}.y, yy, zz}.x + Vector3{xx, yy, zz}.z;
-    print_float(some_float);
+// proc main() {
+//     var xx: float = 1;
+//     var yy: float = 4;
+//     var zz: float = 9;
+//     var some_float = Vector3{Vector3{xx, yy, zz}.y, yy, zz}.x + Vector3{xx, yy, zz}.z;
+//     print_float(some_float);
 
-    vector_proc(Vector3{xx, yy, zz});
-    var my_vector = Vector3{2, 8, 18};
-    assert(my_vector.x == 2);
-    assert(my_vector.y == 8);
-    assert(my_vector.z == 18);
-    print_float(my_vector.x);
-    print_float(my_vector.y);
-    print_float(my_vector.z);
+//     vector_proc(Vector3{xx, yy, zz});
+//     var my_vector = Vector3{2, 8, 18};
+//     assert(my_vector.x == 2);
+//     assert(my_vector.y == 8);
+//     assert(my_vector.z == 18);
+//     print_float(my_vector.x);
+//     print_float(my_vector.y);
+//     print_float(my_vector.z);
 
-    var an_enum = My_Enum.FOO;
-    an_enum = My_Enum.BAR;
-    an_enum = My_Enum.BAZ;
+//     var an_enum = My_Enum.FOO;
+//     an_enum = My_Enum.BAR;
+//     an_enum = My_Enum.BAZ;
 
-    var asd = an_enum.BAZ;
+//     var asd = an_enum.BAZ;
 
-    const N = 16;
-    #assert(N == 16);
-    const My_Int_Type = int;
-    const MY_INT: My_Int_Type = 321;
-    var my_int = MY_INT;
-    #assert(typeof(my_int) == My_Int_Type);
+//     const N = 16;
+//     #assert(N == 16);
+//     const My_Int_Type = int;
+//     const MY_INT: My_Int_Type = 321;
+//     var my_int = MY_INT;
+//     #assert(typeof(my_int) == My_Int_Type);
 
-    var value = 0;
-    while (value < 10) {
-        print_int(value);
-        value = value + 1;
-    }
+//     var value = 0;
+//     while (value < 10) {
+//         print_int(value);
+//         value = value + 1;
+//     }
 
-    print_int(Some_Struct.WOW_A_CONSTANT);
+//     print_int(Some_Struct.WOW_A_CONSTANT);
 
-    var memory = cast(^Vector3, alloc(sizeof(Vector3) * N));
-    var slice: []Vector3;
-    slice.data = memory;
-    slice.count = N;
-    for (var i = 0; i < slice.count; i = i + 1) {
-        var v = &slice[i];
-        v.x = 9;
-        v.y = 4;
-        v.z = 1;
-    }
+//     var memory = cast(^Vector3, alloc(sizeof(Vector3) * N));
+//     var slice: []Vector3;
+//     slice.data = memory;
+//     slice.count = N;
+//     for (var i = 0; i < slice.count; i = i + 1) {
+//         var v = &slice[i];
+//         v.x = 9;
+//         v.y = 4;
+//         v.z = 1;
+//     }
 
-    print("Hello, " + "World!");
+//     print("Hello, " + "World!");
 
-    var v_in_slice = slice[9];
-    print_float(v_in_slice.x);
-    print_float(v_in_slice.y);
-    print_float(v_in_slice.z);
+//     var v_in_slice = slice[9];
+//     print_float(v_in_slice.x);
+//     print_float(v_in_slice.y);
+//     print_float(v_in_slice.z);
 
-    var v_ptr = cast(^Vector3, alloc(sizeof(Vector3)));
-    v_ptr.x = 1;
-    v_ptr.y = 4;
-    v_ptr.z = 9;
-    print_float(v_ptr.x);
-    print_float(v_ptr.y);
-    print_float(v_ptr.z);
-    free(v_ptr);
+//     var v_ptr = cast(^Vector3, alloc(sizeof(Vector3)));
+//     v_ptr.x = 1;
+//     v_ptr.y = 4;
+//     v_ptr.z = 9;
+//     print_float(v_ptr.x);
+//     print_float(v_ptr.y);
+//     print_float(v_ptr.z);
+//     free(v_ptr);
 
-    var str = "Hello, " + "World";
-    print(str);
-    print_int("asd123".count);
+//     var str = "Hello, " + "World";
+//     print(str);
+//     print_int("asd123".count);
 
-    var arr: [3]int;
-    arr[0] = 1;
-    arr[1] = 4;
-    arr[2] = 9;
-    for (var i = 0; i < arr.count; i = i + 1) {
-        print_int(arr[i]);
-    }
-    var v: Vector3;
-    v.x = 1.5;
-    v.y = 4.4;
-    v.z = 9.3;
-    print_float(v.x);
-    print_float(v.y);
-    print_float(v.z);
+//     var arr: [3]int;
+//     arr[0] = 1;
+//     arr[1] = 4;
+//     arr[2] = 9;
+//     for (var i = 0; i < arr.count; i = i + 1) {
+//         print_int(arr[i]);
+//     }
+//     var v: Vector3;
+//     v.x = 1.5;
+//     v.y = 4.4;
+//     v.z = 9.3;
+//     print_float(v.x);
+//     print_float(v.y);
+//     print_float(v.z);
 
-    var a: [4]int;
-    var x = (&a[2])^;
-    #assert(typeof(x) == int);
+//     var a: [4]int;
+//     var x = (&a[2])^;
+//     #assert(typeof(x) == int);
 
-    var v_ptr2 = &v;
-    #assert(typeof(v_ptr2) == ^Vector3);
-    v_ptr2.x = 2;
-    v_ptr2.y = cast(float, return_stuff());
+//     var v_ptr2 = &v;
+//     #assert(typeof(v_ptr2) == ^Vector3);
+//     v_ptr2.x = 2;
+//     v_ptr2.y = cast(float, return_stuff());
 
-    var x_ptr = cast(^float, v_ptr2);
-    #assert(typeof(x_ptr) == ^float);
-    x_ptr^ = 149;
+//     var x_ptr = cast(^float, v_ptr2);
+//     #assert(typeof(x_ptr) == ^float);
+//     x_ptr^ = 149;
 
-    if (x_ptr^ == 40) {
-        return;
-    }
-}
+//     if (x_ptr^ == 40) {
+//         return;
+//     }
+// }
 
 proc return_stuff() : int {
     if (1 == 1) {

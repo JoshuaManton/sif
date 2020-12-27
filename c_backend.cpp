@@ -415,8 +415,10 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
                 Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
                 assert(call->target_procedure_type != nullptr);
                 assert(!is_type_polymorphic(call->target_procedure_type));
-                if (expr->operand.referenced_procedure != nullptr) {
-                    sb->print(expr->operand.referenced_procedure->header->name);
+                if (expr->operand.referenced_declaration != nullptr) {
+                    assert(expr->operand.referenced_declaration->kind == DECL_PROC);
+                    Ast_Proc *referenced_procedure = ((Proc_Declaration *)expr->operand.referenced_declaration)->procedure;
+                    sb->print(referenced_procedure->header->name);
                 }
                 else {
                     c_print_expr(sb, call->lhs);

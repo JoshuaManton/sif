@@ -68,19 +68,46 @@ void append(Dynamic_Array_Int *dyn, i64 value);
 i64 pop(Dynamic_Array_Int *dyn);
 void clear_dynamic_array(Dynamic_Array_Int *dyn);
 void destroy_dynamic_array(Dynamic_Array_Int *dyn);
+void basic_stuff();
+void arrays_by_value(Static_Array<i64 , 4> arr);
+void arrays();
+void slices();
 struct Vector3;
-void foo(i64 *a);
+void operator_overloading();
+i64 value_poly__polymorph_0();
+i64 value_poly__polymorph_1();
+i64 value_poly__polymorph_2();
+i64 type_poly__polymorph_3(i64 a);
+i64 type_poly__polymorph_4(i64 a);
+i64 type_poly__polymorph_5(i64 a);
+f32 type_poly__polymorph_6(f32 a);
+f32 type_poly__polymorph_7(f32 a);
+f32 type_poly__polymorph_8(f32 a);
+i64 type_poly__polymorph_9(i64 a);
+f32 type_poly__polymorph_10(f32 a);
+i64 type_poly__polymorph_11(i64 a);
+i64 type_poly__polymorph_12(i64 a);
+f32 type_poly__polymorph_13(f32 a);
+f32 type_poly__polymorph_14(f32 a);
+i64 value_and_type_poly__polymorph_15();
+f32 value_and_type_poly__polymorph_16();
+i64 value_and_type_poly__polymorph_17();
+i64 value_and_type_poly__polymorph_18();
+f32 value_and_type_poly__polymorph_19();
+f32 value_and_type_poly__polymorph_20();
+void procedural_polymorphism();
+void change_by_reference(i64 *a, i64 value);
 void references();
-void vector_proc(Vector3 v);
-struct Some_Struct;
-i64 return_stuff();
 void main();
+void vector_proc(Vector3 v);
+i64 return_stuff();
 struct T;
 struct B;
 struct A;
 struct Contains_Pointers1;
 struct Self_Pointer;
 void AAA();
+struct Some_Struct;
 void recursion();
 void duo_recursion2();
 void duo_recursion1();
@@ -127,6 +154,32 @@ void destroy_dynamic_array(Dynamic_Array_Int *dyn) {
         free(*((i64 **)&dyn->array.data));
     }
 }
+void basic_stuff() {
+}
+void arrays_by_value(Static_Array<i64 , 4> arr) {
+    arr.elements[2] = 738;
+}
+void arrays() {
+    print(MAKE_STRING("\n\n---- arrays ----", 18));
+    Static_Array<i64 , 4> my_array = {};
+    my_array.elements[0] = 1;
+    my_array.elements[1] = 2;
+    my_array.elements[2] = 3;
+    my_array.elements[3] = 4;
+    print_int(my_array.elements[0]);
+    print_int(my_array.elements[1]);
+    print_int(my_array.elements[2]);
+    print_int(my_array.elements[3]);
+    assert(my_array.elements[0] == 1);
+    assert(my_array.elements[1] == 2);
+    assert(my_array.elements[2] == 3);
+    assert(my_array.elements[3] == 4);
+    arrays_by_value(my_array);
+    print_int(my_array.elements[2]);
+    assert(my_array.elements[2] == 3);
+}
+void slices() {
+}
 struct Vector3 {
     f32 x;
     f32 y;
@@ -167,34 +220,125 @@ Vector3 __operator_overload_Vector3_TK_MULTIPLY(Vector3 a, f32 f) {
     __generated_compound_literal_4.z = a.z * f;
     return __generated_compound_literal_4;
 }
-void foo(i64 *a) {
-    (*a) = 149;
-    i64 b = 45768;
-    (*a) = b;
+void operator_overloading() {
+    print(MAKE_STRING("\n\n---- operator_overloading ----", 32));
+    Vector3 __generated_compound_literal_5 = {};
+    __generated_compound_literal_5.x = 1.000000;
+    __generated_compound_literal_5.y = 2.000000;
+    __generated_compound_literal_5.z = 3.000000;
+    Vector3 v1 = __generated_compound_literal_5;
+    Vector3 __generated_compound_literal_6 = {};
+    __generated_compound_literal_6.x = 1.000000;
+    __generated_compound_literal_6.y = 4.000000;
+    __generated_compound_literal_6.z = 9.000000;
+    Vector3 v2 = __generated_compound_literal_6;
+    Vector3 v3 = __operator_overload_Vector3_TK_PLUS(v1, v2);
+    Vector3 v4 = __operator_overload_Vector3_TK_MULTIPLY(v3, 5.000000);
+    print_float(v4.x);
+    print_float(v4.y);
+    print_float(v4.z);
+    assert(v4.x == 10.000000);
+    assert(v4.y == 30.000000);
+    assert(v4.z == 60.000000);
+}
+i64 value_poly__polymorph_0() {
+    return 4;
+}
+i64 value_poly__polymorph_1() {
+    return 4;
+}
+i64 value_poly__polymorph_2() {
+    return 4;
+}
+i64 type_poly__polymorph_3(i64 a) {
+    return a * a;
+}
+i64 type_poly__polymorph_4(i64 a) {
+    return a * a;
+}
+i64 type_poly__polymorph_5(i64 a) {
+    return a * a;
+}
+f32 type_poly__polymorph_6(f32 a) {
+    return a * a;
+}
+f32 type_poly__polymorph_7(f32 a) {
+    return a * a;
+}
+f32 type_poly__polymorph_8(f32 a) {
+    return a * a;
+}
+i64 type_poly__polymorph_9(i64 a) {
+    return a * a;
+}
+f32 type_poly__polymorph_10(f32 a) {
+    return a * a;
+}
+i64 type_poly__polymorph_11(i64 a) {
+    return a * a;
+}
+i64 type_poly__polymorph_12(i64 a) {
+    return a * a;
+}
+f32 type_poly__polymorph_13(f32 a) {
+    return a * a;
+}
+f32 type_poly__polymorph_14(f32 a) {
+    return a * a;
+}
+i64 value_and_type_poly__polymorph_15() {
+    return 49;
+}
+f32 value_and_type_poly__polymorph_16() {
+    return 64.000000;
+}
+i64 value_and_type_poly__polymorph_17() {
+    return 49;
+}
+i64 value_and_type_poly__polymorph_18() {
+    return 49;
+}
+f32 value_and_type_poly__polymorph_19() {
+    return 64.000000;
+}
+f32 value_and_type_poly__polymorph_20() {
+    return 64.000000;
+}
+void procedural_polymorphism() {
+    print(MAKE_STRING("\n\n---- procedural_polymorphism ----", 35));
+    print_int(value_poly__polymorph_0());
+    assert(value_poly__polymorph_2() == 4);
+    print_int(type_poly__polymorph_3(3));
+    assert(type_poly__polymorph_5(3) == 9);
+    print_float(type_poly__polymorph_6(4.000000));
+    assert(type_poly__polymorph_8(4.000000) == 16.000000);
+    i64 a = 5;
+    f32 f = 6.000000;
+    print_int(type_poly__polymorph_9(a));
+    print_float(type_poly__polymorph_10(f));
+    assert(type_poly__polymorph_12(a) == 25);
+    assert(type_poly__polymorph_14(f) == 36.000000);
+    print_int(value_and_type_poly__polymorph_15());
+    print_float(value_and_type_poly__polymorph_16());
+    assert(value_and_type_poly__polymorph_18() == 49);
+    assert(value_and_type_poly__polymorph_20() == 64.000000);
+}
+void change_by_reference(i64 *a, i64 value) {
+    (*a) = value;
 }
 void references() {
-    {
-        i64 cc = 332;
-        print_int(cc);
-        foo(&cc);
-        print_int(cc);
-        i64 *cref = &cc;
-        (*cref) += 20;
-        print_int((*cref));
-        print(MAKE_STRING("--------------", 14));
-        Vector3 __generated_compound_literal_5 = {};
-        __generated_compound_literal_5.x = 1.000000;
-        __generated_compound_literal_5.y = 4.000000;
-        __generated_compound_literal_5.z = 9.000000;
-        Vector3 v = __generated_compound_literal_5;
-        Vector3 *vref = &v;
-        (*vref).x = 1.000000;
-        (*vref).y = 2.000000;
-        (*vref).z = 3.000000;
-        print_float((*vref).x);
-        print_float((*vref).y);
-        print_float((*vref).z);
-    }
+    print(MAKE_STRING("\n\n---- references ----", 22));
+    i64 my_int = 123;
+    print_int(my_int);
+    assert(my_int == 123);
+    change_by_reference(&my_int, 456);
+    print_int(my_int);
+    assert(my_int == 456);
+    i64 *int_reference = &my_int;
+    (*int_reference) = 789;
+    assert((*int_reference) == 789);
+    assert(my_int == 789);
+    print_int((*int_reference));
     {
         Dynamic_Array_Int arr = {};
         append(&arr, 1);
@@ -210,115 +354,21 @@ void references() {
         }
     }
 }
+void main() {
+    basic_stuff();
+    arrays();
+    slices();
+    operator_overloading();
+    procedural_polymorphism();
+    references();
+}
 void vector_proc(Vector3 v) {
 }
-struct Some_Struct {
-    i64 x;
-};
 i64 return_stuff() {
     if (true) {
         return 123;
     }
     return 321;
-}
-void main() {
-    f32 xx = 1.000000;
-    f32 yy = 4.000000;
-    f32 zz = 9.000000;
-    Vector3 __generated_compound_literal_6 = {};
-    __generated_compound_literal_6.x = xx;
-    __generated_compound_literal_6.y = yy;
-    __generated_compound_literal_6.z = zz;
-    Vector3 __generated_compound_literal_7 = {};
-    __generated_compound_literal_7.x = __generated_compound_literal_6.y;
-    __generated_compound_literal_7.y = yy;
-    __generated_compound_literal_7.z = zz;
-    Vector3 __generated_compound_literal_8 = {};
-    __generated_compound_literal_8.x = xx;
-    __generated_compound_literal_8.y = yy;
-    __generated_compound_literal_8.z = zz;
-    f32 some_float = __generated_compound_literal_7.x + __generated_compound_literal_8.z;
-    print_float(some_float);
-    Vector3 __generated_compound_literal_9 = {};
-    __generated_compound_literal_9.x = xx;
-    __generated_compound_literal_9.y = yy;
-    __generated_compound_literal_9.z = zz;
-    vector_proc(__generated_compound_literal_9);
-    Vector3 __generated_compound_literal_10 = {};
-    __generated_compound_literal_10.x = 2.000000;
-    __generated_compound_literal_10.y = 8.000000;
-    __generated_compound_literal_10.z = 18.000000;
-    Vector3 my_vector = __generated_compound_literal_10;
-    assert(my_vector.x == 2.000000);
-    assert(my_vector.y == 8.000000);
-    assert(my_vector.z == 18.000000);
-    print_float(my_vector.x);
-    print_float(my_vector.y);
-    print_float(my_vector.z);
-    i64 an_enum = 0;
-    an_enum = 1;
-    an_enum = 2;
-    i64 asd = 2;
-    // constant declaration omitted: N
-    // constant declaration omitted: My_Int_Type
-    // constant declaration omitted: MY_INT
-    i64 my_int = 321;
-    i64 value = 0;
-    while (value < 10) {
-        print_int(value);
-        value = value + 1;
-    }
-    print_int(149);
-    Vector3 *memory = ((Vector3 *)alloc(192));
-    Slice slice = {};
-    *((Vector3 **)&slice.data) = memory;
-    slice.count = 16;
-    for (i64 i = 0; i < slice.count; i = i + 1) {
-        Vector3 *v = &((Vector3 *)slice.data)[i];
-        v->x = 9.000000;
-        v->y = 4.000000;
-        v->z = 1.000000;
-    }
-    print(MAKE_STRING("Hello, World!", 13));
-    Vector3 v_in_slice = ((Vector3 *)slice.data)[9];
-    print_float(v_in_slice.x);
-    print_float(v_in_slice.y);
-    print_float(v_in_slice.z);
-    Vector3 *v_ptr = ((Vector3 *)alloc(12));
-    v_ptr->x = 1.000000;
-    v_ptr->y = 4.000000;
-    v_ptr->z = 9.000000;
-    print_float(v_ptr->x);
-    print_float(v_ptr->y);
-    print_float(v_ptr->z);
-    free(v_ptr);
-    String str = MAKE_STRING("Hello, World", 12);
-    print(str);
-    print_int(MAKE_STRING("asd123", 6).count);
-    Static_Array<i64 , 3> arr = {};
-    arr.elements[0] = 1;
-    arr.elements[1] = 4;
-    arr.elements[2] = 9;
-    for (i64 i = 0; i < 3; i = i + 1) {
-        print_int(arr.elements[i]);
-    }
-    Vector3 v = {};
-    v.x = 1.500000;
-    v.y = 4.400000;
-    v.z = 9.300000;
-    print_float(v.x);
-    print_float(v.y);
-    print_float(v.z);
-    Static_Array<i64 , 4> a = {};
-    i64 x = *(&a.elements[2]);
-    Vector3 *v_ptr2 = &v;
-    v_ptr2->x = 2.000000;
-    v_ptr2->y = ((f32 )return_stuff());
-    f32 *x_ptr = ((f32 *)v_ptr2);
-    *x_ptr = 149.000000;
-    if (*x_ptr == 40.000000) {
-        return;
-    }
 }
 T *p = {};
 struct T {
@@ -356,6 +406,9 @@ Static_Array<Static_Array<i64 , 8> , 4> **wack = {};
 Static_Array<Static_Array<i64 **, 8> , 4> more_wack = {};
 Static_Array<Static_Array<i64 , 8> *, 4> *still_more_wack = {};
 Static_Array<Static_Array<Static_Array<i64 *, 32> , 8> *, 4> **complicated_garbage = {};
+struct Some_Struct {
+    i64 x;
+};
 void recursion() {
     Some_Struct *b = {};
     i64 x = b->x;

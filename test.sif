@@ -1,9 +1,31 @@
 #include "basic.sif"
 
-proc holy_wow($a: T, b: $T) : T {
-    return a + b;
+// struct Foo($T: typeid) {
+//     var data: T;
+// }
+
+proc value_poly($a: int) : int {
+    return a * a;
+}
+
+proc type_poly(a: $T) : T {
+    return a * a;
+}
+
+proc value_and_type_poly($a: $T) : T {
+    return a * a;
 }
 
 proc main() {
-    print_float(holy_wow(1, 2.2));
+    print_int(value_poly(2));
+
+    print_int(type_poly(3));
+    print_float(type_poly(4.0));
+    var a: int = 5;
+    var f: float = 6;
+    print_int(type_poly(a));
+    print_float(type_poly(f));
+
+    print_int(value_and_type_poly(7));
+    print_float(value_and_type_poly(8.0));
 }
