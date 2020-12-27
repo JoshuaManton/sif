@@ -970,6 +970,22 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name) {
     return new_parse;
 }
 
+void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
+    assert(declaration->parent_block == nullptr);
+    bool inserted_replacement = false;
+    For (decl_idx, block->declarations) {
+        Declaration *decl = block->declarations[decl_idx];
+        if (decl->kind == DECL_POLYMORPHIC && (strcmp(decl->name, declaration->name) == 0)) {
+            Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
+            assert(poly_decl->declaration == nullptr);
+            declaration->parent_block = block;
+            poly_decl->declaration = declaration;
+            inserted_replacement = true;
+        }
+    }
+    assert(inserted_replacement);
+}
+
 Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
     Ast_Node *procedure_polymorph_node = polymorph_node(proc_to_polymorph, proc_to_polymorph->header->name);
     assert(procedure_polymorph_node != nullptr);
@@ -992,56 +1008,14 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_lo
         }
 
         if (poly_type_decl) {
-            assert(poly_type_decl->parent_block == nullptr);
-            bool inserted_replacement = false;
-            For (decl_idx, procedure_polymorph->header->procedure_block->declarations) {
-                Declaration *decl = procedure_polymorph->header->procedure_block->declarations[decl_idx];
-                if (decl->kind == DECL_POLYMORPHIC && (strcmp(decl->name, poly_type_decl->name) == 0)) {
-                    Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
-                    assert(poly_decl->declaration == nullptr);
-                    poly_type_decl->parent_block = procedure_polymorph->header->procedure_block;
-                    poly_decl->declaration = poly_type_decl;
-                    inserted_replacement = true;
-                }
-            }
-            assert(inserted_replacement);
+            insert_polymorph_replacement(procedure_polymorph->header->procedure_block, poly_type_decl);
         }
 
         if (poly_value_decl) {
-            assert(poly_value_decl->parent_block == nullptr);
-            bool inserted_replacement = false;
-            For (decl_idx, procedure_polymorph->header->procedure_block->declarations) {
-                Declaration *decl = procedure_polymorph->header->procedure_block->declarations[decl_idx];
-                if (decl->kind == DECL_POLYMORPHIC && (strcmp(decl->name, poly_value_decl->name) == 0)) {
-                    Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
-                    assert(poly_decl->declaration == nullptr);
-                    poly_value_decl->parent_block = procedure_polymorph->header->procedure_block;
-                    poly_decl->declaration = poly_value_decl;
-                    inserted_replacement = true;
-                }
-            }
-            assert(inserted_replacement);
+            insert_polymorph_replacement(procedure_polymorph->header->procedure_block, poly_value_decl);
             out_parameter_indices_to_remove->append(idx);
         }
     }
-
-    // insert the declaration replacements
-    // For (idx, replacements) {
-    //     Declaration *replacement = replacements[idx];
-    //     assert(replacement->parent_block == nullptr);
-    //     bool inserted_replacement = false;
-    //     For (decl_idx, procedure_polymorph->header->procedure_block->declarations) {
-    //         Declaration *decl = procedure_polymorph->header->procedure_block->declarations[decl_idx];
-    //         if (decl->kind == DECL_POLYMORPHIC && (strcmp(decl->name, replacement->name) == 0)) {
-    //             Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
-    //             assert(poly_decl->declaration == nullptr);
-    //             replacement->parent_block = procedure_polymorph->header->procedure_block;
-    //             poly_decl->declaration = replacement;
-    //             inserted_replacement = true;
-    //         }
-    //     }
-    //     assert(inserted_replacement);
-    // }
 
     for (int i = out_parameter_indices_to_remove->count-1; i >= 0; i--) {
         procedure_polymorph->header->parameters.ordered_remove(i);
