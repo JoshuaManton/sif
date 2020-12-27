@@ -305,53 +305,86 @@ Ast_Struct *parse_struct(Lexer *lexer, char *name_override) {
     EXPECT(lexer, TK_STRUCT, &token);
     Ast_Struct *structure = new Ast_Struct(token.location);
 
-    // name
-    EXPECT(lexer, TK_IDENTIFIER, &token);
-    if (name_override == nullptr) {
-        structure->name = token.text;
-    }
-    else {
-        structure->name = name_override;
-    }
+    bool is_polymorphic = false;
+    {
+        structure->struct_block = new Ast_Block(token.location);
+        Ast_Block *old_block = push_ast_block(structure->struct_block);
+        defer(pop_ast_block(old_block));
 
-    // fields
-    EXPECT(lexer, TK_LEFT_CURLY, nullptr);
-
-    structure->body = parse_block(lexer);
-    if (!structure->body) {
-        return nullptr;
-    }
-    EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
-    For (idx, structure->body->nodes) {
-        Ast_Node *node = structure->body->nodes[idx];
-        switch (node->ast_kind) {
-            case AST_VAR: {
-                Ast_Var *var = (Ast_Var *)node;
-                structure->fields.append(var);
-                break;
-            }
-            case AST_PROC: {
-                Ast_Proc *proc = (Ast_Proc *)node;
-                if (proc->header->operator_to_overload != TK_INVALID) {
-                    assert(proc->header->name == nullptr);
-                    proc->header->struct_to_operator_overload = structure;
-                    structure->operator_overloads.append(proc);
-                    break;
-                }
-                else {
-                    assert(proc->header->name != nullptr);
-                    // note(josh): fallthrough
-                }
-            }
-            default: {
-                report_error(node->location, "Only variable declarations and operator overloads are allowed in structs.");
-                return nullptr;
-            }
+        // name
+        EXPECT(lexer, TK_IDENTIFIER, &token);
+        if (name_override == nullptr) {
+            structure->name = token.text;
+        }
+        else {
+            structure->name = name_override;
         }
 
+        // polymorphic parameters
+        Token maybe_poly;
+        if (!peek_next_token(lexer, &maybe_poly)) {
+            assert(false && "unexpected EOF");
+            return nullptr;
+        }
+        if (maybe_poly.kind == TK_NOT) {
+            is_polymorphic = true;
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            bool first = true;
+            while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
+                if (!first) {
+                    EXPECT(lexer, TK_COMMA, nullptr);
+                }
+
+                Ast_Var *var = parse_var(lexer, false);
+                if (!var) {
+                    return nullptr;
+                }
+                structure->polymorphic_parameters.append(var);
+                first = false;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+        }
+
+        // fields
+        EXPECT(lexer, TK_LEFT_CURLY, nullptr);
+
+        structure->body = parse_block(lexer);
+        if (!structure->body) {
+            return nullptr;
+        }
+        EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
+        For (idx, structure->body->nodes) {
+            Ast_Node *node = structure->body->nodes[idx];
+            switch (node->ast_kind) {
+                case AST_VAR: {
+                    Ast_Var *var = (Ast_Var *)node;
+                    structure->fields.append(var);
+                    break;
+                }
+                case AST_PROC: {
+                    Ast_Proc *proc = (Ast_Proc *)node;
+                    if (proc->header->operator_to_overload != TK_INVALID) {
+                        assert(proc->header->name == nullptr);
+                        proc->header->struct_to_operator_overload = structure;
+                        structure->operator_overloads.append(proc);
+                        break;
+                    }
+                    else {
+                        assert(proc->header->name != nullptr);
+                        // note(josh): fallthrough
+                    }
+                }
+                default: {
+                    report_error(node->location, "Only variable declarations and operator overloads are allowed in structs.");
+                    return nullptr;
+                }
+            }
+        }
     }
 
     structure->declaration = new Struct_Declaration(structure, current_block);
+    structure->declaration->is_polymorphic = is_polymorphic;
     if (!register_declaration(structure->declaration)) {
         return nullptr;
     }
@@ -905,6 +938,7 @@ bool is_postfix_op(Token_Kind kind) {
         case TK_LEFT_SQUARE:
         case TK_LEFT_CURLY:
         case TK_DOT:
+        case TK_NOT:
         case TK_CARET: { // dereference
             return true;
         }
@@ -1166,6 +1200,28 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
             case TK_CARET: {
                 eat_next_token(lexer);
                 base_expr = new Expr_Dereference(base_expr, base_expr->location);
+                break;
+            }
+            case TK_NOT: {
+                eat_next_token(lexer);
+                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+                Array<Ast_Expr *> parameters;
+                parameters.allocator = default_allocator();
+                bool first = true;
+                while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
+                    if (!first) {
+                        EXPECT(lexer, TK_COMMA, nullptr);
+                    }
+
+                    Ast_Expr *expr = parse_expr(lexer);
+                    if (!expr) {
+                        return nullptr;
+                    }
+                    parameters.append(expr);
+                    first = false;
+                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+                base_expr = new Expr_Polymorphic_Type(base_expr, parameters, base_expr->location);
                 break;
             }
             case TK_DOT: {

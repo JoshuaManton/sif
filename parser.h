@@ -222,13 +222,16 @@ struct Ast_Struct : public Ast_Node {
     Type *type = nullptr; // todo(josh): this can probably be a Type_Struct *?
     Array<Ast_Var *> fields = {};
     Ast_Block *body = {};
+    Ast_Block *struct_block = {};
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
+    Array<Ast_Var *> polymorphic_parameters = {};
     Ast_Struct(Location location)
     : Ast_Node(AST_STRUCT, location)
     {
         fields.allocator = default_allocator();
         operator_overloads.allocator = default_allocator();
+        polymorphic_parameters.allocator = default_allocator();
     }
 };
 
@@ -345,6 +348,7 @@ enum Expr_Kind {
     EXPR_TYPEOF,
     EXPR_CAST,
 
+    EXPR_POLYMORPHIC_TYPE,
     EXPR_POINTER_TYPE,
     EXPR_REFERENCE_TYPE,
     EXPR_ARRAY_TYPE,
@@ -559,6 +563,16 @@ struct Expr_Reference_Type : public Ast_Expr {
     Expr_Reference_Type(Ast_Expr *reference_to, Location location)
     : Ast_Expr(EXPR_REFERENCE_TYPE, location)
     , reference_to(reference_to)
+    {}
+};
+
+struct Expr_Polymorphic_Type : public Ast_Expr {
+    Ast_Expr *type_expr = {};
+    Array<Ast_Expr *> parameters = {};
+    Expr_Polymorphic_Type(Ast_Expr *type_expr, Array<Ast_Expr *> parameters, Location location)
+    : Ast_Expr(EXPR_POLYMORPHIC_TYPE, location)
+    , type_expr(type_expr)
+    , parameters(parameters)
     {}
 };
 

@@ -1,6 +1,8 @@
 #include "basic.sif"
 
-// struct Foo($T: typeid) {
+// todo(josh): test what happens when caller doesn't pass parameters
+
+// struct Foo!($T: typeid) {
 //     var data: T;
 // }
 
@@ -17,6 +19,8 @@ proc value_and_type_poly($a: $T) : T {
 }
 
 proc main() {
+    // var poly_struct: Foo!(float);
+
     print_int(value_poly(2));
 
     print_int(type_poly(3));
