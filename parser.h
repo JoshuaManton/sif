@@ -226,12 +226,14 @@ struct Ast_Struct : public Ast_Node {
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
     Array<Ast_Var *> polymorphic_parameters = {};
+    Array<Ast_Struct *> polymorphs = {};
     Ast_Struct(Location location)
     : Ast_Node(AST_STRUCT, location)
     {
         fields.allocator = default_allocator();
         operator_overloads.allocator = default_allocator();
         polymorphic_parameters.allocator = default_allocator();
+        polymorphs.allocator = default_allocator();
     }
 };
 

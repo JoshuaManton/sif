@@ -133,18 +133,25 @@ void add_global_declarations(Ast_Block *block) {
     register_declaration(new Type_Declaration("rawptr", type_rawptr, block));
 }
 
+Type *make_incomplete_type_for_struct(Struct_Declaration *struct_decl) {
+    Type *incomplete_type = new Type_Struct(struct_decl->structure);
+    incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
+    all_types.append(incomplete_type);
+    struct_decl->structure->type = incomplete_type;
+    return incomplete_type;
+}
+
 void make_incomplete_types_for_all_structs() {
     For (idx, g_all_declarations) {
         Declaration *decl = g_all_declarations[idx];
         if (decl->kind != DECL_STRUCT) { // todo(josh): @Speed maybe make a g_all_structs?
             continue;
         }
-
+        if (decl->is_polymorphic) {
+            continue;
+        }
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
-        Type *incomplete_type = new Type_Struct(struct_decl->structure);
-        incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
-        all_types.append(incomplete_type);
-        struct_decl->structure->type = incomplete_type;
+        make_incomplete_type_for_struct(struct_decl);
     }
 }
 
@@ -945,31 +952,6 @@ bool maybe_create_polymorph_value_declaration(Ast_Var *var, Ast_Expr *parameter,
     return true;
 }
 
-Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name) {
-    // re-parse the procedure to be polymorphed
-    Lexer lexer(node_to_polymorph->location.filepath, node_to_polymorph->location.text);
-    lexer.location = node_to_polymorph->location;
-    lexer.location.index = 0;
-    Ast_Block *old_block = push_ast_block(node_to_polymorph->parent_block);
-    defer(pop_ast_block(old_block));
-    String_Builder sb = make_string_builder(default_allocator());
-    sb.print(original_name);
-    sb.printf("__polymorph_%d", total_num_polymorphs);
-    total_num_polymorphs += 1;
-    Ast_Node *new_parse = parse_single_statement(&lexer, true, sb.string());
-    switch (new_parse->ast_kind) {
-        case AST_PROC:
-        case AST_STRUCT: {
-            // all good
-            break;
-        }
-        default: {
-            assert(false);
-        }
-    }
-    return new_parse;
-}
-
 void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
     assert(declaration->parent_block == nullptr);
     bool inserted_replacement = false;
@@ -986,16 +968,44 @@ void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
     assert(inserted_replacement);
 }
 
-Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
-    Ast_Node *procedure_polymorph_node = polymorph_node(proc_to_polymorph, proc_to_polymorph->header->name);
-    assert(procedure_polymorph_node != nullptr);
-    assert(procedure_polymorph_node->ast_kind == AST_PROC);
-    Ast_Proc *procedure_polymorph = (Ast_Proc *)procedure_polymorph_node;
-    proc_to_polymorph->header->polymorphs.append(procedure_polymorph);
+Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
+    // re-parse the node to be polymorphed
+    Lexer lexer(node_to_polymorph->location.filepath, node_to_polymorph->location.text);
+    lexer.location = node_to_polymorph->location;
+    lexer.location.index = 0;
+    Ast_Block *old_block = push_ast_block(node_to_polymorph->parent_block);
+    defer(pop_ast_block(old_block));
+    String_Builder sb = make_string_builder(default_allocator());
+    sb.print(original_name);
+    sb.printf("__polymorph_%d", total_num_polymorphs);
+    total_num_polymorphs += 1;
+    Ast_Node *new_parse = parse_single_statement(&lexer, true, sb.string());
+
+    Array<Ast_Var *> *vars_to_polymorph = {};
+    Ast_Block *block_to_insert_declarations_into = {};
+    switch (new_parse->ast_kind) {
+        case AST_PROC: {
+            Ast_Proc *proc = (Ast_Proc *)new_parse;
+            vars_to_polymorph = &proc->header->parameters;
+            block_to_insert_declarations_into = proc->header->procedure_block;
+            break;
+        }
+        case AST_STRUCT: {
+            Ast_Struct *structure = (Ast_Struct *)new_parse;
+            vars_to_polymorph = &structure->polymorphic_parameters;
+            block_to_insert_declarations_into = structure->struct_block;
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+
+    assert(block_to_insert_declarations_into != nullptr);
 
     // go through the parameters and fill in polymorphic declarations
-    For (idx, procedure_polymorph->header->parameters) {
-        Ast_Var *param_decl = procedure_polymorph->header->parameters[idx];
+    For (idx, *vars_to_polymorph) {
+        Ast_Var *param_decl = (*vars_to_polymorph)[idx];
         Operand *parameter_operand = nullptr;
         Ast_Expr *parameter = parameters[idx];
         Declaration *poly_type_decl = nullptr;
@@ -1008,18 +1018,31 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_lo
         }
 
         if (poly_type_decl) {
-            insert_polymorph_replacement(procedure_polymorph->header->procedure_block, poly_type_decl);
+            insert_polymorph_replacement(block_to_insert_declarations_into, poly_type_decl);
         }
 
         if (poly_value_decl) {
-            insert_polymorph_replacement(procedure_polymorph->header->procedure_block, poly_value_decl);
+            insert_polymorph_replacement(block_to_insert_declarations_into, poly_value_decl);
             out_parameter_indices_to_remove->append(idx);
+        }
+        else {
+            assert(new_parse->ast_kind != AST_STRUCT && "todo(josh): @ErrorHandling all struct parameters must be constant valued");
         }
     }
 
     for (int i = out_parameter_indices_to_remove->count-1; i >= 0; i--) {
-        procedure_polymorph->header->parameters.ordered_remove(i);
+        vars_to_polymorph->ordered_remove(i);
     }
+
+    return new_parse;
+}
+
+Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
+    Ast_Node *procedure_polymorph_node = polymorph_node(proc_to_polymorph, proc_to_polymorph->header->name, parameters, out_parameter_indices_to_remove);
+    assert(procedure_polymorph_node != nullptr);
+    assert(procedure_polymorph_node->ast_kind == AST_PROC);
+    Ast_Proc *procedure_polymorph = (Ast_Proc *)procedure_polymorph_node;
+    proc_to_polymorph->header->polymorphs.append(procedure_polymorph);
 
     procedure_polymorph->declaration->is_polymorphic = false;
     if (!check_declaration(procedure_polymorph->declaration, polymorph_location)) {
@@ -1027,6 +1050,26 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_lo
     }
 
     return procedure_polymorph;
+}
+
+Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
+    Ast_Node *struct_polymorph_node = polymorph_node(structure, structure->name, parameters, out_parameter_indices_to_remove);
+    assert(struct_polymorph_node != nullptr);
+    assert(struct_polymorph_node->ast_kind == AST_STRUCT);
+    Ast_Struct *structure_polymorph = (Ast_Struct *)struct_polymorph_node;
+    structure->polymorphs.append(structure_polymorph);
+
+    structure_polymorph->declaration->is_polymorphic = false;
+    // if (!check_declaration(structure_polymorph->declaration, polymorph_location)) {
+    //     return nullptr;
+    // }
+
+    Type *incomplete_type = make_incomplete_type_for_struct(structure_polymorph->declaration);
+    if (!complete_type(incomplete_type)) {
+        return nullptr;
+    }
+
+    return structure_polymorph;
 }
 
 bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand, Array<Ast_Expr *> *out_params_to_emit) {
@@ -1666,7 +1709,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(ident->resolved_declaration != nullptr);
             if (ident->resolved_declaration->is_polymorphic) {
                 result_operand.type = type_polymorphic;
-                assert(ident->resolved_declaration->kind == DECL_PROC);
                 result_operand.referenced_declaration = ident->resolved_declaration;
             }
             else {
@@ -1888,8 +1930,28 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             Expr_Polymorphic_Type *poly_type = (Expr_Polymorphic_Type *)expr;
             assert(poly_type->parameters.count > 0); // todo(josh)
 
-            assert(false);
+            Operand *type_operand = typecheck_expr(poly_type->type_expr);
+            if (!type_operand) {
+                return nullptr;
+            }
+            assert(is_type_polymorphic(type_operand->type));
+            assert(type_operand->referenced_declaration != nullptr);
+            assert(type_operand->referenced_declaration->kind == DECL_STRUCT);
+            Ast_Struct *referenced_struct = ((Struct_Declaration *)type_operand->referenced_declaration)->structure;
 
+            Array<int> parameter_indices_to_remove;
+            parameter_indices_to_remove.allocator = default_allocator();
+            Ast_Struct *polymorphed_struct = polymorph_struct(referenced_struct, poly_type->location, poly_type->parameters, &parameter_indices_to_remove);
+            if (!polymorphed_struct) {
+                return nullptr;
+            }
+            if (!check_declaration(polymorphed_struct->declaration, poly_type->location)) {
+                return nullptr;
+            }
+            assert(parameter_indices_to_remove.count == poly_type->parameters.count);
+            assert(polymorphed_struct->declaration != nullptr);
+            assert(polymorphed_struct->declaration->operand.type != nullptr);
+            result_operand = polymorphed_struct->declaration->operand;
             break;
         }
         case EXPR_POLYMORPHIC_VARIABLE: {

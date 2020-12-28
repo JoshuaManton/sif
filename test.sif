@@ -1,10 +1,12 @@
 #include "basic.sif"
+// #include "dynamic_array.sif"
 
 // todo(josh): test what happens when caller doesn't pass parameters
 
-// struct Foo!($T: typeid) {
-//     var data: T;
-// }
+struct Foo!($T: typeid, $wowza: int) {
+    var data: T;
+    var arr: [wowza]int;
+}
 
 proc value_poly($a: int) : int {
     return a * a;
@@ -18,8 +20,17 @@ proc value_and_type_poly($a: $T) : T {
     return a * a;
 }
 
+proc thing(foo: $T) {
+    print_int(foo.arr[4]);
+}
+
 proc main() {
-    // var poly_struct: Foo!(float);
+    // var dyn: Dynamic_Array!(float);
+    // dyn.append
+    var poly_struct: Foo!(float, 32);
+    poly_struct.arr[4] = 123;
+    print_int(poly_struct.arr[4]);
+    thing(poly_struct);
 
     print_int(value_poly(2));
 
