@@ -64,13 +64,12 @@ void free(void *ptr);
 void assert(bool condition);
 struct Foo__polymorph_0;
 void thing__polymorph_1(Foo__polymorph_0 foo);
-i64 value_poly__polymorph_2();
-i64 type_poly__polymorph_3(i64 a);
-f32 type_poly__polymorph_4(f32 a);
-i64 type_poly__polymorph_5(i64 a);
-f32 type_poly__polymorph_6(f32 a);
-i64 value_and_type_poly__polymorph_7();
-f32 value_and_type_poly__polymorph_8();
+void thinger__polymorph_2(Foo__polymorph_0 t);
+i64 value_poly__polymorph_3();
+i64 type_poly__polymorph_4(i64 a);
+f32 type_poly__polymorph_5(f32 a);
+i64 value_and_type_poly__polymorph_6();
+f32 value_and_type_poly__polymorph_7();
 void main();
 
 // Actual declarations
@@ -79,41 +78,43 @@ struct Foo__polymorph_0 {
     Static_Array<i64 , 32> arr;
 };
 void thing__polymorph_1(Foo__polymorph_0 foo) {
+    i64 a = 32;
     print_int(foo.arr.elements[4]);
 }
-i64 value_poly__polymorph_2() {
+void thinger__polymorph_2(Foo__polymorph_0 t) {
+}
+i64 value_poly__polymorph_3() {
     return 4;
 }
-i64 type_poly__polymorph_3(i64 a) {
+i64 type_poly__polymorph_4(i64 a) {
     return a * a;
 }
-f32 type_poly__polymorph_4(f32 a) {
+f32 type_poly__polymorph_5(f32 a) {
     return a * a;
 }
-i64 type_poly__polymorph_5(i64 a) {
-    return a * a;
-}
-f32 type_poly__polymorph_6(f32 a) {
-    return a * a;
-}
-i64 value_and_type_poly__polymorph_7() {
+i64 value_and_type_poly__polymorph_6() {
     return 49;
 }
-f32 value_and_type_poly__polymorph_8() {
+f32 value_and_type_poly__polymorph_7() {
     return 64.000000;
 }
 void main() {
-    Foo__polymorph_0 poly_struct = {};
-    poly_struct.arr.elements[4] = 123;
-    print_int(poly_struct.arr.elements[4]);
-    thing__polymorph_1(poly_struct);
-    print_int(value_poly__polymorph_2());
-    print_int(type_poly__polymorph_3(3));
-    print_float(type_poly__polymorph_4(4.000000));
+    Foo__polymorph_0 poly_struct1 = {};
+    Foo__polymorph_0 poly_struct2 = {};
+    poly_struct1 = poly_struct2;
+    thing__polymorph_1(poly_struct1);
+    thing__polymorph_1(poly_struct2);
+    thinger__polymorph_2(poly_struct1);
+    thinger__polymorph_2(poly_struct2);
+    poly_struct1.arr.elements[4] = 123;
+    print_int(poly_struct1.arr.elements[4]);
+    print_int(value_poly__polymorph_3());
+    print_int(type_poly__polymorph_4(3));
+    print_float(type_poly__polymorph_5(4.000000));
     i64 a = 5;
     f32 f = 6.000000;
-    print_int(type_poly__polymorph_5(a));
-    print_float(type_poly__polymorph_6(f));
-    print_int(value_and_type_poly__polymorph_7());
-    print_float(value_and_type_poly__polymorph_8());
+    print_int(type_poly__polymorph_4(a));
+    print_float(type_poly__polymorph_5(f));
+    print_int(value_and_type_poly__polymorph_6());
+    print_float(value_and_type_poly__polymorph_7());
 }

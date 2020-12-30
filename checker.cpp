@@ -133,8 +133,8 @@ void add_global_declarations(Ast_Block *block) {
     register_declaration(new Type_Declaration("rawptr", type_rawptr, block));
 }
 
-Type *make_incomplete_type_for_struct(Struct_Declaration *struct_decl) {
-    Type *incomplete_type = new Type_Struct(struct_decl->structure);
+Type_Struct *make_incomplete_type_for_struct(Struct_Declaration *struct_decl) {
+    Type_Struct *incomplete_type = new Type_Struct(struct_decl->structure);
     incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
     all_types.append(incomplete_type);
     struct_decl->structure->type = incomplete_type;
@@ -427,9 +427,11 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
     }
     else {
-        if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
-            if (!decl->is_polymorphic) {
-                ordered_declarations.append(decl);
+        if (decl->parent_block) { // note(josh): some declarations don't have a parent block yet like when we are doing polymorphs
+            if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
+                if (!decl->is_polymorphic) {
+                    ordered_declarations.append(decl);
+                }
             }
         }
     }
@@ -546,7 +548,9 @@ bool complete_type(Type *type) {
                 else {
                     For (idx, structure->fields) {
                         Ast_Var *var = structure->fields[idx];
-                        assert(check_declaration(var->declaration, var->location));
+                        if (!check_declaration(var->declaration, var->location)) {
+                            return false;
+                        }
                         if (!complete_type(var->type)) {
                             return false;
                         }
@@ -888,69 +892,231 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
     return false;
 }
 
+bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Operand *out_operand) {
+    Type *most_concrete = get_most_concrete_type(lhs.type, rhs.type);
 
-
-int total_num_polymorphs = 0;
-
-bool maybe_create_polymorph_type_declaration(Ast_Var *var, Ast_Expr *parameter, Declaration **out_declaration) {
-    switch (var->type_expr->expr_kind) {
-        case EXPR_IDENTIFIER: {
-            break;
-        }
-        case EXPR_POLYMORPHIC_VARIABLE: {
-            // name: $T
-            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)var->type_expr;
-            assert(poly->poly_decl->declaration == nullptr);
-            Operand *parameter_operand = typecheck_expr(parameter);
-            assert(parameter_operand->type != nullptr);
-            Type *concrete_type = try_concretize_type_without_context(parameter_operand->type);
-            if (!concrete_type) {
-                assert(false && "todo(josh): error message");
-            }
-            *out_declaration = new Type_Declaration(poly->ident->name, concrete_type, nullptr);
-            return true;
-        }
-        default: {
-            assert(false);
-        }
-    }
-    return true;
-}
-
-bool maybe_create_polymorph_value_declaration(Ast_Var *var, Ast_Expr *parameter, Declaration **out_declaration) {
-    switch (var->name_expr->expr_kind) {
-        case EXPR_IDENTIFIER: {
-            break;
-        }
-        case EXPR_POLYMORPHIC_VARIABLE: {
-            // $name: T
-            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)var->name_expr;
-            assert(poly->poly_decl->declaration == nullptr);
-            Operand *type_operand = typecheck_expr(var->type_expr);
-            Operand *parameter_operand = nullptr;
-            if (!is_type_polymorphic(type_operand->type)) {
-                parameter_operand = typecheck_expr(parameter, type_operand->type_value);
-                if (!parameter_operand) {
+    Operand result_operand(location);
+    result_operand.flags |= OPERAND_RVALUE;
+    switch (op) {
+        case TK_EQUAL_TO: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value    == rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value  == rhs.float_value;
+                else if (is_type_bool(lhs.type)    && is_type_bool(rhs.type))     result_operand.bool_value = lhs.bool_value   == rhs.bool_value;
+                else if (is_type_typeid(lhs.type)  && is_type_typeid(rhs.type))   result_operand.bool_value = lhs.type_value   == rhs.type_value;
+                else if (is_type_string(lhs.type)  && is_type_string(rhs.type))   result_operand.bool_value = (lhs.escaped_string_length == rhs.escaped_string_length) && (strcmp(lhs.escaped_string_value, rhs.escaped_string_value) == 0);
+                else {
+                    report_error(location, "Operator == is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
                 }
             }
-            else {
-                parameter_operand = typecheck_expr(parameter);
+            break;
+        }
+        case TK_NOT_EQUAL_TO: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value   != rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value != rhs.float_value;
+                else if (is_type_bool(lhs.type)    && is_type_bool(rhs.type))     result_operand.bool_value = lhs.bool_value  != rhs.bool_value;
+                else if (is_type_typeid(lhs.type)  && is_type_typeid(rhs.type))   result_operand.bool_value = lhs.type_value  != rhs.type_value;
+                else if (is_type_string(lhs.type)  && is_type_string(rhs.type))   result_operand.bool_value = (lhs.escaped_string_length != rhs.escaped_string_length) || (strcmp(lhs.escaped_string_value, rhs.escaped_string_value) != 0);
+                else {
+                    report_error(location, "Operator != is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
             }
-            assert(parameter_operand->type != nullptr);
-            if (!(parameter_operand->flags & OPERAND_CONSTANT)) {
-                report_error(parameter->location, "Parameter must be constant for polymorphic variable.");
-                return false;
+            break;
+        }
+        case TK_PLUS: {
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   + rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value + rhs.float_value;
+                else if (is_type_string(lhs.type)  && is_type_string(rhs.type)) {
+                    int total_length_scanned = (lhs.scanned_string_length + rhs.scanned_string_length);
+                    int total_length_escaped = (lhs.escaped_string_length + rhs.escaped_string_length);
+                    char *new_scanned_string = (char *)alloc(default_allocator(), total_length_scanned+1);
+                    memcpy(new_scanned_string, lhs.scanned_string_value, lhs.scanned_string_length);
+                    memcpy(new_scanned_string+lhs.scanned_string_length, rhs.scanned_string_value, rhs.scanned_string_length);
+                    char *new_escaped_string = (char *)alloc(default_allocator(), total_length_escaped+1);
+                    memcpy(new_escaped_string, lhs.escaped_string_value, lhs.escaped_string_length);
+                    memcpy(new_escaped_string+lhs.escaped_string_length, rhs.escaped_string_value, rhs.escaped_string_length);
+                    new_scanned_string[total_length_scanned] = '\0';
+                    new_escaped_string[total_length_escaped] = '\0';
+                    result_operand.scanned_string_value = new_scanned_string;
+                    result_operand.scanned_string_length = total_length_scanned;
+                    result_operand.escaped_string_value = new_escaped_string;
+                    result_operand.escaped_string_length = total_length_escaped;
+                }
+                else {
+                    report_error(location, "Operator + is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
             }
-            *out_declaration = new Constant_Declaration(poly->ident->name, *parameter_operand, nullptr, parameter->location);
-            return true;
+            break;
+        }
+        case TK_MINUS: {
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   - rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value - rhs.float_value;
+                else {
+                    report_error(location, "Operator - is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_MULTIPLY: {
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   * rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value * rhs.float_value;
+                else {
+                    report_error(location, "Operator * is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_DIVIDE: {
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   / rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value / rhs.float_value;
+                else {
+                    report_error(location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_AMPERSAND: { // note(josh): BIT_AND
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value & rhs.int_value;
+                else {
+                    report_error(location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_BIT_OR: {
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value | rhs.int_value;
+                else {
+                    report_error(location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_LESS_THAN: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   < rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value < rhs.float_value;
+                else {
+                    report_error(location, "Operator < is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_LESS_THAN_OR_EQUAL: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   <= rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value <= rhs.float_value;
+                else {
+                    report_error(location, "Operator <= is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_GREATER_THAN: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   > rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value > rhs.float_value;
+                else {
+                    report_error(location, "Operator > is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_GREATER_THAN_OR_EQUAL: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   >= rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value >= rhs.float_value;
+                else {
+                    report_error(location, "Operator >= is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_BOOLEAN_AND: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_bool(lhs.type) && is_type_bool(rhs.type))  result_operand.bool_value = lhs.bool_value && rhs.bool_value;
+                else {
+                    report_error(location, "Operator && is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_BOOLEAN_OR: {
+            result_operand.type = type_bool;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_bool(lhs.type) && is_type_bool(rhs.type))  result_operand.bool_value = lhs.bool_value || rhs.bool_value;
+                else {
+                    report_error(location, "Operator || is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
+        case TK_LEFT_SHIFT: {
+            UNIMPLEMENTED(TK_LEFT_SHIFT);
+        }
+        case TK_RIGHT_SHIFT: {
+            UNIMPLEMENTED(TK_RIGHT_SHIFT);
         }
         default: {
+            printf("Unhandled operator: %s\n", token_string(op));
             assert(false);
         }
     }
+
+    *out_operand = result_operand;
     return true;
 }
+
+
+
+int total_num_polymorphs = 0;
 
 void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
     assert(declaration->parent_block == nullptr);
@@ -968,7 +1134,225 @@ void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
     assert(inserted_replacement);
 }
 
-Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
+bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
+    switch (value_expr->expr_kind) {
+        case EXPR_IDENTIFIER: {
+            break;
+        }
+        case EXPR_POLYMORPHIC_VARIABLE: {
+            // $name: T
+            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)value_expr;
+            assert(poly->poly_decl->declaration == nullptr);
+            assert(parameter_operand.type != nullptr);
+            if (!(parameter_operand.flags & OPERAND_CONSTANT)) {
+                report_error(parameter_operand.location, "Parameter must be constant for polymorphic variable.");
+                return false;
+            }
+            assert(parameter_operand.type != nullptr);
+            out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, parameter_operand, nullptr, parameter_operand.location));
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+    return true;
+}
+
+bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
+    switch (type_expr->expr_kind) {
+        case EXPR_IDENTIFIER: {
+            break;
+        }
+        case EXPR_POLYMORPHIC_VARIABLE: {
+            // name: $T
+            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)type_expr;
+            assert(poly->poly_decl->declaration == nullptr);
+            assert(parameter_operand.type != nullptr);
+            Type *concrete_type = try_concretize_type_without_context(parameter_operand.type);
+            if (!concrete_type) {
+                assert(false && "todo(josh): error message");
+            }
+            Operand type_operand(parameter_operand.location);
+            type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
+            type_operand.type = type_typeid;
+            type_operand.type_value = concrete_type;
+            out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_operand.location));
+            break;
+        }
+        case EXPR_POLYMORPHIC_TYPE: {
+            Expr_Polymorphic_Type *poly_type = (Expr_Polymorphic_Type *)type_expr;
+            Operand *type_expr_operand = typecheck_expr(poly_type->type_expr);
+            if (!is_type_polymorphic(type_expr_operand->type)) {
+                report_error(poly_type->type_expr->location, "Expected a polymorphic struct type.");
+                return false;
+            }
+            assert(type_expr_operand->referenced_declaration != nullptr);
+            assert(type_expr_operand->referenced_declaration->kind == DECL_STRUCT);
+            Ast_Struct *referenced_struct = ((Struct_Declaration *)type_expr_operand->referenced_declaration)->structure;
+            assert(referenced_struct != nullptr);
+            assert(poly_type->type_expr->operand.type != nullptr);
+            assert(parameter_operand.type != nullptr);
+            if (!is_type_struct(parameter_operand.type)) {
+                report_error(parameter_operand.location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
+                return false;
+            }
+            Type_Struct *struct_type = (Type_Struct *)parameter_operand.type;
+            if (struct_type->is_polymorph_of == nullptr) {
+                report_error(parameter_operand.location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
+                return false;
+            }
+            if (struct_type->is_polymorph_of != referenced_struct) {
+                report_error(parameter_operand.location, "Expected an instance of '%s', got '%s'.", referenced_struct->name, struct_type->is_polymorph_of->name);
+                return false;
+            }
+            For (idx, poly_type->parameters) {
+                Ast_Expr *poly_expr = poly_type->parameters[idx];
+                assert(poly_expr->expr_kind == EXPR_POLYMORPHIC_VARIABLE);
+                Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)poly_expr;
+                Operand param_operand = struct_type->polymorphic_parameter_values[idx];
+                assert(param_operand.type != nullptr);
+                out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, param_operand, nullptr, param_operand.location));
+            }
+            break;
+        }
+        // case EXPR_POINTER_TYPE: {
+        //     Expr_Pointer_Type *pointer = (Expr_Pointer_Type *)type_expr;
+        //     if (!is_type_pointer(parameter_operand.type)) {
+        //         type_mismatch(parameter_operand.location, parameter_operand)
+        //     }
+        //     return try_create_polymorph_type_declarations(pointer->pointer_to);
+        // }
+        default: {
+            assert(false);
+        }
+    }
+    return true;
+}
+
+bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
+    if (!try_create_polymorph_type_declarations(var->type_expr, parameter_operand, out_polymorphic_declarations)) {
+        return false;
+    }
+
+    if (!try_create_polymorph_value_declaration(var->name_expr, parameter_operand, out_polymorphic_declarations)) {
+        return false;
+    }
+
+    return true;
+}
+
+Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Operand> parameters, Location polymorph_location, Array<int> *polymorphic_constants) {
+    Array<Declaration *> polymorphic_declarations;
+    polymorphic_declarations.allocator = default_allocator();
+
+    // create polymorphic declarations and deduplicate polymorphs
+    {
+        Array<Ast_Var *> *root_vars_to_polymorph = {};
+        switch (node_to_polymorph->ast_kind) {
+            case AST_PROC: {
+                Ast_Proc *proc = (Ast_Proc *)node_to_polymorph;
+                root_vars_to_polymorph = &proc->header->parameters;
+                break;
+            }
+            case AST_STRUCT: {
+                Ast_Struct *structure = (Ast_Struct *)node_to_polymorph;
+                root_vars_to_polymorph = &structure->polymorphic_parameters;
+                break;
+            }
+            default: {
+                assert(false);
+            }
+        }
+
+        if (parameters.count != root_vars_to_polymorph->count) {
+            report_error(polymorph_location, "Expected %d parameter(s), got %d.", root_vars_to_polymorph->count, parameters.count);
+            return false;
+        }
+
+        // go through the parameters and create polymorphic declarations
+        For (idx, *root_vars_to_polymorph) {
+            Ast_Var *param_decl = (*root_vars_to_polymorph)[idx];
+            Operand parameter_operand = parameters[idx];
+            if (!try_create_polymorph_declarations(param_decl, parameter_operand, &polymorphic_declarations)) {
+                report_info(polymorph_location, "Error during polymorph triggered here.");
+                return nullptr;
+            }
+            if (param_decl->is_polymorphic_value) {
+                polymorphic_constants->append(idx);
+            }
+        }
+
+        // check the declarations
+        For (idx, polymorphic_declarations) {
+            Declaration *decl = polymorphic_declarations[idx];
+            if (!check_declaration(decl, decl->location)) {
+                report_info(polymorph_location, "Error during polymorph triggered here.");
+                return nullptr;
+            }
+        }
+
+        // deduplicate
+        switch (node_to_polymorph->ast_kind) {
+            case AST_PROC: {
+                Ast_Proc *proc_to_polymorph = (Ast_Proc *)node_to_polymorph;
+                assert(parameters.count == proc_to_polymorph->header->parameters.count);
+                For (idx, proc_to_polymorph->polymorphs) {
+                    Node_Polymorph polymorph = proc_to_polymorph->polymorphs[idx];
+                    bool all_matched = true;
+                    assert(polymorph.polymorph_values.count == polymorphic_declarations.count);
+                    For (value_idx, polymorph.polymorph_values) {
+                        Operand poly_value  = polymorph.polymorph_values[value_idx];
+                        Operand param_value = polymorphic_declarations[value_idx]->operand;
+                        assert(param_value.type != nullptr);
+                        Operand result;
+                        bool ok = binary_eval(poly_value, param_value, TK_EQUAL_TO, param_value.location, &result);
+                        assert(ok);
+                        assert(result.type == type_bool);
+                        assert(result.flags & OPERAND_CONSTANT);
+                        if (result.bool_value == false) {
+                            all_matched = false;
+                            break;
+                        }
+                    }
+
+                    if (all_matched) {
+                        return (Ast_Proc *)polymorph.polymorphed_node;
+                    }
+                }
+                break;
+            }
+            case AST_STRUCT: {
+                Ast_Struct *structure = (Ast_Struct *)node_to_polymorph;
+                For (idx, structure->polymorphs) {
+                    Node_Polymorph polymorph = structure->polymorphs[idx];
+                    bool all_matched = true;
+                    For (value_idx, polymorph.polymorph_values) {
+                        Operand poly_value  = polymorph.polymorph_values[value_idx];
+                        Operand param_value = parameters[value_idx];
+                        Operand result;
+                        bool ok = binary_eval(poly_value, param_value, TK_EQUAL_TO, param_value.location, &result);
+                        assert(ok);
+                        assert(result.type == type_bool);
+                        assert(result.flags & OPERAND_CONSTANT);
+                        if (result.bool_value == false) {
+                            all_matched = false;
+                            break;
+                        }
+                    }
+
+                    if (all_matched) {
+                        return (Ast_Struct *)polymorph.polymorphed_node;
+                    }
+                }
+                break;
+            }
+            default: {
+                assert(false);
+            }
+        }
+    }
+
     // re-parse the node to be polymorphed
     Lexer lexer(node_to_polymorph->location.filepath, node_to_polymorph->location.text);
     lexer.location = node_to_polymorph->location;
@@ -981,19 +1365,19 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     total_num_polymorphs += 1;
     Ast_Node *new_parse = parse_single_statement(&lexer, true, sb.string());
 
-    Array<Ast_Var *> *vars_to_polymorph = {};
     Ast_Block *block_to_insert_declarations_into = {};
+    Array<Ast_Var *> *polymorph_vars = {};
     switch (new_parse->ast_kind) {
         case AST_PROC: {
             Ast_Proc *proc = (Ast_Proc *)new_parse;
-            vars_to_polymorph = &proc->header->parameters;
             block_to_insert_declarations_into = proc->header->procedure_block;
+            polymorph_vars = &proc->header->parameters;
             break;
         }
         case AST_STRUCT: {
             Ast_Struct *structure = (Ast_Struct *)new_parse;
-            vars_to_polymorph = &structure->polymorphic_parameters;
             block_to_insert_declarations_into = structure->struct_block;
+            polymorph_vars = &structure->polymorphic_parameters;
             break;
         }
         default: {
@@ -1003,72 +1387,100 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
 
     assert(block_to_insert_declarations_into != nullptr);
 
-    // go through the parameters and fill in polymorphic declarations
-    For (idx, *vars_to_polymorph) {
-        Ast_Var *param_decl = (*vars_to_polymorph)[idx];
-        Operand *parameter_operand = nullptr;
-        Ast_Expr *parameter = parameters[idx];
-        Declaration *poly_type_decl = nullptr;
-        Declaration *poly_value_decl = nullptr;
-        bool ok = false;
-        ok = maybe_create_polymorph_type_declaration  (param_decl, parameter, &poly_type_decl);
-        ok &= maybe_create_polymorph_value_declaration(param_decl, parameter, &poly_value_decl);
-        if (!ok) {
-            return false;
+    Array<Operand> polymorph_values;
+    polymorph_values.allocator = default_allocator();
+    For (idx, polymorphic_declarations) {
+        Declaration *poly_decl = polymorphic_declarations[idx];
+        insert_polymorph_replacement(block_to_insert_declarations_into, poly_decl);
+        if (!check_declaration(poly_decl, polymorph_location)) { // todo(josh): put the real parameter location in here
+            report_info(polymorph_location, "Error during polymorph triggered here.");
+            return nullptr;
         }
-
-        if (poly_type_decl) {
-            insert_polymorph_replacement(block_to_insert_declarations_into, poly_type_decl);
-        }
-
-        if (poly_value_decl) {
-            insert_polymorph_replacement(block_to_insert_declarations_into, poly_value_decl);
-            out_parameter_indices_to_remove->append(idx);
-        }
-        else {
-            assert(new_parse->ast_kind != AST_STRUCT && "todo(josh): @ErrorHandling all struct parameters must be constant valued");
-        }
+        assert(poly_decl->operand.type != nullptr);
+        polymorph_values.append(poly_decl->operand);
     }
 
-    for (int i = out_parameter_indices_to_remove->count-1; i >= 0; i--) {
-        vars_to_polymorph->ordered_remove(i);
+    for (int i = polymorphic_constants->count-1; i >= 0; i--) {
+        polymorph_vars->ordered_remove(i);
+    }
+
+    Node_Polymorph new_poly_node = {};
+    new_poly_node.polymorphed_node = new_parse;
+    new_poly_node.polymorph_values = polymorph_values;
+    node_to_polymorph->polymorphs.append(new_poly_node);
+
+    switch (new_parse->ast_kind) {
+        case AST_STRUCT: {
+            Ast_Struct *structure_polymorph = (Ast_Struct *)new_parse;
+            structure_polymorph->declaration->is_polymorphic = false;
+            Type_Struct *incomplete_type = make_incomplete_type_for_struct(structure_polymorph->declaration);
+            incomplete_type->polymorphic_parameter_values = parameters;
+            incomplete_type->is_polymorph_of = (Ast_Struct *)node_to_polymorph;
+            // todo(josh): I'm not sure if this should be here or if it should just happen with each usage like with every other time with call complete_type()
+            if (!complete_type(incomplete_type)) {
+                report_info(polymorph_location, "Error during polymorph triggered here.");
+                return nullptr;
+            }
+            break;
+        }
+        case AST_PROC: {
+            Ast_Proc *procedure_polymorph = (Ast_Proc *)new_parse;
+            procedure_polymorph->declaration->is_polymorphic = false;
+            if (!check_declaration(procedure_polymorph->declaration, polymorph_location)) {
+                report_info(polymorph_location, "Error during polymorph triggered here.");
+                return nullptr;
+            }
+            break;
+        }
+        default: {
+            assert(false);
+        }
     }
 
     return new_parse;
 }
 
-Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
-    Ast_Node *procedure_polymorph_node = polymorph_node(proc_to_polymorph, proc_to_polymorph->header->name, parameters, out_parameter_indices_to_remove);
-    assert(procedure_polymorph_node != nullptr);
-    assert(procedure_polymorph_node->ast_kind == AST_PROC);
-    Ast_Proc *procedure_polymorph = (Ast_Proc *)procedure_polymorph_node;
-    proc_to_polymorph->header->polymorphs.append(procedure_polymorph);
-
-    procedure_polymorph->declaration->is_polymorphic = false;
-    if (!check_declaration(procedure_polymorph->declaration, polymorph_location)) {
-        return nullptr;
+Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *polymorphic_constants) {
+    // todo(josh): compress this out with the one in polymorph_struct()
+    Array<Operand> parameter_operands = {};
+    parameter_operands.allocator = default_allocator();
+    For (idx, parameters) {
+        Ast_Expr *parameter = parameters[idx];
+        Operand *param_operand = typecheck_expr(parameter);
+        parameter_operands.append(*param_operand);
     }
 
+    Ast_Node *procedure_polymorph_node = polymorph_node(proc_to_polymorph, proc_to_polymorph->header->name, parameter_operands, polymorph_location, polymorphic_constants);
+    if (!procedure_polymorph_node) {
+        return nullptr;
+    }
+    assert(procedure_polymorph_node->ast_kind == AST_PROC);
+    Ast_Proc *procedure_polymorph = (Ast_Proc *)procedure_polymorph_node;
     return procedure_polymorph;
 }
 
-Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *out_parameter_indices_to_remove) {
-    Ast_Node *struct_polymorph_node = polymorph_node(structure, structure->name, parameters, out_parameter_indices_to_remove);
-    assert(struct_polymorph_node != nullptr);
-    assert(struct_polymorph_node->ast_kind == AST_STRUCT);
-    Ast_Struct *structure_polymorph = (Ast_Struct *)struct_polymorph_node;
-    structure->polymorphs.append(structure_polymorph);
-
-    structure_polymorph->declaration->is_polymorphic = false;
-    // if (!check_declaration(structure_polymorph->declaration, polymorph_location)) {
-    //     return nullptr;
-    // }
-
-    Type *incomplete_type = make_incomplete_type_for_struct(structure_polymorph->declaration);
-    if (!complete_type(incomplete_type)) {
-        return nullptr;
+Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location, Array<Ast_Expr *> parameters) {
+    // todo(josh): compress this out with the one in polymorph_procedure()
+    Array<Operand> parameter_operands = {};
+    parameter_operands.allocator = default_allocator();
+    For (idx, parameters) {
+        Ast_Expr *parameter = parameters[idx];
+        Operand *param_operand = typecheck_expr(parameter);
+        if (!(param_operand->flags & OPERAND_CONSTANT)) {
+            report_error(parameter->location, "Value must be constant for struct polymorph.");
+            return nullptr;
+        }
+        parameter_operands.append(*param_operand);
     }
 
+    Array<int> parameter_indices_to_remove;
+    parameter_indices_to_remove.allocator = default_allocator();
+    Ast_Node *struct_polymorph_node = polymorph_node(structure, structure->name, parameter_operands, polymorph_location, &parameter_indices_to_remove);
+    if (!struct_polymorph_node) {
+        return nullptr;
+    }
+    assert(struct_polymorph_node->ast_kind == AST_STRUCT);
+    Ast_Struct *structure_polymorph = (Ast_Struct *)struct_polymorph_node;
     return structure_polymorph;
 }
 
@@ -1094,7 +1506,6 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         parameter_indices_to_remove.allocator = default_allocator();
         procedure_polymorph = polymorph_procedure(referenced_procedure, expr->location, parameters, &parameter_indices_to_remove);
         if (procedure_polymorph == nullptr) {
-            report_info(expr->location, "This polymorph was generated here.");
             return false;
         }
         for (int i = parameter_indices_to_remove.count-1; i >= 0; i--) {
@@ -1227,7 +1638,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             assert(!is_type_incomplete(lhs_operand->type));
             assert(!is_type_incomplete(rhs_operand->type));
-            result_operand.flags |= OPERAND_RVALUE;
             Type *most_concrete = get_most_concrete_type(lhs_operand->type, rhs_operand->type);
             if (expected_type != nullptr) {
                 most_concrete = get_most_concrete_type(most_concrete, expected_type);
@@ -1252,217 +1662,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
 
                 assert(match_types(lhs_operand, most_concrete));
                 assert(match_types(rhs_operand, most_concrete));
-                switch (binary->op) {
-                    case TK_EQUAL_TO: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value    == rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value  == rhs_operand->float_value;
-                            else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value   == rhs_operand->bool_value;
-                            else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value   == rhs_operand->type_value;
-                            else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length == rhs_operand->escaped_string_length) && (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) == 0);
-                            else {
-                                report_error(binary->location, "Operator == is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_NOT_EQUAL_TO: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.bool_value = lhs_operand->int_value   != rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.bool_value = lhs_operand->float_value != rhs_operand->float_value;
-                            else if (is_type_bool(lhs_operand->type)    && is_type_bool(rhs_operand->type))     result_operand.bool_value = lhs_operand->bool_value  != rhs_operand->bool_value;
-                            else if (is_type_typeid(lhs_operand->type)  && is_type_typeid(rhs_operand->type))   result_operand.bool_value = lhs_operand->type_value  != rhs_operand->type_value;
-                            else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type))   result_operand.bool_value = (lhs_operand->escaped_string_length != rhs_operand->escaped_string_length) || (strcmp(lhs_operand->escaped_string_value, rhs_operand->escaped_string_value) != 0);
-                            else {
-                                report_error(binary->location, "Operator != is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_PLUS: {
-                        result_operand.type = most_concrete;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   + rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value + rhs_operand->float_value;
-                            else if (is_type_string(lhs_operand->type)  && is_type_string(rhs_operand->type)) {
-                                int total_length_scanned = (lhs_operand->scanned_string_length + rhs_operand->scanned_string_length);
-                                int total_length_escaped = (lhs_operand->escaped_string_length + rhs_operand->escaped_string_length);
-                                char *new_scanned_string = (char *)alloc(default_allocator(), total_length_scanned+1);
-                                memcpy(new_scanned_string, lhs_operand->scanned_string_value, lhs_operand->scanned_string_length);
-                                memcpy(new_scanned_string+lhs_operand->scanned_string_length, rhs_operand->scanned_string_value, rhs_operand->scanned_string_length);
-                                char *new_escaped_string = (char *)alloc(default_allocator(), total_length_escaped+1);
-                                memcpy(new_escaped_string, lhs_operand->escaped_string_value, lhs_operand->escaped_string_length);
-                                memcpy(new_escaped_string+lhs_operand->escaped_string_length, rhs_operand->escaped_string_value, rhs_operand->escaped_string_length);
-                                new_scanned_string[total_length_scanned] = '\0';
-                                new_escaped_string[total_length_escaped] = '\0';
-                                result_operand.scanned_string_value = new_scanned_string;
-                                result_operand.scanned_string_length = total_length_scanned;
-                                result_operand.escaped_string_value = new_escaped_string;
-                                result_operand.escaped_string_length = total_length_escaped;
-                            }
-                            else {
-                                report_error(binary->location, "Operator + is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_MINUS: {
-                        result_operand.type = most_concrete;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   - rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value - rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator - is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_MULTIPLY: {
-                        result_operand.type = most_concrete;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   * rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value * rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator * is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_DIVIDE: {
-                        result_operand.type = most_concrete;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   / rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value / rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_AMPERSAND: { // note(josh): BIT_AND
-                        result_operand.type = most_concrete;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value & rhs_operand->int_value;
-                            else {
-                                report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_BIT_OR: {
-                        result_operand.type = most_concrete;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value = lhs_operand->int_value | rhs_operand->int_value;
-                            else {
-                                report_error(binary->location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_LESS_THAN: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   < rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value < rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator < is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_LESS_THAN_OR_EQUAL: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   <= rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value <= rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator <= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_GREATER_THAN: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   > rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value > rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator > is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_GREATER_THAN_OR_EQUAL: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_integer(lhs_operand->type) && is_type_integer(rhs_operand->type))  result_operand.int_value   = lhs_operand->int_value   >= rhs_operand->int_value;
-                            else if (is_type_float(lhs_operand->type)   && is_type_float(rhs_operand->type))    result_operand.float_value = lhs_operand->float_value >= rhs_operand->float_value;
-                            else {
-                                report_error(binary->location, "Operator >= is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_BOOLEAN_AND: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value && rhs_operand->bool_value;
-                            else {
-                                report_error(binary->location, "Operator && is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_BOOLEAN_OR: {
-                        result_operand.type = type_bool;
-                        if ((lhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_CONSTANT)) {
-                            result_operand.flags |= OPERAND_CONSTANT;
-                                 if (is_type_bool(lhs_operand->type) && is_type_bool(rhs_operand->type))  result_operand.bool_value = lhs_operand->bool_value || rhs_operand->bool_value;
-                            else {
-                                report_error(binary->location, "Operator || is unsupported for types '%s' and '%s'.", type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                                return nullptr;
-                            }
-                        }
-                        break;
-                    }
-                    case TK_LEFT_SHIFT: {
-                        UNIMPLEMENTED(TK_LEFT_SHIFT);
-                    }
-                    case TK_RIGHT_SHIFT: {
-                        UNIMPLEMENTED(TK_RIGHT_SHIFT);
-                    }
-                    default: {
-                        printf("Unhandled operator: %s\n", token_string(binary->op));
-                        assert(false);
-                    }
+                bool ok = binary_eval(*lhs_operand, *rhs_operand, binary->op, binary->location, &result_operand);
+                if (!ok) {
+                    return nullptr;
                 }
             }
             else {
@@ -1710,6 +1912,14 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (ident->resolved_declaration->is_polymorphic) {
                 result_operand.type = type_polymorphic;
                 result_operand.referenced_declaration = ident->resolved_declaration;
+                switch (ident->resolved_declaration->kind) {
+                    case DECL_STRUCT: {
+                        break;
+                    }
+                    case DECL_PROC: {
+                        break;
+                    }
+                }
             }
             else {
                 if (!check_declaration(ident->resolved_declaration, ident->location, &result_operand)) {
@@ -1939,16 +2149,13 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(type_operand->referenced_declaration->kind == DECL_STRUCT);
             Ast_Struct *referenced_struct = ((Struct_Declaration *)type_operand->referenced_declaration)->structure;
 
-            Array<int> parameter_indices_to_remove;
-            parameter_indices_to_remove.allocator = default_allocator();
-            Ast_Struct *polymorphed_struct = polymorph_struct(referenced_struct, poly_type->location, poly_type->parameters, &parameter_indices_to_remove);
+            Ast_Struct *polymorphed_struct = polymorph_struct(referenced_struct, poly_type->location, poly_type->parameters);
             if (!polymorphed_struct) {
                 return nullptr;
             }
             if (!check_declaration(polymorphed_struct->declaration, poly_type->location)) {
                 return nullptr;
             }
-            assert(parameter_indices_to_remove.count == poly_type->parameters.count);
             assert(polymorphed_struct->declaration != nullptr);
             assert(polymorphed_struct->declaration->operand.type != nullptr);
             result_operand = polymorphed_struct->declaration->operand;

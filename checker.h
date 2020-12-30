@@ -79,11 +79,15 @@ struct Type_Primitive : public Type {
 struct Type_Struct : public Type {
     char *name = nullptr;
     Ast_Struct *ast_struct = {};
+    Ast_Struct *is_polymorph_of = {};
+    Array<Operand> polymorphic_parameter_values = {};
     Type_Struct(Ast_Struct *structure)
     : Type(TYPE_STRUCT)
     , name(structure->name)
     , ast_struct(structure)
-    {}
+    {
+        polymorphic_parameter_values.allocator = default_allocator();
+    }
 };
 
 struct Type_Enum : public Type {

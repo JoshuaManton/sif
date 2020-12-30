@@ -50,6 +50,10 @@ bool register_declaration(Declaration *new_declaration) {
 
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
 
+
+
+bool did_parse_polymorphic_thing = false;
+
 Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
@@ -73,6 +77,8 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     }
 
     bool is_constant = root_token.kind == TK_CONST;
+
+    did_parse_polymorphic_thing = false;
 
     Ast_Expr *name_expr = parse_expr(lexer);
     bool is_polymorphic_value = false;
@@ -125,7 +131,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         return nullptr;
     }
 
-    Ast_Var *var = new Ast_Var(var_name, name_expr, type_expr, expr, is_constant, root_token.location);
+    Ast_Var *var = new Ast_Var(var_name, name_expr, type_expr, expr, is_constant, did_parse_polymorphic_thing, root_token.location);
     var->declaration = new Var_Declaration(var, current_block);
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
@@ -135,8 +141,6 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     }
     return var;
 }
-
-bool did_parse_polymorphic_thing = false;
 
 Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Token token;
@@ -149,10 +153,6 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Ast_Block *procedure_block = new Ast_Block(token.location);
     Ast_Block *old_block = push_ast_block(procedure_block);
     defer(pop_ast_block(old_block));
-
-    bool old_value = did_parse_polymorphic_thing;
-    did_parse_polymorphic_thing = false;
-    defer(did_parse_polymorphic_thing = old_value);
 
     bool is_operator_overload = false;
     Token_Kind operator_to_overload = TK_INVALID;
@@ -209,6 +209,8 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Array<Ast_Var *> parameters = {};
     parameters.allocator = default_allocator();
     bool first = true;
+    Array<int> polymorphic_parameter_indices;
+    polymorphic_parameter_indices.allocator = default_allocator();
     while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
         if (!first) {
             EXPECT(lexer, TK_COMMA, nullptr);
@@ -218,6 +220,10 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         if (!var) {
             return nullptr;
         }
+        if (var->is_polymorphic) {
+            polymorphic_parameter_indices.append(parameters.count);
+        }
+
         parameters.append(var);
         first = false;
     }
@@ -257,7 +263,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         proc_name = name_override;
     }
 
-    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, did_parse_polymorphic_thing, proc_location);
+    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, proc_location);
 }
 
 Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {

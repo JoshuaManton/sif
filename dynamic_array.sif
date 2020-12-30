@@ -1,41 +1,41 @@
-struct Dynamic_Array_Int {
-    var array: []int;
+struct Dynamic_Array!($T: typeid) {
+    var array: []T;
     var count: int;
-    operator [](dyn: >Dynamic_Array_Int, index: int) : >int {
+    operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
         return dyn.array[index];
     }
 }
 
-proc append(dyn: ^Dynamic_Array_Int, value: int) {
+proc append(dyn: ^Dynamic_Array($T), value: T) {
     maybe_grow(dyn);
     assert(dyn.count < dyn.array.count);
-    dyn.array[dyn.count] = value;
+    dyn[dyn.count] = value;
     dyn.count += 1;
 }
 
-proc maybe_grow(dyn: ^Dynamic_Array_Int) {
+proc maybe_grow(dyn: ^Dynamic_Array($T)) {
     if (dyn.count == dyn.array.count) {
         if (dyn.array.data != null) {
             free(dyn.array.data);
         }
         var new_cap = 8 + dyn.array.count * 2;
-        dyn.array.data = cast(^int, alloc(new_cap * sizeof(int)));
+        dyn.array.data = cast(^int, alloc(new_cap * sizeof(T)));
         dyn.array.count = new_cap;
     }
 }
 
-proc pop(dyn: ^Dynamic_Array_Int) : int {
+proc pop(dyn: ^Dynamic_Array($T)) : T {
     assert(dyn.count > 0);
-    var value = dyn.array[dyn.count-1];
+    var value = dyn[dyn.count-1];
     dyn.count -= 1;
     return value;
 }
 
-proc clear_dynamic_array(dyn: ^Dynamic_Array_Int) {
+proc clear_dynamic_array(dyn: ^Dynamic_Array($T)) {
     dyn.count = 0;
 }
 
-proc destroy_dynamic_array(dyn: ^Dynamic_Array_Int) {
+proc destroy_dynamic_array(dyn: ^Dynamic_Array($T)) {
     if (dyn.array.data != null) {
         free(dyn.array.data);
     }

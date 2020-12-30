@@ -11,7 +11,10 @@
 
 /*
 TODO:
--bounds checks
+-put struct constants in a different block than struct instance members
+-error when instantiating a polymorphic struct without parameters
+-runtime bounds checks
+-constant bounds checks i.e. var arr: [4]int; arr[232];
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -reference-to-reference parsing bug: var x: >>int parses as a shift-right
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
@@ -24,7 +27,7 @@ TODO:
 -unions
 -tagged unions
 -defer
--polymorphism
+-#if
 -figure out if I should allow shadowing (maybe with a keyword?)
 -generate C instead of C++. I think the only thing from C++ I'm using is for the templated Static_Array for array-by-value semantics
 */

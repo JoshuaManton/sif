@@ -3,11 +3,6 @@
 
 // todo(josh): test what happens when caller doesn't pass parameters
 
-struct Foo!($T: typeid, $wowza: int) {
-    var data: T;
-    var arr: [wowza]int;
-}
-
 proc value_poly($a: int) : int {
     return a * a;
 }
@@ -20,17 +15,32 @@ proc value_and_type_poly($a: $T) : T {
     return a * a;
 }
 
-proc thing(foo: $T) {
+struct Foo!($T: typeid, $wowza: int) {
+    var data: T;
+    var arr: [wowza]int;
+}
+
+proc thing(foo: Foo!($T, $W)) {
+    var a = W;
     print_int(foo.arr[4]);
 }
 
+proc thinger(t: $T) {
+}
+
 proc main() {
-    // var dyn: Dynamic_Array!(float);
-    // dyn.append
-    var poly_struct: Foo!(float, 32);
-    poly_struct.arr[4] = 123;
-    print_int(poly_struct.arr[4]);
-    thing(poly_struct);
+    var poly_struct1: Foo!(float, 32);
+    var poly_struct2: Foo!(float, 32);
+    poly_struct1 = poly_struct2;
+
+    thing(poly_struct1);
+    thing(poly_struct2);
+
+    thinger(poly_struct1);
+    thinger(poly_struct2);
+
+    poly_struct1.arr[4] = 123;
+    print_int(poly_struct1.arr[4]);
 
     print_int(value_poly(2));
 

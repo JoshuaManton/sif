@@ -88,15 +88,25 @@ struct Operand {
     {}
 };
 
+struct Ast_Node;
+
+struct Node_Polymorph {
+    Ast_Node *polymorphed_node = {};
+    Array<Operand> polymorph_values = {};
+};
+
 struct Ast_Node {
     Ast_Block *parent_block = {};
     Ast_Kind ast_kind = AST_INVALID;
     Location location = {};
+    Array<Node_Polymorph> polymorphs = {};
     Ast_Node(Ast_Kind ast_kind, Location location)
     : ast_kind(ast_kind)
     , parent_block(current_block)
     , location(location)
-    {}
+    {
+        polymorphs.allocator = default_allocator();
+    }
 };
 
 enum Block_Flags {
@@ -125,9 +135,9 @@ struct Ast_Proc_Header : public Ast_Node {
     Operand operand = {};
     Token_Kind operator_to_overload = {};
     Ast_Struct *struct_to_operator_overload = {};
-    Array<Ast_Proc *> polymorphs = {};
     bool is_polymorphic = {};
-    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, bool is_polymorphic, Location location)
+    Array<int> polymorphic_parameter_indices = {};
+    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
     , procedure_block(procedure_block)
@@ -135,10 +145,10 @@ struct Ast_Proc_Header : public Ast_Node {
     , return_type_expr(return_type_expr)
     , is_foreign(is_foreign)
     , operator_to_overload(operator_to_overload)
-    , is_polymorphic(is_polymorphic)
+    , is_polymorphic(polymorphic_parameter_indices.count > 0)
+    , polymorphic_parameter_indices(polymorphic_parameter_indices)
     {
         parameters.allocator = default_allocator();
-        polymorphs.allocator = default_allocator();
     }
 };
 
@@ -207,13 +217,15 @@ struct Ast_Var : public Ast_Node {
     Var_Declaration *declaration = {};
     Operand constant_operand = {};
     bool is_polymorphic_value = {};
-    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, Location location)
+    bool is_polymorphic = {};
+    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
     , name_expr(name_expr)
     , type_expr(type_expr)
     , expr(expr)
     , is_constant(is_constant)
+    , is_polymorphic(is_polymorphic)
     {}
 };
 
@@ -226,14 +238,12 @@ struct Ast_Struct : public Ast_Node {
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
     Array<Ast_Var *> polymorphic_parameters = {};
-    Array<Ast_Struct *> polymorphs = {};
     Ast_Struct(Location location)
     : Ast_Node(AST_STRUCT, location)
     {
         fields.allocator = default_allocator();
         operator_overloads.allocator = default_allocator();
         polymorphic_parameters.allocator = default_allocator();
-        polymorphs.allocator = default_allocator();
     }
 };
 
