@@ -1,34 +1,39 @@
 #include "basic.sif"
-#include "dynamic_array.sif"
-
-// todo(josh): test what happens when caller doesn't pass parameters
-
-// proc value_poly($a: int) : int {
-//     return a * a;
-// }
-
-// proc type_poly(a: $T) : T {
-//     return a * a;
-// }
-
-// proc value_and_type_poly($a: $T) : T {
-//     return a * a;
-// }
 
 struct Foo!($T: typeid, $wowza: int) {
     var data: T;
     var arr: [wowza]int;
 }
 
-// proc thing(foo: ^Foo!($T, $W)) {
-//     var a = W;
-//     print_int(foo.arr[4]);
-// }
+proc pointer_proc(foo: ^Foo!($T, $W)) {
+
+}
+
+proc slice_proc(foo: []Foo!($T, $W)) {
+
+}
+
+proc array_proc(foo: [$N]^Foo!($T, $W)) {
+
+}
+
+proc array_proc_fixed(foo: [4]^Foo!($T, $W)) {
+
+}
 
 proc main() {
-    var dyn: Dynamic_Array!(int);
-    append(&dyn, 123);
-    append(&dyn, 456);
-    append(&dyn, 789);
-    print_int(dyn[1]);
+    var foo: Foo!(float, 16);
+    pointer_proc(&foo);
+
+    var slice1: []Foo!(float, 16);
+    var slice2: []Foo!(float, 8);
+    slice_proc(slice1);
+    slice_proc(slice2);
+
+    var arr: [4]^Foo!(float, 16);
+    array_proc(arr);
+    array_proc_fixed(arr);
+
+    var arr2: [2]^Foo!(float, 16);
+    array_proc(arr2);
 }

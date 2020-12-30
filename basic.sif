@@ -76,3 +76,5 @@ proc destroy_dynamic_array(dyn: ^Dynamic_Array!($T)) {
         free(dyn.array.data);
     }
 }
+
+

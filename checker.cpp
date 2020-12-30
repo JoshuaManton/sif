@@ -1189,7 +1189,18 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
             break;
         }
         default: {
-            assert(false);
+            Operand *value_operand = typecheck_expr(value_expr);
+            Operand result = {};
+            if (!binary_eval(*value_operand, parameter_operand, TK_EQUAL_TO, parameter_operand.location, &result)) {
+                assert(false);
+                return false;
+            }
+            assert(result.type == type_bool);
+            if (!result.bool_value) {
+                // note(josh): we don't log an error message here so the caller better do it!
+                return false;
+            }
+            break;
         }
     }
     return true;
@@ -1216,10 +1227,11 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
+            assert(parameter_type != nullptr);
             Expr_Polymorphic_Type *poly_type = (Expr_Polymorphic_Type *)type_expr;
             Operand *type_expr_operand = typecheck_expr(poly_type->type_expr);
             if (!is_type_polymorphic(type_expr_operand->type)) {
-                report_error(poly_type->type_expr->location, "Expected a polymorphic struct type.");
+                report_error(poly_type->type_expr->location, "Expected a polymorphic struct type, got '%s'.", type_to_string(parameter_type));
                 return false;
             }
             assert(type_expr_operand->referenced_declaration != nullptr);
@@ -1227,14 +1239,13 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             Ast_Struct *referenced_struct = ((Struct_Declaration *)type_expr_operand->referenced_declaration)->structure;
             assert(referenced_struct != nullptr);
             assert(poly_type->type_expr->operand.type != nullptr);
-            assert(parameter_type != nullptr);
             if (!is_type_struct(parameter_type)) {
-                report_error(parameter_location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
+                report_error(parameter_location, "Expected an instance of polymorphic struct '%s', got '%s'.", referenced_struct->name, type_to_string(parameter_type));
                 return false;
             }
             Type_Struct *struct_type = (Type_Struct *)parameter_type;
             if (struct_type->is_polymorph_of == nullptr) {
-                report_error(parameter_location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
+                report_error(parameter_location, "Expected an instance of polymorphic struct '%s', got '%s'.", referenced_struct->name, type_to_string(parameter_type));
                 return false;
             }
             if (struct_type->is_polymorph_of != referenced_struct) {
@@ -1259,6 +1270,33 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             }
             Type_Pointer *parameter_pointer = (Type_Pointer *)parameter_type;
             return try_create_polymorph_type_declarations(pointer->pointer_to, parameter_pointer->pointer_to, parameter_location, out_polymorphic_declarations);
+        }
+        case EXPR_SLICE_TYPE: {
+            Expr_Slice_Type *slice_type = (Expr_Slice_Type *)type_expr;
+            if (!is_type_slice(parameter_type)) {
+                report_error(parameter_location, "Expected a slice type, got '%s'.", type_to_string(parameter_type));
+                return false;
+            }
+            Type_Slice *parameter_slice = (Type_Slice *)parameter_type;
+            return try_create_polymorph_type_declarations(slice_type->slice_of, parameter_slice->slice_of, parameter_location, out_polymorphic_declarations);
+        }
+        case EXPR_ARRAY_TYPE: {
+            Expr_Array_Type *array_type = (Expr_Array_Type *)type_expr;
+            if (!is_type_array(parameter_type)) {
+                report_error(parameter_location, "Expected an array type, got '%s'.", type_to_string(parameter_type));
+                return false;
+            }
+            Type_Array *parameter_array = (Type_Array *)parameter_type;
+            Operand number_operand(parameter_location);
+            number_operand.type = type_int;
+            number_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+            number_operand.int_value = parameter_array->count;
+            if (!try_create_polymorph_value_declaration(array_type->count_expr, number_operand, out_polymorphic_declarations)) {
+                assert(array_type->count_expr->operand.type != nullptr);
+                report_error(parameter_location, "Expected an array of size %d, got %d.", array_type->count_expr->operand.int_value, parameter_array->count);
+                return false;
+            }
+            return try_create_polymorph_type_declarations(array_type->array_of, parameter_array->array_of, parameter_location, out_polymorphic_declarations);
         }
         default: {
             assert(false);
@@ -1561,15 +1599,13 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         assert(target_procedure_type->parameter_types.count == parameters.count);
     }
 
-    // typecheck the other parameters
+    // typecheck parameters now that we have concrete types for the procedure parameters
     For (idx, *out_params_to_emit) {
         Type *parameter_type = target_procedure_type->parameter_types[idx];
         Ast_Expr *parameter = (*out_params_to_emit)[idx];
-        if (parameter->operand.type == nullptr) {
-            Operand *parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
-            if (!parameter_operand) {
-                return false;
-            }
+        Operand *parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
+        if (!parameter_operand) {
+            return false;
         }
     }
 
