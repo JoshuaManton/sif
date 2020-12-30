@@ -747,6 +747,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
     sb.print("#include <stdio.h>\n");
+    sb.print("#include <cstring>\n");
     sb.print("#include <cstdlib>\n");
 
     sb.print("typedef int8_t i8;\n");
@@ -803,8 +804,10 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             }
             case DECL_PROC: {
                 Proc_Declaration *procedure = (Proc_Declaration *)decl;
-                c_print_procedure_header(&sb, procedure->procedure->header);
-                sb.print(";\n");
+                if (!procedure->procedure->header->is_foreign) {
+                    c_print_procedure_header(&sb, procedure->procedure->header);
+                    sb.print(";\n");
+                }
                 break;
             }
         }

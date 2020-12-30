@@ -705,7 +705,7 @@ void init_parser();
 Ast_Block *push_ast_block(Ast_Block *block);
 void pop_ast_block(Ast_Block *old_block);
 bool register_declaration(Declaration *new_declaration);
-bool parse_file(const char *filename);
+bool parse_file(const char *filename, Location include_location);
 Ast_Block *begin_parsing(const char *filename);
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true, char *name_override = nullptr);
 Ast_Expr *parse_expr(Lexer *lexer);

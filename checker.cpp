@@ -473,18 +473,54 @@ bool typecheck_global_scope(Ast_Block *block) {
     return true;
 }
 
+void sbprint_constant_operand(String_Builder *sb, Operand operand) {
+    assert(operand.flags & OPERAND_CONSTANT);
+    if (is_type_integer(operand.type)) {
+        sb->printf("%d", operand.int_value);
+    }
+    else if (is_type_float(operand.type)) {
+        sb->printf("%f", operand.float_value);
+    }
+    else if (is_type_string(operand.type)) {
+        sb->printf("%s", operand.escaped_string_value);
+    }
+    else if (is_type_bool(operand.type)) {
+        sb->print(operand.bool_value ? "true" : false);
+    }
+    else if (is_type_typeid(operand.type)) {
+        assert(operand.type_value != nullptr);
+        sb->printf("%s", type_to_string(operand.type_value));
+    }
+    else {
+        assert(false);
+    }
+}
+
 char *type_to_string(Type *type) {
     // todo(josh): janky allocation
-    char *buffer = (char *)alloc(default_allocator(), 64);
+    String_Builder sb = make_string_builder(default_allocator(), 128);
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *primitive = (Type_Primitive *)type;
-            sprintf(buffer, primitive->name);
+            sb.print(primitive->name);
             break;
         }
         case TYPE_STRUCT: {
             Type_Struct *structure = (Type_Struct *)type;
-            sprintf(buffer, structure->name);
+            if (structure->is_polymorph_of) {
+                sb.print(structure->is_polymorph_of->name);
+                sb.print("!(");
+                For (idx, structure->polymorphic_parameter_values) {
+                    if (idx != 0) {
+                        sb.print(", ");
+                    }
+                    sbprint_constant_operand(&sb, structure->polymorphic_parameter_values[idx]);
+                }
+                sb.print(")");
+            }
+            else {
+                sb.print(structure->name);
+            }
             break;
         }
         case TYPE_PROCEDURE: {
@@ -493,34 +529,34 @@ char *type_to_string(Type *type) {
         }
         case TYPE_POINTER: {
             Type_Pointer *pointer = (Type_Pointer *)type;
-            sprintf(buffer, "^%s", type_to_string(pointer->pointer_to));
+            sb.printf("^%s", type_to_string(pointer->pointer_to));
             break;
         }
         case TYPE_REFERENCE: {
             Type_Reference *reference = (Type_Reference *)type;
-            sprintf(buffer, ">%s", type_to_string(reference->reference_to));
+            sb.printf(">%s", type_to_string(reference->reference_to));
             break;
         }
         case TYPE_ARRAY: {
             Type_Array *array = (Type_Array *)type;
-            sprintf(buffer, "[%d]%s", array->count, type_to_string(array->array_of));
+            sb.printf("[%d]%s", array->count, type_to_string(array->array_of));
             break;
         }
         case TYPE_SLICE: {
             Type_Slice *slice = (Type_Slice *)type;
-            sprintf(buffer, "[]%s", type_to_string(slice->slice_of));
+            sb.printf("[]%s", type_to_string(slice->slice_of));
             break;
         }
         case TYPE_ENUM: {
             Type_Enum *enum_type = (Type_Enum *)type;
-            sprintf(buffer, "%s", enum_type->name);
+            sb.printf("%s", enum_type->name);
             break;
         }
         default: {
             assert(false);
         }
     }
-    return buffer;
+    return sb.string();
 }
 
 bool complete_type(Type *type) {
@@ -1159,7 +1195,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
     return true;
 }
 
-bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
+bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter_type, Location parameter_location, Array<Declaration *> *out_polymorphic_declarations) {
     switch (type_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             break;
@@ -1168,16 +1204,15 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Operand paramet
             // name: $T
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)type_expr;
             assert(poly->poly_decl->declaration == nullptr);
-            assert(parameter_operand.type != nullptr);
-            Type *concrete_type = try_concretize_type_without_context(parameter_operand.type);
+            Type *concrete_type = try_concretize_type_without_context(parameter_type);
             if (!concrete_type) {
                 assert(false && "todo(josh): error message");
             }
-            Operand type_operand(parameter_operand.location);
+            Operand type_operand(parameter_location);
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
             type_operand.type = type_typeid;
             type_operand.type_value = concrete_type;
-            out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_operand.location));
+            out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_location));
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
@@ -1192,18 +1227,18 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Operand paramet
             Ast_Struct *referenced_struct = ((Struct_Declaration *)type_expr_operand->referenced_declaration)->structure;
             assert(referenced_struct != nullptr);
             assert(poly_type->type_expr->operand.type != nullptr);
-            assert(parameter_operand.type != nullptr);
-            if (!is_type_struct(parameter_operand.type)) {
-                report_error(parameter_operand.location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
+            assert(parameter_type != nullptr);
+            if (!is_type_struct(parameter_type)) {
+                report_error(parameter_location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
                 return false;
             }
-            Type_Struct *struct_type = (Type_Struct *)parameter_operand.type;
+            Type_Struct *struct_type = (Type_Struct *)parameter_type;
             if (struct_type->is_polymorph_of == nullptr) {
-                report_error(parameter_operand.location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
+                report_error(parameter_location, "Expected an instance of polymorphic struct '%s'.", referenced_struct->name);
                 return false;
             }
             if (struct_type->is_polymorph_of != referenced_struct) {
-                report_error(parameter_operand.location, "Expected an instance of '%s', got '%s'.", referenced_struct->name, struct_type->is_polymorph_of->name);
+                report_error(parameter_location, "Expected an instance of '%s', got '%s'.", referenced_struct->name, struct_type->is_polymorph_of->name);
                 return false;
             }
             For (idx, poly_type->parameters) {
@@ -1216,13 +1251,15 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Operand paramet
             }
             break;
         }
-        // case EXPR_POINTER_TYPE: {
-        //     Expr_Pointer_Type *pointer = (Expr_Pointer_Type *)type_expr;
-        //     if (!is_type_pointer(parameter_operand.type)) {
-        //         type_mismatch(parameter_operand.location, parameter_operand)
-        //     }
-        //     return try_create_polymorph_type_declarations(pointer->pointer_to);
-        // }
+        case EXPR_POINTER_TYPE: {
+            Expr_Pointer_Type *pointer = (Expr_Pointer_Type *)type_expr;
+            if (!is_type_pointer(parameter_type)) {
+                report_error(parameter_location, "Expected a pointer type, got '%s'.", type_to_string(parameter_type));
+                return false;
+            }
+            Type_Pointer *parameter_pointer = (Type_Pointer *)parameter_type;
+            return try_create_polymorph_type_declarations(pointer->pointer_to, parameter_pointer->pointer_to, parameter_location, out_polymorphic_declarations);
+        }
         default: {
             assert(false);
         }
@@ -1231,7 +1268,8 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Operand paramet
 }
 
 bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
-    if (!try_create_polymorph_type_declarations(var->type_expr, parameter_operand, out_polymorphic_declarations)) {
+    assert(parameter_operand.type != nullptr);
+    if (!try_create_polymorph_type_declarations(var->type_expr, parameter_operand.type, parameter_operand.location, out_polymorphic_declarations)) {
         return false;
     }
 

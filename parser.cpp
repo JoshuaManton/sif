@@ -546,7 +546,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer);
             Token filename_token;
             EXPECT(lexer, TK_STRING, &filename_token);
-            bool ok = parse_file(filename_token.text);
+            bool ok = parse_file(filename_token.text, filename_token.location);
             if (!ok) {
                 return nullptr;
             }
@@ -781,9 +781,13 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
     return current_block;
 }
 
-bool parse_file(const char *filename) {
+bool parse_file(const char *filename, Location include_location) {
     int len = 0;
     char *root_file_text = read_entire_file(filename, &len);
+    if (root_file_text == nullptr) {
+        report_error(include_location, "Couldn't find file '%s'.", filename);
+        return false;
+    }
     Lexer lexer(filename, root_file_text);
     Ast_Block *block = parse_block(&lexer, false, false);
     if (!block) {
@@ -798,7 +802,7 @@ Ast_Block *begin_parsing(const char *filename) {
     global_scope->flags |= BF_IS_GLOBAL_SCOPE;
     Ast_Block *old_block = push_ast_block(global_scope);
 
-    bool ok = parse_file(filename);
+    bool ok = parse_file(filename, {});
 
     pop_ast_block(old_block);
     if (!ok) {

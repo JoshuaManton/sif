@@ -1,5 +1,4 @@
 #include "basic.sif"
-#include "dynamic_array.sif"
 
 proc main() {
     basic_stuff();
@@ -7,6 +6,8 @@ proc main() {
     slices();
     operator_overloading();
     procedural_polymorphism();
+    structural_polymorphism();
+    dynamic_arrays();
     references();
 }
 
@@ -124,6 +125,41 @@ proc procedural_polymorphism() {
 
 
 
+struct Custom_Array_Type!($N: int, $T: typeid) {
+    var array: [N]T;
+    operator [](my_array: >Custom_Array_Type!(N, T), index: int) : >T {
+        return my_array.array[index];
+    }
+}
+proc structural_polymorphism() {
+    print("\n\n---- structural_polymorphism ----");
+
+    var array_of_ints: Custom_Array_Type!(16, int);
+    array_of_ints[4] = 124;
+    print_int(array_of_ints[4]);
+    assert(array_of_ints[4] == 124);
+}
+
+
+
+proc dynamic_arrays() {
+    print("\n\n---- dynamic_arrays ----");
+
+    // definition is in basic.sif
+    var dyn: Dynamic_Array!(Vector3);
+    append(&dyn, Vector3{1, 2, 3});
+    append(&dyn, Vector3{1, 4, 9});
+    append(&dyn, Vector3{2, 8, 18});
+    print_float(dyn[1].x);
+    print_float(dyn[1].y);
+    print_float(dyn[1].z);
+    assert(dyn[1].x == 1);
+    assert(dyn[1].y == 4);
+    assert(dyn[1].z == 9);
+}
+
+
+
 proc change_by_reference(a: >int, value: int) {
     a = value;
 }
@@ -141,22 +177,13 @@ proc references() {
     assert(int_reference == 789);
     assert(my_int == 789);
     print_int(int_reference);
-
-    {
-        var arr: Dynamic_Array_Int;
-        append(&arr, 1);
-        append(&arr, 4);
-        append(&arr, 9);
-        assert(arr[0] == 1);
-        assert(arr[1] == 4);
-        assert(arr[2] == 9);
-        arr[1] = 334;
-        assert(arr[1] == 334);
-        for (var i = 0; i < arr.count; i += 1) {
-            print_int(arr[i]);
-        }
-    }
 }
+
+
+
+// todo(josh): organize the rest of this file
+// todo(josh): organize the rest of this file
+// todo(josh): organize the rest of this file
 
 #assert("foo" == "foo");
 #assert("foo" != "bar");

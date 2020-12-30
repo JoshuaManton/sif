@@ -1,56 +1,34 @@
 #include "basic.sif"
-// #include "dynamic_array.sif"
+#include "dynamic_array.sif"
 
 // todo(josh): test what happens when caller doesn't pass parameters
 
-proc value_poly($a: int) : int {
-    return a * a;
-}
+// proc value_poly($a: int) : int {
+//     return a * a;
+// }
 
-proc type_poly(a: $T) : T {
-    return a * a;
-}
+// proc type_poly(a: $T) : T {
+//     return a * a;
+// }
 
-proc value_and_type_poly($a: $T) : T {
-    return a * a;
-}
+// proc value_and_type_poly($a: $T) : T {
+//     return a * a;
+// }
 
 struct Foo!($T: typeid, $wowza: int) {
     var data: T;
     var arr: [wowza]int;
 }
 
-proc thing(foo: Foo!($T, $W)) {
-    var a = W;
-    print_int(foo.arr[4]);
-}
-
-proc thinger(t: $T) {
-}
+// proc thing(foo: ^Foo!($T, $W)) {
+//     var a = W;
+//     print_int(foo.arr[4]);
+// }
 
 proc main() {
-    var poly_struct1: Foo!(float, 32);
-    var poly_struct2: Foo!(float, 32);
-    poly_struct1 = poly_struct2;
-
-    thing(poly_struct1);
-    thing(poly_struct2);
-
-    thinger(poly_struct1);
-    thinger(poly_struct2);
-
-    poly_struct1.arr[4] = 123;
-    print_int(poly_struct1.arr[4]);
-
-    print_int(value_poly(2));
-
-    print_int(type_poly(3));
-    print_float(type_poly(4.0));
-    var a: int = 5;
-    var f: float = 6;
-    print_int(type_poly(a));
-    print_float(type_poly(f));
-
-    print_int(value_and_type_poly(7));
-    print_float(value_and_type_poly(8.0));
+    var dyn: Dynamic_Array!(int);
+    append(&dyn, 123);
+    append(&dyn, 456);
+    append(&dyn, 789);
+    print_int(dyn[1]);
 }
