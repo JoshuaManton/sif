@@ -18,6 +18,7 @@ TODO:
 -put struct constants in a different block than struct instance members
 -error when instantiating a polymorphic struct without parameters
 -implicit polymorphism
+-control flow graph analysis
 -function pointers
 -varargs
 -runtime bounds checks
