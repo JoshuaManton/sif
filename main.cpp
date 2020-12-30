@@ -13,7 +13,9 @@
 TODO:
 -put struct constants in a different block than struct instance members
 -error when instantiating a polymorphic struct without parameters
+-implicit polymorphism
 -function pointers
+-varargs
 -runtime bounds checks
 -constant bounds checks i.e. var arr: [4]int; arr[232];
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
@@ -35,16 +37,19 @@ TODO:
 */
 
 void main(int argc, char **argv) {
-    if (argc <= 1) {
-        printf("Usage:\n  sif <file>\n");
+    if (argc < 3) {
+        printf("Usage:\n  sif <build|run> <file>\n");
         return;
     }
+
+    bool is_run   = strcmp(argv[1], "run")   == 0;
+    bool is_build = strcmp(argv[1], "build") == 0;
 
     init_lexer_globals();
     init_parser();
     init_checker();
 
-    Ast_Block *global_scope = begin_parsing(argv[1]);
+    Ast_Block *global_scope = begin_parsing(argv[2]);
     if (!global_scope) {
         printf("There were errors.\n");
         return;
@@ -60,4 +65,16 @@ void main(int argc, char **argv) {
 
     String_Builder c_code = generate_c_main_file(global_scope);
     write_entire_file("output.cpp", c_code.string());
+
+    if (system("cmd.exe /c \"cl output.cpp\"") != 0) {
+        printf("sif encountered an error when compiling C output. Exiting.\n");
+        return;
+    }
+
+    if (is_run) {
+        system("cmd.exe /c \"output.exe\"");
+    }
+    else {
+        assert(is_build);
+    }
 }

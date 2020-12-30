@@ -6,19 +6,15 @@ struct Foo!($T: typeid, $wowza: int) {
 }
 
 proc pointer_proc(foo: ^Foo!($T, $W)) {
-
 }
 
 proc slice_proc(foo: []Foo!($T, $W)) {
-
 }
 
 proc array_proc(foo: [$N]^Foo!($T, $W)) {
-
 }
 
 proc array_proc_fixed(foo: [4]^Foo!($T, $W)) {
-
 }
 
 proc main() {

@@ -10,7 +10,6 @@ void print(String string) {
         char c = string.data[i];
         printf(\"%%c\", c);
     }
-    printf(\"\\\n\");
 }
 void *alloc(i64 size) {
     char *memory = (char *)malloc(size);
