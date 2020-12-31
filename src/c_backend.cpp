@@ -557,7 +557,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
                 assert(!is_type_polymorphic(call->target_procedure_type));
                 if (expr->operand.referenced_declaration != nullptr) {
                     assert(expr->operand.referenced_declaration->kind == DECL_PROC);
-                    Ast_Proc *referenced_procedure = ((Proc_Declaration *)expr->operand.referenced_declaration)->procedure;
+                    Ast_Proc *referenced_procedure = ((Proc_Declaration *)expr->operand.referenced_declaration)->header->procedure;
                     sb->print(referenced_procedure->header->name);
                 }
                 else {
@@ -945,9 +945,9 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 break;
             }
             case DECL_PROC: {
-                Proc_Declaration *procedure = (Proc_Declaration *)decl;
-                if (!procedure->procedure->header->is_foreign) {
-                    c_print_procedure_header(&sb, procedure->procedure->header);
+                Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
+                if (!proc_decl->header->is_foreign) {
+                    c_print_procedure_header(&sb, proc_decl->header);
                     sb.print(";\n");
                 }
                 break;
@@ -986,9 +986,9 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 break;
             }
             case DECL_PROC: {
-                Proc_Declaration *procedure = (Proc_Declaration *)decl;
-                if (!procedure->procedure->header->is_foreign) {
-                    c_print_procedure(&sb, procedure->procedure);
+                Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
+                if (!proc_decl->header->is_foreign) {
+                    c_print_procedure(&sb, proc_decl->header->procedure);
                 }
                 break;
             }

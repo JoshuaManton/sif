@@ -371,11 +371,11 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
         case DECL_PROC: {
             Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
-            if (!typecheck_procedure_header(proc_decl->procedure->header)) {
+            if (!typecheck_procedure_header(proc_decl->header)) {
                 return false;
             }
-            assert(proc_decl->procedure->header->type != nullptr);
-            decl_operand = proc_decl->procedure->header->operand;
+            assert(proc_decl->header->type != nullptr);
+            decl_operand = proc_decl->header->operand;
             break;
         }
         case DECL_CONSTANT_VALUE: {
@@ -395,10 +395,10 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
     if (decl->kind == DECL_PROC) {
         Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
-        if (!proc_decl->procedure->header->is_foreign) {
-            assert(proc_decl->procedure->body != nullptr);
-            if (!is_type_polymorphic(proc_decl->procedure->header->type)) {
-                if (!typecheck_block(proc_decl->procedure->body)) {
+        if (!proc_decl->header->is_foreign) {
+            assert(proc_decl->header->procedure->body != nullptr);
+            if (!is_type_polymorphic(proc_decl->header->type)) {
+                if (!typecheck_block(proc_decl->header->procedure->body)) {
                     return false;
                 }
             }
@@ -407,7 +407,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
         }
         else {
-            assert(proc_decl->procedure->body == nullptr);
+            assert(proc_decl->header->procedure->body == nullptr);
         }
     }
 
@@ -415,6 +415,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
         For (idx, struct_decl->structure->operator_overloads) {
             // todo(josh): this should just go through the normal check_declaration() path. having it copy pasted here is dumb
+            // but operator overloads don't currently have a declaration since they don't have names. hmm.
             Ast_Proc *proc = struct_decl->structure->operator_overloads[idx];
             assert(!proc->header->is_foreign);
             assert(proc->body != nullptr);
@@ -1562,8 +1563,8 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
         }
         case AST_PROC: {
             Ast_Proc *procedure_polymorph = (Ast_Proc *)new_parse;
-            procedure_polymorph->declaration->is_polymorphic = false;
-            if (!check_declaration(procedure_polymorph->declaration, polymorph_location)) {
+            procedure_polymorph->header->declaration->is_polymorphic = false;
+            if (!check_declaration(procedure_polymorph->header->declaration, polymorph_location)) {
                 report_info(polymorph_location, "Error during polymorph triggered here.");
                 return nullptr;
             }
@@ -1622,8 +1623,6 @@ Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location,
 }
 
 bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand, Array<Ast_Expr *> *out_params_to_emit) {
-    out_params_to_emit->allocator = default_allocator();
-
     // copy all the exprs into out_params_to_emit
     For (idx, parameters) {
         out_params_to_emit->append(parameters[idx]);
@@ -1634,7 +1633,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
     if (is_type_polymorphic(procedure_operand.type)) {
         assert(procedure_operand.referenced_declaration != nullptr);
         assert(procedure_operand.referenced_declaration->kind == DECL_PROC);
-        Ast_Proc *referenced_procedure = ((Proc_Declaration *)procedure_operand.referenced_declaration)->procedure;
+        Ast_Proc *referenced_procedure = ((Proc_Declaration *)procedure_operand.referenced_declaration)->header->procedure;
 
         Array<int> parameter_indices_to_remove;
         parameter_indices_to_remove.allocator = default_allocator();
@@ -1646,14 +1645,14 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
             out_params_to_emit->ordered_remove(i);
         }
 
-        assert(!is_type_polymorphic(procedure_polymorph->declaration->operand.type));
-        procedure_operand = procedure_polymorph->declaration->operand;
+        assert(!is_type_polymorphic(procedure_polymorph->header->declaration->operand.type));
+        procedure_operand = procedure_polymorph->header->declaration->operand;
         assert(is_type_procedure(procedure_operand.type));
         target_procedure_type = (Type_Procedure *)procedure_operand.type;
 
         expr->desugared_procedure_to_call = procedure_polymorph;
         expr->desugared_procedure_parameters = *out_params_to_emit;
-        result_operand.referenced_declaration = procedure_polymorph->declaration;
+        // result_operand.referenced_declaration = procedure_polymorph->header->declaration;
     }
     else {
         assert(procedure_operand.type->kind == TYPE_PROCEDURE);
@@ -1669,6 +1668,15 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         if (!parameter_operand) {
             return false;
         }
+    }
+
+    assert(is_type_procedure(target_procedure_type));
+    assert(!is_type_polymorphic(target_procedure_type));
+
+    if (expr->expr_kind == EXPR_PROCEDURE_CALL) {
+        Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+        call->parameters_to_emit = *out_params_to_emit;
+        call->target_procedure_type = target_procedure_type;
     }
 
     result_operand.type = target_procedure_type->return_type;
@@ -1736,11 +1744,12 @@ bool try_resolve_operator_overload(Ast_Struct *structure, Ast_Expr *root_expr, A
     else {
         assert(overload_proc->header->operand.type != nullptr);
         Array<Ast_Expr *> params_to_emit;
+        params_to_emit.allocator = default_allocator();
         if (!typecheck_procedure_call(root_expr, overload_proc->header->operand, parameters, out_result_operand, &params_to_emit)) {
             return false;
         }
         root_expr->desugared_procedure_to_call = overload_proc;
-        root_expr->desugared_procedure_parameters = parameters;
+        root_expr->desugared_procedure_parameters = params_to_emit;
     }
     return true;
 }
@@ -1807,7 +1816,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             Operand rhs_operand_copy = *rhs_operand;
             bool types_matched = match_types(&lhs_operand_copy, most_concrete, false);
             types_matched = types_matched && match_types(&rhs_operand_copy, most_concrete, false);
-
             if (types_matched && operator_is_defined(lhs_operand_copy.type, rhs_operand_copy.type, binary->op)) {
                 Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
                 if (!lhs_operand) {
@@ -2001,17 +2009,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
 
             Array<Ast_Expr *> params_to_emit;
+            params_to_emit.allocator = default_allocator();
             if (!typecheck_procedure_call(call, *procedure_operand, call->parameters, &result_operand, &params_to_emit)) {
                 return nullptr;
-            }
-            call->parameters_to_emit = params_to_emit;
-            call->target_procedure_type = (Type_Procedure *)procedure_operand->type;
-            if (result_operand.referenced_declaration) {
-                // @PolymorphCleanup
-                assert(result_operand.referenced_declaration->kind == DECL_PROC);
-                assert(is_type_procedure(result_operand.referenced_declaration->operand.type));
-                assert(!is_type_polymorphic(result_operand.referenced_declaration->operand.type));
-                call->target_procedure_type = (Type_Procedure *)result_operand.referenced_declaration->operand.type;
             }
             assert(!is_type_polymorphic(call->target_procedure_type));
             assert(is_type_procedure(call->target_procedure_type));

@@ -149,121 +149,137 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         return nullptr;
     }
 
-    Location proc_location = token.location;
-    Ast_Block *procedure_block = new Ast_Block(token.location);
-    Ast_Block *old_block = push_ast_block(procedure_block);
-    defer(pop_ast_block(old_block));
+    Ast_Proc_Header *header = nullptr;
+    {
+        Location proc_location = token.location;
+        Ast_Block *procedure_block = new Ast_Block(token.location);
+        Ast_Block *old_block = push_ast_block(procedure_block);
+        defer(pop_ast_block(old_block));
 
-    bool is_operator_overload = false;
-    Token_Kind operator_to_overload = TK_INVALID;
-    char *proc_name = nullptr;
-    if (token.kind == TK_PROC) {
-        eat_next_token(lexer, &token);
-        // name
-        EXPECT(lexer, TK_IDENTIFIER, &token);
-        proc_name = token.text;
-    }
-    else if (token.kind == TK_OPERATOR) {
-        is_operator_overload = true;
-        eat_next_token(lexer, &token);
-        Token operator_token;
-        if (!peek_next_token(lexer, &operator_token)) {
+        bool is_operator_overload = false;
+        Token_Kind operator_to_overload = TK_INVALID;
+        char *proc_name = nullptr;
+        if (token.kind == TK_PROC) {
+            eat_next_token(lexer, &token);
+            // name
+            EXPECT(lexer, TK_IDENTIFIER, &token);
+            proc_name = token.text;
+        }
+        else if (token.kind == TK_OPERATOR) {
+            is_operator_overload = true;
+            eat_next_token(lexer, &token);
+            Token operator_token;
+            if (!peek_next_token(lexer, &operator_token)) {
+                assert(false && "unexpected EOF");
+                return nullptr;
+            }
+            switch (operator_token.kind) {
+                case TK_PLUS: {
+                    eat_next_token(lexer);
+                    break;
+                }
+                case TK_MINUS: {
+                    eat_next_token(lexer);
+                    break;
+                }
+                case TK_MULTIPLY: {
+                    eat_next_token(lexer);
+                    break;
+                }
+                case TK_DIVIDE: {
+                    eat_next_token(lexer);
+                    break;
+                }
+                case TK_LEFT_SQUARE: {
+                    eat_next_token(lexer);
+                    EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                    break;
+                }
+                default: {
+                    report_error(operator_token.location, "Cannot overload operator '%s'.", token_string(operator_token.kind));
+                    return nullptr;
+                }
+            }
+            operator_to_overload = operator_token.kind;
+        }
+        else {
+            assert(false);
+        }
+
+        // parameter list
+        EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+        Array<Ast_Var *> parameters = {};
+        parameters.allocator = default_allocator();
+        bool first = true;
+        Array<int> polymorphic_parameter_indices;
+        polymorphic_parameter_indices.allocator = default_allocator();
+        while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
+            if (!first) {
+                EXPECT(lexer, TK_COMMA, nullptr);
+            }
+
+            Ast_Var *var = parse_var(lexer, false);
+            if (!var) {
+                return nullptr;
+            }
+            if (var->is_polymorphic) {
+                polymorphic_parameter_indices.append(parameters.count);
+            }
+
+            parameters.append(var);
+            first = false;
+        }
+        EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+
+        // return type
+        Ast_Expr *return_type_expr = {};
+        Token colon = {};
+        if (!peek_next_token(lexer, &colon)) {
             assert(false && "unexpected EOF");
             return nullptr;
         }
-        switch (operator_token.kind) {
-            case TK_PLUS: {
-                eat_next_token(lexer);
-                break;
-            }
-            case TK_MINUS: {
-                eat_next_token(lexer);
-                break;
-            }
-            case TK_MULTIPLY: {
-                eat_next_token(lexer);
-                break;
-            }
-            case TK_DIVIDE: {
-                eat_next_token(lexer);
-                break;
-            }
-            case TK_LEFT_SQUARE: {
-                eat_next_token(lexer);
-                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
-                break;
-            }
-            default: {
-                report_error(operator_token.location, "Cannot overload operator '%s'.", token_string(operator_token.kind));
+        if (colon.kind == TK_COLON) {
+            eat_next_token(lexer);
+            assert(lexer->allow_compound_literals);
+            lexer->allow_compound_literals = false;
+            return_type_expr = parse_expr(lexer);
+            lexer->allow_compound_literals = true;
+            if (!return_type_expr) {
                 return nullptr;
             }
         }
-        operator_to_overload = operator_token.kind;
+
+        Token foreign;
+        bool is_foreign = false;
+        if (!peek_next_token(lexer, &foreign)) {
+            assert(false && "unexpected EOF");
+            return nullptr;
+        }
+        if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
+            eat_next_token(lexer);
+            is_foreign = true;
+            EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
+        }
+
+        if (name_override != nullptr) {
+            proc_name = name_override;
+        }
+
+        header = new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, proc_location);
+    }
+
+    if (header->operator_to_overload == TK_INVALID) {
+        assert(header->name != nullptr);
+        header->declaration = new Proc_Declaration(header, current_block);
+        header->declaration->is_polymorphic = header->is_polymorphic;
+        if (!register_declaration(header->declaration)) {
+            return nullptr;
+        }
     }
     else {
-        assert(false);
+        assert(header->name == nullptr);
     }
-
-    // parameter list
-    EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-    Array<Ast_Var *> parameters = {};
-    parameters.allocator = default_allocator();
-    bool first = true;
-    Array<int> polymorphic_parameter_indices;
-    polymorphic_parameter_indices.allocator = default_allocator();
-    while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
-        if (!first) {
-            EXPECT(lexer, TK_COMMA, nullptr);
-        }
-
-        Ast_Var *var = parse_var(lexer, false);
-        if (!var) {
-            return nullptr;
-        }
-        if (var->is_polymorphic) {
-            polymorphic_parameter_indices.append(parameters.count);
-        }
-
-        parameters.append(var);
-        first = false;
-    }
-    EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-
-    // return type
-    Ast_Expr *return_type_expr = {};
-    Token colon = {};
-    if (!peek_next_token(lexer, &colon)) {
-        assert(false && "unexpected EOF");
-        return nullptr;
-    }
-    if (colon.kind == TK_COLON) {
-        eat_next_token(lexer);
-        assert(lexer->allow_compound_literals);
-        lexer->allow_compound_literals = false;
-        return_type_expr = parse_expr(lexer);
-        lexer->allow_compound_literals = true;
-        if (!return_type_expr) {
-            return nullptr;
-        }
-    }
-
-    Token foreign;
-    bool is_foreign = false;
-    if (!peek_next_token(lexer, &foreign)) {
-        assert(false && "unexpected EOF");
-        return nullptr;
-    }
-    if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
-        eat_next_token(lexer);
-        is_foreign = true;
-        EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
-    }
-
-    if (name_override != nullptr) {
-        proc_name = name_override;
-    }
-
-    return new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, proc_location);
+    return header;
 }
 
 Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
@@ -290,17 +306,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     }
 
     Ast_Proc *proc = new Ast_Proc(header, body, header->location);
-    if (header->operator_to_overload == TK_INVALID) {
-        assert(header->name != nullptr);
-        proc->declaration = new Proc_Declaration(proc, current_block);
-        proc->declaration->is_polymorphic = header->is_polymorphic;
-        if (!register_declaration(proc->declaration)) {
-            return nullptr;
-        }
-    }
-    else {
-        assert(header->name == nullptr);
-    }
+    header->procedure = proc;
     return proc;
 }
 

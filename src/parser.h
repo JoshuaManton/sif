@@ -137,6 +137,8 @@ struct Ast_Proc_Header : public Ast_Node {
     Ast_Struct *struct_to_operator_overload = {};
     bool is_polymorphic = {};
     Array<int> polymorphic_parameter_indices = {};
+    Ast_Proc *procedure = {};
+    Proc_Declaration *declaration = {};
     Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
@@ -155,7 +157,6 @@ struct Ast_Proc_Header : public Ast_Node {
 struct Ast_Proc : public Ast_Node {
     Ast_Proc_Header *header = {};
     Ast_Block *body = nullptr;
-    Proc_Declaration *declaration = {};
     Ast_Proc(Ast_Proc_Header *header, Ast_Block *body, Location location)
     : Ast_Node(AST_PROC, location)
     , header(header)
@@ -665,10 +666,10 @@ struct Enum_Declaration : Declaration {
 };
 
 struct Proc_Declaration : Declaration {
-    Ast_Proc *procedure = {};
-    Proc_Declaration(Ast_Proc *procedure, Ast_Block *parent_block)
-    : Declaration(procedure->header->name, DECL_PROC, parent_block, procedure->header->location)
-    , procedure(procedure)
+    Ast_Proc_Header *header = {};
+    Proc_Declaration(Ast_Proc_Header *header, Ast_Block *parent_block)
+    : Declaration(header->name, DECL_PROC, parent_block, header->location)
+    , header(header)
     {}
 };
 
