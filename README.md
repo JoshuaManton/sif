@@ -30,6 +30,12 @@ proc main() : i32 {
 - Other small things you'd expect like varargs, static #if, switch-statements, etc
 - Currently the code-generator outputs C code, in the future I'd like to either try to use LLVM or write a custom x64 backend
 
+## Building and Running
+
+1. Clone the repo.
+2. Run `build.bat`
+3. Run `bin/sif run my_program.sif`
+
 ## Demo
 
 The following is a demo program showing off many of the features of sif.
