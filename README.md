@@ -338,7 +338,9 @@ proc procedural_polymorphism() {
 struct Custom_Array_Type!($N: int, $T: typeid) {
     var array: [N]T;
     operator [](my_array: >Custom_Array_Type!(N, T), index: int) : >T {
-        return my_array.array[index]; // implicitly takes a pointer to `my_array.array[index]` since this returns a reference
+        // implicitly takes a pointer to `my_array.array[index]` since this
+        // procedure returns a reference
+        return my_array.array[index];
     }
 }
 proc structural_polymorphism() {
