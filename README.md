@@ -1,5 +1,28 @@
 # sif
-A compiler for a custom language written in C++.
+sif is an imperative procedural language that compiles to C.
+
+## Hello, World!
+
+```odin
+#include "basic.sif"
+
+proc main() : i32 {
+    print_string("Hello, World!");
+    return 0;
+}
+```
+
+## Features
+
+- The basic stuff: ints, floats, bool, pointers, arrays, etc
+- Length-delimited strings, not null-terminated
+- Operator overloading
+- Procedural and structural polymorphism
+- Order-independent declarations
+
+## Demo
+
+The following is a demo program showing off many of the features of sif.
 
 ```odin
 #include "basic.sif"
