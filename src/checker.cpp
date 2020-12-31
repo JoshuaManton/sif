@@ -1716,6 +1716,35 @@ Ast_Proc *find_operator_overload(Ast_Struct *structure, Array<Ast_Expr *> exprs,
     return nullptr;
 }
 
+bool try_resolve_operator_overload(Ast_Struct *structure, Ast_Expr *root_expr, Ast_Expr *lhs, Ast_Expr *rhs, Token_Kind op, Operand *out_result_operand) {
+    assert(lhs->operand.type != nullptr);
+    assert(rhs->operand.type != nullptr);
+    Array<Ast_Expr *> parameters = {};
+    parameters.allocator = default_allocator();
+    parameters.append(lhs);
+    parameters.append(rhs);
+    Ast_Proc *overload_proc = find_operator_overload(structure, parameters, op);
+    if (overload_proc == nullptr) {
+        if (op == TK_LEFT_SQUARE) {
+            report_error(root_expr->location, "Cannot subscript type '%s'.", type_to_string(lhs->operand.type));
+        }
+        else {
+            report_error(root_expr->location, "Operator '%s' is unsupported for types '%s' and '%s'.", token_string(op), type_to_string(lhs->operand.type), type_to_string(rhs->operand.type));
+        }
+        return false;
+    }
+    else {
+        assert(overload_proc->header->operand.type != nullptr);
+        Array<Ast_Expr *> params_to_emit;
+        if (!typecheck_procedure_call(root_expr, overload_proc->header->operand, parameters, out_result_operand, &params_to_emit)) {
+            return false;
+        }
+        root_expr->desugared_procedure_to_call = overload_proc;
+        root_expr->desugared_procedure_parameters = parameters;
+    }
+    return true;
+}
+
 Type *unwrap_type(Type *type) {
     assert(type != nullptr);
     bool did_something = true;
@@ -1797,28 +1826,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
             }
             else {
-                // check for overloads!
-                // todo(josh): this is pretty crude but maybe fine. means that for operator overloads
-                // the struct type has to be the first argument. again, maybe fine
                 if (is_type_struct(lhs_operand->type)) {
                     Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
-                    Array<Ast_Expr *> parameters = {};
-                    parameters.allocator = default_allocator();
-                    parameters.append(binary->lhs);
-                    parameters.append(binary->rhs);
-                    Ast_Proc *overload_proc = find_operator_overload(struct_type->ast_struct, parameters, binary->op);
-                    if (!overload_proc) {
-                        report_error(binary->location, "Operator '%s' is unsupported for types '%s' and '%s'.", token_string(binary->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
+                    if (!try_resolve_operator_overload(struct_type->ast_struct, binary, binary->lhs, binary->rhs, binary->op, &result_operand)) {
                         return nullptr;
-                    }
-                    else {
-                        assert(overload_proc->header->operand.type != nullptr);
-                        Array<Ast_Expr *> params_to_emit;
-                        if (!typecheck_procedure_call(binary, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
-                            return nullptr;
-                        }
-                        binary->desugared_procedure_to_call = overload_proc;
-                        binary->desugared_procedure_parameters = params_to_emit;
                     }
                 }
                 else {
@@ -1896,23 +1907,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             else if (is_type_struct(lhs_operand->type)) {
                 Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
-                Array<Ast_Expr *> parameters = {};
-                parameters.allocator = default_allocator();
-                parameters.append(subscript->lhs);
-                parameters.append(subscript->index);
-                Ast_Proc *overload_proc = find_operator_overload(struct_type->ast_struct, parameters, TK_LEFT_SQUARE);
-                if (overload_proc == nullptr) {
-                    report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
+                if (!try_resolve_operator_overload(struct_type->ast_struct, subscript, subscript->lhs, subscript->index, TK_LEFT_SQUARE, &result_operand)) {
                     return nullptr;
-                }
-                else {
-                    assert(overload_proc->header->operand.type != nullptr);
-                    Array<Ast_Expr *> params_to_emit;
-                    if (!typecheck_procedure_call(subscript, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
-                        return nullptr;
-                    }
-                    subscript->desugared_procedure_to_call = overload_proc;
-                    subscript->desugared_procedure_parameters = parameters;
                 }
             }
             else {
