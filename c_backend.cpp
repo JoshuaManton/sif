@@ -1,6 +1,7 @@
 #include "c_backend.h"
 
 void c_print_type(String_Builder *sb, Type *type, const char *var_name);
+void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name);
 void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type = nullptr);
 void print_indents(String_Builder *sb, int indent_level);
 
@@ -27,7 +28,7 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
         }
         case TYPE_STRUCT: {
             Type_Struct *type_struct = (Type_Struct *)type;
-            sb->printf("%s ", type_struct->name);
+            sb->printf("struct %s ", type_struct->name);
             break;
         }
         case TYPE_ENUM: {
@@ -52,9 +53,9 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
         }
         case TYPE_ARRAY: {
             Type_Array *type_array = (Type_Array *)type;
-            sb->print("Static_Array<");
-            c_print_type(sb, type_array->array_of, "");
-            sb->printf(", %d> ", type_array->count);
+            sb->print("struct ");
+            c_print_type_plain(sb, type_array, "");
+            sb->print(" ");
             break;
         }
         case TYPE_SLICE: {
@@ -127,9 +128,138 @@ void c_print_type(String_Builder *sb, Type *type, const char *var_name) {
 
     assert(!(type->flags & TF_UNTYPED));
     assert(!(type->flags & TF_INCOMPLETE));
+
     c_print_type_prefix(sb, type);
     sb->print(var_name);
     c_print_type_postfix(sb, type);
+}
+
+void c_print_type_plain_prefix(String_Builder *sb, Type *type) {
+    if (type == nullptr) {
+        sb->printf("void_");
+        return;
+    }
+
+    // todo(josh): handle procedure types
+    switch (type->kind) {
+        case TYPE_PRIMITIVE: {
+            Type_Primitive *type_primitive = (Type_Primitive *)type;
+            if (strcmp(type_primitive->name, "string") == 0) {
+                sb->print("String");
+            }
+            else if (strcmp(type_primitive->name, "rawptr") == 0) {
+                sb->print("voidpointer");
+            }
+            else {
+                sb->printf("%s", type_primitive->name);
+            }
+            break;
+        }
+        case TYPE_STRUCT: {
+            Type_Struct *type_struct = (Type_Struct *)type;
+            sb->printf("%s_", type_struct->name);
+            break;
+        }
+        case TYPE_ENUM: {
+            sb->printf("i64_");
+            break;
+        }
+        case TYPE_REFERENCE: {
+            // note(josh): copypasted from TYPE_POINTER
+            Type_Reference *type_reference = (Type_Reference *)type;
+            sb->print("ptr_");
+            c_print_type_plain_prefix(sb, type_reference->reference_to);
+            break;
+        }
+        case TYPE_POINTER: {
+            // note(josh): identical to TYPE_REFERENCE
+            // note(josh): identical to TYPE_REFERENCE
+            // note(josh): identical to TYPE_REFERENCE
+            Type_Pointer *type_pointer = (Type_Pointer *)type;
+            sb->print("ptr_");
+            c_print_type_plain_prefix(sb, type_pointer->pointer_to);
+            break;
+        }
+        case TYPE_ARRAY: {
+            Type_Array *type_array = (Type_Array *)type;
+            sb->print("Static_Array_");
+            sb->printf("%d_", type_array->count);
+            c_print_type_plain(sb, type_array->array_of, "");
+            break;
+        }
+        case TYPE_SLICE: {
+            sb->print("Slice_");
+            break;
+        }
+        case TYPE_PROCEDURE: {
+            Type_Procedure *type_procedure = (Type_Procedure *)type;
+            c_print_type_plain_prefix(sb, type_procedure->return_type);
+            sb->print("(*");
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+}
+
+void c_print_type_plain_postfix(String_Builder *sb, Type *type) {
+    // todo(josh): handle procedure types
+    switch (type->kind) {
+        case TYPE_PRIMITIVE: {
+            break;
+        }
+        case TYPE_STRUCT: {
+            break;
+        }
+        case TYPE_ENUM: {
+            break;
+        }
+        case TYPE_REFERENCE: {
+            Type_Reference *type_reference = (Type_Reference *)type;
+            c_print_type_plain_postfix(sb, type_reference->reference_to);
+            break;
+        }
+        case TYPE_POINTER: {
+            Type_Pointer *type_pointer = (Type_Pointer *)type;
+            c_print_type_plain_postfix(sb, type_pointer->pointer_to);
+            break;
+        }
+        case TYPE_ARRAY: {
+            break;
+        }
+        case TYPE_PROCEDURE: {
+            Type_Procedure *type_procedure = (Type_Procedure *)type;
+            sb->print(")(");
+            For (idx, type_procedure->parameter_types) {
+                c_print_type_plain(sb, type_procedure->parameter_types[idx], "");
+                if (idx != (type_procedure->parameter_types.count-1)) {
+                    sb->print(", ");
+                }
+            }
+            sb->print(")");
+            break;
+        }
+        case TYPE_SLICE: {
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+}
+
+void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name) {
+    if (type == nullptr) {
+        sb->printf("void_%s", var_name);
+        return;
+    }
+
+    assert(!(type->flags & TF_UNTYPED));
+    assert(!(type->flags & TF_INCOMPLETE));
+    c_print_type_plain_prefix(sb, type);
+    sb->print(var_name);
+    c_print_type_plain_postfix(sb, type);
 }
 
 void c_print_var(String_Builder *sb, const char *var_name, Type *type, Ast_Expr *expr) {
@@ -181,7 +311,7 @@ void c_emit_compound_literal_temporaries(String_Builder *sb, Ast_Expr *expr, int
             assert(var_name[63] == '\0'); // todo(josh): we should properly handle this case and allocate a bigger string
             num_compound_literal_temporaries_emitted += 1;
             c_print_var(sb, var_name, compound_literal->operand.type, nullptr);
-            sb->printf(" = {};\n");
+            sb->printf(" = {0};\n");
             print_indents(sb, indent_level);
             compound_literal->generated_temporary_variable_name = var_name;
             Type *compound_literal_type = compound_literal->operand.type;
@@ -533,7 +663,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
             }
             case EXPR_NULL: {
                 // todo(josh): should null be a constant? probably
-                sb->print("nullptr");
+                sb->print("NULL");
                 break;
             }
             case EXPR_TRUE: {
@@ -581,7 +711,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
             if (!var->is_constant) {
                 c_print_var(sb, var);
                 if (var->expr == nullptr) {
-                    sb->printf(" = {}");
+                    sb->printf(" = {0}");
                 }
                 if (print_semicolon) {
                     sb->print(";\n");
@@ -747,8 +877,8 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
     sb.print("#include <stdio.h>\n");
-    sb.print("#include <cstring>\n");
-    sb.print("#include <cstdlib>\n");
+    sb.print("#include <stdlib.h>\n");
+    sb.print("#include <string.h>\n");
 
     sb.print("typedef int8_t i8;\n");
     sb.print("typedef int16_t i16;\n");
@@ -763,10 +893,10 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("typedef float f32;\n");
     sb.print("typedef double f64;\n");
 
-    sb.print("struct String {\n");
+    sb.print("typedef struct {\n");
     sb.print("    char *data;\n");
     sb.print("    i64 count;\n");
-    sb.print("};\n");
+    sb.print("} String;\n");
     sb.print("String MAKE_STRING(char *data, i64 count) {\n");
     sb.print("    String string;\n");
     sb.print("    string.data = data;\n");
@@ -774,15 +904,31 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    return string;\n");
     sb.print("};\n");
 
-    sb.print("struct Slice {\n");
+    sb.print("typedef struct {\n");
     sb.print("    void *data;\n");
     sb.print("    i64 count;\n");
-    sb.print("};\n");
+    sb.print("} Slice;\n");
 
-    sb.print("template<typename T, int N>\n");
-    sb.print("struct Static_Array {\n");
-    sb.print("    T elements[N];\n");
-    sb.print("};\n");
+    // For (idx, all_types) {
+    //     Type *type = all_types[idx];
+    //     if (!is_type_array(type)) {
+    //         continue;
+    //     }
+
+    //     Type_Array *array_type = (Type_Array *)type;
+    //     sb.printf("typedef struct {\n");
+    //     sb.printf("    ");
+    //     c_print_type(&sb, array_type->array_of, "");
+    //     sb.printf(" elements[%d];\n", array_type->count);
+    //     sb.printf("} ");
+    //     c_print_type(&sb, array_type, "");
+    //     sb.printf(";\n");
+    // }
+
+    // sb.print("template<typename T, int N>\n");
+    // sb.print("struct Static_Array {\n");
+    // sb.print("    T elements[N];\n");
+    // sb.print("};\n");
 
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];
@@ -810,6 +956,16 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 }
                 break;
             }
+            case DECL_TYPE: {
+                Type_Declaration *type_decl = (Type_Declaration *)decl;
+                if (is_type_array(type_decl->type)) {
+                    assert(type_decl->parent_block == nullptr);
+                    Type_Array *array_type = (Type_Array *)type_decl->type;
+                    c_print_type(&sb, array_type, "");
+                    sb.printf(";\n");
+                }
+                break;
+            }
         }
     }
 
@@ -827,7 +983,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 if (!var->var->is_constant) {
                     c_print_var(&sb, var->var);
                     if (var->var->expr == nullptr) {
-                        sb.printf(" = {}");
+                        sb.printf(" = {0}");
                     }
                     sb.print(";\n");
                 }
@@ -837,6 +993,20 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 Proc_Declaration *procedure = (Proc_Declaration *)decl;
                 if (!procedure->procedure->header->is_foreign) {
                     c_print_procedure(&sb, procedure->procedure);
+                }
+                break;
+            }
+            case DECL_TYPE: {
+                Type_Declaration *type_decl = (Type_Declaration *)decl;
+                if (is_type_array(type_decl->type)) {
+                    assert(type_decl->parent_block == nullptr);
+                    Type_Array *array_type = (Type_Array *)type_decl->type;
+                    c_print_type(&sb, array_type, "");
+                    sb.printf(" {\n");
+                    sb.printf("    ");
+                    c_print_type(&sb, array_type->array_of, "");
+                    sb.printf(" elements[%d];\n", array_type->count);
+                    sb.printf("};\n");
                 }
                 break;
             }

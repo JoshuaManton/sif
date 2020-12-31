@@ -18,7 +18,9 @@ TODO:
 -put struct constants in a different block than struct instance members
 -error when instantiating a polymorphic struct without parameters
 -implicit polymorphism
+-figure out extra newlines in #c_code directive
 -control flow graph analysis
+-pass command line params to `run`
 -function pointers
 -varargs
 -runtime bounds checks
@@ -38,7 +40,6 @@ TODO:
 -#if
 -type_info
 -figure out if I should allow shadowing (maybe with a keyword?)
--generate C instead of C++. I think the only thing from C++ I'm using is for the templated Static_Array for array-by-value semantics
 */
 
 struct Timer {
@@ -104,11 +105,11 @@ void main(int argc, char **argv) {
     double codegen_start_time = query_timer(&timer);
 
     String_Builder c_code = generate_c_main_file(global_scope);
-    write_entire_file("output.cpp", c_code.string());
+    write_entire_file("output.c", c_code.string());
 
     double c_compile_start_time = query_timer(&timer);
 
-    if (system("cmd.exe /c \"cl output.cpp /nologo\"") != 0) {
+    if (system("cmd.exe /c \"cl output.c /nologo\"") != 0) {
         printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
         return;
     }

@@ -1,6 +1,6 @@
 #include "basic.sif"
 
-proc main() {
+proc main() : i32 {
     basic_stuff();
     arrays();
     slices();
@@ -9,13 +9,14 @@ proc main() {
     structural_polymorphism();
     dynamic_arrays();
     references();
+    return 0;
 }
 
 
 
 proc basic_stuff() {
     // todo(josh)
-    // variables, procedures, types, recursion, order independence
+    // variables, procedures, types, recursion, order independence, loops
 }
 
 
@@ -24,7 +25,7 @@ proc arrays_by_value(arr: [4]int) {
     arr[2] = 738;
 }
 proc arrays() {
-    print("\n\n---- arrays ----\n");
+    print_string("\n\n---- arrays ----\n");
     var my_array: [4]int;
     my_array[0] = 1;
     my_array[1] = 2;
@@ -47,7 +48,7 @@ proc arrays() {
 
 proc slices() {
     // todo(josh)
-    // print("\n\n---- slices todo(josh) ----\n");
+    // print_string("\n\n---- slices todo(josh) ----\n");
 }
 
 
@@ -74,7 +75,7 @@ struct Vector3 {
     }
 }
 proc operator_overloading() {
-    print("\n\n---- operator_overloading ----\n");
+    print_string("\n\n---- operator_overloading ----\n");
 
     var v1 = Vector3{1, 2, 3};
     var v2 = Vector3{1, 4, 9};
@@ -100,7 +101,7 @@ proc value_and_type_poly($a: $T) : T {
     return a * a;
 }
 proc procedural_polymorphism() {
-    print("\n\n---- procedural_polymorphism ----\n");
+    print_string("\n\n---- procedural_polymorphism ----\n");
 
     print_int(value_poly(2));
     assert(value_poly(2) == 4);
@@ -132,7 +133,7 @@ struct Custom_Array_Type!($N: int, $T: typeid) {
     }
 }
 proc structural_polymorphism() {
-    print("\n\n---- structural_polymorphism ----\n");
+    print_string("\n\n---- structural_polymorphism ----\n");
 
     var array_of_ints: Custom_Array_Type!(16, int);
     array_of_ints[4] = 124;
@@ -143,7 +144,7 @@ proc structural_polymorphism() {
 
 
 proc dynamic_arrays() {
-    print("\n\n---- dynamic_arrays ----\n");
+    print_string("\n\n---- dynamic_arrays ----\n");
 
     // definition is in basic.sif
     var dyn: Dynamic_Array!(Vector3);
@@ -164,7 +165,7 @@ proc change_by_reference(a: >int, value: int) {
     a = value;
 }
 proc references() {
-    print("\n\n---- references ----\n");
+    print_string("\n\n---- references ----\n");
     var my_int = 123;
     print_int(my_int);
     assert(my_int == 123);
@@ -249,7 +250,7 @@ proc vector_proc(var v: Vector3) {
 //         v.z = 1;
 //     }
 
-//     print("Hello, " + "World!\n");
+//     print_string("Hello, " + "World!\n");
 
 //     var v_in_slice = slice[9];
 //     print_float(v_in_slice.x);
@@ -266,7 +267,7 @@ proc vector_proc(var v: Vector3) {
 //     free(v_ptr);
 
 //     var str = "Hello, " + "World\n";
-//     print(str);
+//     print_string(str);
 //     print_int("asd123".count);
 
 //     var arr: [3]int;

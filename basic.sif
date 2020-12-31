@@ -5,8 +5,8 @@ void print_int(i64 i) {
 void print_float(float f) {
     printf(\"%%f\\\n\", f);
 }
-void print(String string) {
-    for (int i = 0; i < string.count; i++) {
+void print_string(String string) {
+    for (i64 i = 0; i < string.count; i++) {
         char c = string.data[i];
         printf(\"%%c\", c);
     }
@@ -23,13 +23,22 @@ void assert(bool condition) {
 }
 "
 
-proc print_int  (i: int)                                                #foreign;
-proc print_float(f: float)                                              #foreign;
-proc print      (str: string)                                           #foreign;
-proc alloc      (size: int)                                    : rawptr #foreign;
-proc free       (ptr: rawptr)                                           #foreign;
-proc assert     (condition: bool)                                       #foreign;
-proc memcpy     (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
+proc print_int   (i: int)                                                #foreign;
+proc print_float (f: float)                                              #foreign;
+proc print_string(str: string)                                           #foreign;
+proc alloc       (size: int)                                    : rawptr #foreign;
+proc free        (ptr: rawptr)                                           #foreign;
+proc assert      (condition: bool)                                       #foreign;
+proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
+
+
+
+proc slice_ptr(ptr: ^$T, count: int) : []T {
+    var slice: []T;
+    slice.data = ptr;
+    slice.count = count;
+    return slice;
+}
 
 
 
@@ -75,5 +84,3 @@ proc destroy_dynamic_array(dyn: ^Dynamic_Array!($T)) {
         free(dyn.array.data);
     }
 }
-
-

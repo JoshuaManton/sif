@@ -18,6 +18,12 @@ proc array_proc_fixed(foo: [4]^Foo!($T, $W)) {
 }
 
 proc main() {
+    var array_of_ints: [10]int;
+    var slice_arr = slice_ptr(&array_of_ints[0], array_of_ints.count);
+    for (var i = 0; i < slice_arr.count; i += 1) {
+        print_int(slice_arr[i]);
+    }
+
     var foo: Foo!(float, 16);
     pointer_proc(&foo);
 

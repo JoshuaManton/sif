@@ -2,7 +2,7 @@
 
 #define POINTER_SIZE 8
 
-static Array<Type *> all_types;
+Array<Type *> all_types;
 
 Type *type_i8;
 Type *type_i16;
@@ -497,7 +497,6 @@ void sbprint_constant_operand(String_Builder *sb, Operand operand) {
 }
 
 char *type_to_string(Type *type) {
-    // todo(josh): janky allocation
     String_Builder sb = make_string_builder(default_allocator(), 128);
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
@@ -550,6 +549,68 @@ char *type_to_string(Type *type) {
         case TYPE_ENUM: {
             Type_Enum *enum_type = (Type_Enum *)type;
             sb.printf("%s", enum_type->name);
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+    return sb.string();
+}
+
+char *type_to_string_plain(Type *type) {
+    String_Builder sb = make_string_builder(default_allocator(), 128);
+    switch (type->kind) {
+        case TYPE_PRIMITIVE: {
+            Type_Primitive *primitive = (Type_Primitive *)type;
+            sb.print(primitive->name);
+            break;
+        }
+        case TYPE_STRUCT: {
+            Type_Struct *structure = (Type_Struct *)type;
+            if (structure->is_polymorph_of) {
+                sb.print(structure->is_polymorph_of->name);
+                sb.print("_poly_");
+                For (idx, structure->polymorphic_parameter_values) {
+                    if (idx != 0) {
+                        sb.print("_");
+                    }
+                    // todo(josh): this might add non-identifier characters. need to do something special here.
+                    sbprint_constant_operand(&sb, structure->polymorphic_parameter_values[idx]);
+                }
+            }
+            else {
+                sb.print(structure->name);
+            }
+            break;
+        }
+        case TYPE_PROCEDURE: {
+            assert(false && "unimplemented");
+            break;
+        }
+        case TYPE_POINTER: {
+            Type_Pointer *pointer = (Type_Pointer *)type;
+            sb.printf("pointer_%s", type_to_string(pointer->pointer_to));
+            break;
+        }
+        case TYPE_REFERENCE: {
+            Type_Reference *reference = (Type_Reference *)type;
+            sb.printf("reference_%s", type_to_string(reference->reference_to));
+            break;
+        }
+        case TYPE_ARRAY: {
+            Type_Array *array = (Type_Array *)type;
+            sb.printf("array_%d_%s", array->count, type_to_string(array->array_of));
+            break;
+        }
+        case TYPE_SLICE: {
+            Type_Slice *slice = (Type_Slice *)type;
+            sb.printf("slice_%s", type_to_string(slice->slice_of));
+            break;
+        }
+        case TYPE_ENUM: {
+            Type_Enum *enum_type = (Type_Enum *)type;
+            sb.printf("enum_%s", enum_type->name);
             break;
         }
         default: {
@@ -645,6 +706,7 @@ bool complete_type(Type *type) {
                 array_type->align = array_type->array_of->align;
                 assert(array_type->size > 0);
                 array_type->flags &= ~(TF_INCOMPLETE);
+                ordered_declarations.append(new Type_Declaration("", array_type, nullptr));
                 break;
             }
         }
@@ -2316,11 +2378,12 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
     header->type = get_or_create_type_procedure(parameter_types, return_type);
     if (header->name == nullptr) {
         assert(header->operator_to_overload != TK_INVALID);
-        char *name = (char *)alloc(default_allocator(), 64);
-        // todo(josh): put the parameter types in the name too probably?
         assert(header->struct_to_operator_overload != nullptr);
-        sprintf(name, "__operator_overload_%s_%s", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
-        header->name = name;
+        String_Builder op_overload_name_sb = make_string_builder(default_allocator(), 64);
+        op_overload_name_sb.printf("__operator_overload_%s_%s_", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
+        assert(header->parameters.count == 2);
+        op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
+        header->name = op_overload_name_sb.string();
     }
     else {
         assert(header->operator_to_overload == TK_INVALID);

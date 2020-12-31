@@ -147,6 +147,7 @@ struct Type_Procedure : public Type {
 };
 
 extern Array<Declaration *> ordered_declarations;
+extern Array<Type *> all_types;
 extern Type *type_i8;
 extern Type *type_i16;
 extern Type *type_i32;
