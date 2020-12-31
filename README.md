@@ -34,7 +34,17 @@ proc main() : i32 {
 
 1. Clone the repo.
 2. Run `build.bat`
-3. Run `bin/sif run my_program.sif`
+3. Make sure that you have run vcvars so `cl` is in your path (this is a temporary step, will work around it later)
+4. Put the following into a file called `my_program.sif`:
+```odin
+#include "basic.sif"
+
+proc main() : i32 {
+    print_string("Hello, World!");
+    return 0;
+}
+```
+5. Run `bin/sif.exe run my_program.sif`
 
 ## Demo
 
