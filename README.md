@@ -20,6 +20,15 @@ proc main() : i32 {
 - Procedural and structural polymorphism
 - Order-independent declarations
 
+## Features Planned
+
+- Runtime type information
+- Tagged unions (and normal unions, haven't done that yet)
+- defer statement
+- First-class procedures
+- Runtime bounds checks
+- Other small things you'd expect like varargs, static #if, switch-statements, etc
+
 ## Demo
 
 The following is a demo program showing off many of the features of sif.
@@ -39,8 +48,6 @@ proc main() : i32 {
     structs();
     enums();
     order_independence();
-    // print_string("\n\n---- enums ----\n");
-
     references();
     operator_overloading();
     procedural_polymorphism();

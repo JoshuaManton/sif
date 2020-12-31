@@ -12,8 +12,6 @@ proc main() : i32 {
     structs();
     enums();
     order_independence();
-    // print_string("\n\n---- enums ----\n");
-
     references();
     operator_overloading();
     procedural_polymorphism();
