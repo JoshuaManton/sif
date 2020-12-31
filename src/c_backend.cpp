@@ -483,13 +483,13 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
         }
     }
 
-    if (expr->resolved_operator_overload != nullptr) {
-        assert(expr->resolved_operator_overload != nullptr);
-        assert(expr->resolved_operator_overload->header->name != nullptr);
-        sb->printf("%s(", expr->resolved_operator_overload->header->name);
-        For (idx, expr->operator_overload_parameters) {
-            c_print_expr(sb, expr->operator_overload_parameters[idx], expr->resolved_operator_overload->header->type->parameter_types[idx]);
-            if (idx != (expr->operator_overload_parameters.count-1)) {
+    if (expr->desugared_procedure_to_call != nullptr) {
+        assert(expr->desugared_procedure_to_call != nullptr);
+        assert(expr->desugared_procedure_to_call->header->name != nullptr);
+        sb->printf("%s(", expr->desugared_procedure_to_call->header->name);
+        For (idx, expr->desugared_procedure_parameters) {
+            c_print_expr(sb, expr->desugared_procedure_parameters[idx], expr->desugared_procedure_to_call->header->type->parameter_types[idx]);
+            if (idx != (expr->desugared_procedure_parameters.count-1)) {
                 sb->print(", ");
             }
         }

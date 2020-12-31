@@ -18,31 +18,52 @@
 
 /*
 TODO:
--put struct constants in a different block than struct instance members
--error when instantiating a polymorphic struct without parameters
--implicit polymorphism
--figure out extra newlines in #c_code directive
--control flow graph analysis
+
+SMALL
 -pass command line params to `run`
--function pointers
--varargs
--make C output a bit prettier, whatever that means
--runtime bounds checks
--allow custom entrypoints
--enforce entrypoints returning i32
+-opt=N
+-show optional compiler flags in usage
+-error for unknown compiler flags
+-unknown directives don't stop compilation
+-default output file based on source file name i.e. sif build thing.sif -> thing.exe
 -constant bounds checks i.e. var arr: [4]int; arr[232];
--right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
+-unions
+-error when instantiating a polymorphic struct without parameters
+-block comments
+-@notes on declarations
+
+MEDIUM
+-check for use-before-declaration of local vars
+-make C output a bit prettier, whatever that means
+-allow custom entrypoints
+-enforce entrypoints returning i32, or do it implicitly in the backend
+-runtime bounds checks
+-good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
--assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -enum field expressions
--foreach loops
+-defer
+-put struct constants in a different block than struct instance members
+-polymorphic structs should register their parameters as local constants
 -slicing
 -transmute
 -switch statements
+-locally scoped structs and procs
+
+BIG
+-iterative solver for polymorphism
+-namespaced imports i.e. `#include Foo "foo.sif"`
+-implicit polymorphism
+-control flow graph analysis
+-function pointers
+-varargs
+-using
+-C varargs
+-right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
+-assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
+-foreach loops
 -#caller_location
--unions
+-#location()
 -tagged unions
--defer
 -#if
 -type_info
 -figure out if I should allow shadowing (maybe with a keyword?)
@@ -84,7 +105,6 @@ void main(int argc, char **argv) {
 
     if (argc < 3) {
         printf("Usage:\n  sif <build|run> <file>\n");
-        // todo(josh): document optional switches
         return;
     }
 

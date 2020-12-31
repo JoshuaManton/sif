@@ -374,8 +374,8 @@ enum Expr_Kind {
 struct Ast_Expr : public Ast_Node {
     Expr_Kind expr_kind = EXPR_INVALID;
     Operand operand = {};
-    Ast_Proc *resolved_operator_overload = {};
-    Array<Ast_Expr *> operator_overload_parameters = {};
+    Ast_Proc *desugared_procedure_to_call = {};
+    Array<Ast_Expr *> desugared_procedure_parameters = {};
     Ast_Expr(Expr_Kind kind, Location location)
     : Ast_Node(AST_EXPR, location)
     , expr_kind(kind)

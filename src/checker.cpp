@@ -663,7 +663,6 @@ bool complete_type(Type *type) {
                         }
                         else {
                             assert(var->type->size > 0);
-                            // todo(josh): alignment
                             int next_alignment = -1;
                             for (int i = idx; i < (structure->fields.count-1); i++) {
                                 Ast_Var *next_var = structure->fields[i+1];
@@ -690,14 +689,14 @@ bool complete_type(Type *type) {
                 struct_type->align = largest_alignment;
                 struct_type->flags &= ~(TF_INCOMPLETE);
 
-                assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE); // todo(josh): locally scoped structs and procs
+                assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE);
                 ordered_declarations.append(structure->declaration);
                 break;
             }
             case TYPE_ARRAY: {
                 Type_Array *array_type = (Type_Array *)type;
                 if (!complete_type(array_type->array_of)) {
-                    return false; // todo(josh): error message
+                    return false;
                 }
                 assert(array_type->count > 0);
                 assert(array_type->array_of->size > 0);
@@ -1630,10 +1629,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         out_params_to_emit->append(parameters[idx]);
     }
 
-    // todo(josh): deduplicate polymorphs
-
-    Ast_Proc *procedure_polymorph = nullptr; // todo(josh): it would be nice if we could remove this to keep the poly stuff localized
-
+    Operand result_operand(expr->location);
     Type_Procedure *target_procedure_type = nullptr;
     if (is_type_polymorphic(procedure_operand.type)) {
         assert(procedure_operand.referenced_declaration != nullptr);
@@ -1642,7 +1638,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
 
         Array<int> parameter_indices_to_remove;
         parameter_indices_to_remove.allocator = default_allocator();
-        procedure_polymorph = polymorph_procedure(referenced_procedure, expr->location, parameters, &parameter_indices_to_remove);
+        Ast_Proc *procedure_polymorph = polymorph_procedure(referenced_procedure, expr->location, parameters, &parameter_indices_to_remove);
         if (procedure_polymorph == nullptr) {
             return false;
         }
@@ -1654,6 +1650,10 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         procedure_operand = procedure_polymorph->declaration->operand;
         assert(is_type_procedure(procedure_operand.type));
         target_procedure_type = (Type_Procedure *)procedure_operand.type;
+
+        expr->desugared_procedure_to_call = procedure_polymorph;
+        expr->desugared_procedure_parameters = *out_params_to_emit;
+        result_operand.referenced_declaration = procedure_polymorph->declaration;
     }
     else {
         assert(procedure_operand.type->kind == TYPE_PROCEDURE);
@@ -1671,7 +1671,6 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         }
     }
 
-    Operand result_operand(expr->location);
     result_operand.type = target_procedure_type->return_type;
     if (result_operand.type) {
         result_operand.flags = OPERAND_RVALUE;
@@ -1679,12 +1678,6 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
     else {
         result_operand.flags = OPERAND_NO_VALUE;
     }
-    // todo(josh): can we please move this up into the other polymorph code?
-    // @PolymorphCleanup
-    if (procedure_polymorph != nullptr) {
-        result_operand.referenced_declaration = procedure_polymorph->declaration;
-    }
-
     *out_operand = result_operand;
     return true;
 }
@@ -1824,8 +1817,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         if (!typecheck_procedure_call(binary, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
                             return nullptr;
                         }
-                        binary->resolved_operator_overload = overload_proc;
-                        binary->operator_overload_parameters = params_to_emit;
+                        binary->desugared_procedure_to_call = overload_proc;
+                        binary->desugared_procedure_parameters = params_to_emit;
                     }
                 }
                 else {
@@ -1918,8 +1911,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     if (!typecheck_procedure_call(subscript, overload_proc->header->operand, parameters, &result_operand, &params_to_emit)) {
                         return nullptr;
                     }
-                    subscript->resolved_operator_overload = overload_proc;
-                    subscript->operator_overload_parameters = parameters;
+                    subscript->desugared_procedure_to_call = overload_proc;
+                    subscript->desugared_procedure_parameters = parameters;
                 }
             }
             else {
