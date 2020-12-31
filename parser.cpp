@@ -472,6 +472,8 @@ Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
     return body;
 }
 
+extern char *sif_core_lib_path;
+
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_override) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
@@ -546,7 +548,15 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer);
             Token filename_token;
             EXPECT(lexer, TK_STRING, &filename_token);
-            bool ok = parse_file(filename_token.text, filename_token.location);
+            String_Builder include_sb = make_string_builder(default_allocator(), 64);
+            if (starts_with(filename_token.text, "core:")) {
+                char *filename = filename_token.text + 5;
+                include_sb.printf("%s/%s", sif_core_lib_path, filename);
+            }
+            else {
+                include_sb.print(filename_token.text);
+            }
+            bool ok = parse_file(include_sb.string(), filename_token.location);
             if (!ok) {
                 return nullptr;
             }

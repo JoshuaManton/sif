@@ -326,6 +326,15 @@ void String_Builder::destroy() {
 
 
 
+bool starts_with(char *str, char *start) {
+    for (int i = 0; start[i] != '\0'; i++) {
+        if (str[i] != start[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // path/to/file.txt -> path/to
 // returns null if it doesn't hit a '/' or '\\'
 char *path_directory(const char *filepath, Allocator allocator) {

@@ -75,6 +75,9 @@ char *wide_to_cstring(wchar_t *wide) {
     return cstring;
 }
 
+char *sif_exe_path;
+char *sif_core_lib_path;
+
 void main(int argc, char **argv) {
     Timer timer = {};
     init_timer(&timer);
@@ -84,6 +87,14 @@ void main(int argc, char **argv) {
         printf("Usage:\n  sif <build|run> <file> [-show-timings]\n");
         return;
     }
+
+    wchar_t exe_path_wide[MAX_PATH];
+    GetModuleFileNameW(nullptr, exe_path_wide, MAX_PATH);
+    sif_exe_path = wide_to_cstring(exe_path_wide);
+    char *sif_root = path_directory(sif_exe_path, default_allocator());
+    String_Builder core_lib_builder = make_string_builder(default_allocator(), 64);
+    core_lib_builder.printf("%s/../core", sif_root);
+    sif_core_lib_path = core_lib_builder.string();
 
     bool show_timings = false;
 
