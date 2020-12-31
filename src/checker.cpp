@@ -419,9 +419,13 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             Ast_Proc *proc = struct_decl->structure->operator_overloads[idx];
             assert(!proc->header->is_foreign);
             assert(proc->body != nullptr);
+            assert(proc->header->name == nullptr);
+            assert(proc->header->declaration == nullptr);
             if (!typecheck_procedure_header(proc->header)) {
                 return false;
             }
+            assert(proc->header->name != nullptr);
+            assert(proc->header->declaration != nullptr);
             if (!typecheck_block(proc->body)) {
                 return false;
             }
@@ -1622,13 +1626,14 @@ Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location,
     return structure_polymorph;
 }
 
-bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand, Array<Ast_Expr *> *out_params_to_emit) {
-    // copy all the exprs into out_params_to_emit
+bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand) {
+    // copy all the exprs into params_to_emit
+    Array<Ast_Expr *> params_to_emit = {};
+    params_to_emit.allocator = default_allocator();
     For (idx, parameters) {
-        out_params_to_emit->append(parameters[idx]);
+        params_to_emit.append(parameters[idx]);
     }
 
-    Operand result_operand(expr->location);
     Type_Procedure *target_procedure_type = nullptr;
     if (is_type_polymorphic(procedure_operand.type)) {
         assert(procedure_operand.referenced_declaration != nullptr);
@@ -1642,17 +1647,13 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
             return false;
         }
         for (int i = parameter_indices_to_remove.count-1; i >= 0; i--) {
-            out_params_to_emit->ordered_remove(i);
+            params_to_emit.ordered_remove(i);
         }
 
         assert(!is_type_polymorphic(procedure_polymorph->header->declaration->operand.type));
         procedure_operand = procedure_polymorph->header->declaration->operand;
         assert(is_type_procedure(procedure_operand.type));
         target_procedure_type = (Type_Procedure *)procedure_operand.type;
-
-        expr->desugared_procedure_to_call = procedure_polymorph;
-        expr->desugared_procedure_parameters = *out_params_to_emit;
-        // result_operand.referenced_declaration = procedure_polymorph->header->declaration;
     }
     else {
         assert(procedure_operand.type->kind == TYPE_PROCEDURE);
@@ -1660,25 +1661,33 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         assert(target_procedure_type->parameter_types.count == parameters.count);
     }
 
+    assert(is_type_procedure(target_procedure_type));
+    assert(!is_type_polymorphic(target_procedure_type));
+
     // typecheck parameters now that we have concrete types for the procedure parameters
-    For (idx, *out_params_to_emit) {
+    For (idx, params_to_emit) {
         Type *parameter_type = target_procedure_type->parameter_types[idx];
-        Ast_Expr *parameter = (*out_params_to_emit)[idx];
+        Ast_Expr *parameter = params_to_emit[idx];
         Operand *parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
         if (!parameter_operand) {
             return false;
         }
     }
 
-    assert(is_type_procedure(target_procedure_type));
-    assert(!is_type_polymorphic(target_procedure_type));
+    if (procedure_operand.referenced_declaration != nullptr) {
+        assert(procedure_operand.referenced_declaration->kind == DECL_PROC);
+        Ast_Proc *referenced_procedure = ((Proc_Declaration *)procedure_operand.referenced_declaration)->header->procedure;
+        expr->desugared_procedure_to_call = referenced_procedure;
+        expr->desugared_procedure_parameters = params_to_emit;
+    }
 
     if (expr->expr_kind == EXPR_PROCEDURE_CALL) {
         Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-        call->parameters_to_emit = *out_params_to_emit;
+        call->parameters_to_emit = params_to_emit;
         call->target_procedure_type = target_procedure_type;
     }
 
+    Operand result_operand(expr->location);
     result_operand.type = target_procedure_type->return_type;
     if (result_operand.type) {
         result_operand.flags = OPERAND_RVALUE;
@@ -1743,13 +1752,10 @@ bool try_resolve_operator_overload(Ast_Struct *structure, Ast_Expr *root_expr, A
     }
     else {
         assert(overload_proc->header->operand.type != nullptr);
-        Array<Ast_Expr *> params_to_emit;
-        params_to_emit.allocator = default_allocator();
-        if (!typecheck_procedure_call(root_expr, overload_proc->header->operand, parameters, out_result_operand, &params_to_emit)) {
+        assert(overload_proc->header->operand.referenced_declaration != nullptr);
+        if (!typecheck_procedure_call(root_expr, overload_proc->header->operand, parameters, out_result_operand)) {
             return false;
         }
-        root_expr->desugared_procedure_to_call = overload_proc;
-        root_expr->desugared_procedure_parameters = params_to_emit;
     }
     return true;
 }
@@ -2008,9 +2014,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
             }
 
-            Array<Ast_Expr *> params_to_emit;
-            params_to_emit.allocator = default_allocator();
-            if (!typecheck_procedure_call(call, *procedure_operand, call->parameters, &result_operand, &params_to_emit)) {
+            if (!typecheck_procedure_call(call, *procedure_operand, call->parameters, &result_operand)) {
                 return nullptr;
             }
             assert(!is_type_polymorphic(call->target_procedure_type));
@@ -2381,11 +2385,14 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
         assert(header->parameters.count == 2);
         op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
         header->name = op_overload_name_sb.string();
+        assert(header->declaration == nullptr);
+        header->declaration = new Proc_Declaration(header, header->parent_block);
     }
     else {
         assert(header->operator_to_overload == TK_INVALID);
     }
     Operand operand = {};
+    operand.referenced_declaration = header->declaration;
     operand.type = header->type;
     operand.flags = OPERAND_RVALUE;
     header->operand = operand;
