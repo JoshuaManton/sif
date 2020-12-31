@@ -4,7 +4,7 @@ sif is a simple imperative procedural language made with the goal of being a sli
 ## Hello, World!
 
 ```odin
-#include "basic.sif"
+#include "core:basic.sif"
 
 proc main() : i32 {
     print_string("Hello, World!");
@@ -37,7 +37,7 @@ proc main() : i32 {
 3. Make sure that you have run vcvars so `cl` is in your path (this is a temporary step, will work around it later)
 4. Put the following into a file called `my_program.sif`:
 ```odin
-#include "basic.sif"
+#include "core:basic.sif"
 
 proc main() : i32 {
     print_string("Hello, World!");
