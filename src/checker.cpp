@@ -1760,22 +1760,6 @@ bool try_resolve_operator_overload(Ast_Struct *structure, Ast_Expr *root_expr, A
     return true;
 }
 
-Type *unwrap_type(Type *type) {
-    assert(type != nullptr);
-    bool did_something = true;
-    do {
-        did_something = false;
-        while (type->kind == TYPE_REFERENCE) {
-            did_something = true;
-            Type_Reference *reference = (Type_Reference *)type;
-            assert(reference->reference_to != nullptr);
-            type = reference->reference_to;
-        }
-    } while (did_something);
-
-    return type;
-}
-
 Ast_Expr *unparen_expr(Ast_Expr *expr) {
     assert(expr != nullptr);
     while (expr->expr_kind == EXPR_PAREN) {
@@ -2331,7 +2315,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.flags |= OPERAND_LVALUE;
             result_operand.reference_type = result_operand.type;
         }
-        result_operand.type = unwrap_type(result_operand.type);
+        while (result_operand.type->kind == TYPE_REFERENCE) {
+            Type_Reference *reference = (Type_Reference *)result_operand.type;
+            assert(reference->reference_to != nullptr);
+            result_operand.type = reference->reference_to;
+        }
     }
 
     if (expected_type) {
@@ -2349,7 +2337,6 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
     assert(header->type == nullptr);
     Array<Type *> parameter_types = {};
     parameter_types.allocator = default_allocator();
-    bool is_polymorphic = false;
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
         if (parameter->is_constant) {
