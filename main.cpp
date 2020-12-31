@@ -4,8 +4,11 @@
 #include <cassert>
 
 #define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+// #define WIN32_LEAN_AND_MEAN
+// #include <windows.h>
+
+#define MICROSOFT_CRAZINESS_IMPLEMENTATION
+#include "microsoft_craziness.h"
 
 #include "common.h"
 #include "lexer.h"
@@ -61,6 +64,17 @@ double query_timer(Timer *timer) {
     return large_integer_counter.QuadPart / timer->frequency;
 }
 
+char *wide_to_cstring(wchar_t *wide) {
+    int query_result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+    assert(query_result > 0);
+
+    char *cstring = (char *)alloc(default_allocator(), query_result);
+    int result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, cstring, query_result, nullptr, nullptr);
+
+    assert(result == query_result);
+    return cstring;
+}
+
 void main(int argc, char **argv) {
     Timer timer = {};
     init_timer(&timer);
@@ -112,7 +126,17 @@ void main(int argc, char **argv) {
 
     double c_compile_start_time = query_timer(&timer);
 
-    if (system("cmd.exe /c \"cl output.c /nologo\"") != 0) {
+    // Find_Result fr = find_visual_studio_and_windows_sdk();
+    // todo(josh): get the vs and windows sdk paths
+    // char *exe_path = wide_to_cstring(fr.vs_exe_path);
+    // char *lib_path = wide_to_cstring(fr.vs_library_path);
+    // char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path);
+    // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
+
+    String_Builder command_sb = make_string_builder(default_allocator(), 128);
+    command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo\"");
+
+    if (system(command_sb.string()) != 0) {
         printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
         return;
     }
