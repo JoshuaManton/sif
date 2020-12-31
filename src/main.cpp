@@ -75,7 +75,6 @@ char *wide_to_cstring(wchar_t *wide) {
     return cstring;
 }
 
-char *sif_exe_path;
 char *sif_core_lib_path;
 
 void main(int argc, char **argv) {
@@ -84,24 +83,38 @@ void main(int argc, char **argv) {
     double application_start_time = query_timer(&timer);
 
     if (argc < 3) {
-        printf("Usage:\n  sif <build|run> <file> [-show-timings]\n");
+        printf("Usage:\n  sif <build|run> <file>\n");
+        // todo(josh): document optional switches
         return;
     }
 
     wchar_t exe_path_wide[MAX_PATH];
     GetModuleFileNameW(nullptr, exe_path_wide, MAX_PATH);
-    sif_exe_path = wide_to_cstring(exe_path_wide);
+    char *sif_exe_path = wide_to_cstring(exe_path_wide);
     char *sif_root = path_directory(sif_exe_path, default_allocator());
     String_Builder core_lib_builder = make_string_builder(default_allocator(), 64);
     core_lib_builder.printf("%s/../core", sif_root);
     sif_core_lib_path = core_lib_builder.string();
 
     bool show_timings = false;
+    bool keep_temp_files = false;
+    char *output_exe_name = "output.exe";
 
     for (int i = 2; i < argc; i++) {
         char *arg = argv[i];
         if (strcmp(arg, "-show-timings") == 0) {
             show_timings = true;
+        }
+        else if (strcmp(arg, "-keep-temp-files") == 0) {
+            keep_temp_files = true;
+        }
+        else if (strcmp(arg, "-o") == 0) {
+            if ((i+1) >= argc) {
+                printf("Missing argument for -o switch.");
+                return;
+            }
+            output_exe_name = argv[i+1];
+            i += 1;
         }
     }
 
@@ -145,11 +158,16 @@ void main(int argc, char **argv) {
     // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
 
     String_Builder command_sb = make_string_builder(default_allocator(), 128);
-    command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo\"");
+    command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo /link /OUT:%s\"", output_exe_name);
 
     if (system(command_sb.string()) != 0) {
         printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
         return;
+    }
+
+    if (!keep_temp_files) {
+        DeleteFileA("output.c");
+        DeleteFileA("output.obj");
     }
 
     double compilation_end_time = query_timer(&timer);
@@ -167,7 +185,9 @@ void main(int argc, char **argv) {
     }
 
     if (is_run) {
-        system("cmd.exe /c \"output.exe\"");
+        String_Builder run_command_sb = make_string_builder(default_allocator(), 64);
+        run_command_sb.printf("cmd.exe /c \"%s\"", output_exe_name);
+        system(run_command_sb.string());
     }
     else {
         assert(is_build);
