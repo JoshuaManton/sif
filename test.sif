@@ -1,24 +1,19 @@
 #include "core:basic.sif"
+#include "core:dynamic_array.sif"
 
 proc main() : i32 {
-    var array_of_ints: [10]int;
-    var slice_arr = slice_ptr(&array_of_ints[0], array_of_ints.count);
-    for (var i = 0; i < slice_arr.count; i += 1) {
-        print_int(slice_arr[i]);
+    var dyn: Dynamic_Array!(int);
+    append(&dyn, 1);
+    append(&dyn, 2);
+    append(&dyn, 3);
+    append(&dyn, 4);
+    append(&dyn, 5);
+    for (var i = 0; i < dyn.count; i += 1) {
+        print_int(dyn[i]);
     }
-
-    var foo: Foo!(float, 16);
-    pointer_proc(&foo);
-
-    var slice1: []Foo!(float, 16);
-    var slice2: []Foo!(float, 8);
-    slice_proc(slice1);
-    slice_proc(slice2);
-
-    var arr: [4]^Foo!(float, 16);
-    array_proc(arr);
-    array_proc_fixed(arr);
-
-    var arr2: [2]^Foo!(float, 16);
-    array_proc(arr2);
+    print_string("---------------\n");
+    ordered_remove(&dyn, 2);
+    for (var i = 0; i < dyn.count; i += 1) {
+        print_int(dyn[i]);
+    }
 }

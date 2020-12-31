@@ -335,7 +335,22 @@ bool starts_with(char *str, char *start) {
     return true;
 }
 
+bool ends_with(char *str, char *end) {
+    int str_length = strlen(str);
+    int end_length = strlen(end);
+    if (str_length < end_length) {
+        return false;
+    }
+    for (int i = 0; i < end_length; i++) {
+        if (str[str_length-1-i] != end[end_length-1-i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // path/to/file.txt -> path/to
+// file.txt         -> <null>
 // returns null if it doesn't hit a '/' or '\\'
 char *path_directory(const char *filepath, Allocator allocator) {
     int length = strlen(filepath);
@@ -351,6 +366,40 @@ char *path_directory(const char *filepath, Allocator allocator) {
     int length_to_end = length - (length - slash_index);
     char *new_str = (char *)alloc(allocator, length_to_end+1);
     memcpy(new_str, filepath, length_to_end);
+    new_str[length_to_end] = '\0';
+    return new_str;
+}
+
+// path/to/file.txt -> file
+// file.txt         -> file
+// file             -> file
+// path/to/         -> <null>
+char *path_filename(const char *filepath, Allocator allocator) {
+    int length = strlen(filepath);
+    int slash_index = length;
+    int dot_index = length;
+    for (; slash_index >= 0; slash_index--) {
+        if (filepath[slash_index] == '/' || filepath[slash_index] == '\\') {
+            break;
+        }
+    }
+    for (; dot_index >= 0; dot_index--) {
+        if (filepath[dot_index] == '.') {
+            break;
+        }
+    }
+    int start = slash_index+1;
+    int end = dot_index;
+    if (end < start) {
+        end = length;
+    }
+    if (start == end) {
+        return nullptr;
+    }
+    assert(end >= start);
+    int length_to_end = end - start;
+    char *new_str = (char *)alloc(allocator, length_to_end+1);
+    memcpy(new_str, &filepath[start], length_to_end);
     new_str[length_to_end] = '\0';
     return new_str;
 }

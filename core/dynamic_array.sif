@@ -29,6 +29,24 @@ proc pop(dyn: ^Dynamic_Array!($T)) : T {
     return value;
 }
 
+proc unordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
+    var value = dyn^[index];
+    dyn^[index] = dyn^[dyn.count-1];
+    dyn.count -= 1;
+    return value;
+}
+
+proc ordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
+    var value = dyn^[index];
+    if (index != dyn.count-1) {
+        var src: rawptr = &dyn^[index+1];
+        var dst: rawptr = &dyn^[index];
+        memcpy(dst, src, cast(u32, (dyn.count-index+1) * sizeof(T)));
+    }
+    dyn.count -= 1;
+    return value;
+}
+
 proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
     dyn.count = 0;
 }

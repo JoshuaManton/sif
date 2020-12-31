@@ -20,15 +20,15 @@
 TODO:
 
 SMALL
+-deduplicate #include paths
 -opt=N
--show optional compiler flags in usage
 -unknown directives don't stop compilation
--default output file based on source file name i.e. sif build thing.sif -> thing.exe
 -constant bounds checks i.e. var arr: [4]int; arr[232];
 -unions
 -error when instantiating a polymorphic struct without parameters
 -block comments
 -@notes on declarations
+-intern identifiers and remove strcmps
 
 MEDIUM
 -read command line parameters
@@ -55,8 +55,8 @@ BIG
 -control flow graph analysis
 -function pointers
 -varargs
--using
 -C varargs
+-using
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
@@ -140,9 +140,16 @@ void main(int argc, char **argv) {
         return;
     }
 
+    char *file_to_compile = argv[2];
+    if (!ends_with(file_to_compile, ".sif")) {
+        printf("File to compile must end with '.sif'");
+        return;
+    }
+
     bool show_timings = false;
     bool keep_temp_files = false;
-    char *output_exe_name = "output.exe";
+
+    char *output_exe_name = nullptr;
 
     for (int i = 3; i < argc; i++) {
         char *arg = argv[i];
@@ -157,6 +164,10 @@ void main(int argc, char **argv) {
                 printf("Missing argument for -o flag.");
                 return;
             }
+            if (!ends_with(argv[i+1], ".exe")) {
+                printf("Argument for -o must end with '.exe'");
+                return;
+            }
             output_exe_name = argv[i+1];
             i += 1;
         }
@@ -167,13 +178,20 @@ void main(int argc, char **argv) {
         }
     }
 
+    if (output_exe_name == nullptr) {
+        char *file_to_compile_without_extension = path_filename(file_to_compile, default_allocator());
+        String_Builder output_exe_name_sb = make_string_builder(default_allocator(), 64);
+        output_exe_name_sb.printf("%s.exe", file_to_compile_without_extension);
+        output_exe_name = output_exe_name_sb.string();
+    }
+
     init_lexer_globals();
     init_parser();
     init_checker();
 
     double parsing_start_time = query_timer(&timer);
 
-    Ast_Block *global_scope = begin_parsing(argv[2]);
+    Ast_Block *global_scope = begin_parsing(file_to_compile);
     if (!global_scope) {
         printf("There were errors.\n");
         return;
