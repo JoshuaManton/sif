@@ -1,0 +1,40 @@
+struct Dynamic_Array!($T: typeid) {
+    var array: []T;
+    var count: int;
+    operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
+        return dyn.array[index];
+    }
+}
+
+proc append(dyn: ^Dynamic_Array!($T), value: T) {
+    if (dyn.count == dyn.array.count) {
+        var old_data = dyn.array.data;
+        var new_cap = 8 + dyn.array.count * 2;
+        dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
+        dyn.array.count = new_cap;
+        if (old_data != null) {
+            memcpy(dyn.array.data, old_data, cast(u32, dyn.count * sizeof(T)));
+            free(old_data);
+        }
+    }
+    assert(dyn.count < dyn.array.count);
+    dyn.array[dyn.count] = value;
+    dyn.count += 1;
+}
+
+proc pop(dyn: ^Dynamic_Array!($T)) : T {
+    assert(dyn.count > 0);
+    var value = dyn[dyn.count-1];
+    dyn.count -= 1;
+    return value;
+}
+
+proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
+    dyn.count = 0;
+}
+
+proc destroy_dynamic_array(dyn: ^Dynamic_Array!($T)) {
+    if (dyn.array.data != null) {
+        free(dyn.array.data);
+    }
+}

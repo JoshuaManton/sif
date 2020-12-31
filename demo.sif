@@ -1,22 +1,68 @@
 #include "basic.sif"
 
 proc main() : i32 {
+    print_string("-------------------------\n");
+    print_string("|   sif language demo   |\n");
+    print_string("-------------------------\n");
+
     basic_stuff();
     arrays();
     slices();
+    strings();
+    structs();
+    enums();
+    order_independence();
+    // print_string("\n\n---- enums ----\n");
+
+    references();
     operator_overloading();
     procedural_polymorphism();
     structural_polymorphism();
     dynamic_arrays();
-    references();
     return 0;
 }
 
 
 
+proc factorial(var n: int) : int {
+    if (n == 1) {
+        return 1;
+    }
+    return n * factorial(n-1);
+}
 proc basic_stuff() {
-    // todo(josh)
-    // variables, procedures, types, recursion, order independence, loops
+    print_string("\n\n---- basic_stuff ----\n");
+
+    // declaration syntax:
+    // var <variable name>: <type> = <expression>;
+    var a: int = 123;
+
+    // type can be omitted if it can be inferred from the right-hand-side expression
+    var b1 = 123;
+    assert(typeof(b1) == int);
+    var b2 = 123.0;
+    assert(typeof(b2) == float);
+
+    // since factorial() returns an int, the type can be inferred here too
+    var fact = factorial(5);
+    assert(fact == 120);
+    assert(typeof(fact) == int);
+
+    // number literals are "untyped" and can coerce when needed
+    var c: int = 12;
+    var d: float = 12;
+
+    // even when nested under binary expressions
+    var e: float = 11 / 2;
+    assert(e == 5.5);
+
+    // without type inference the "untyped" numbers default to int, as above
+    var f = 11 / 2;
+    assert(f == 5);
+
+    // if a `.` is present, float will be assumed, as above
+    var g = 11.0 / 2;
+    assert(g == 5.5);
 }
 
 
@@ -48,7 +94,116 @@ proc arrays() {
 
 proc slices() {
     // todo(josh)
-    // print_string("\n\n---- slices todo(josh) ----\n");
+    // print_string("\n\n---- slices ----\n");
+}
+
+
+
+proc strings() {
+    print_string("\n\n---- slices ----\n");
+
+    // strings in sif are length-delimited rather than null-terminated.
+    // the string type is implemented as:
+    // struct String {
+    //     var data: rawptr;
+    //     var count: int;
+    // }
+    assert(sizeof(string) == 16);
+
+    // since strings are length-delimited this means you can trivially
+    // take a substring without allocating and copying
+    var a = "Hello, World!";
+    var hello: string;
+    hello.data = &a[0];
+    hello.count = 5;
+    assert(hello == "Hello");
+    print_string(hello);
+    print_string("\n");
+
+    var world: string;
+    world.data = &a[7];
+    world.count = 5;
+    assert(world == "World");
+    print_string(world);
+    print_string("\n");
+}
+
+
+
+struct Foo {
+    var a: int;
+    var str: string;
+    var t: bool;
+}
+proc structs() {
+    print_string("\n\n---- structs ----\n");
+
+    var f: Foo;
+    assert(f.a == 0); // everything is zero initialized by default
+    f.a = 123;
+    f.str = "foozle";
+    f.t = 120 == factorial(5);
+
+    // can also use compound literals to initialize
+    f = Foo{149, "hellooo", false};
+}
+
+
+
+proc enums() {
+    // todo(josh)
+    // print_string("\n\n---- enums ----\n");
+}
+
+
+
+proc order_independence() {
+    print_string("\n\n---- order_independence ----\n");
+
+    // declaration order does not matter. the compiler figures
+    // out what depends on what for you. delete all your .h files :)
+
+    var loopy: Loopy;
+    assert(sizeof(typeof(loopy.a)) == 8);
+    assert(sizeof(typeof(nesty)) == 64);
+}
+var nesty: [sizeof(typeof(ptr_to_loopy^))]int;
+var ptr_to_loopy: ^Loopy;
+struct Loopy {
+    var a: [sizeof(typeof(ptr_to_loopy))]bool;
+}
+
+
+
+proc change_by_reference(a: >int, value: int) {
+    // since `a` is a reference, it is implicitly a pointer
+    // and dereferences/indirections are inserted automatically
+    a = value;
+}
+proc references() {
+    print_string("\n\n---- references ----\n");
+
+    var my_int = 123;
+    print_int(my_int);
+    assert(my_int == 123);
+
+    // reference implicitly take/dereference pointers depending on context
+    // and are (currently, will likely change) denoted by a `>` before the type
+    var int_reference: >int = my_int; // implicit `&my_int` after `=`
+    int_reference = 789;              // implicit `int_reference^` before `=`
+    assert(int_reference == 789);
+    assert(my_int == 789);
+    print_int(int_reference);
+
+    // you can also define procedures that take (and return) references, of course
+    assert(my_int == 789);
+    change_by_reference(my_int, 456);
+    assert(my_int == 456);
+    print_int(my_int);
+
+    // the only real reason I implemented references is for overloading []
+    // which you can see below in the structural_polymorphism() and
+    // dynamic_array() procedures
 }
 
 
@@ -91,12 +246,26 @@ proc operator_overloading() {
 
 
 
+// $ on the name of a parameter means this parameter MUST be constant
+// and a new polymorph of the procedure will be baked with that constant.
+// for example if you called `value_poly(4)` a new version of `value_poly`
+// would be generated that replaces each use of the parameter `a` with the
+// `4` that you passed. this means the return statement will constant fold
+// into a simple `return 16;`
 proc value_poly($a: int) : int {
     return a * a;
 }
+// $ on the type of a parameter means that this parameter can be ANY
+// type, and a new version of this procedure will be generated for
+// that type. for example `type_poly(124)` would generate a version
+// of `type_poly` where `T` is `int`. `type_poly(Vector3{1, 4, 9})`
+// would generate a version where `T` is `Vector3`
 proc type_poly(a: $T) : T {
     return a * a;
 }
+// $ on both the name and the type means that this procedure can accept
+// any type and it must be a constant. simply a combination of the two
+// cases above.
 proc value_and_type_poly($a: $T) : T {
     return a * a;
 }
@@ -126,274 +295,88 @@ proc procedural_polymorphism() {
 
 
 
+// same with procedural polymorphism, a new version of the struct
+// Custom_Array_Type will be generated for each set of parameters
+// that are passed, creating a brand new type.
+// for structs, unlike procedures, these values must all be constant
+// values in order to maintain compile-time typesafety
 struct Custom_Array_Type!($N: int, $T: typeid) {
     var array: [N]T;
     operator [](my_array: >Custom_Array_Type!(N, T), index: int) : >T {
-        return my_array.array[index];
+        return my_array.array[index]; // implicitly takes a pointer to `my_array.array[index]` since this returns a reference
     }
 }
 proc structural_polymorphism() {
     print_string("\n\n---- structural_polymorphism ----\n");
 
-    var array_of_ints: Custom_Array_Type!(16, int);
-    array_of_ints[4] = 124;
+    var array_of_ints: Custom_Array_Type!(8, int);
+    array_of_ints[4] = 124; // calls [] operator overload
     print_int(array_of_ints[4]);
     assert(array_of_ints[4] == 124);
 }
 
 
 
+// the following is a barebones implementation of a resizable array
+// using many of the features you've seen thus far including
+// structural and procedural polymorphism and operator overloading
+
+struct Dynamic_Array!($T: typeid) {
+    var array: []T;
+    var count: int;
+    operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
+        return dyn.array[index];
+    }
+}
+
+proc append(dyn: ^Dynamic_Array!($T), value: T) {
+    if (dyn.count == dyn.array.count) {
+        var old_data = dyn.array.data;
+        var new_cap = 8 + dyn.array.count * 2;
+        dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
+        dyn.array.count = new_cap;
+        if (old_data != null) {
+            memcpy(dyn.array.data, old_data, cast(u32, dyn.count * sizeof(T)));
+            free(old_data);
+        }
+    }
+    assert(dyn.count < dyn.array.count);
+    dyn.array[dyn.count] = value;
+    dyn.count += 1;
+}
+
+proc pop(dyn: ^Dynamic_Array!($T)) : T {
+    assert(dyn.count > 0);
+    var value = dyn[dyn.count-1];
+    dyn.count -= 1;
+    return value;
+}
+
+proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
+    dyn.count = 0;
+}
+
+proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
+    if (dyn.array.data != null) {
+        free(dyn.array.data);
+    }
+}
+
 proc dynamic_arrays() {
     print_string("\n\n---- dynamic_arrays ----\n");
 
-    // definition is in basic.sif
     var dyn: Dynamic_Array!(Vector3);
     append(&dyn, Vector3{1, 2, 3});
     append(&dyn, Vector3{1, 4, 9});
     append(&dyn, Vector3{2, 8, 18});
-    print_float(dyn[1].x);
-    print_float(dyn[1].y);
-    print_float(dyn[1].z);
     assert(dyn[1].x == 1);
     assert(dyn[1].y == 4);
     assert(dyn[1].z == 9);
-}
-
-
-
-proc change_by_reference(a: >int, value: int) {
-    a = value;
-}
-proc references() {
-    print_string("\n\n---- references ----\n");
-    var my_int = 123;
-    print_int(my_int);
-    assert(my_int == 123);
-    change_by_reference(my_int, 456);
-    print_int(my_int);
-    assert(my_int == 456);
-
-    var int_reference: >int = my_int;
-    int_reference = 789;
-    assert(int_reference == 789);
-    assert(my_int == 789);
-    print_int(int_reference);
-}
-
-
-
-// todo(josh): organize the rest of this file
-// todo(josh): organize the rest of this file
-// todo(josh): organize the rest of this file
-
-#assert("foo" == "foo");
-#assert("foo" != "bar");
-#assert("foo" != "foobar");
-#assert("foobar" != "foo");
-#assert(("foo" + "bar") == "foobar");
-
-enum My_Enum {
-    FOO;
-    BAR;
-    BAZ;
-}
-
-proc vector_proc(var v: Vector3) {
-
-}
-
-// proc main() {
-//     var xx: float = 1;
-//     var yy: float = 4;
-//     var zz: float = 9;
-//     var some_float = Vector3{Vector3{xx, yy, zz}.y, yy, zz}.x + Vector3{xx, yy, zz}.z;
-//     print_float(some_float);
-
-//     vector_proc(Vector3{xx, yy, zz});
-//     var my_vector = Vector3{2, 8, 18};
-//     assert(my_vector.x == 2);
-//     assert(my_vector.y == 8);
-//     assert(my_vector.z == 18);
-//     print_float(my_vector.x);
-//     print_float(my_vector.y);
-//     print_float(my_vector.z);
-
-//     var an_enum = My_Enum.FOO;
-//     an_enum = My_Enum.BAR;
-//     an_enum = My_Enum.BAZ;
-
-//     var asd = an_enum.BAZ;
-
-//     const N = 16;
-//     #assert(N == 16);
-//     const My_Int_Type = int;
-//     const MY_INT: My_Int_Type = 321;
-//     var my_int = MY_INT;
-//     #assert(typeof(my_int) == My_Int_Type);
-
-//     var value = 0;
-//     while (value < 10) {
-//         print_int(value);
-//         value = value + 1;
-//     }
-
-//     print_int(Some_Struct.WOW_A_CONSTANT);
-
-//     var memory = cast(^Vector3, alloc(sizeof(Vector3) * N));
-//     var slice: []Vector3;
-//     slice.data = memory;
-//     slice.count = N;
-//     for (var i = 0; i < slice.count; i = i + 1) {
-//         var v = &slice[i];
-//         v.x = 9;
-//         v.y = 4;
-//         v.z = 1;
-//     }
-
-//     print_string("Hello, " + "World!\n");
-
-//     var v_in_slice = slice[9];
-//     print_float(v_in_slice.x);
-//     print_float(v_in_slice.y);
-//     print_float(v_in_slice.z);
-
-//     var v_ptr = cast(^Vector3, alloc(sizeof(Vector3)));
-//     v_ptr.x = 1;
-//     v_ptr.y = 4;
-//     v_ptr.z = 9;
-//     print_float(v_ptr.x);
-//     print_float(v_ptr.y);
-//     print_float(v_ptr.z);
-//     free(v_ptr);
-
-//     var str = "Hello, " + "World\n";
-//     print_string(str);
-//     print_int("asd123".count);
-
-//     var arr: [3]int;
-//     arr[0] = 1;
-//     arr[1] = 4;
-//     arr[2] = 9;
-//     for (var i = 0; i < arr.count; i = i + 1) {
-//         print_int(arr[i]);
-//     }
-//     var v: Vector3;
-//     v.x = 1.5;
-//     v.y = 4.4;
-//     v.z = 9.3;
-//     print_float(v.x);
-//     print_float(v.y);
-//     print_float(v.z);
-
-//     var a: [4]int;
-//     var x = (&a[2])^;
-//     #assert(typeof(x) == int);
-
-//     var v_ptr2 = &v;
-//     #assert(typeof(v_ptr2) == ^Vector3);
-//     v_ptr2.x = 2;
-//     v_ptr2.y = cast(float, return_stuff());
-
-//     var x_ptr = cast(^float, v_ptr2);
-//     #assert(typeof(x_ptr) == ^float);
-//     x_ptr^ = 149;
-
-//     if (x_ptr^ == 40) {
-//         return;
-//     }
-// }
-
-proc return_stuff() : int {
-    if (1 == 1) {
-        return 123;
+    for (var i = 0; i < dyn.count; i += 1) {
+        print_int(i);
+        print_float(dyn[i].x);
+        print_float(dyn[i].y);
+        print_float(dyn[i].z);
     }
-    return 321;
-}
-
-var a: [sizeof(typeof(p^))]int;
-var p: ^T;
-struct T {
-    var a: [sizeof(typeof(p))]bool;
-}
-
-struct A {
-    var b: [4]B;
-}
-struct B {
-    var a: ^A;
-}
-
-struct Contains_Pointers1 {
-    var a: ^Contains_Pointers2;
-}
-struct Contains_Pointers2 {
-    var b: ^Contains_Pointers1;
-}
-
-struct Self_Pointer {
-    var b: ^Self_Pointer;
-}
-
-proc AAA() {
-    var aa: A;
-    var b: B = aa.b[2];
-
-    var c: ^Contains_Pointers1;
-    var d: ^Contains_Pointers2 = c.a;
-    c.a = d;
-    // d.b = c;
-
-    var e: Self_Pointer;
-}
-
-var simple: int;
-var pointer: ^int;
-var array: [4]int;
-var pointer_to_pointer: ^^int;
-var array_of_arrays: [4][8]int;
-var pointer_to_array: ^[4]int;
-var array_of_pointers: [4]^int;
-var wack: ^^[4][8]int;
-var more_wack: [4][8]^^int;
-var still_more_wack: ^[4]^[8]int;
-var complicated_garbage: ^^[4]^[8][32]^int;
-
-proc recursion() {
-    var b: ^Some_Struct;
-    var x: int = b.x;
-    recursion();
-}
-
-proc duo_recursion1() {
-    duo_recursion2();
-}
-proc duo_recursion2() {
-    var a: Some_Struct;
-    duo_recursion1();
-}
-
-proc baz(var x: int) {
-    foo2(x);
-}
-
-proc foo2(var x: int) {
-    bar(1);
-    var b: Some_Struct;
-    var neato: [b.WOW_A_CONSTANT]bool;
-    #assert(sizeof(typeof(neato)) == 149);
-    var z: int;
-    z = 321;
-}
-proc bar(var x: int) {
-    baz(2);
-    var y: ^int;
-    var z: int = y^;
-    z = 123 + z;
-    z = z + 123;
-    z = 12 + 12;
-}
-var global_var: int;
-struct Some_Struct {
-    const WOW_A_CONSTANT = 149;
-    var x: int;
+    destroy_dynamic_array(dyn);
 }

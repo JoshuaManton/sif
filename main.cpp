@@ -23,7 +23,10 @@ TODO:
 -pass command line params to `run`
 -function pointers
 -varargs
+-make C output a bit prettier, whatever that means
 -runtime bounds checks
+-allow custom entrypoints
+-enforce entrypoints returning i32
 -constant bounds checks i.e. var arr: [4]int; arr[232];
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right

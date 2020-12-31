@@ -1896,6 +1896,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 result_operand.type = elem_type;
                 result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             }
+            else if (is_type_string(lhs_operand->type)) {
+                elem_type = type_u8;
+                result_operand.type = elem_type;
+                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+            }
             else if (is_type_struct(lhs_operand->type)) {
                 Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
                 Array<Ast_Expr *> parameters = {};
@@ -2184,7 +2189,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!expr_operand) {
                 return nullptr;
             }
-            assert(expr_operand->type == type_typeid);
+            if (!is_type_typeid(expr_operand->type)) {
+                report_error(expr_operand->location, "Expected a type for sizeof(). Maybe you forgot a typeof()?");
+                return nullptr;
+            }
             assert(expr_operand->type_value != nullptr);
             if (!complete_type(expr_operand->type_value)) {
                 return nullptr;

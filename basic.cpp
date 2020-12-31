@@ -285,10 +285,10 @@ String_Builder make_string_builder(Allocator allocator, int capacity) {
 }
 
 void String_Builder::print(const char *str) {
-    for (const char *s = str; *s != '\0'; s++) {
-        buf.append(*s);
-    }
-    buf.reserve(buf.count+1);
+    int length = strlen(str);
+    buf.reserve(buf.count + length + 8);
+    memcpy(&buf.data[buf.count], str, length);
+    buf.count += length;
     BOUNDS_CHECK(buf.count, 0, buf.capacity);
     buf.data[buf.count] = 0;
 }
@@ -298,7 +298,7 @@ void String_Builder::printf(const char *fmt, ...) {
     buf.reserve(32); // ensure at least 32 bytes in the buffer
     int length_would_have_written = 0;
     do {
-        buf.reserve(buf.count + length_would_have_written+1);
+        buf.reserve(buf.count + length_would_have_written + 8);
         va_start(args, fmt);
         length_would_have_written = vsnprintf(&buf.data[buf.count], buf.capacity - buf.count, fmt, args);
         va_end(args);

@@ -516,6 +516,16 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
             }
             case EXPR_BINARY: {
                 Expr_Binary *binary = (Expr_Binary *)expr;
+                if (binary->op == TK_EQUAL_TO) {
+                    if (is_type_string(binary->lhs->operand.type) && is_type_string(binary->lhs->operand.type)) {
+                        sb->print("string_eq(");
+                        c_print_expr(sb, binary->lhs);
+                        sb->print(", ");
+                        c_print_expr(sb, binary->rhs);
+                        sb->print(")");
+                        break;
+                    }
+                }
                 c_print_expr(sb, binary->lhs);
                 switch (binary->op) {
                     case TK_PLUS:                     { sb->print(" + ");  break; }
@@ -587,6 +597,12 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
                 else if (is_type_array(subscript->lhs->operand.type)) {
                     c_print_expr(sb, subscript->lhs);
                     sb->print(".elements[");
+                    c_print_expr(sb, subscript->index);
+                    sb->print("]");
+                }
+                else if (is_type_string(subscript->lhs->operand.type)) {
+                    c_print_expr(sb, subscript->lhs);
+                    sb->print(".data[");
                     c_print_expr(sb, subscript->index);
                     sb->print("]");
                 }
