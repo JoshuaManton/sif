@@ -1,5 +1,5 @@
 # sif
-sif is an imperative procedural language that compiles to C.
+sif is a simple imperative procedural language made with the goal of being a slightly-higher-level C.
 
 ## Hello, World!
 
@@ -28,6 +28,7 @@ proc main() : i32 {
 - First-class procedures
 - Runtime bounds checks
 - Other small things you'd expect like varargs, static #if, switch-statements, etc
+- Currently the code-generator outputs C code, in the future I'd like to either try to use LLVM or write a custom x64 backend
 
 ## Demo
 
