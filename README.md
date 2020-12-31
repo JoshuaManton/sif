@@ -51,7 +51,7 @@ proc main() : i32 {
 The following is a demo program showing off many of the features of sif.
 
 ```odin
-#include "basic.sif"
+#include "core:basic.sif"
 
 proc main() : i32 {
     print_string("-------------------------\n");
