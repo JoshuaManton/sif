@@ -20,10 +20,8 @@
 TODO:
 
 SMALL
--pass command line params to `run`
 -opt=N
 -show optional compiler flags in usage
--error for unknown compiler flags
 -unknown directives don't stop compilation
 -default output file based on source file name i.e. sif build thing.sif -> thing.exe
 -constant bounds checks i.e. var arr: [4]int; arr[232];
@@ -33,6 +31,7 @@ SMALL
 -@notes on declarations
 
 MEDIUM
+-read command line parameters
 -check for use-before-declaration of local vars
 -make C output a bit prettier, whatever that means
 -allow custom entrypoints
@@ -96,6 +95,16 @@ char *wide_to_cstring(wchar_t *wide) {
     return cstring;
 }
 
+void print_usage() {
+    printf("Usage:\n");
+    printf("  sif <build|run> <file> [optional flags]\n\n");
+
+    printf("Optional flags:\n");
+    printf("  -show-timings           Print a log of times for different compilation stages.\n");
+    printf("  -keep-temp-files        Don't delete intermediate files used for compilation.\n");
+    printf("  -o <output>.exe         Override the default output .exe name.\n");
+}
+
 char *sif_core_lib_path;
 
 void main(int argc, char **argv) {
@@ -104,7 +113,7 @@ void main(int argc, char **argv) {
     double application_start_time = query_timer(&timer);
 
     if (argc < 3) {
-        printf("Usage:\n  sif <build|run> <file>\n");
+        print_usage();
         return;
     }
 
@@ -116,11 +125,26 @@ void main(int argc, char **argv) {
     core_lib_builder.printf("%s/../core", sif_root);
     sif_core_lib_path = core_lib_builder.string();
 
+    bool is_run   = false;
+    bool is_build = false;
+
+    if (strcmp(argv[1], "run") == 0) {
+        is_run = true;
+    }
+    else if (strcmp(argv[1], "build") == 0) {
+        is_build = true;
+    }
+    else {
+        printf("Unknown compiler flag: %s\n", argv[1]);
+        print_usage();
+        return;
+    }
+
     bool show_timings = false;
     bool keep_temp_files = false;
     char *output_exe_name = "output.exe";
 
-    for (int i = 2; i < argc; i++) {
+    for (int i = 3; i < argc; i++) {
         char *arg = argv[i];
         if (strcmp(arg, "-show-timings") == 0) {
             show_timings = true;
@@ -130,16 +154,18 @@ void main(int argc, char **argv) {
         }
         else if (strcmp(arg, "-o") == 0) {
             if ((i+1) >= argc) {
-                printf("Missing argument for -o switch.");
+                printf("Missing argument for -o flag.");
                 return;
             }
             output_exe_name = argv[i+1];
             i += 1;
         }
+        else {
+            printf("Unknown compiler flag: %s\n", arg);
+            print_usage();
+            return;
+        }
     }
-
-    bool is_run   = strcmp(argv[1], "run")   == 0;
-    bool is_build = strcmp(argv[1], "build") == 0;
 
     init_lexer_globals();
     init_parser();
@@ -196,12 +222,12 @@ void main(int argc, char **argv) {
         printf("-----------------------------\n");
         printf("|    sif compile timings    |\n");
         printf("-----------------------------\n");
-        printf("Setup     time: %fs\n", (parsing_start_time   - application_start_time));
-        printf("Parse     time: %fs\n", (checking_start_time  - parsing_start_time));
-        printf("Check     time: %fs\n", (codegen_start_time   - checking_start_time));
-        printf("Codegen   time: %fs\n", (c_compile_start_time - codegen_start_time));
-        printf("C compile time: %fs\n", (compilation_end_time - c_compile_start_time));
-        printf("Total     time: %fs\n", (compilation_end_time - application_start_time));
+        printf("Setup     time: %fms\n", (parsing_start_time   - application_start_time));
+        printf("Parse     time: %fms\n", (checking_start_time  - parsing_start_time));
+        printf("Check     time: %fms\n", (codegen_start_time   - checking_start_time));
+        printf("Codegen   time: %fms\n", (c_compile_start_time - codegen_start_time));
+        printf("C compile time: %fms\n", (compilation_end_time - c_compile_start_time));
+        printf("Total     time: %fms\n", (compilation_end_time - application_start_time));
     }
 
     if (is_run) {
