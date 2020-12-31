@@ -579,7 +579,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer);
             Token code;
             EXPECT(lexer, TK_STRING, &code);
-            return new Ast_Directive_C_Code(code.escaped_text, root_token.location);
+            return new Ast_Directive_C_Code(code.text, root_token.location);
         }
 
         case TK_SEMICOLON: {

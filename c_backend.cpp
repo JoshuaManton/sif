@@ -913,6 +913,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    char *data;\n");
     sb.print("    i64 count;\n");
     sb.print("} String;\n");
+
     sb.print("String MAKE_STRING(char *data, i64 count) {\n");
     sb.print("    String string;\n");
     sb.print("    string.data = data;\n");
@@ -924,27 +925,6 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    void *data;\n");
     sb.print("    i64 count;\n");
     sb.print("} Slice;\n");
-
-    // For (idx, all_types) {
-    //     Type *type = all_types[idx];
-    //     if (!is_type_array(type)) {
-    //         continue;
-    //     }
-
-    //     Type_Array *array_type = (Type_Array *)type;
-    //     sb.printf("typedef struct {\n");
-    //     sb.printf("    ");
-    //     c_print_type(&sb, array_type->array_of, "");
-    //     sb.printf(" elements[%d];\n", array_type->count);
-    //     sb.printf("} ");
-    //     c_print_type(&sb, array_type, "");
-    //     sb.printf(";\n");
-    // }
-
-    // sb.print("template<typename T, int N>\n");
-    // sb.print("struct Static_Array {\n");
-    // sb.print("    T elements[N];\n");
-    // sb.print("};\n");
 
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];

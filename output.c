@@ -27,29 +27,29 @@ typedef struct {
     void *data;
     i64 count;
 } Slice;
-
-void print_int(i64 i) {
-    printf("%lld\n", i);
-}
-void print_float(float f) {
-    printf("%f\n", f);
-}
-void print_string(String string) {
-    for (i64 i = 0; i < string.count; i++) {
-        char c = string.data[i];
-        printf("%c", c);
-    }
-}
-void *alloc(i64 size) {
-    char *memory = (char *)malloc(size);
-    return memory;
-}
-void assert(bool condition) {
-    if (!condition) {
-        printf("Assertion failed.");
-        *((char *)0) = 0;
-    }
-}
+
+void print_int(i64 i) {
+    printf("%lld\n", i);
+}
+void print_float(float f) {
+    printf("%f\n", f);
+}
+void print_string(String string) {
+    for (i64 i = 0; i < string.count; i++) {
+        char c = string.data[i];
+        printf("%c", c);
+    }
+}
+void *alloc(i64 size) {
+    char *memory = (char *)malloc(size);
+    return memory;
+}
+void assert(bool condition) {
+    if (!condition) {
+        printf("Assertion failed.");
+        *((char *)0) = 0;
+    }
+}
 
 // Forward declarations
 bool string_eq(String a, String b);

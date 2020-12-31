@@ -1,14 +1,14 @@
-#c_code "
+#c_code `
 void print_int(i64 i) {
-    printf(\"%%lld\\\n\", i);
+    printf("%lld\n", i);
 }
 void print_float(float f) {
-    printf(\"%%f\\\n\", f);
+    printf("%f\n", f);
 }
 void print_string(String string) {
     for (i64 i = 0; i < string.count; i++) {
         char c = string.data[i];
-        printf(\"%%c\", c);
+        printf("%c", c);
     }
 }
 void *alloc(i64 size) {
@@ -17,11 +17,11 @@ void *alloc(i64 size) {
 }
 void assert(bool condition) {
     if (!condition) {
-        printf(\"Assertion failed.\");
+        printf("Assertion failed.");
         *((char *)0) = 0;
     }
 }
-"
+`
 
 proc print_int   (i: int)                                                #foreign;
 proc print_float (f: float)                                              #foreign;

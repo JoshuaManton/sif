@@ -272,7 +272,7 @@ char *read_entire_file(const char *filename, int *len) {
 void write_entire_file(const char *filename, const char *data) {
     FILE *file = fopen(filename, "w");
     assert(file != nullptr);
-    fprintf(file, data);
+    fputs(data, file);
     fclose(file);
 }
 

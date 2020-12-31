@@ -238,6 +238,9 @@ char *unescape_string(char *str, int *out_escaped_length) {
                 escape = true;
                 escaped_length -= 1;
             }
+            else if (*c == '\r') {
+                // skip it
+            }
             else {
                 sb.printf("%c", *c);
             }
@@ -246,7 +249,7 @@ char *unescape_string(char *str, int *out_escaped_length) {
             escape = false;
             switch (*c) {
                 case '"':  sb.printf("%c", '\"'); break;
-                case '\\': sb.printf("%c", '\\\\'); break;
+                case '\\': sb.printf("%c", '\\'); break;
                 case 'b':  sb.printf("%c", '\\b');  break;
                 case 'f':  sb.printf("%c", '\\f');  break;
                 case 'n':  sb.printf("%c", '\\n');  break;
@@ -266,13 +269,13 @@ char *unescape_string(char *str, int *out_escaped_length) {
 }
 
 // note(josh): returns the string without quotes, out_length includes the quotes though since the lexer needs to know how much to advance by
-char *scan_string(char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string) {
-    assert(*text == '"');
+char *scan_string(char delim, char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string) {
+    assert(*text == delim);
     text += 1;
     char *start = text;
     bool escaped = false;
     int newlines = 0;
-    while ((*text != 0) && (*text != '"' || escaped)) {
+    while ((*text != 0) && (*text != delim || escaped)) {
         escaped = false;
         if (*text == '\n') {
             newlines += 1;
@@ -282,7 +285,7 @@ char *scan_string(char *text, int *out_scanner_length, int *out_escaped_length, 
         }
         text += 1;
     }
-    assert(*text == '"'); // todo(josh): check for EOF
+    assert(*text == delim); // todo(josh): check for EOF
     int length = (text - start);
     text += 1;
     *out_scanner_length = length + 2; // note(josh): +2 for the quotation marks
@@ -389,12 +392,26 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = number;
         out_token->has_a_dot = has_a_dot;
     }
+    else if (lexer->text[lexer->location.index] == '`') {
+        int scanner_length = 0;
+        int escaped_length = 0;
+        char *escaped_string = nullptr;
+        int newlines = 0;
+        char *string = scan_string('`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        lexer->location.line += newlines;
+        advance(lexer, scanner_length);
+        out_token->kind = TK_STRING;
+        out_token->text = string;
+        out_token->escaped_text = escaped_string;
+        out_token->escaped_length = escaped_length;
+        out_token->scanner_length = scanner_length-2; // note(josh): -2 for the quotes
+    }
     else if (lexer->text[lexer->location.index] == '"') {
         int scanner_length = 0;
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string(&lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        char *string = scan_string('"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
         lexer->location.line += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
