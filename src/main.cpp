@@ -4,11 +4,11 @@
 #include <cassert>
 
 #define NOMINMAX
-// #define WIN32_LEAN_AND_MEAN
-// #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
-#define MICROSOFT_CRAZINESS_IMPLEMENTATION
-#include "microsoft_craziness.h"
+// #define MICROSOFT_CRAZINESS_IMPLEMENTATION
+// #include "microsoft_craziness.h"
 
 #include "common.h"
 #include "lexer.h"
