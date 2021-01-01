@@ -108,6 +108,7 @@ enum Token_Kind {
     TK_SEMICOLON,
     TK_COLON,
     TK_DOT,
+    TK_DOT_DOT,
     TK_COMMA,
     TK_CARET,
 

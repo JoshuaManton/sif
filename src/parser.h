@@ -125,6 +125,9 @@ struct Ast_Block : public Ast_Node {
     }
 };
 
+struct Procedure_Parameter_Info {
+};
+
 struct Ast_Proc_Header : public Ast_Node {
     char *name = nullptr;
     Array<Ast_Var *> parameters = {};
@@ -366,6 +369,7 @@ enum Expr_Kind {
     EXPR_REFERENCE_TYPE,
     EXPR_ARRAY_TYPE,
     EXPR_SLICE_TYPE,
+    EXPR_VARARGS_TYPE,
 
     EXPR_PAREN,
 
@@ -604,6 +608,14 @@ struct Expr_Slice_Type : public Ast_Expr {
     Expr_Slice_Type(Ast_Expr *slice_of, Location location)
     : Ast_Expr(EXPR_SLICE_TYPE, location)
     , slice_of(slice_of)
+    {}
+};
+
+struct Expr_Varargs_Type : public Ast_Expr {
+    Ast_Expr *type_expr = nullptr;
+    Expr_Varargs_Type(Ast_Expr *type_expr, Location location)
+    : Ast_Expr(EXPR_VARARGS_TYPE, location)
+    , type_expr(type_expr)
     {}
 };
 

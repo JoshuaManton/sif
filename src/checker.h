@@ -16,6 +16,7 @@ enum Type_Kind {
     TYPE_ARRAY,
     TYPE_POLYMORPHIC,
     TYPE_SLICE,
+    TYPE_VARARGS,
     TYPE_PROCEDURE,
 
     TYPE_COUNT,
@@ -36,6 +37,7 @@ enum Type_Flags {
     TF_SLICE        = 1 << 11, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_REFERENCE    = 1 << 12, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_POLYMORPHIC  = 1 << 13, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_VARARGS      = 1 << 14, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -136,6 +138,18 @@ struct Type_Slice : public Type {
     {}
 };
 
+struct Type_Varargs : public Type {
+    Type *varargs_of = {};
+    Type_Pointer *data_pointer_type = {};
+    Type_Slice *slice_type = {};
+    Type_Varargs(Type *varargs_of, Type_Pointer *data_pointer_type, Type_Slice *slice_type)
+    : Type(TYPE_VARARGS)
+    , varargs_of(varargs_of)
+    , slice_type(slice_type)
+    , data_pointer_type(data_pointer_type)
+    {}
+};
+
 struct Type_Procedure : public Type {
     Array<Type *> parameter_types = {};
     Type *return_type = {};
@@ -184,8 +198,10 @@ bool is_type_struct     (Type *type);
 bool is_type_incomplete (Type *type);
 bool is_type_typeid     (Type *type);
 bool is_type_string     (Type *type);
+bool is_type_varargs    (Type *type);
 
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Reference *get_or_create_type_reference_to(Type *type);
 Type_Array *get_or_create_type_array_of(Type *type, int count);
 Type_Slice *get_or_create_type_slice_of(Type *type);
+Type_Varargs *get_or_create_type_varargs_of(Type *type);

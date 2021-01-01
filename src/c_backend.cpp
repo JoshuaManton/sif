@@ -2,7 +2,7 @@
 
 void c_print_type(String_Builder *sb, Type *type, const char *var_name);
 void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name);
-void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type = nullptr);
+char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type = nullptr);
 void print_indents(String_Builder *sb, int indent_level);
 
 void c_print_type_prefix(String_Builder *sb, Type *type) {
@@ -58,6 +58,7 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             sb->print(" ");
             break;
         }
+        case TYPE_VARARGS: // note(josh): fallthrough
         case TYPE_SLICE: {
             sb->print("Slice ");
             break;
@@ -111,6 +112,7 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
             sb->print(")");
             break;
         }
+        case TYPE_VARARGS: // note(josh): fallthrough
         case TYPE_SLICE: {
             break;
         }
@@ -262,17 +264,21 @@ void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name) {
     c_print_type_plain_postfix(sb, type);
 }
 
-void c_print_var(String_Builder *sb, const char *var_name, Type *type, Ast_Expr *expr) {
+void c_print_var(String_Builder *sb, const char *var_name, Type *type, Ast_Expr *expr, int indent_level) {
+    char *rhs = nullptr;
+    if (expr) {
+        rhs = c_print_expr(sb, expr, indent_level, type);
+    }
+    print_indents(sb, indent_level);
     c_print_type(sb, type, var_name);
-    if (expr != nullptr) {
-        sb->print(" = ");
-        c_print_expr(sb, expr, type);
+    if (rhs) {
+        sb->printf(" = %s", rhs);
     }
 }
 
-void c_print_var(String_Builder *sb, Ast_Var *var) {
+void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
     assert(!var->is_constant);
-    c_print_var(sb, var->name, var->type, var->expr);
+    c_print_var(sb, var->name, var->type, var->expr, indent_level);
 }
 
 void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
@@ -286,185 +292,48 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
         if (idx != 0) {
             sb->print(", ");
         }
-        c_print_var(sb, parameter);
+        c_print_var(sb, parameter, 0);
     }
     sb->print(")");
 }
 
 static int num_compound_literal_temporaries_emitted = 0;
 
-void c_emit_compound_literal_temporaries(String_Builder *sb, Ast_Expr *expr, int indent_level) {
-    if (!expr) {
-        return;
-    }
-
-    switch (expr->expr_kind) {
-        case EXPR_COMPOUND_LITERAL: {
-            Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
-            c_emit_compound_literal_temporaries(sb, compound_literal->type_expr, indent_level);
-            For (idx, compound_literal->exprs) {
-                Ast_Expr *nested = compound_literal->exprs[idx];
-                c_emit_compound_literal_temporaries(sb, nested, indent_level);
-            }
-            char *var_name = (char *)alloc(default_allocator(), 64);
-            sprintf(var_name, "__generated_compound_literal_%d\0", num_compound_literal_temporaries_emitted);
-            assert(var_name[63] == '\0'); // todo(josh): we should properly handle this case and allocate a bigger string
-            num_compound_literal_temporaries_emitted += 1;
-            c_print_var(sb, var_name, compound_literal->operand.type, nullptr);
-            sb->printf(" = {0};\n");
-            print_indents(sb, indent_level);
-            compound_literal->generated_temporary_variable_name = var_name;
-            Type *compound_literal_type = compound_literal->operand.type;
-            if (is_type_array(compound_literal_type)) {
-                Type_Array *array_type = (Type_Array *)compound_literal_type;
-                For (idx, compound_literal->exprs) {
-                    Ast_Expr *nested = compound_literal->exprs[idx];
-                    sb->printf("%s.elements[%d] = ", compound_literal->generated_temporary_variable_name, idx);
-                    c_print_expr(sb, nested, array_type->array_of);
-                    sb->printf(";\n");
-                    print_indents(sb, indent_level);
-                }
-            }
-            else {
-                int variable_field_index = -1;
-                For (idx, compound_literal->exprs) {
-                    variable_field_index += 1;
-                    while (compound_literal_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
-                        variable_field_index += 1;
-                    }
-                    Struct_Field target_field = compound_literal_type->fields[variable_field_index];
-                    assert(!(target_field.operand.flags & OPERAND_CONSTANT));
-                    assert(target_field.operand.flags & OPERAND_LVALUE);
-                    sb->printf("%s.%s = ", compound_literal->generated_temporary_variable_name, target_field.name);
-                    Ast_Expr *nested = compound_literal->exprs[idx];
-                    c_print_expr(sb, nested, target_field.operand.type);
-                    sb->printf(";\n");
-                    print_indents(sb, indent_level);
-                }
-            }
-
-            break;
-        }
-        case EXPR_IDENTIFIER: {
-            break;
-        }
-        case EXPR_UNARY: {
-            UNIMPLEMENTED(EXPR_UNARY);
-            break;
-        }
-        case EXPR_BINARY: {
-            Expr_Binary *binary = (Expr_Binary *)expr;
-            c_emit_compound_literal_temporaries(sb, binary->lhs, indent_level);
-            c_emit_compound_literal_temporaries(sb, binary->rhs, indent_level);
-            break;
-        }
-        case EXPR_PROCEDURE_CALL: {
-            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-            For (idx, call->parameters_to_emit) {
-                Ast_Expr *parameter = call->parameters_to_emit[idx];
-                c_emit_compound_literal_temporaries(sb, parameter, indent_level);
-            }
-        }
-        case EXPR_ADDRESS_OF: {
-            Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
-            c_emit_compound_literal_temporaries(sb, address_of->rhs, indent_level);
-            break;
-        }
-        case EXPR_SUBSCRIPT: {
-            Expr_Subscript *subscript = (Expr_Subscript *)expr;
-            c_emit_compound_literal_temporaries(sb, subscript->lhs, indent_level);
-            c_emit_compound_literal_temporaries(sb, subscript->index, indent_level);
-            break;
-        }
-        case EXPR_DEREFERENCE: {
-            Expr_Dereference *dereference = (Expr_Dereference *)expr;
-            c_emit_compound_literal_temporaries(sb, dereference->lhs, indent_level);
-            break;
-        }
-        case EXPR_SELECTOR: {
-            Expr_Selector *selector = (Expr_Selector *)expr;
-            c_emit_compound_literal_temporaries(sb, selector->lhs, indent_level);
-            break;
-        }
-        case EXPR_CAST: {
-            Expr_Cast *expr_cast = (Expr_Cast *)expr;
-            c_emit_compound_literal_temporaries(sb, expr_cast->type_expr, indent_level);
-            c_emit_compound_literal_temporaries(sb, expr_cast->rhs, indent_level);
-            break;
-        }
-        case EXPR_NUMBER_LITERAL: {
-            break;
-        }
-        case EXPR_STRING_LITERAL: {
-            break;
-        }
-        case EXPR_POINTER_TYPE: {
-            Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
-            c_emit_compound_literal_temporaries(sb, expr_pointer->pointer_to, indent_level);
-            break;
-        }
-        case EXPR_ARRAY_TYPE: {
-            Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
-            c_emit_compound_literal_temporaries(sb, expr_array->array_of, indent_level);
-            break;
-        }
-        case EXPR_PAREN: {
-            Expr_Paren *paren = (Expr_Paren *)expr;
-            c_emit_compound_literal_temporaries(sb, paren->nested, indent_level);
-            break;
-        }
-        case EXPR_NULL: {
-            break;
-        }
-        case EXPR_TRUE: {
-            break;
-        }
-        case EXPR_FALSE: {
-            break;
-        }
-        case EXPR_SIZEOF: {
-            Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
-            c_emit_compound_literal_temporaries(sb, expr_sizeof->expr, indent_level);
-            break;
-        }
-        case EXPR_TYPEOF: {
-            Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
-            c_emit_compound_literal_temporaries(sb, expr_typeof->expr, indent_level);
-            break;
-        }
-        default: {
-            printf("unhandled case: %d\n", expr->expr_kind);
-            assert(false);
-        }
+void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
+    For (idx, parameters) {
+        char *param = c_print_expr(sb, parameters[idx], indent_level, proc_type->parameter_types[idx]);
+        out_temporaries->append(param);
     }
 }
 
-void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
-    if (expr->expr_kind == EXPR_PAREN) {
-        Expr_Paren *paren = (Expr_Paren *)expr;
-        sb->print("(");
-        c_print_expr(sb, paren->nested, target_type);
-        sb->print(")");
-        return;
-    }
+int total_num_temporaries_emitted = 0;
 
+char *c_temporary() {
+    total_num_temporaries_emitted += 1;
+    String_Builder sb = make_string_builder(default_allocator(), 32); // todo(josh): this is very dumb. use an arena or something
+    sb.printf("__t%d", total_num_temporaries_emitted);
+    return sb.string();
+}
+
+char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     if (expr->operand.flags & OPERAND_CONSTANT) {
+        String_Builder constant_sb = make_string_builder(default_allocator(), 16);
         if (is_type_float(expr->operand.type)) {
-            sb->printf("%f", expr->operand.float_value);
+            constant_sb.printf("%f", expr->operand.float_value);
         }
         else if (is_type_integer(expr->operand.type)) {
-            sb->printf("%d", expr->operand.int_value);
+            constant_sb.printf("%d", expr->operand.int_value);
         }
         else if (expr->operand.type == type_bool) {
-            sb->print(expr->operand.bool_value ? "true" : "false");
+            constant_sb.print(expr->operand.bool_value ? "true" : "false");
         }
         else if (expr->operand.type == type_string) {
-            sb->printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+            constant_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
         }
         else {
             assert(false);
         }
-        return;
+        return constant_sb.string();
     }
 
     if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
@@ -472,41 +341,47 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
     }
     assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
 
+    String_Builder reference_prefix_sb = {};
+    reference_prefix_sb.buf.allocator = default_allocator();
+
     if (expr->operand.reference_type != nullptr) {
         assert(is_type_reference(expr->operand.reference_type));
-        sb->print("(");
+        reference_prefix_sb.print("(");
         Type *type = expr->operand.reference_type;
         while (is_type_reference(type)) {
-            sb->print("*");
+            reference_prefix_sb.print("*");
             Type_Reference *reference = (Type_Reference *)type;
             type = reference->reference_to;
         }
     }
 
+    char *t = nullptr;
     if (expr->desugared_procedure_to_call != nullptr) {
         assert(expr->desugared_procedure_to_call != nullptr);
         assert(expr->desugared_procedure_to_call->header->name != nullptr);
+        Array<char *> params;
+        params.allocator = default_allocator();
+        c_print_procedure_call_parameters(sb, expr->desugared_procedure_to_call->header->type, expr->desugared_procedure_parameters, indent_level, &params);
+        print_indents(sb, indent_level);
+        if (expr->desugared_procedure_to_call->header->type->return_type) {
+            t = c_temporary();
+            c_print_type(sb, expr->desugared_procedure_to_call->header->type->return_type, t);
+            sb->print(" = ");
+        }
         sb->printf("%s(", expr->desugared_procedure_to_call->header->name);
-        For (idx, expr->desugared_procedure_parameters) {
-            c_print_expr(sb, expr->desugared_procedure_parameters[idx], expr->desugared_procedure_to_call->header->type->parameter_types[idx]);
-            if (idx != (expr->desugared_procedure_parameters.count-1)) {
+        For (idx, params) {
+            if (idx != 0) {
                 sb->print(", ");
             }
+            sb->print(params[idx]);
         }
-        sb->print(")");
+        sb->print(");\n");
     }
     else {
-        // todo(josh): should this be above the operator overload stuff?
-        if (target_type) {
-            if (is_type_reference(target_type)) {
-                sb->print("&");
-            }
-        }
-
         switch (expr->expr_kind) {
             case EXPR_IDENTIFIER: {
                 Expr_Identifier *identifier = (Expr_Identifier *)expr;
-                sb->print(identifier->name);
+                t = identifier->name;
                 break;
             }
             case EXPR_UNARY: {
@@ -516,17 +391,19 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
             }
             case EXPR_BINARY: {
                 Expr_Binary *binary = (Expr_Binary *)expr;
-                if (binary->op == TK_EQUAL_TO) {
-                    if (is_type_string(binary->lhs->operand.type) && is_type_string(binary->lhs->operand.type)) {
-                        sb->print("string_eq(");
-                        c_print_expr(sb, binary->lhs);
-                        sb->print(", ");
-                        c_print_expr(sb, binary->rhs);
-                        sb->print(")");
-                        break;
-                    }
+                t = c_temporary();
+                char *lhs = c_print_expr(sb, binary->lhs, indent_level); assert(lhs);
+                char *rhs = c_print_expr(sb, binary->rhs, indent_level); assert(rhs);
+                print_indents(sb, indent_level);
+                if (binary->op == TK_EQUAL_TO && is_type_string(binary->lhs->operand.type) && is_type_string(binary->lhs->operand.type)) {
+                    // todo(josh): this should probably be a desugared_procedure thing
+                    c_print_type(sb, type_bool, t);
+                    sb->printf(" = string_eq(%s, %s);\n", lhs, rhs);
+                    break;
                 }
-                c_print_expr(sb, binary->lhs);
+                c_print_type(sb, binary->operand.type, t);
+                sb->print(" = ");
+                sb->print(lhs);
                 switch (binary->op) {
                     case TK_PLUS:                     { sb->print(" + ");  break; }
                     case TK_MINUS:                    { sb->print(" - ");  break; }
@@ -548,112 +425,173 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
                         assert(false);
                     }
                 }
-                c_print_expr(sb, binary->rhs);
+                sb->printf("%s;\n", rhs);
                 break;
             }
             case EXPR_PROCEDURE_CALL: {
                 Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
                 assert(call->target_procedure_type != nullptr);
                 assert(!is_type_polymorphic(call->target_procedure_type));
-                if (expr->operand.referenced_declaration != nullptr) {
-                    assert(expr->operand.referenced_declaration->kind == DECL_PROC);
-                    Ast_Proc *referenced_procedure = ((Proc_Declaration *)expr->operand.referenced_declaration)->header->procedure;
-                    sb->print(referenced_procedure->header->name);
+                char *procedure_name = c_print_expr(sb, call->lhs, indent_level);
+                Array<char *> params;
+                params.allocator = default_allocator();
+                c_print_procedure_call_parameters(sb, call->target_procedure_type, call->parameters_to_emit, indent_level, &params);
+                if (call->target_procedure_type->return_type) {
+                    t = c_temporary();
+                    print_indents(sb, indent_level);
+                    c_print_type(sb, call->target_procedure_type->return_type, t);
+                    sb->print(" = ");
                 }
-                else {
-                    c_print_expr(sb, call->lhs);
-                }
-                sb->print("(");
-                assert(call->parameters_to_emit.count == call->target_procedure_type->parameter_types.count);
-                For (idx, call->parameters_to_emit) {
-                    Ast_Expr *parameter = call->parameters_to_emit[idx];
-                    Type *parameter_type = call->target_procedure_type->parameter_types[idx];
+                sb->printf("%s(", procedure_name);
+                For (idx, params) {
                     if (idx != 0) {
                         sb->print(", ");
                     }
-                    c_print_expr(sb, parameter, parameter_type);
+                    sb->print(params[idx]);
                 }
-                sb->print(")");
-                break;
-            }
-            case EXPR_ADDRESS_OF: {
-                Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
-                sb->print("&");
-                c_print_expr(sb, address_of->rhs);
+                sb->print(");\n");
                 break;
             }
             case EXPR_SUBSCRIPT: {
                 Expr_Subscript *subscript = (Expr_Subscript *)expr;
-                if (is_type_slice(subscript->lhs->operand.type)) {
-                    Type_Slice *slice_type = (Type_Slice *)subscript->lhs->operand.type;
-                    sb->print("((");
-                    c_print_type(sb, slice_type->data_pointer_type, "");
-                    sb->print(")");
-                    c_print_expr(sb, subscript->lhs);
-                    sb->print(".data)[");
-                    c_print_expr(sb, subscript->index);
-                    sb->print("]");
+                char *lhs = c_print_expr(sb, subscript->lhs, indent_level);
+                char *index = c_print_expr(sb, subscript->index, indent_level);
+                String_Builder subscript_sb = make_string_builder(default_allocator(), 32);
+                if (is_type_slice(subscript->lhs->operand.type) || is_type_varargs(subscript->lhs->operand.type)) {
+                    Type_Slice *slice_type = nullptr;
+                    if (is_type_slice(subscript->lhs->operand.type)) {
+                        slice_type = (Type_Slice *)subscript->lhs->operand.type;
+                    }
+                    else if (is_type_varargs(subscript->lhs->operand.type)) {
+                        slice_type = ((Type_Varargs *)subscript->lhs->operand.type)->slice_type;
+                    }
+                    assert(slice_type != nullptr);
+                    subscript_sb.print("((");
+                    c_print_type(&subscript_sb, slice_type->data_pointer_type, "");
+                    subscript_sb.print(")");
+                    subscript_sb.print(lhs);
+                    subscript_sb.print(".data)[");
+                    subscript_sb.print(index);
+                    subscript_sb.print("]");
                 }
                 else if (is_type_array(subscript->lhs->operand.type)) {
-                    c_print_expr(sb, subscript->lhs);
-                    sb->print(".elements[");
-                    c_print_expr(sb, subscript->index);
-                    sb->print("]");
+                    subscript_sb.printf("%s.elements[%s]", lhs, index);
                 }
                 else if (is_type_string(subscript->lhs->operand.type)) {
-                    c_print_expr(sb, subscript->lhs);
-                    sb->print(".data[");
-                    c_print_expr(sb, subscript->index);
-                    sb->print("]");
+                    subscript_sb.printf("%s.data[%s]", lhs, index);
                 }
                 else {
                     assert(false);
                 }
-                break;
-            }
-            case EXPR_DEREFERENCE: {
-                Expr_Dereference *dereference = (Expr_Dereference *)expr;
-                sb->print("*");
-                c_print_expr(sb, dereference->lhs);
-                break;
-            }
-            case EXPR_SELECTOR: {
-                Expr_Selector *selector = (Expr_Selector *)expr;
-                bool is_accessing_slice_data_field = false;
-                if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
-                    is_accessing_slice_data_field = true;
-                    Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
-                    sb->print("*((");
-                    c_print_type(sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), ""); // todo(josh): @Speed we should be able to cache a pointer-to-pointer-to-element-type
-                    sb->print(")&");
-                }
-                c_print_expr(sb, selector->lhs);
-                if (is_type_pointer(selector->lhs->operand.type)) {
-                    sb->print("->");
-                }
-                else {
-                    sb->print(".");
-                }
-                sb->print(selector->field_name);
-                if (is_accessing_slice_data_field) {
-                    sb->print(")");
-                }
-                break;
-            }
-            case EXPR_CAST: {
-                Expr_Cast *expr_cast = (Expr_Cast *)expr;
-                sb->print("(");
-                sb->print("(");
-                c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
-                sb->print(")");
-                c_print_expr(sb, expr_cast->rhs);
-                sb->print(")");
+                t = subscript_sb.string();
                 break;
             }
             case EXPR_COMPOUND_LITERAL: {
                 Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
-                assert(compound_literal->generated_temporary_variable_name != nullptr);
-                sb->print(compound_literal->generated_temporary_variable_name);
+                Array<char *> expr_names;
+                expr_names.allocator = default_allocator();
+                For (idx, compound_literal->exprs) {
+                    char *name = c_print_expr(sb, compound_literal->exprs[idx], indent_level);
+                    expr_names.append(name);
+                }
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, compound_literal->operand.type, t);
+                sb->print(" = {0};\n");
+
+                Type *compound_literal_type = compound_literal->operand.type;
+                if (is_type_array(compound_literal_type)) {
+                    Type_Array *array_type = (Type_Array *)compound_literal_type;
+                    For (idx, expr_names) {
+                        print_indents(sb, indent_level);
+                        sb->printf("%s.elements[%d] = %s;\n", t, idx, expr_names[idx]);
+                    }
+                }
+                else {
+                    int variable_field_index = -1;
+                    For (idx, expr_names) {
+                        variable_field_index += 1;
+                        while (compound_literal_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
+                            variable_field_index += 1;
+                        }
+                        print_indents(sb, indent_level);
+                        Struct_Field target_field = compound_literal_type->fields[variable_field_index];
+                        assert(!(target_field.operand.flags & OPERAND_CONSTANT));
+                        assert(target_field.operand.flags & OPERAND_LVALUE);
+                        sb->printf("%s.%s = %s;\n", t, target_field.name, expr_names[idx]);
+                    }
+                }
+
+
+
+                // c_emit_compound_literal_temporaries(sb, compound_literal->type_expr, indent_level);
+                // For (idx, compound_literal->exprs) {
+                //     Ast_Expr *nested = compound_literal->exprs[idx];
+                //     c_emit_compound_literal_temporaries(sb, nested, indent_level);
+                // }
+                // char *var_name = (char *)alloc(default_allocator(), 64);
+                // sprintf(var_name, "__generated_compound_literal_%d\0", num_compound_literal_temporaries_emitted);
+                // assert(var_name[63] == '\0'); // todo(josh): we should properly handle this case and allocate a bigger string
+                // num_compound_literal_temporaries_emitted += 1;
+                // c_print_var(sb, var_name, compound_literal->operand.type, nullptr);
+                // sb->printf(" = {0};\n");
+                // compound_literal->generated_temporary_variable_name = var_name;
+
+
+                break;
+            }
+            case EXPR_ADDRESS_OF: {
+                Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
+                char *rhs = c_print_expr(sb, address_of->rhs, indent_level);
+                String_Builder address_sb = make_string_builder(default_allocator(), 64);
+                address_sb.printf("&%s", rhs);
+                t = address_sb.string();
+                break;
+            }
+            case EXPR_DEREFERENCE: {
+                Expr_Dereference *dereference = (Expr_Dereference *)expr;
+                char *lhs = c_print_expr(sb, dereference->lhs, indent_level);
+                String_Builder deref_sb = make_string_builder(default_allocator(), 64);
+                deref_sb.printf("*%s", lhs);
+                t = deref_sb.string();
+                break;
+            }
+            case EXPR_SELECTOR: {
+                Expr_Selector *selector = (Expr_Selector *)expr;
+                char *lhs = c_print_expr(sb, selector->lhs, indent_level);
+                assert(lhs);
+                String_Builder selector_sb = make_string_builder(default_allocator(), 64);
+                bool is_accessing_slice_data_field = false;
+                if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
+                    is_accessing_slice_data_field = true;
+                    Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
+                    selector_sb.print("*((");
+                    c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), ""); // todo(josh): @Speed we should be able to cache a pointer-to-pointer-to-element-type
+                    selector_sb.print(")&");
+                }
+                selector_sb.print(lhs);
+                if (is_type_pointer(selector->lhs->operand.type)) {
+                    selector_sb.print("->");
+                }
+                else {
+                    selector_sb.print(".");
+                }
+                selector_sb.print(selector->field_name);
+                if (is_accessing_slice_data_field) {
+                    selector_sb.print(")");
+                }
+                t = selector_sb.string();
+                break;
+            }
+            case EXPR_CAST: {
+                Expr_Cast *expr_cast = (Expr_Cast *)expr;
+                char *rhs = c_print_expr(sb, expr_cast->rhs, indent_level);
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, expr_cast->type_expr->operand.type_value, t);
+                sb->print(" = ((");
+                c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
+                sb->printf(")%s);\n", rhs);
                 break;
             }
             case EXPR_NUMBER_LITERAL: {
@@ -679,7 +617,7 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
             }
             case EXPR_NULL: {
                 // todo(josh): should null be a constant? probably
-                sb->print("NULL");
+                t = "NULL";
                 break;
             }
             case EXPR_TRUE: {
@@ -705,10 +643,20 @@ void c_print_expr(String_Builder *sb, Ast_Expr *expr, Type *target_type) {
         }
     }
 
+    if (target_type) {
+        if (is_type_reference(target_type)) {
+            reference_prefix_sb.printf("&%s", t);
+            t = reference_prefix_sb.string();
+        }
+    }
+
     if (expr->operand.reference_type != nullptr) {
         assert(is_type_reference(expr->operand.reference_type));
-        sb->print(")");
+        reference_prefix_sb.printf("%s)", t);
+        t = reference_prefix_sb.string();
     }
+
+    return t;
 }
 
 void print_indents(String_Builder *sb, int indent_level) {
@@ -723,9 +671,8 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
-            c_emit_compound_literal_temporaries(sb, var->expr, indent_level);
             if (!var->is_constant) {
-                c_print_var(sb, var);
+                c_print_var(sb, var, indent_level);
                 if (var->expr == nullptr) {
                     sb->printf(" = {0}");
                 }
@@ -741,9 +688,10 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
         case AST_ASSIGN: {
             Ast_Assign *assign = (Ast_Assign *)node;
-            c_emit_compound_literal_temporaries(sb, assign->lhs, indent_level);
-            c_emit_compound_literal_temporaries(sb, assign->rhs, indent_level);
-            c_print_expr(sb, assign->lhs);
+            char *lhs = c_print_expr(sb, assign->lhs, indent_level);
+            char *rhs = c_print_expr(sb, assign->rhs, indent_level);
+            print_indents(sb, indent_level);
+            sb->print(lhs);
             switch (assign->op) {
                 case TK_ASSIGN:             sb->print(" = "); break;
                 case TK_PLUS_ASSIGN:        sb->print(" += "); break;
@@ -760,7 +708,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
                     assert(false);
                 }
             }
-            c_print_expr(sb, assign->rhs);
+            sb->print(rhs);
             if (print_semicolon) {
                 sb->print(";\n");
             }
@@ -769,16 +717,13 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
         case AST_STATEMENT_EXPR: {
             Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
-            c_emit_compound_literal_temporaries(sb, statement->expr, indent_level);
-            c_print_expr(sb, statement->expr);
-            if (print_semicolon) {
-                sb->print(";\n");
-            }
+            c_print_expr(sb, statement->expr, indent_level);
             break;
         }
 
         case AST_BLOCK_STATEMENT: {
             Ast_Block_Statement *block_statement = (Ast_Block_Statement *)node;
+            print_indents(sb, indent_level);
             sb->print("{\n");
             c_print_block(sb, block_statement->block, indent_level + 1);
             print_indents(sb, indent_level);
@@ -788,33 +733,39 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
         case AST_IF: {
             Ast_If *ast_if = (Ast_If *)node;
-            c_emit_compound_literal_temporaries(sb, ast_if->condition, indent_level);
             assert(ast_if->condition != nullptr);
             assert(ast_if->body != nullptr);
-            sb->print("if (");
-            c_print_expr(sb, ast_if->condition);
-            sb->print(") {\n");
-            c_print_block(sb, ast_if->body, indent_level + 1);
+            char *cond_name = c_print_expr(sb, ast_if->condition, indent_level);
+            print_indents(sb, indent_level);
+            sb->printf("if (%s) {\n", cond_name);
+            c_print_block(sb, ast_if->body, indent_level+1);
             print_indents(sb, indent_level);
             sb->print("}\n");
             if (ast_if->else_body) {
-                sb->print("else ");
+                print_indents(sb, indent_level);
+                sb->print("else {\n");
                 c_print_block(sb, ast_if->else_body, indent_level + 1);
+                print_indents(sb, indent_level);
+                sb->print("}\n");
             }
             break;
         }
 
         case AST_FOR_LOOP: {
             Ast_For_Loop *for_loop = (Ast_For_Loop *)node;
-            c_emit_compound_literal_temporaries(sb, for_loop->condition, indent_level);
-            sb->print("for (");
-            c_print_statement(sb, for_loop->pre, indent_level, false);
-            sb->print("; ");
-            c_print_expr(sb, for_loop->condition);
-            sb->print("; ");
-            c_print_statement(sb, for_loop->post, indent_level, false);
-            sb->print(") {\n");
-            c_print_block(sb, for_loop->body, indent_level + 1);
+            print_indents(sb, indent_level);
+            sb->print("{\n");
+            c_print_statement(sb, for_loop->pre, indent_level+1, true);
+            print_indents(sb, indent_level+1);
+            sb->print("while (true) {\n");
+            char *cond_name = c_print_expr(sb, for_loop->condition, indent_level+2);
+            assert(cond_name);
+            print_indents(sb, indent_level+2);
+            sb->printf("if (!%s) { break; }\n", cond_name);
+            c_print_block(sb, for_loop->body, indent_level + 2);
+            c_print_statement(sb, for_loop->post, indent_level+2, true);
+            print_indents(sb, indent_level+1);
+            sb->print("}\n");
             print_indents(sb, indent_level);
             sb->print("}\n");
             break;
@@ -822,10 +773,12 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
         case AST_WHILE_LOOP: {
             Ast_While_Loop *while_loop = (Ast_While_Loop *)node;
-            c_emit_compound_literal_temporaries(sb, while_loop->condition, indent_level);
-            sb->print("while (");
-            c_print_expr(sb, while_loop->condition);
-            sb->print(") {\n");
+            print_indents(sb, indent_level);
+            sb->print("while (true) {\n");
+            char *cond_name = c_print_expr(sb, while_loop->condition, indent_level+1);
+            assert(cond_name);
+            print_indents(sb, indent_level+1);
+            sb->printf("if (!%s) { break; }\n", cond_name);
             c_print_block(sb, while_loop->body, indent_level + 1);
             print_indents(sb, indent_level);
             sb->print("}\n");
@@ -834,13 +787,15 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
         case AST_RETURN: {
             Ast_Return *ast_return = (Ast_Return *)node;
-            c_emit_compound_literal_temporaries(sb, ast_return->expr, indent_level);
-            sb->print("return");
+            char *expr_name = nullptr;
             if (ast_return->expr) {
-                sb->print(" ");
-                c_print_expr(sb, ast_return->expr, ast_return->matching_procedure->type->return_type);
+                expr_name = c_print_expr(sb, ast_return->expr, indent_level, ast_return->matching_procedure->type->return_type);
             }
-            sb->print(";\n");
+            print_indents(sb, indent_level);
+            sb->print("return");
+            if (expr_name) {
+                sb->printf(" %s;\n", expr_name);
+            }
             break;
         }
 
@@ -853,7 +808,6 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
 
 void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level) {
     For (idx, block->nodes) {
-        print_indents(sb, indent_level);
         Ast_Node *node = block->nodes[idx];
         c_print_statement(sb, node, indent_level, true);
     }
@@ -868,27 +822,10 @@ void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
     sb->print("}\n");
 }
 
-void c_print_struct(String_Builder *sb, Ast_Struct *structure) {
-    sb->printf("struct %s {\n", structure->name);
-    For (idx, structure->fields) {
-        Ast_Var *var = structure->fields[idx];
-        if (var->is_constant) {
-            continue;
-        }
-        sb->print("    ");
-        c_print_var(sb, var);
-        sb->print(";\n");
-    }
-    sb->print("};\n");
-    For (idx, structure->operator_overloads) {
-        c_print_procedure(sb, structure->operator_overloads[idx]);
-    }
-}
-
 String_Builder generate_c_main_file(Ast_Block *global_scope) {
     // todo(josh): I think there's a bug in my String_Buffer implementation
     //             as this crashes on resize sometimes
-    String_Builder sb = make_string_builder(default_allocator(), 10 * 1024);
+    String_Builder sb = make_string_builder(default_allocator(), 50 * 1024);
 
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
@@ -970,14 +907,27 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
         Declaration *decl = ordered_declarations[idx];
         switch (decl->kind) {
             case DECL_STRUCT: {
-                Struct_Declaration *structure = (Struct_Declaration *)decl;
-                c_print_struct(&sb, structure->structure);
+                Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
+                Ast_Struct *structure = struct_decl->structure;
+                sb.printf("struct %s {\n", structure->name);
+                For (idx, structure->fields) {
+                    Ast_Var *var = structure->fields[idx];
+                    if (var->is_constant) {
+                        continue;
+                    }
+                    c_print_var(&sb, var, 1);
+                    sb.print(";\n");
+                }
+                sb.print("};\n");
+                For (idx, structure->operator_overloads) {
+                    c_print_procedure(&sb, structure->operator_overloads[idx]);
+                }
                 break;
             }
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
                 if (!var->var->is_constant) {
-                    c_print_var(&sb, var->var);
+                    c_print_var(&sb, var->var, 0);
                     if (var->var->expr == nullptr) {
                         sb.printf(" = {0}");
                     }

@@ -1,19 +1,12 @@
 #include "core:basic.sif"
-#include "core:dynamic_array.sif"
+// #include "core:dynamic_array.sif"
 
 proc main() : i32 {
-    var dyn: Dynamic_Array!(int);
-    append(&dyn, 1);
-    append(&dyn, 2);
-    append(&dyn, 3);
-    append(&dyn, 4);
-    append(&dyn, 5);
-    for (var i = 0; i < dyn.count; i += 1) {
-        print_int(dyn[i]);
-    }
-    print_string("---------------\n");
-    ordered_remove(&dyn, 2);
-    for (var i = 0; i < dyn.count; i += 1) {
-        print_int(dyn[i]);
-    }
+    var a = 123;
+    var b: >int = a;
+    b = 321;
+    assert(a == 321);
+
+    var d = 123;
+    var e = cast(float, d);
 }

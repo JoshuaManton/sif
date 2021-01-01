@@ -938,6 +938,7 @@ bool is_unary_op(Token_Kind kind) {
         case TK_MINUS:
         case TK_PLUS:
         case TK_NOT:
+        case TK_DOT_DOT:
         case TK_SIZEOF:
         case TK_TYPEOF:
         case TK_CAST:
@@ -1108,6 +1109,10 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                     return nullptr;
                 }
                 return new Expr_Unary(op.kind, rhs, op.location);
+            }
+            case TK_DOT_DOT: {
+                Ast_Expr *type_expr = parse_expr(lexer);
+                return new Expr_Varargs_Type(type_expr, op.location);
             }
             case TK_SIZEOF: {
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);

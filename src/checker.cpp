@@ -172,6 +172,7 @@ bool is_type_struct     (Type *type) { return type->flags & TF_STRUCT;      }
 bool is_type_incomplete (Type *type) { return type->flags & TF_INCOMPLETE;  }
 bool is_type_typeid     (Type *type) { return type == type_typeid;          }
 bool is_type_string     (Type *type) { return type == type_string;          }
+bool is_type_varargs    (Type *type) { return type->flags & TF_VARARGS;     }
 
 Type *get_most_concrete_type(Type *a, Type *b) {
     if (a->flags & TF_UNTYPED) {
@@ -556,6 +557,11 @@ char *type_to_string(Type *type) {
             sb.printf("%s", enum_type->name);
             break;
         }
+        case TYPE_VARARGS: {
+            Type_Varargs *varargs_type = (Type_Varargs *)type;
+            sb.printf("..%s", type_to_string(varargs_type->varargs_of));
+            break;
+        }
         default: {
             assert(false);
         }
@@ -846,6 +852,29 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(slice_of);
     Type_Slice *new_type = new Type_Slice(slice_of, pointer_to_element_type);
     new_type->flags = TF_SLICE;
+    new_type->size  = 16;
+    new_type->align = 8;
+    add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
+    add_variable_type_field(new_type, "count", type_int, 8);
+    all_types.append(new_type);
+    return new_type;
+}
+
+Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
+    assert(!is_type_untyped(varargs_of));
+    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_varargs_types` array
+        Type *other_type = all_types[idx];
+        if (other_type->kind == TYPE_VARARGS) {
+            Type_Varargs *other_type_varargs = (Type_Varargs *)other_type;
+            if (other_type_varargs->varargs_of == varargs_of) {
+                return other_type_varargs;
+            }
+        }
+    }
+    Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(varargs_of);
+    Type_Slice *slice_type = get_or_create_type_slice_of(varargs_of);
+    Type_Varargs *new_type = new Type_Varargs(varargs_of, pointer_to_element_type, slice_type);
+    new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
     add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
@@ -1653,25 +1682,27 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         assert(!is_type_polymorphic(procedure_polymorph->header->declaration->operand.type));
         procedure_operand = procedure_polymorph->header->declaration->operand;
         assert(is_type_procedure(procedure_operand.type));
-        target_procedure_type = (Type_Procedure *)procedure_operand.type;
-    }
-    else {
-        assert(procedure_operand.type->kind == TYPE_PROCEDURE);
-        target_procedure_type = (Type_Procedure *)procedure_operand.type;
-        assert(target_procedure_type->parameter_types.count == parameters.count);
     }
 
+    target_procedure_type = (Type_Procedure *)procedure_operand.type;
     assert(is_type_procedure(target_procedure_type));
     assert(!is_type_polymorphic(target_procedure_type));
 
     // typecheck parameters now that we have concrete types for the procedure parameters
-    For (idx, params_to_emit) {
-        Type *parameter_type = target_procedure_type->parameter_types[idx];
-        Ast_Expr *parameter = params_to_emit[idx];
-        Operand *parameter_operand = typecheck_expr(parameter, target_procedure_type->parameter_types[idx]);
+    int param_index = 0;
+    for (int idx = 0; idx < target_procedure_type->parameter_types.count && param_index < params_to_emit.count; idx += 1) {
+        Type *target_type = target_procedure_type->parameter_types[idx];
+        Ast_Expr *parameter = params_to_emit[param_index];
+        if (is_type_varargs(target_type)) {
+            Type_Varargs *varargs_type = (Type_Varargs *)target_type;
+            target_type = varargs_type->varargs_of;
+            idx -= 1; // sketch
+        }
+        Operand *parameter_operand = typecheck_expr(parameter, target_type);
         if (!parameter_operand) {
             return false;
         }
+        param_index += 1;
     }
 
     if (procedure_operand.referenced_declaration != nullptr) {
@@ -1900,6 +1931,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             else if (is_type_string(lhs_operand->type)) {
                 elem_type = type_u8;
+                result_operand.type = elem_type;
+                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+            }
+            else if (is_type_varargs(lhs_operand->type)) {
+                Type_Varargs *varargs_type = (Type_Varargs *)lhs_operand->type;
+                elem_type = varargs_type->varargs_of;
                 result_operand.type = elem_type;
                 result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             }
@@ -2254,6 +2291,19 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
             break;
         }
+        case EXPR_VARARGS_TYPE: {
+            Expr_Varargs_Type *varargs_type = (Expr_Varargs_Type *)expr;
+            assert(varargs_type->type_expr != nullptr);
+            Operand *varargs_of_operand = typecheck_expr(varargs_type->type_expr, type_typeid);
+            if (!varargs_of_operand) {
+                return nullptr;
+            }
+            assert((varargs_of_operand->flags & OPERAND_CONSTANT) && (varargs_of_operand->flags & OPERAND_TYPE));
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.type = type_typeid;
+            result_operand.type_value = get_or_create_type_varargs_of(varargs_of_operand->type_value);
+            break;
+        }
         case EXPR_POLYMORPHIC_TYPE: {
             // foo: Some_Struct!(123, float);
             //      ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2351,6 +2401,12 @@ bool typecheck_procedure_header(Ast_Proc_Header *header) {
             return false;
         }
         assert(parameter->type != nullptr);
+        if (is_type_varargs(parameter->type)) {
+            if (idx != header->parameters.count-1) {
+                report_error(parameter->location, "Varargs must be the last parameter for a procedure.");
+                return false;
+            }
+        }
         parameter_types.append(parameter->type);
     }
     Type *return_type = {};
