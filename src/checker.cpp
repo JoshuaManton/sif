@@ -109,7 +109,7 @@ void init_checker() {
     add_variable_type_field(type_string, "data", get_or_create_type_pointer_to(type_u8), 0);
     add_variable_type_field(type_string, "count", type_int, 8);
 
-    add_variable_type_field(type_any, "data", get_or_create_type_pointer_to(type_u8), 0);
+    add_variable_type_field(type_any, "data", type_rawptr, 0);
     add_variable_type_field(type_any, "type", type_typeid, 8);
 }
 
@@ -786,7 +786,7 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
         }
     }
 
-    if ((expected_type == type_rawptr) && (is_type_pointer(operand->type))) {
+    if ((expected_type == type_rawptr && is_type_pointer(operand->type)) || (operand->type == type_rawptr && is_type_pointer(expected_type))) {
         return true;
     }
 

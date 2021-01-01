@@ -17,6 +17,7 @@ proc main() : i32 {
     operator_overloading();
     procedural_polymorphism();
     structural_polymorphism();
+    any_type();
     dynamic_arrays();
     return 0;
 }
@@ -328,6 +329,50 @@ proc structural_polymorphism() {
     array_of_ints[4] = 124; // calls [] operator overload
     print("%\n", array_of_ints[4]);
     assert(array_of_ints[4] == 124);
+}
+
+
+
+proc any_type() {
+    print("\n\n---- any ----\n");
+
+    // an `any` is defined as the following:
+    // struct Any {
+    //     var data: rawptr;
+    //     var type: typeid;
+    // }
+    // any type will implicitly convert to an `any` by taking a pointer to
+    // the data and setting the type field to the appropriate typeid
+    var some_int = 123;
+    var a: any = some_int;
+    assert(a.data == &some_int);
+    assert(a.type == int);
+
+    // you can access the data pointed to by an `any` by casting the data
+    // pointer and dereferencing
+    var b: int = cast(^int, a.data)^;
+    print("%\n", b);
+
+    // the most notable use of `any` is for a print routine. here is an
+    // example using varargs
+    print_things(true, 456, 78.9, "hello");
+}
+proc print_things(args: ..any) {
+    for (var i = 0; i < args.count; i += 1) {
+        var arg = args[i];
+        if (arg.type == int) {
+            print("%\n", cast(^int, arg.data)^);
+        }
+        else if (arg.type == string) {
+            print("%\n", cast(^string, arg.data)^);
+        }
+        else if (arg.type == bool) {
+            print("%\n", cast(^bool, arg.data)^);
+        }
+        else if (arg.type == float) {
+            print("%\n", cast(^float, arg.data)^);
+        }
+    }
 }
 
 
