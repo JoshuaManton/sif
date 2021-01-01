@@ -297,15 +297,6 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
     sb->print(")");
 }
 
-static int num_compound_literal_temporaries_emitted = 0;
-
-void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
-    For (idx, parameters) {
-        char *param = c_print_expr(sb, parameters[idx], indent_level, proc_type->parameter_types[idx]);
-        out_temporaries->append(param);
-    }
-}
-
 int total_num_temporaries_emitted = 0;
 
 char *c_temporary() {
@@ -313,6 +304,42 @@ char *c_temporary() {
     String_Builder sb = make_string_builder(default_allocator(), 32); // todo(josh): this is very dumb. use an arena or something
     sb.printf("__t%d", total_num_temporaries_emitted);
     return sb.string();
+}
+
+void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
+    // todo(josh): handle the case where the proc accepts varargs but the caller does pass anything
+    For (idx, parameters) {
+        if (is_type_varargs(proc_type->parameter_types[idx])) {
+            Type_Varargs *varargs = (Type_Varargs *)proc_type->parameter_types[idx];
+            assert(idx == proc_type->parameter_types.count-1);
+            int varargs_count = parameters.count - idx;
+            char *t = c_temporary();
+            print_indents(sb, indent_level);
+            c_print_type(sb, varargs->varargs_of, t);
+            sb->printf("[%d];\n", varargs_count);
+            for (int varargs_idx = 0; varargs_idx < varargs_count; varargs_idx += 1) {
+                Ast_Expr *param = parameters[idx + varargs_idx];
+                char *param_name = c_print_expr(sb, param, indent_level);
+                print_indents(sb, indent_level);
+                sb->printf("%s[%d] = %s;\n", t, varargs_idx, param_name);
+            }
+            char *slice = c_temporary();
+            print_indents(sb, indent_level);
+            c_print_type(sb, get_or_create_type_slice_of(varargs->varargs_of), slice);
+            sb->print(";\n");
+            print_indents(sb, indent_level);
+            sb->printf("%s.data = %s;\n", slice, t);
+            print_indents(sb, indent_level);
+            sb->printf("%s.count = %d;\n", slice, varargs_count);
+            print_indents(sb, indent_level);
+            out_temporaries->append(slice);
+            return;
+        }
+        else {
+            char *param = c_print_expr(sb, parameters[idx], indent_level, proc_type->parameter_types[idx]);
+            out_temporaries->append(param);
+        }
+    }
 }
 
 char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {

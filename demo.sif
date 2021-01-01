@@ -12,6 +12,7 @@ proc main() : i32 {
     structs();
     enums();
     order_independence();
+    varargs();
     references();
     operator_overloading();
     procedural_polymorphism();
@@ -98,7 +99,7 @@ proc slices() {
 
 
 proc strings() {
-    print_string("\n\n---- slices ----\n");
+    print_string("\n\n---- strings ----\n");
 
     // strings in sif are length-delimited rather than null-terminated.
     // the string type is implemented as:
@@ -169,6 +170,12 @@ var nesty: [sizeof(typeof(ptr_to_loopy^))]int;
 var ptr_to_loopy: ^Loopy;
 struct Loopy {
     var a: [sizeof(typeof(ptr_to_loopy))]bool;
+}
+
+
+
+proc varargs() {
+    // todo(josh)
 }
 
 

@@ -816,24 +816,26 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
     return new_type;
 }
 
-Type_Array *get_or_create_type_array_of(Type *array_of, Operand *count_operand) {
+Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     assert(array_of != nullptr);
     assert(!is_type_untyped(array_of));
-    assert(count_operand->flags & OPERAND_CONSTANT);
-    assert(is_type_integer(count_operand->type));
     For (idx, all_types) { // todo(josh): @Speed maybe have an `all_array_types` array
         Type *other_type = all_types[idx];
         if (other_type->kind == TYPE_ARRAY) {
             Type_Array *other_type_array = (Type_Array *)other_type;
-            if (other_type_array->array_of == array_of && other_type_array->count == count_operand->int_value) {
+            if (other_type_array->array_of == array_of && other_type_array->count == count) {
                 return other_type_array;
             }
         }
     }
-    Type_Array *new_type = new Type_Array(array_of, count_operand->int_value);
+    Type_Array *new_type = new Type_Array(array_of, count);
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
     add_variable_type_field(new_type, "data", type_rawptr, 0);
-    add_constant_type_field(new_type, "count", *count_operand);
+    Operand operand = {};
+    operand.type = type_int;
+    operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
+    operand.int_value = count;
+    add_constant_type_field(new_type, "count", operand);
     all_types.append(new_type);
     return new_type;
 }
@@ -2275,7 +2277,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand);
+            result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
             break;
         }
         case EXPR_SLICE_TYPE: {

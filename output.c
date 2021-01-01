@@ -68,6 +68,7 @@ struct Static_Array_8_bool ;
 struct Loopy;
 struct Static_Array_8_i64 ;
 void order_independence();
+void varargs();
 void change_by_reference(i64 *a, i64 value);
 void references();
 struct Vector3;
@@ -236,6 +237,8 @@ void order_independence() {
     struct Loopy loopy = {0};
     assert(true);
     assert(true);
+}
+void varargs() {
 }
 void change_by_reference(i64 *a, i64 value) {
     (*a) = value;
@@ -508,6 +511,7 @@ i32 main() {
     structs();
     enums();
     order_independence();
+    varargs();
     references();
     operator_overloading();
     procedural_polymorphism();

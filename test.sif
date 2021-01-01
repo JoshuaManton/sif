@@ -1,12 +1,16 @@
 #include "core:basic.sif"
 // #include "core:dynamic_array.sif"
 
-proc main() : i32 {
-    var a = 123;
-    var b: >int = a;
-    b = 321;
-    assert(a == 321);
+proc varargs(things: ..int) {
+    print_string("--------\n");
+    for (var i = 0; i < things.count; i += 1) {
+        print_int(things[i]);
+    }
+}
 
-    var d = 123;
-    var e = cast(float, d);
+proc main() : i32 {
+    varargs(1, 2, 3);
+    varargs(1);
+    // todo(josh)
+    // varargs();
 }
