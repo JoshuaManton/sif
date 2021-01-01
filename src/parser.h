@@ -378,12 +378,13 @@ enum Expr_Kind {
     EXPR_TYPEOF,
     EXPR_CAST,
 
+    EXPR_SPREAD,
+
     EXPR_POLYMORPHIC_TYPE,
     EXPR_POINTER_TYPE,
     EXPR_REFERENCE_TYPE,
     EXPR_ARRAY_TYPE,
     EXPR_SLICE_TYPE,
-    EXPR_VARARGS_TYPE,
 
     EXPR_PAREN,
 
@@ -395,6 +396,7 @@ struct Ast_Expr : public Ast_Node {
     Operand operand = {};
     Ast_Proc *desugared_procedure_to_call = {};
     Array<Ast_Expr *> desugared_procedure_parameters = {};
+    Array<Ast_Expr *> vararg_parameters = {}; // kind weird that this is on here
     Ast_Expr(Expr_Kind kind, Location location)
     : Ast_Node(AST_EXPR, location)
     , expr_kind(kind)
@@ -633,11 +635,11 @@ struct Expr_Slice_Type : public Ast_Expr {
     {}
 };
 
-struct Expr_Varargs_Type : public Ast_Expr {
-    Ast_Expr *type_expr = nullptr;
-    Expr_Varargs_Type(Ast_Expr *type_expr, Location location)
-    : Ast_Expr(EXPR_VARARGS_TYPE, location)
-    , type_expr(type_expr)
+struct Expr_Spread : public Ast_Expr {
+    Ast_Expr *rhs = nullptr;
+    Expr_Spread(Ast_Expr *rhs, Location location)
+    : Ast_Expr(EXPR_SPREAD, location)
+    , rhs(rhs)
     {}
 };
 

@@ -209,3 +209,4 @@ Type_Array *get_or_create_type_array_of(Type *type, int count);
 Type_Slice *get_or_create_type_slice_of(Type *type);
 Type_Varargs *get_or_create_type_varargs_of(Type *type);
 bool complete_type(Type *type);
+Ast_Expr *unparen_expr(Ast_Expr *expr);

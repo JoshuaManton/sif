@@ -1124,8 +1124,8 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 return new Expr_Unary(op.kind, rhs, op.location);
             }
             case TK_DOT_DOT: {
-                Ast_Expr *type_expr = parse_expr(lexer);
-                return new Expr_Varargs_Type(type_expr, op.location);
+                Ast_Expr *rhs = parse_expr(lexer);
+                return new Expr_Spread(rhs, op.location);
             }
             case TK_SIZEOF: {
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);

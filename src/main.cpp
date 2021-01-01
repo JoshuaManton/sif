@@ -29,8 +29,7 @@ SMALL
 -block comments
 -@notes on declarations
 -intern identifiers and remove strcmps
--call varargs with varargs
--add `any` to demo.sif
+-bind `break` and `continue` to the loops they are in. error if no loop
 
 MEDIUM
 -read command line parameters

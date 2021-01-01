@@ -1,23 +1,18 @@
 #include "core:basic.sif"
 
-proc stuff(a: any) {
-    var i = cast(^[2]int, a.data);
-    i^[1] = 321;
+proc a(args: ..any) {
+    print("---------\n");
+    for (var i = 0; i < args.count; i += 1) {
+        print("%\n", args[i]);
+    }
 }
 
-struct Foo {
-    var a: int;
+proc b(args: ..any) {
+    a(..args);
 }
 
 proc main() : i32 {
-    var i = 12;
-    var a = 1 >> (i+2);
-
-    var f: Foo;
-    var arr: [2]int;
-    stuff(arr);
-    print("%\n", arr[1]);
-    print("this is % very % neato 100%%\n", 123.4, true);
-    printa(123, 42.1, true, "hellooooooo");
-    printa(123, 42.1, true, "hellooooooo");
+    b();
+    b(1, 2);
+    return 0;
 }

@@ -318,37 +318,43 @@ char *c_temporary() {
     return sb.string();
 }
 
-void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
-    // todo(josh): handle the case where the proc accepts varargs but the caller does pass anything
+void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
     For (idx, proc_type->parameter_types) {
-        if (is_type_varargs(proc_type->parameter_types[idx])) {
-            Type_Varargs *varargs = (Type_Varargs *)proc_type->parameter_types[idx];
-            assert(idx == proc_type->parameter_types.count-1);
-            int varargs_count = parameters.count - idx;
-            char *t = c_temporary();
-            print_indents(sb, indent_level);
-            c_print_type(sb, varargs->varargs_of, t);
-            sb->printf("[%d];\n", max(1, varargs_count));
-            for (int varargs_idx = 0; varargs_idx < varargs_count; varargs_idx += 1) {
-                Ast_Expr *param = parameters[idx + varargs_idx];
-                char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
-                print_indents(sb, indent_level);
-                sb->printf("%s[%d] = %s;\n", t, varargs_idx, param_name);
-            }
-            char *slice = c_temporary();
-            print_indents(sb, indent_level);
-            c_print_type(sb, get_or_create_type_slice_of(varargs->varargs_of), slice);
-            sb->print(";\n");
-            print_indents(sb, indent_level);
-            sb->printf("%s.data = %s;\n", slice, t);
-            print_indents(sb, indent_level);
-            sb->printf("%s.count = %d;\n", slice, varargs_count);
-            out_temporaries->append(slice);
-            return;
-        }
-        else {
+        if (!is_type_varargs(proc_type->parameter_types[idx])) {
             char *param = c_print_expr(sb, parameters[idx], indent_level, proc_type->parameter_types[idx]);
             out_temporaries->append(param);
+        }
+        else {
+            Type_Varargs *varargs = (Type_Varargs *)proc_type->parameter_types[idx];
+            assert(idx == proc_type->parameter_types.count-1);
+            int varargs_count = root_expr->vararg_parameters.count;
+            if (varargs_count == 1 && (unparen_expr(root_expr->vararg_parameters[0])->expr_kind == EXPR_SPREAD)) {
+                Expr_Spread *spread = (Expr_Spread *)unparen_expr(root_expr->vararg_parameters[0]);
+                char *spread_name = c_print_expr(sb, spread->rhs, indent_level);
+                out_temporaries->append(spread_name);
+            }
+            else {
+                char *t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, varargs->varargs_of, t);
+                sb->printf("[%d];\n", max(1, varargs_count));
+                For (idx, root_expr->vararg_parameters) {
+                    Ast_Expr *param = root_expr->vararg_parameters[idx];
+                    char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
+                    print_indents(sb, indent_level);
+                    sb->printf("%s[%d] = %s;\n", t, idx, param_name);
+                }
+                char *slice = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, get_or_create_type_slice_of(varargs->varargs_of), slice);
+                sb->print(";\n");
+                print_indents(sb, indent_level);
+                sb->printf("%s.data = %s;\n", slice, t);
+                print_indents(sb, indent_level);
+                sb->printf("%s.count = %d;\n", slice, varargs_count);
+                out_temporaries->append(slice);
+            }
+            return;
         }
     }
 }
@@ -379,7 +385,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
         assert(expr->desugared_procedure_to_call->header->name != nullptr);
         Array<char *> params;
         params.allocator = default_allocator();
-        c_print_procedure_call_parameters(sb, expr->desugared_procedure_to_call->header->type, expr->desugared_procedure_parameters, indent_level, &params);
+        c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->desugared_procedure_parameters, indent_level, &params);
         print_indents(sb, indent_level);
         if (expr->desugared_procedure_to_call->header->type->return_type) {
             t = c_temporary();
@@ -480,7 +486,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     char *procedure_name = c_print_expr(sb, call->lhs, indent_level);
                     Array<char *> params;
                     params.allocator = default_allocator();
-                    c_print_procedure_call_parameters(sb, call->target_procedure_type, call->parameters_to_emit, indent_level, &params);
+                    c_print_procedure_call_parameters(sb, call, call->target_procedure_type, call->parameters_to_emit, indent_level, &params);
                     if (call->target_procedure_type->return_type) {
                         t = c_temporary();
                         print_indents(sb, indent_level);

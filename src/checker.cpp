@@ -1735,20 +1735,41 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
     assert(!is_type_polymorphic(target_procedure_type));
 
     // typecheck parameters now that we have concrete types for the procedure parameters
+    Array<Ast_Expr *> vararg_parameters;
+    vararg_parameters.allocator = default_allocator();
     int param_index = 0;
+    int has_started_assigning_to_varargs = false;
     for (int idx = 0; idx < target_procedure_type->parameter_types.count && param_index < params_to_emit.count; idx += 1) {
         Type *target_type = target_procedure_type->parameter_types[idx];
         Ast_Expr *parameter = params_to_emit[param_index];
+        bool parameter_is_spread = unparen_expr(parameter)->expr_kind == EXPR_SPREAD;
+        if (parameter_is_spread) {
+            if (has_started_assigning_to_varargs) {
+                report_error(parameter->location, "Cannot mix normal varargs with a spread operation.");
+                return false;
+            }
+        }
         if (is_type_varargs(target_type)) {
             Type_Varargs *varargs_type = (Type_Varargs *)target_type;
             target_type = varargs_type->varargs_of;
-            idx -= 1; // sketch
+            if (!parameter_is_spread) {
+                idx -= 1; // sketch
+            }
+            vararg_parameters.append(parameter);
+            has_started_assigning_to_varargs = true;
         }
         Operand *parameter_operand = typecheck_expr(parameter, target_type);
         if (!parameter_operand) {
             return false;
         }
         param_index += 1;
+    }
+
+    expr->vararg_parameters = vararg_parameters;
+
+    if (param_index < params_to_emit.count) {
+        report_error(expr->location, "Too many parameters for procedure call.");
+        return false;
     }
 
     if (procedure_operand.referenced_declaration != nullptr) {
@@ -2344,17 +2365,23 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
             break;
         }
-        case EXPR_VARARGS_TYPE: {
-            Expr_Varargs_Type *varargs_type = (Expr_Varargs_Type *)expr;
-            assert(varargs_type->type_expr != nullptr);
-            Operand *varargs_of_operand = typecheck_expr(varargs_type->type_expr, type_typeid);
-            if (!varargs_of_operand) {
+        case EXPR_SPREAD: {
+            Expr_Spread *spread = (Expr_Spread *)expr;
+            assert(spread->rhs != nullptr);
+            Operand *rhs_operand = typecheck_expr(spread->rhs);
+            if (!rhs_operand) {
                 return nullptr;
             }
-            assert((varargs_of_operand->flags & OPERAND_CONSTANT) && (varargs_of_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
-            result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_varargs_of(varargs_of_operand->type_value);
+            if (is_type_typeid(rhs_operand->type)) {
+                assert((rhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_TYPE));
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+                result_operand.type = type_typeid;
+                result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value);
+            }
+            else {
+                result_operand.flags = rhs_operand->flags;
+                result_operand.type = rhs_operand->type;
+            }
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
