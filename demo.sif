@@ -174,8 +174,19 @@ struct Loopy {
 
 
 
+proc procedure_with_varargs(numbers: ..int) {
+    print_int(numbers.count);
+    for (var i = 0; i < numbers.count; i += 1) {
+        print_string("    ");
+        print_int(numbers[i]);
+    }
+}
 proc varargs() {
-    // todo(josh)
+    print_string("\n\n---- varargs ----\n");
+
+    procedure_with_varargs(1, 2, 3, 4);
+    procedure_with_varargs(1, 2);
+    procedure_with_varargs();
 }
 
 

@@ -12,5 +12,5 @@ proc main() : i32 {
     varargs(1, 2, 3);
     varargs(1);
     // todo(josh)
-    // varargs();
+    varargs();
 }

@@ -308,7 +308,7 @@ char *c_temporary() {
 
 void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
     // todo(josh): handle the case where the proc accepts varargs but the caller does pass anything
-    For (idx, parameters) {
+    For (idx, proc_type->parameter_types) {
         if (is_type_varargs(proc_type->parameter_types[idx])) {
             Type_Varargs *varargs = (Type_Varargs *)proc_type->parameter_types[idx];
             assert(idx == proc_type->parameter_types.count-1);
@@ -316,7 +316,7 @@ void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_
             char *t = c_temporary();
             print_indents(sb, indent_level);
             c_print_type(sb, varargs->varargs_of, t);
-            sb->printf("[%d];\n", varargs_count);
+            sb->printf("[%d];\n", max(1, varargs_count));
             for (int varargs_idx = 0; varargs_idx < varargs_count; varargs_idx += 1) {
                 Ast_Expr *param = parameters[idx + varargs_idx];
                 char *param_name = c_print_expr(sb, param, indent_level);
@@ -331,7 +331,6 @@ void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_
             sb->printf("%s.data = %s;\n", slice, t);
             print_indents(sb, indent_level);
             sb->printf("%s.count = %d;\n", slice, varargs_count);
-            print_indents(sb, indent_level);
             out_temporaries->append(slice);
             return;
         }
