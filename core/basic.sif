@@ -1,33 +1,3 @@
-#c_code `
-void print_int(i64 i) {
-    printf("%lld", i);
-}
-void print_float(float f) {
-    printf("%f", f);
-}
-void print_bool(bool b) {
-    printf("%s", (b ? "true" : "false"));
-}
-void print_string(String string) {
-    for (i64 i = 0; i < string.count; i++) {
-        char c = string.data[i];
-        putchar(c);
-    }
-}
-void *alloc(i64 size) {
-    char *memory = (char *)malloc(size);
-    return memory;
-}
-void assert(bool condition) {
-    if (!condition) {
-        printf("Assertion failed.");
-        *((char *)0) = 0;
-    }
-}
-`
-
-
-
 proc putchar     (c: u8)                                                 #foreign;
 proc print_int   (i: int)                                                #foreign;
 proc print_float (f: float)                                              #foreign;
@@ -37,6 +7,7 @@ proc alloc       (size: int)                                    : rawptr #foreig
 proc free        (ptr: rawptr)                                           #foreign;
 proc assert      (condition: bool)                                       #foreign;
 proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
+proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
 
 
 
@@ -72,6 +43,29 @@ proc print(fmt: string, args: ..any) {
             putchar(c);
         }
     }
+}
+
+proc printa(args: ..any) {
+    for (var i = 0; i < args.count; i += 1) {
+        if (i != 0) {
+            putchar(' ');
+        }
+
+        var arg = args[i];
+        if (arg.type == int) {
+            print_int(cast(^int, arg.data)^);
+        }
+        else if (arg.type == float) {
+            print_float(cast(^float, arg.data)^);
+        }
+        else if (arg.type == string) {
+            print_string(cast(^string, arg.data)^);
+        }
+        else if (arg.type == bool) {
+            print_bool(cast(^bool, arg.data)^);
+        }
+    }
+    putchar('\n');
 }
 
 

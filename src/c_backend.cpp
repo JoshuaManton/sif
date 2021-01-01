@@ -933,6 +933,32 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    return any;\n");
     sb.print("};\n");
 
+    sb.print("void print_int(i64 i) {\n");
+    sb.print("    printf(\"%lld\", i);\n");
+    sb.print("}\n");
+    sb.print("void print_float(float f) {\n");
+    sb.print("    printf(\"%f\", f);\n");
+    sb.print("}\n");
+    sb.print("void print_bool(bool b) {\n");
+    sb.print("    printf((b ? \"true\" : \"false\"));\n");
+    sb.print("}\n");
+    sb.print("void print_string(String string) {\n");
+    sb.print("    for (i64 i = 0; i < string.count; i++) {\n");
+    sb.print("        char c = string.data[i];\n");
+    sb.print("        putchar(c);\n");
+    sb.print("    }\n");
+    sb.print("}\n");
+    sb.print("void *alloc(i64 size) {\n");
+    sb.print("    char *memory = (char *)malloc(size);\n");
+    sb.print("    return memory;\n");
+    sb.print("}\n");
+    sb.print("void assert(bool condition) {\n");
+    sb.print("    if (!condition) {\n");
+    sb.print("        printf(\"Assertion failed.\");\n");
+    sb.print("        *((char *)0) = 0;\n");
+    sb.print("    }\n");
+    sb.print("}\n");
+
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];
         sb.print(directive->text);
