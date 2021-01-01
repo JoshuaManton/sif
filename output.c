@@ -70,6 +70,8 @@ bool string_eq(String a, String b);
 String string_ptr(u8 *ptr, i64 count);
 void a(Slice args);
 void b(Slice args);
+struct Static_Array_2_i64 ;
+Slice slice_ptr__polymorph_0(i64 *ptr, i64 count);
 i32 main();
 
 // Actual declarations
@@ -241,7 +243,7 @@ void a(Slice args) {
             if (!__t61) { break; }
             String __t62 = MAKE_STRING("%\n", 2);
             Any __t63[1];
-            __t63[0] = ((Any *)args.data)[i];
+            __t63[0] = MAKE_ANY(&((i64 *)args.data)[i], 4);
             Slice __t64;
             __t64.data = __t63;
             __t64.count = 1;
@@ -254,21 +256,28 @@ void a(Slice args) {
 void b(Slice args) {
     a(args);
 }
+struct Static_Array_2_i64  {
+    i64  elements[2];
+};
+Slice slice_ptr__polymorph_0(i64 *ptr, i64 count) {
+    Slice slice = {0};
+    *((i64 **)&slice.data) = ptr;
+    slice.count = count;
+    return slice;
+}
 i32 main() {
-    Any __t66[1];
-    Slice __t67;
-    __t67.data = __t66;
-    __t67.count = 0;
-    b(__t67);
-    Any __t68[2];
-    i64 __t69 = 1;
-    __t68[0] = MAKE_ANY(&__t69, 4);
-    i64 __t70 = 2;
-    __t68[1] = MAKE_ANY(&__t70, 4);
-    Slice __t71;
-    __t71.data = __t68;
-    __t71.count = 2;
-    b(__t71);
-    i32 __t72 = 0;
-    return __t72;
+    struct Static_Array_2_i64 arr = {0};
+    i64 __t66 = 0;
+    i64 __t67 = 1;
+    arr.elements[__t66] = __t67;
+    i64 __t68 = 1;
+    i64 __t69 = 2;
+    arr.elements[__t68] = __t69;
+    i64 __t70 = 0;
+    i64 __t71 = 2;
+    Slice __t72 = slice_ptr__polymorph_0(&arr.elements[__t70], __t71);
+    Slice slice = __t72;
+    b(slice);
+    i32 __t73 = 0;
+    return __t73;
 }

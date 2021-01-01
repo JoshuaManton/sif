@@ -1751,8 +1751,8 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         }
         if (is_type_varargs(target_type)) {
             Type_Varargs *varargs_type = (Type_Varargs *)target_type;
-            target_type = varargs_type->varargs_of;
             if (!parameter_is_spread) {
+                target_type = varargs_type->varargs_of;
                 idx -= 1; // sketch
             }
             vararg_parameters.append(parameter);
@@ -2379,8 +2379,23 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value);
             }
             else {
+                Type *elem_type = nullptr;
+                if (is_type_array(rhs_operand->type)) {
+                    elem_type = ((Type_Array *)rhs_operand->type)->array_of;
+                }
+                else if (is_type_slice(rhs_operand->type)) {
+                    elem_type = ((Type_Slice *)rhs_operand->type)->slice_of;
+                }
+                else if (is_type_varargs(rhs_operand->type)) {
+                    elem_type = ((Type_Varargs *)rhs_operand->type)->varargs_of;
+                }
+                else {
+                    report_error(spread->location, "Cannot spread expression of type '%s'.", type_to_string(rhs_operand->type));
+                    return nullptr;
+                }
+                assert(elem_type != nullptr);
                 result_operand.flags = rhs_operand->flags;
-                result_operand.type = rhs_operand->type;
+                result_operand.type = get_or_create_type_varargs_of(elem_type);
             }
             break;
         }

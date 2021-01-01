@@ -1,18 +1,21 @@
 #include "core:basic.sif"
 
-proc a(args: ..any) {
+proc a(args: ..int) {
     print("---------\n");
     for (var i = 0; i < args.count; i += 1) {
         print("%\n", args[i]);
     }
 }
 
-proc b(args: ..any) {
+proc b(args: ..int) {
     a(..args);
 }
 
 proc main() : i32 {
-    b();
-    b(1, 2);
+    var arr: [2]int;
+    arr[0] = 1;
+    arr[1] = 2;
+    var slice = slice_ptr(&arr[0], 2);
+    b(..slice);
     return 0;
 }
