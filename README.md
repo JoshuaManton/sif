@@ -7,7 +7,7 @@ sif is a simple imperative procedural language made with the goal of being a sli
 #include "core:basic.sif"
 
 proc main() : i32 {
-    print_string("Hello, World!");
+    print("Hello, World!\n");
     return 0;
 }
 ```
@@ -19,15 +19,17 @@ proc main() : i32 {
 - Operator overloading
 - Procedural and structural polymorphism
 - Order-independent declarations
+- `any` type (see demo below)
 
 ## Features Planned
 
 - Runtime type information
 - Tagged unions (and normal unions, haven't done that yet)
 - defer statement
+- `using` statement for namespace inclusion
 - First-class procedures
 - Runtime bounds checks
-- Other small things you'd expect like varargs, static #if, switch-statements, etc
+- Other small things you'd expect like static #if, switch statements, etc
 - Currently the code-generator outputs C code, in the future I'd like to either try to use LLVM or write a custom x64 backend
 
 ## Building and Running
@@ -40,7 +42,7 @@ proc main() : i32 {
 #include "core:basic.sif"
 
 proc main() : i32 {
-    print_string("Hello, World!");
+    print("Hello, World!\n");
     return 0;
 }
 ```
@@ -54,9 +56,9 @@ The following is a demo program showing off many of the features of sif.
 #include "core:basic.sif"
 
 proc main() : i32 {
-    print_string("-------------------------\n");
-    print_string("|   sif language demo   |\n");
-    print_string("-------------------------\n");
+    print("-------------------------\n");
+    print("|   sif language demo   |\n");
+    print("-------------------------\n");
 
     basic_stuff();
     arrays();
@@ -65,10 +67,12 @@ proc main() : i32 {
     structs();
     enums();
     order_independence();
+    varargs();
     references();
     operator_overloading();
     procedural_polymorphism();
     structural_polymorphism();
+    any_type();
     dynamic_arrays();
     return 0;
 }
@@ -82,7 +86,7 @@ proc factorial(var n: int) : int {
     return n * factorial(n-1);
 }
 proc basic_stuff() {
-    print_string("\n\n---- basic_stuff ----\n");
+    print("\n\n---- basic_stuff ----\n");
 
     // declaration syntax:
     // var <variable name>: <type> = <expression>;
@@ -122,22 +126,22 @@ proc arrays_by_value(arr: [4]int) {
     arr[2] = 738;
 }
 proc arrays() {
-    print_string("\n\n---- arrays ----\n");
+    print("\n\n---- arrays ----\n");
     var my_array: [4]int;
     my_array[0] = 1;
     my_array[1] = 2;
     my_array[2] = 3;
     my_array[3] = 4;
-    print_int(my_array[0]);
-    print_int(my_array[1]);
-    print_int(my_array[2]);
-    print_int(my_array[3]);
+    print("%\n", my_array[0]);
+    print("%\n", my_array[1]);
+    print("%\n", my_array[2]);
+    print("%\n", my_array[3]);
     assert(my_array[0] == 1);
     assert(my_array[1] == 2);
     assert(my_array[2] == 3);
     assert(my_array[3] == 4);
     arrays_by_value(my_array);
-    print_int(my_array[2]);
+    print("%\n", my_array[2]);
     assert(my_array[2] == 3);
 }
 
@@ -145,13 +149,13 @@ proc arrays() {
 
 proc slices() {
     // todo(josh)
-    // print_string("\n\n---- slices ----\n");
+    // print("\n\n---- slices ----\n");
 }
 
 
 
 proc strings() {
-    print_string("\n\n---- slices ----\n");
+    print("\n\n---- strings ----\n");
 
     // strings in sif are length-delimited rather than null-terminated.
     // the string type is implemented as:
@@ -168,15 +172,13 @@ proc strings() {
     hello.data = &a[0];
     hello.count = 5;
     assert(hello == "Hello");
-    print_string(hello);
-    print_string("\n");
+    print("%\n", hello);
 
     var world: string;
     world.data = &a[7];
     world.count = 5;
     assert(world == "World");
-    print_string(world);
-    print_string("\n");
+    print("%\n", world);
 }
 
 
@@ -187,7 +189,7 @@ struct Foo {
     var t: bool;
 }
 proc structs() {
-    print_string("\n\n---- structs ----\n");
+    print("\n\n---- structs ----\n");
 
     var f: Foo;
     assert(f.a == 0); // everything is zero initialized by default
@@ -203,13 +205,13 @@ proc structs() {
 
 proc enums() {
     // todo(josh)
-    // print_string("\n\n---- enums ----\n");
+    // print("\n\n---- enums ----\n");
 }
 
 
 
 proc order_independence() {
-    print_string("\n\n---- order_independence ----\n");
+    print("\n\n---- order_independence ----\n");
 
     // declaration order does not matter. the compiler figures
     // out what depends on what for you. delete all your .h files :)
@@ -226,16 +228,32 @@ struct Loopy {
 
 
 
+proc procedure_with_varargs(numbers: ..int) {
+    print("varargs count: %\n", numbers.count);
+    for (var i = 0; i < numbers.count; i += 1) {
+        print("  %\n", numbers[i]);
+    }
+}
+proc varargs() {
+    print("\n\n---- varargs ----\n");
+
+    procedure_with_varargs(1, 2, 3, 4);
+    procedure_with_varargs(5, 6);
+    procedure_with_varargs();
+}
+
+
+
 proc change_by_reference(a: >int, value: int) {
     // since `a` is a reference, it is implicitly a pointer
     // and dereferences/indirections are inserted automatically
     a = value;
 }
 proc references() {
-    print_string("\n\n---- references ----\n");
+    print("\n\n---- references ----\n");
 
     var my_int = 123;
-    print_int(my_int);
+    print("%\n", my_int);
     assert(my_int == 123);
 
     // reference implicitly take/dereference pointers depending on context
@@ -244,13 +262,13 @@ proc references() {
     int_reference = 789;              // implicit `int_reference^` before `=`
     assert(int_reference == 789);
     assert(my_int == 789);
-    print_int(int_reference);
+    print("%\n", int_reference);
 
     // you can also define procedures that take (and return) references, of course
     assert(my_int == 789);
     change_by_reference(my_int, 456);
     assert(my_int == 456);
-    print_int(my_int);
+    print("%\n", my_int);
 
     // the only real reason I implemented references is for overloading []
     // which you can see below in the structural_polymorphism() and
@@ -281,15 +299,15 @@ struct Vector3 {
     }
 }
 proc operator_overloading() {
-    print_string("\n\n---- operator_overloading ----\n");
+    print("\n\n---- operator_overloading ----\n");
 
     var v1 = Vector3{1, 2, 3};
     var v2 = Vector3{1, 4, 9};
     var v3 = v1 + v2;
     var v4 = v3 * 5;
-    print_float(v4.x);
-    print_float(v4.y);
-    print_float(v4.z);
+    print("%\n", v4.x);
+    print("%\n", v4.y);
+    print("%\n", v4.z);
     assert(v4.x == 10);
     assert(v4.y == 30);
     assert(v4.z == 60);
@@ -321,25 +339,25 @@ proc value_and_type_poly($a: $T) : T {
     return a * a;
 }
 proc procedural_polymorphism() {
-    print_string("\n\n---- procedural_polymorphism ----\n");
+    print("\n\n---- procedural_polymorphism ----\n");
 
-    print_int(value_poly(2));
+    print("%\n", value_poly(2));
     assert(value_poly(2) == 4);
 
-    print_int(type_poly(3));
+    print("%\n", type_poly(3));
     assert(type_poly(3) == 9);
     print_float(type_poly(4.0));
     assert(type_poly(4.0) == 16);
 
     var a: int = 5;
     var f: float = 6;
-    print_int(type_poly(a));
-    print_float(type_poly(f));
+    print("%\n", type_poly(a));
+    print("%\n", type_poly(f));
     assert(type_poly(a) == 25);
     assert(type_poly(f) == 36);
 
-    print_int(value_and_type_poly(7));
-    print_float(value_and_type_poly(8.0));
+    print("%\n", value_and_type_poly(7));
+    print("%\n", value_and_type_poly(8.0));
     assert(value_and_type_poly(7) == 49);
     assert(value_and_type_poly(8.0) == 64);
 }
@@ -360,12 +378,56 @@ struct Custom_Array_Type!($N: int, $T: typeid) {
     }
 }
 proc structural_polymorphism() {
-    print_string("\n\n---- structural_polymorphism ----\n");
+    print("\n\n---- structural_polymorphism ----\n");
 
     var array_of_ints: Custom_Array_Type!(8, int);
     array_of_ints[4] = 124; // calls [] operator overload
-    print_int(array_of_ints[4]);
+    print("%\n", array_of_ints[4]);
     assert(array_of_ints[4] == 124);
+}
+
+
+
+proc any_type() {
+    print("\n\n---- any ----\n");
+
+    // an `any` is defined as the following:
+    // struct Any {
+    //     var data: rawptr;
+    //     var type: typeid;
+    // }
+    // any type will implicitly convert to an `any` by taking a pointer to
+    // the data and setting the type field to the appropriate typeid
+    var some_int = 123;
+    var a: any = some_int;
+    assert(a.data == &some_int);
+    assert(a.type == int);
+
+    // you can access the data pointed to by an `any` by casting the data
+    // pointer and dereferencing
+    var b: int = cast(^int, a.data)^;
+    print("%\n", b);
+
+    // the most notable use of `any` is for a print routine. here is an
+    // example using varargs
+    print_things(true, 456, 78.9, "hello");
+}
+proc print_things(args: ..any) {
+    for (var i = 0; i < args.count; i += 1) {
+        var arg = args[i];
+        if (arg.type == int) {
+            print("%\n", cast(^int, arg.data)^);
+        }
+        else if (arg.type == string) {
+            print("%\n", cast(^string, arg.data)^);
+        }
+        else if (arg.type == bool) {
+            print("%\n", cast(^bool, arg.data)^);
+        }
+        else if (arg.type == float) {
+            print("%\n", cast(^float, arg.data)^);
+        }
+    }
 }
 
 
@@ -416,7 +478,7 @@ proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
 }
 
 proc dynamic_arrays() {
-    print_string("\n\n---- dynamic_arrays ----\n");
+    print("\n\n---- dynamic_arrays ----\n");
 
     var dyn: Dynamic_Array!(Vector3);
     append(&dyn, Vector3{1, 2, 3});
@@ -426,10 +488,10 @@ proc dynamic_arrays() {
     assert(dyn[1].y == 4);
     assert(dyn[1].z == 9);
     for (var i = 0; i < dyn.count; i += 1) {
-        print_int(i);
-        print_float(dyn[i].x);
-        print_float(dyn[i].y);
-        print_float(dyn[i].z);
+        print("%\n", i);
+        print("%\n", dyn[i].x);
+        print("%\n", dyn[i].y);
+        print("%\n", dyn[i].z);
     }
     destroy_dynamic_array(dyn);
 }

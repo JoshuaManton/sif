@@ -20,54 +20,56 @@
 TODO:
 
 SMALL
+-unions
+-constant bounds checks i.e. var arr: [4]int; arr[232];
 -deduplicate #include paths
 -opt=N
 -unknown directives don't stop compilation
--constant bounds checks i.e. var arr: [4]int; arr[232];
--unions
 -error when instantiating a polymorphic struct without parameters
 -block comments
 -@notes on declarations
 -intern identifiers and remove strcmps
 
 MEDIUM
--change everything to use custom allocators
+-allow custom entrypoints
+-enforce entrypoints returning i32, or do it implicitly in the backend
+-enum field expressions
+-defer
 -foreign system
+-runtime bounds checks
+-switch statements
+-change everything to use custom allocators
+-slicing
+-transmute
 -build to dll
 -read command line parameters
 -check for use-before-declaration of local vars
 -make C output a bit prettier, whatever that means
--allow custom entrypoints
--enforce entrypoints returning i32, or do it implicitly in the backend
--runtime bounds checks
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
--enum field expressions
--defer
 -put struct constants in a different block than struct instance members
 -polymorphic structs should register their parameters as local constants
--slicing
--transmute
--switch statements
 -locally scoped structs and procs
 -tagged unions
 
 BIG
--iterative solver for polymorphism
--namespaced imports i.e. `#include Foo "foo.sif"`
--implicit polymorphism
 -control flow graph analysis
 -function pointers
+-type_info
+-#if
 -C varargs for bindings
 -cstring type
+-default procedure parameters
+-#caller_location
+-#location()
+-iterative solver for polymorphism
+-implicit polymorphism
+-namespaced imports i.e. `#include Foo "foo.sif"`
 -using
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
--#caller_location
--#location()
--#if
--type_info
+
 -figure out if I should allow shadowing (maybe with a keyword?)
 */
 
