@@ -10,9 +10,14 @@ struct Foo {
 }
 
 proc main() : i32 {
+    var i = 12;
+    var a = 1 >> (i+2);
+
     var f: Foo;
     var arr: [2]int;
     stuff(arr);
     print("%\n", arr[1]);
     print("this is % very % neato 100%%\n", 123.4, true);
+    printa(123, 42.1, true, "hellooooooo");
+    printa(123, 42.1, true, "hellooooooo");
 }

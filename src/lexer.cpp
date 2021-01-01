@@ -254,11 +254,12 @@ char *unescape_string(char *str, int *out_escaped_length) {
             switch (*c) {
                 case '"':  sb.printf("%c", '\"'); break;
                 case '\\': sb.printf("%c", '\\'); break;
-                case 'b':  sb.printf("%c", '\\b');  break;
-                case 'f':  sb.printf("%c", '\\f');  break;
-                case 'n':  sb.printf("%c", '\\n');  break;
-                case 'r':  sb.printf("%c", '\\r');  break;
-                case 't':  sb.printf("%c", '\\t');  break;
+                case '\'': sb.printf("%c", '\''); break;
+                case 'b':  sb.printf("%c", '\b');  break;
+                case 'f':  sb.printf("%c", '\f');  break;
+                case 'n':  sb.printf("%c", '\n');  break;
+                case 'r':  sb.printf("%c", '\r');  break;
+                case 't':  sb.printf("%c", '\t');  break;
                 // case 'u':  fmt.sbprint(&sb, '\u'); // todo(josh): unicode
                 default: {
                     printf("Unexpected escape character: %c\n", *c);
@@ -396,6 +397,9 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = number;
         out_token->has_a_dot = has_a_dot;
     }
+    // todo(josh): string and char handling is garbage. make better pls
+    // todo(josh): string and char handling is garbage. make better pls
+    // todo(josh): string and char handling is garbage. make better pls
     else if (lexer->text[lexer->location.index] == '\'') {
         int scanner_length = 0;
         int escaped_length = 0;

@@ -1036,10 +1036,12 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
             break;
         }
         case TK_LEFT_SHIFT: {
-            UNIMPLEMENTED(TK_LEFT_SHIFT);
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            break;
         }
         case TK_RIGHT_SHIFT: {
-            UNIMPLEMENTED(TK_RIGHT_SHIFT);
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            break;
         }
         default: {
             printf("Unhandled operator: %s\n", token_string(op));
@@ -1256,10 +1258,28 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             break;
         }
         case TK_LEFT_SHIFT: {
-            UNIMPLEMENTED(TK_LEFT_SHIFT);
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value >> rhs.int_value;
+                else {
+                    report_error(location, "Operator >> is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
         }
         case TK_RIGHT_SHIFT: {
-            UNIMPLEMENTED(TK_RIGHT_SHIFT);
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value << rhs.int_value;
+                else {
+                    report_error(location, "Operator >> is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
         }
         default: {
             printf("Unhandled operator: %s\n", token_string(op));

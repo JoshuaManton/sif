@@ -30,6 +30,7 @@ SMALL
 -@notes on declarations
 -intern identifiers and remove strcmps
 -call varargs with varargs
+-add `any` to demo.sif
 
 MEDIUM
 -read command line parameters
