@@ -139,6 +139,7 @@ struct Ast_Proc_Header : public Ast_Node {
     Array<int> polymorphic_parameter_indices = {};
     Ast_Proc *procedure = {};
     Proc_Declaration *declaration = {};
+    Ast_Node *current_parsing_loop = {};
     Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
@@ -265,22 +266,16 @@ struct Ast_For_Loop : public Ast_Node {
     Ast_Expr *condition = {};
     Ast_Node *post = {};
     Ast_Block *body = {};
-    Ast_For_Loop(Ast_Node *pre, Ast_Expr *condition, Ast_Node *post, Ast_Block *body, Location location)
+    Ast_For_Loop(Location location)
     : Ast_Node(AST_FOR_LOOP, location)
-    , pre(pre)
-    , condition(condition)
-    , post(post)
-    , body(body)
     {}
 };
 
 struct Ast_While_Loop : public Ast_Node {
     Ast_Expr *condition = {};
     Ast_Block *body = {};
-    Ast_While_Loop(Ast_Expr *condition, Ast_Block *body, Location location)
+    Ast_While_Loop(Location location)
     : Ast_Node(AST_WHILE_LOOP, location)
-    , condition(condition)
-    , body(body)
     {}
 };
 
@@ -311,18 +306,18 @@ struct Ast_Return : public Ast_Node {
 };
 
 struct Ast_Break : public Ast_Node {
-    // todo(josh)
-    // Ast_Node *matching_node = {};
-    Ast_Break(Location location)
+    Ast_Node *matching_loop = {};
+    Ast_Break(Ast_Node *matching_loop, Location location)
     : Ast_Node(AST_BREAK, location)
+    , matching_loop(matching_loop)
     {}
 };
 
 struct Ast_Continue : public Ast_Node {
-    // todo(josh)
-    // Ast_Node *matching_node = {};
-    Ast_Continue(Location location)
+    Ast_Node *matching_loop = {};
+    Ast_Continue(Ast_Node *matching_loop, Location location)
     : Ast_Node(AST_CONTINUE, location)
+    , matching_loop(matching_loop)
     {}
 };
 

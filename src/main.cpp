@@ -29,14 +29,15 @@ SMALL
 -block comments
 -@notes on declarations
 -intern identifiers and remove strcmps
--bind `break` and `continue` to the loops they are in. error if no loop
 
 MEDIUM
+-change everything to use custom allocators
+-foreign system
+-build to dll
 -read command line parameters
 -check for use-before-declaration of local vars
 -make C output a bit prettier, whatever that means
 -allow custom entrypoints
--any
 -enforce entrypoints returning i32, or do it implicitly in the backend
 -runtime bounds checks
 -good logging of cyclic dependencies
@@ -49,6 +50,7 @@ MEDIUM
 -transmute
 -switch statements
 -locally scoped structs and procs
+-tagged unions
 
 BIG
 -iterative solver for polymorphism
@@ -56,15 +58,14 @@ BIG
 -implicit polymorphism
 -control flow graph analysis
 -function pointers
--varargs
--C varargs
+-C varargs for bindings
+-cstring type
 -using
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
 -#caller_location
 -#location()
--tagged unions
 -#if
 -type_info
 -figure out if I should allow shadowing (maybe with a keyword?)

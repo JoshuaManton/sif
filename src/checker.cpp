@@ -2749,10 +2749,14 @@ bool typecheck_node(Ast_Node *node) {
         }
 
         case AST_BREAK: {
+            Ast_Break *break_stmt = (Ast_Break *)node;
+            assert(break_stmt->matching_loop != nullptr);
             break;
         }
 
         case AST_CONTINUE: {
+            Ast_Continue *continue_stmt = (Ast_Continue *)node;
+            assert(continue_stmt->matching_loop != nullptr);
             break;
         }
 

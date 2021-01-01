@@ -606,58 +606,78 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         case TK_FOR: {
-            Ast_Node *pre = {};
-            Ast_Expr *condition = {};
-            Ast_Node *post = {};
-            Ast_Block *body = {};
+            eat_next_token(lexer);
+            if (g_currently_parsing_proc == nullptr) {
+                report_error(root_token.location, "Cannot use `for` at file scope.");
+                return nullptr;
+            }
+
+            Ast_For_Loop *for_loop = new Ast_For_Loop(root_token.location);
+            assert(g_currently_parsing_proc != nullptr);
+            Ast_Node *old_loop = g_currently_parsing_proc->current_parsing_loop;
+            g_currently_parsing_proc->current_parsing_loop = for_loop;
+            defer(g_currently_parsing_proc->current_parsing_loop = old_loop);
+
             {
                 Ast_Block *block = new Ast_Block(lexer->location);
                 Ast_Block *old_block = push_ast_block(block);
                 defer(pop_ast_block(old_block));
 
-                eat_next_token(lexer);
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-                pre = parse_single_statement(lexer, false);
-                if (!pre) {
+                for_loop->pre = parse_single_statement(lexer, false);
+                if (!for_loop->pre) {
                     return nullptr;
                 }
                 EXPECT(lexer, TK_SEMICOLON, nullptr);
-                condition = parse_expr(lexer);
-                if (!condition) {
+                for_loop->condition = parse_expr(lexer);
+                if (!for_loop->condition) {
                     return nullptr;
                 }
                 EXPECT(lexer, TK_SEMICOLON, nullptr);
-                post = parse_single_statement(lexer, false);
-                if (!post) {
+                for_loop->post = parse_single_statement(lexer, false);
+                if (!for_loop->post) {
                     return nullptr;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                body = parse_block_including_curly_brackets(lexer);
-                if (!body) {
+                for_loop->body = parse_block_including_curly_brackets(lexer);
+                if (!for_loop->body) {
                     return nullptr;
                 }
             }
-
-            return new Ast_For_Loop(pre, condition, post, body, root_token.location);
+            return for_loop;
         }
 
         case TK_WHILE: {
             eat_next_token(lexer);
+            if (g_currently_parsing_proc == nullptr) {
+                report_error(root_token.location, "Cannot use `while` at file scope.");
+                return nullptr;
+            }
+            Ast_While_Loop *while_loop = new Ast_While_Loop(root_token.location);
+            Ast_Node *old_loop = g_currently_parsing_proc->current_parsing_loop;
+            g_currently_parsing_proc->current_parsing_loop = while_loop;
+            defer(g_currently_parsing_proc->current_parsing_loop = old_loop);
+
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-            Ast_Expr *condition = parse_expr(lexer);
-            if (!condition) {
+            while_loop->condition = parse_expr(lexer);
+            if (!while_loop->condition) {
                 return nullptr;
             }
+
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            Ast_Block *body = parse_block_including_curly_brackets(lexer);
-            if (!body) {
+            while_loop->body = parse_block_including_curly_brackets(lexer);
+            if (!while_loop->body) {
                 return nullptr;
             }
-            return new Ast_While_Loop(condition, body, root_token.location);
+            return while_loop;
         }
 
         case TK_IF: {
             eat_next_token(lexer);
+            if (g_currently_parsing_proc == nullptr) {
+                report_error(root_token.location, "Cannot use `if` at file scope.");
+                return nullptr;
+            }
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);
             Ast_Expr *condition = parse_expr(lexer);
             if (!condition) {
@@ -683,6 +703,10 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_RETURN: {
             eat_next_token(lexer);
+            if (g_currently_parsing_proc == nullptr) {
+                report_error(root_token.location, "Cannot use `return` at file scope.");
+                return nullptr;
+            }
             Token semicolon;
             if (!peek_next_token(lexer, &semicolon)) {
                 assert(false && "unexpected EOF");
@@ -704,17 +728,31 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         case TK_CONTINUE: {
-            // todo(josh): hook up matching_loop
             eat_next_token(lexer);
+            if (g_currently_parsing_proc == nullptr) {
+                report_error(root_token.location, "Cannot use `continue` at file scope.");
+                return nullptr;
+            }
+            if (g_currently_parsing_proc->current_parsing_loop == nullptr) {
+                report_error(root_token.location, "`continue` must be used from within a loop.");
+                return nullptr;
+            }
             EXPECT(lexer, TK_SEMICOLON, nullptr);
-            return new Ast_Continue(root_token.location);
+            return new Ast_Continue(g_currently_parsing_proc->current_parsing_loop, root_token.location);
         }
 
         case TK_BREAK: {
-            // todo(josh): hook up matching_loop
             eat_next_token(lexer);
+            if (g_currently_parsing_proc == nullptr) {
+                report_error(root_token.location, "Cannot use `break` at file scope.");
+                return nullptr;
+            }
+            if (g_currently_parsing_proc->current_parsing_loop == nullptr) {
+                report_error(root_token.location, "`break` must be used from within a loop.");
+                return nullptr;
+            }
             EXPECT(lexer, TK_SEMICOLON, nullptr);
-            return new Ast_Break(root_token.location);
+            return new Ast_Break(g_currently_parsing_proc->current_parsing_loop, root_token.location);
         }
 
         default: {
