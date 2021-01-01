@@ -330,7 +330,19 @@ void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, 
             int varargs_count = root_expr->vararg_parameters.count;
             if (varargs_count == 1 && (unparen_expr(root_expr->vararg_parameters[0])->expr_kind == EXPR_SPREAD)) {
                 Expr_Spread *spread = (Expr_Spread *)unparen_expr(root_expr->vararg_parameters[0]);
-                char *spread_name = c_print_expr(sb, spread->rhs, indent_level);
+                char *spread_name = nullptr;
+                if (is_type_array(spread->rhs->operand.type)) {
+                    Type_Array *array_type = (Type_Array *)spread->rhs->operand.type;
+                    char *rhs_name = c_print_expr(sb, spread->rhs, indent_level);
+                    spread_name = c_temporary();
+                    print_indents(sb, indent_level);
+                    sb->printf("Slice %s = MAKE_SLICE(&%s.elements[0], %d);\n", spread_name, rhs_name, array_type->count);
+                }
+                else {
+                    assert(is_type_slice(spread->rhs->operand.type) || is_type_varargs(spread->rhs->operand.type));
+                    spread_name = c_print_expr(sb, spread->rhs, indent_level);
+                }
+                assert(spread_name != nullptr);
                 out_temporaries->append(spread_name);
             }
             else {
@@ -926,6 +938,13 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    void *data;\n");
     sb.print("    i64 count;\n");
     sb.print("} Slice;\n");
+
+    sb.print("Slice MAKE_SLICE(void *data, i64 count) {\n");
+    sb.print("    Slice slice;\n");
+    sb.print("    slice.data = data;\n");
+    sb.print("    slice.count = count;\n");
+    sb.print("    return slice;\n");
+    sb.print("};\n");
 
     sb.print("typedef struct {\n");
     sb.print("    void *data;\n");

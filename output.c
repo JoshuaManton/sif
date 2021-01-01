@@ -27,6 +27,12 @@ typedef struct {
     void *data;
     i64 count;
 } Slice;
+Slice MAKE_SLICE(void *data, i64 count) {
+    Slice slice;
+    slice.data = data;
+    slice.count = count;
+    return slice;
+};
 typedef struct {
     void *data;
     i64 type;
@@ -229,27 +235,30 @@ String string_ptr(u8 *ptr, i64 count) {
     return str;
 }
 void a(Slice args) {
-    String __t57 = MAKE_STRING("---------\n", 10);
-    Any __t58[1];
-    Slice __t59;
-    __t59.data = __t58;
-    __t59.count = 0;
-    print(__t57, __t59);
+    i64 __t57 = 0;
+    i64 __t58 = 1;
+    ((i64 *)args.data)[__t57] += __t58;
+    String __t59 = MAKE_STRING("---------\n", 10);
+    Any __t60[1];
+    Slice __t61;
+    __t61.data = __t60;
+    __t61.count = 0;
+    print(__t59, __t61);
     {
-        i64 __t60 = 0;
-        i64 i = __t60;
+        i64 __t62 = 0;
+        i64 i = __t62;
         while (true) {
-            bool __t61 = i < args.count;
-            if (!__t61) { break; }
-            String __t62 = MAKE_STRING("%\n", 2);
-            Any __t63[1];
-            __t63[0] = MAKE_ANY(&((i64 *)args.data)[i], 4);
-            Slice __t64;
-            __t64.data = __t63;
-            __t64.count = 1;
-            print(__t62, __t64);
-            i64 __t65 = 1;
-            i += __t65;
+            bool __t63 = i < args.count;
+            if (!__t63) { break; }
+            String __t64 = MAKE_STRING("%\n", 2);
+            Any __t65[1];
+            __t65[0] = MAKE_ANY(&((i64 *)args.data)[i], 4);
+            Slice __t66;
+            __t66.data = __t65;
+            __t66.count = 1;
+            print(__t64, __t66);
+            i64 __t67 = 1;
+            i += __t67;
         }
     }
 }
@@ -267,17 +276,19 @@ Slice slice_ptr__polymorph_0(i64 *ptr, i64 count) {
 }
 i32 main() {
     struct Static_Array_2_i64 arr = {0};
-    i64 __t66 = 0;
-    i64 __t67 = 1;
-    arr.elements[__t66] = __t67;
-    i64 __t68 = 1;
-    i64 __t69 = 2;
+    i64 __t68 = 0;
+    i64 __t69 = 1;
     arr.elements[__t68] = __t69;
-    i64 __t70 = 0;
+    i64 __t70 = 1;
     i64 __t71 = 2;
-    Slice __t72 = slice_ptr__polymorph_0(&arr.elements[__t70], __t71);
-    Slice slice = __t72;
+    arr.elements[__t70] = __t71;
+    Slice __t72 = MAKE_SLICE(&arr.elements[0], 2);
+    b(__t72);
+    i64 __t73 = 0;
+    i64 __t74 = 2;
+    Slice __t75 = slice_ptr__polymorph_0(&arr.elements[__t73], __t74);
+    Slice slice = __t75;
     b(slice);
-    i32 __t73 = 0;
-    return __t73;
+    i32 __t76 = 0;
+    return __t76;
 }
