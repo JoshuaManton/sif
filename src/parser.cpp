@@ -941,7 +941,6 @@ bool is_unary_op(Token_Kind kind) {
         case TK_DOT_DOT:
         case TK_SIZEOF:
         case TK_TYPEOF:
-        case TK_CAST:
         case TK_AMPERSAND: { // address-of
             return true;
         }
@@ -1132,17 +1131,6 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
                 return new Expr_Typeof(expr, op.location);
             }
-            case TK_CAST: {
-                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-                Ast_Expr *type_expr = parse_expr(lexer);
-                if (!type_expr) {
-                    return nullptr;
-                }
-                EXPECT(lexer, TK_COMMA, nullptr);
-                Ast_Expr *rhs = parse_expr(lexer);
-                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                return new Expr_Cast(type_expr, rhs, op.location);
-            }
             default: {
                 assert(false);
             }
@@ -1310,6 +1298,18 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Ast_Expr *nested = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return new Expr_Paren(nested, token.location);
+        }
+        case TK_CAST: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *type_expr = parse_expr(lexer);
+            if (!type_expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_COMMA, nullptr);
+            Ast_Expr *rhs = parse_expr(lexer);
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return new Expr_Cast(type_expr, rhs, token.location);
         }
         case TK_DOLLAR: {
             eat_next_token(lexer);

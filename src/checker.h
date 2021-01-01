@@ -38,6 +38,7 @@ enum Type_Flags {
     TF_REFERENCE    = 1 << 12, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_POLYMORPHIC  = 1 << 13, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_VARARGS      = 1 << 14, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_ANY          = 1 << 15, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -52,6 +53,7 @@ struct Struct_Field {
     int offset = {}; // -1 if is_constant
 };
 struct Type {
+    i64 id = {};
     Type_Kind kind = {};
     int size = {};
     int align = {};
@@ -177,6 +179,7 @@ extern Type *type_untyped_number;
 extern Type *type_untyped_null;
 extern Type *type_typeid;
 extern Type *type_string;
+extern Type *type_any;
 
 void init_checker();
 void add_global_declarations(Ast_Block *block);

@@ -125,9 +125,6 @@ struct Ast_Block : public Ast_Node {
     }
 };
 
-struct Procedure_Parameter_Info {
-};
-
 struct Ast_Proc_Header : public Ast_Node {
     char *name = nullptr;
     Array<Ast_Var *> parameters = {};

@@ -29,12 +29,14 @@ SMALL
 -block comments
 -@notes on declarations
 -intern identifiers and remove strcmps
+-call varargs with varargs
 
 MEDIUM
 -read command line parameters
 -check for use-before-declaration of local vars
 -make C output a bit prettier, whatever that means
 -allow custom entrypoints
+-any
 -enforce entrypoints returning i32, or do it implicitly in the backend
 -runtime bounds checks
 -good logging of cyclic dependencies

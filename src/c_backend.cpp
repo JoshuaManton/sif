@@ -21,6 +21,12 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
             else if (strcmp(type_primitive->name, "rawptr") == 0) {
                 sb->print("void *");
             }
+            else if (strcmp(type_primitive->name, "any") == 0) {
+                sb->print("Any ");
+            }
+            else if (strcmp(type_primitive->name, "typeid") == 0) {
+                sb->print("i64 ");
+            }
             else {
                 sb->printf("%s ", type_primitive->name);
             }
@@ -151,6 +157,12 @@ void c_print_type_plain_prefix(String_Builder *sb, Type *type) {
             }
             else if (strcmp(type_primitive->name, "rawptr") == 0) {
                 sb->print("voidpointer");
+            }
+            else if (strcmp(type_primitive->name, "any") == 0) {
+                sb->print("Any");
+            }
+            else if (strcmp(type_primitive->name, "typeid") == 0) {
+                sb->print("i64 ");
             }
             else {
                 sb->printf("%s", type_primitive->name);
@@ -319,7 +331,7 @@ void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_
             sb->printf("[%d];\n", max(1, varargs_count));
             for (int varargs_idx = 0; varargs_idx < varargs_count; varargs_idx += 1) {
                 Ast_Expr *param = parameters[idx + varargs_idx];
-                char *param_name = c_print_expr(sb, param, indent_level);
+                char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
                 print_indents(sb, indent_level);
                 sb->printf("%s[%d] = %s;\n", t, varargs_idx, param_name);
             }
@@ -342,30 +354,29 @@ void c_print_procedure_call_parameters(String_Builder *sb, Type_Procedure *proc_
 }
 
 char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
-    if (expr->operand.flags & OPERAND_CONSTANT) {
-        String_Builder constant_sb = make_string_builder(default_allocator(), 16);
-        if (is_type_float(expr->operand.type)) {
-            constant_sb.printf("%f", expr->operand.float_value);
-        }
-        else if (is_type_integer(expr->operand.type)) {
-            constant_sb.printf("%d", expr->operand.int_value);
-        }
-        else if (expr->operand.type == type_bool) {
-            constant_sb.print(expr->operand.bool_value ? "true" : "false");
-        }
-        else if (expr->operand.type == type_string) {
-            constant_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-        }
-        else {
-            assert(false);
-        }
-        return constant_sb.string();
-    }
+    // if (expr->operand.flags & OPERAND_CONSTANT) {
+    //     String_Builder constant_sb = make_string_builder(default_allocator(), 16);
+    //     if (is_type_float(expr->operand.type)) {
+    //         constant_sb.printf("%f", expr->operand.float_value);
+    //     }
+    //     else if (is_type_integer(expr->operand.type)) {
+    //         constant_sb.printf("%d", expr->operand.int_value);
+    //     }
+    //     else if (expr->operand.type == type_bool) {
+    //         constant_sb.print(expr->operand.bool_value ? "true" : "false");
+    //     }
+    //     else if (expr->operand.type == type_string) {
+    //         constant_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+    //     }
+    //     else {
+    //         assert(false);
+    //     }
+    //     return constant_sb.string();
+    // }
 
     if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
         assert(expr->operand.type != nullptr);
     }
-    assert(expr->expr_kind != EXPR_NUMBER_LITERAL);
 
     String_Builder reference_prefix_sb = {};
     reference_prefix_sb.buf.allocator = default_allocator();
@@ -402,6 +413,12 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
             sb->print(params[idx]);
         }
         sb->print(");\n");
+    }
+    else if (is_type_typeid(expr->operand.type) && (expr->operand.flags & OPERAND_CONSTANT)) {
+        t = c_temporary();
+        print_indents(sb, indent_level);
+        c_print_type(sb, expr->operand.type, t);
+        sb->printf(" = %d;\n", expr->operand.type_value->id);
     }
     else {
         switch (expr->expr_kind) {
@@ -547,23 +564,6 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                         sb->printf("%s.%s = %s;\n", t, target_field.name, expr_names[idx]);
                     }
                 }
-
-
-
-                // c_emit_compound_literal_temporaries(sb, compound_literal->type_expr, indent_level);
-                // For (idx, compound_literal->exprs) {
-                //     Ast_Expr *nested = compound_literal->exprs[idx];
-                //     c_emit_compound_literal_temporaries(sb, nested, indent_level);
-                // }
-                // char *var_name = (char *)alloc(default_allocator(), 64);
-                // sprintf(var_name, "__generated_compound_literal_%d\0", num_compound_literal_temporaries_emitted);
-                // assert(var_name[63] == '\0'); // todo(josh): we should properly handle this case and allocate a bigger string
-                // num_compound_literal_temporaries_emitted += 1;
-                // c_print_var(sb, var_name, compound_literal->operand.type, nullptr);
-                // sb->printf(" = {0};\n");
-                // compound_literal->generated_temporary_variable_name = var_name;
-
-
                 break;
             }
             case EXPR_ADDRESS_OF: {
@@ -621,11 +621,29 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 break;
             }
             case EXPR_NUMBER_LITERAL: {
-                assert(false && "shouldn't ever get in here with a number literal because of constant handling above");
+                assert(!is_type_untyped(expr->operand.type));
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, expr->operand.type, t);
+                sb->printf(" = ");
+                if (is_type_integer(expr->operand.type)) {
+                    sb->printf("%d;\n", expr->operand.int_value);
+                }
+                else if (is_type_float(expr->operand.type)) {
+                    sb->printf("%f;\n", expr->operand.float_value);
+                }
+                else {
+                    assert(false);
+                }
                 break;
             }
             case EXPR_STRING_LITERAL: {
-                assert(false && "shouldn't ever get in here with a string literal because of constant handling above");
+                assert(!is_type_untyped(expr->operand.type));
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, expr->operand.type, t);
+                sb->printf(" = ");
+                sb->printf("MAKE_STRING(\"%s\", %d);\n", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
                 break;
             }
             case EXPR_POINTER_TYPE: {
@@ -642,16 +660,21 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 assert(false && "handled above");
             }
             case EXPR_NULL: {
-                // todo(josh): should null be a constant? probably
                 t = "NULL";
                 break;
             }
             case EXPR_TRUE: {
-                assert(false && "shouldn't ever get in here with a true because of constant handling above");
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, expr->operand.type, t);
+                sb->printf(" = true;\n");
                 break;
             }
             case EXPR_FALSE: {
-                assert(false && "shouldn't ever get in here with a false because of constant handling above");
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, expr->operand.type, t);
+                sb->printf(" = false;\n");
                 break;
             }
             case EXPR_SIZEOF: {
@@ -680,6 +703,14 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
         assert(is_type_reference(expr->operand.reference_type));
         reference_prefix_sb.printf("%s)", t);
         t = reference_prefix_sb.string();
+    }
+
+    if (target_type) {
+        if (target_type == type_any && (expr->operand.type != type_any)) {
+            String_Builder any_sb = make_string_builder(default_allocator(), 32);
+            any_sb.printf("MAKE_ANY(&%s, %d)", t, expr->operand.type->id);
+            t = any_sb.string();
+        }
     }
 
     return t;
@@ -715,7 +746,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
         case AST_ASSIGN: {
             Ast_Assign *assign = (Ast_Assign *)node;
             char *lhs = c_print_expr(sb, assign->lhs, indent_level);
-            char *rhs = c_print_expr(sb, assign->rhs, indent_level);
+            char *rhs = c_print_expr(sb, assign->rhs, indent_level, assign->lhs->operand.type);
             print_indents(sb, indent_level);
             sb->print(lhs);
             switch (assign->op) {
@@ -888,6 +919,18 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    void *data;\n");
     sb.print("    i64 count;\n");
     sb.print("} Slice;\n");
+
+    sb.print("typedef struct {\n");
+    sb.print("    void *data;\n");
+    sb.print("    i64 type;\n");
+    sb.print("} Any;\n");
+
+    sb.print("Any MAKE_ANY(void *data, i64 type) {\n");
+    sb.print("    Any any;\n");
+    sb.print("    any.data = data;\n");
+    sb.print("    any.type = type;\n");
+    sb.print("    return any;\n");
+    sb.print("};\n");
 
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];

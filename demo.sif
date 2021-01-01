@@ -185,7 +185,7 @@ proc varargs() {
     print_string("\n\n---- varargs ----\n");
 
     procedure_with_varargs(1, 2, 3, 4);
-    procedure_with_varargs(1, 2);
+    procedure_with_varargs(5, 6);
     procedure_with_varargs();
 }
 

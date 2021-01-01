@@ -5,6 +5,9 @@ void print_int(i64 i) {
 void print_float(float f) {
     printf("%f\n", f);
 }
+void print_bool(bool b) {
+    printf("%s\n", (b ? "true" : "false"));
+}
 void print_string(String string) {
     for (i64 i = 0; i < string.count; i++) {
         char c = string.data[i];
@@ -27,6 +30,7 @@ void assert(bool condition) {
 
 proc print_int   (i: int)                                                #foreign;
 proc print_float (f: float)                                              #foreign;
+proc print_bool  (b: bool)                                               #foreign;
 proc print_string(str: string)                                           #foreign;
 proc alloc       (size: int)                                    : rawptr #foreign;
 proc free        (ptr: rawptr)                                           #foreign;

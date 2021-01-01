@@ -33,6 +33,8 @@ Type *type_float;
 
 Type *type_polymorphic;
 
+Type *type_any;
+
 Array<Declaration *> ordered_declarations;
 
 char *type_to_string(Type *type);
@@ -72,24 +74,26 @@ void init_checker() {
     all_types.allocator = default_allocator();
     ordered_declarations.allocator = default_allocator();
 
-    type_i8  = new Type_Primitive("i8", 1, 1);  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8);
-    type_i16 = new Type_Primitive("i16", 2, 2); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16);
-    type_i32 = new Type_Primitive("i32", 4, 4); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32);
-    type_i64 = new Type_Primitive("i64", 8, 8); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64);
+    type_i8  = new Type_Primitive("i8", 1, 1);  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8); type_i8->id = all_types.count;
+    type_i16 = new Type_Primitive("i16", 2, 2); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16); type_i16->id = all_types.count;
+    type_i32 = new Type_Primitive("i32", 4, 4); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32); type_i32->id = all_types.count;
+    type_i64 = new Type_Primitive("i64", 8, 8); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64); type_i64->id = all_types.count;
 
-    type_u8  = new Type_Primitive("u8", 1, 1);  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8);
-    type_u16 = new Type_Primitive("u16", 2, 2); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16);
-    type_u32 = new Type_Primitive("u32", 4, 4); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32);
-    type_u64 = new Type_Primitive("u64", 8, 8); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64);
+    type_u8  = new Type_Primitive("u8", 1, 1);  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8); type_u8->id = all_types.count;
+    type_u16 = new Type_Primitive("u16", 2, 2); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16); type_u16->id = all_types.count;
+    type_u32 = new Type_Primitive("u32", 4, 4); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32); type_u32->id = all_types.count;
+    type_u64 = new Type_Primitive("u64", 8, 8); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64); type_u64->id = all_types.count;
 
-    type_f32 = new Type_Primitive("f32", 4, 4); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32);
-    type_f64 = new Type_Primitive("f64", 8, 8); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64);
+    type_f32 = new Type_Primitive("f32", 4, 4); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32); type_f32->id = all_types.count;
+    type_f64 = new Type_Primitive("f64", 8, 8); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64); type_f64->id = all_types.count;
 
-    type_bool = new Type_Primitive("bool", 1, 1); all_types.append(type_bool);
+    type_bool = new Type_Primitive("bool", 1, 1); all_types.append(type_bool); type_bool->id = all_types.count;
 
-    type_typeid = new Type_Primitive("typeid", 8, 8); all_types.append(type_typeid);
-    type_string = new Type_Primitive("string", 16, 8); all_types.append(type_string);
-    type_rawptr = new Type_Primitive("rawptr", 8, 8); all_types.append(type_rawptr); type_rawptr->flags = TF_POINTER;
+    type_typeid = new Type_Primitive("typeid", 8, 8); all_types.append(type_typeid); type_typeid->id = all_types.count;
+    type_string = new Type_Primitive("string", 16, 8); all_types.append(type_string); type_string->id = all_types.count;
+    type_rawptr = new Type_Primitive("rawptr", 8, 8); type_rawptr->flags = TF_POINTER; all_types.append(type_rawptr); type_rawptr->id = all_types.count;
+
+    type_any = new Type_Primitive("any", 16, 8); type_any->flags = TF_ANY; all_types.append(type_any); type_any->id = all_types.count;
 
     type_untyped_integer = new Type_Primitive("untyped integer", -1, -1); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
     type_untyped_float   = new Type_Primitive("untyped float", -1, -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
@@ -104,6 +108,9 @@ void init_checker() {
 
     add_variable_type_field(type_string, "data", get_or_create_type_pointer_to(type_u8), 0);
     add_variable_type_field(type_string, "count", type_int, 8);
+
+    add_variable_type_field(type_any, "data", get_or_create_type_pointer_to(type_u8), 0);
+    add_variable_type_field(type_any, "type", type_typeid, 8);
 }
 
 void add_global_declarations(Ast_Block *block) {
@@ -131,12 +138,15 @@ void add_global_declarations(Ast_Block *block) {
     register_declaration(new Type_Declaration("typeid", type_typeid, block));
     register_declaration(new Type_Declaration("string", type_string, block));
     register_declaration(new Type_Declaration("rawptr", type_rawptr, block));
+
+    register_declaration(new Type_Declaration("any", type_any, block));
 }
 
 Type_Struct *make_incomplete_type_for_struct(Struct_Declaration *struct_decl) {
     Type_Struct *incomplete_type = new Type_Struct(struct_decl->structure);
     incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
     all_types.append(incomplete_type);
+    incomplete_type->id = all_types.count;
     struct_decl->structure->type = incomplete_type;
     return incomplete_type;
 }
@@ -736,6 +746,12 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
         return true;
     }
 
+    if (expected_type == type_any) {
+        operand->type = try_concretize_type_without_context(operand->type);
+        assert(operand->type != nullptr); // todo(josh): handle the case of untyped null
+        return true;
+    }
+
     if (is_type_reference(expected_type)) {
         if ((operand->flags & OPERAND_LVALUE)) {
             return true;
@@ -794,6 +810,7 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     all_types.append(new_type);
+    new_type->id = all_types.count;
     return new_type;
 }
 
@@ -813,6 +830,7 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     all_types.append(new_type);
+    new_type->id = all_types.count;
     return new_type;
 }
 
@@ -837,6 +855,7 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     operand.int_value = count;
     add_constant_type_field(new_type, "count", operand);
     all_types.append(new_type);
+    new_type->id = all_types.count;
     return new_type;
 }
 
@@ -859,6 +878,7 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
     add_variable_type_field(new_type, "count", type_int, 8);
     all_types.append(new_type);
+    new_type->id = all_types.count;
     return new_type;
 }
 
@@ -882,6 +902,7 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
     add_variable_type_field(new_type, "count", type_int, 8);
     all_types.append(new_type);
+    new_type->id = all_types.count;
     return new_type;
 }
 
@@ -919,6 +940,7 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     all_types.append(new_type);
+    new_type->id = all_types.count;
     return new_type;
 }
 

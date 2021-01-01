@@ -1,16 +1,24 @@
 #include "core:basic.sif"
-// #include "core:dynamic_array.sif"
 
-proc varargs(things: ..int) {
-    print_string("--------\n");
-    for (var i = 0; i < things.count; i += 1) {
-        print_int(things[i]);
+proc print(args: ..any) {
+    for (var i = 0; i < args.count; i += 1) {
+        var arg = args[i];
+        if (arg.type == int) {
+            print_int(cast(^int, arg.data)^);
+        }
+        else if (arg.type == float) {
+            print_float(cast(^float, arg.data)^);
+        }
+        else if (arg.type == string) {
+            print_string(cast(^string, arg.data)^);
+        }
+        else if (arg.type == bool) {
+            print_bool(cast(^bool, arg.data)^);
+        }
     }
 }
 
 proc main() : i32 {
-    varargs(1, 2, 3);
-    varargs(1);
-    // todo(josh)
-    varargs();
+    print(1, 12.4, "hello there\n");
+    print("this ", "is ", "very ", "poggers");
 }
