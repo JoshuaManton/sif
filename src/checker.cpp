@@ -344,6 +344,8 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     }
                 }
 
+                assert(!is_type_untyped(expr_operand->type));
+
                 if (var->is_constant) {
                     if (!(expr_operand->flags & OPERAND_CONSTANT)) {
                         report_error(var->expr->location, "Expression must be constant.");
@@ -2204,6 +2206,13 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.escaped_string_length = string_literal->escaped_length;
             break;
         }
+        case EXPR_CHAR_LITERAL: {
+            Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+            result_operand.type = type_u8;
+            result_operand.int_value = char_literal->c;
+            break;
+        }
         case EXPR_NULL: {
             result_operand.flags = OPERAND_RVALUE;
             result_operand.type = type_untyped_null;
@@ -2674,6 +2683,14 @@ bool typecheck_node(Ast_Node *node) {
                     return nullptr;
                 }
             }
+            break;
+        }
+
+        case AST_BREAK: {
+            break;
+        }
+
+        case AST_CONTINUE: {
             break;
         }
 

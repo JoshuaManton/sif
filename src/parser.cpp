@@ -703,6 +703,20 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             return new Ast_Return(g_currently_parsing_proc, return_expr, root_token.location);
         }
 
+        case TK_CONTINUE: {
+            // todo(josh): hook up matching_loop
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            return new Ast_Continue(root_token.location);
+        }
+
+        case TK_BREAK: {
+            // todo(josh): hook up matching_loop
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            return new Ast_Break(root_token.location);
+        }
+
         default: {
             Ast_Expr *expr = parse_expr(lexer);
             if (expr == nullptr) {
@@ -1288,6 +1302,14 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         case TK_NUMBER: {
             eat_next_token(lexer);
             return new Expr_Number_Literal(token.text, token.has_a_dot, token.location);
+        }
+        case TK_CHAR: {
+            eat_next_token(lexer);
+            if (token.escaped_length != 1) {
+                report_error(token.location, "Character literal must be length 1.");
+                return nullptr;
+            }
+            return new Expr_Char_Literal(token.escaped_text[0], token.location);
         }
         case TK_STRING: {
             eat_next_token(lexer);

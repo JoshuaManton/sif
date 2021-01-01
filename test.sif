@@ -1,24 +1,18 @@
 #include "core:basic.sif"
 
-proc print(args: ..any) {
-    for (var i = 0; i < args.count; i += 1) {
-        var arg = args[i];
-        if (arg.type == int) {
-            print_int(cast(^int, arg.data)^);
-        }
-        else if (arg.type == float) {
-            print_float(cast(^float, arg.data)^);
-        }
-        else if (arg.type == string) {
-            print_string(cast(^string, arg.data)^);
-        }
-        else if (arg.type == bool) {
-            print_bool(cast(^bool, arg.data)^);
-        }
-    }
+proc stuff(a: any) {
+    var i = cast(^[2]int, a.data);
+    i^[1] = 321;
+}
+
+struct Foo {
+    var a: int;
 }
 
 proc main() : i32 {
-    print(1, 12.4, "hello there\n");
-    print("this ", "is ", "very ", "poggers");
+    var f: Foo;
+    var arr: [2]int;
+    stuff(arr);
+    print("%\n", arr[1]);
+    print("this is % very % neato 100%%\n", 123.4, true);
 }

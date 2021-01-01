@@ -310,6 +310,22 @@ struct Ast_Return : public Ast_Node {
     {}
 };
 
+struct Ast_Break : public Ast_Node {
+    // todo(josh)
+    // Ast_Node *matching_node = {};
+    Ast_Break(Location location)
+    : Ast_Node(AST_BREAK, location)
+    {}
+};
+
+struct Ast_Continue : public Ast_Node {
+    // todo(josh)
+    // Ast_Node *matching_node = {};
+    Ast_Continue(Location location)
+    : Ast_Node(AST_CONTINUE, location)
+    {}
+};
+
 struct Ast_Statement_Expr : public Ast_Node {
     Ast_Expr *expr = {};
     Ast_Statement_Expr(Ast_Expr *expr, Location location)
@@ -350,6 +366,7 @@ enum Expr_Kind {
     EXPR_IDENTIFIER,
     EXPR_NUMBER_LITERAL,
     EXPR_STRING_LITERAL,
+    EXPR_CHAR_LITERAL,
 
     EXPR_POLYMORPHIC_VARIABLE,
 
@@ -430,6 +447,14 @@ struct Expr_Number_Literal : public Ast_Expr {
     : Ast_Expr(EXPR_NUMBER_LITERAL, location)
     , number_string(number_string)
     , has_a_dot(has_a_dot)
+    {}
+};
+
+struct Expr_Char_Literal : public Ast_Expr {
+    char c = {};
+    Expr_Char_Literal(char c, Location location)
+    : Ast_Expr(EXPR_CHAR_LITERAL, location)
+    , c(c)
     {}
 };
 

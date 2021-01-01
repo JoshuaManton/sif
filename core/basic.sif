@@ -1,17 +1,17 @@
 #c_code `
 void print_int(i64 i) {
-    printf("%lld\n", i);
+    printf("%lld", i);
 }
 void print_float(float f) {
-    printf("%f\n", f);
+    printf("%f", f);
 }
 void print_bool(bool b) {
-    printf("%s\n", (b ? "true" : "false"));
+    printf("%s", (b ? "true" : "false"));
 }
 void print_string(String string) {
     for (i64 i = 0; i < string.count; i++) {
         char c = string.data[i];
-        printf("%c", c);
+        putchar(c);
     }
 }
 void *alloc(i64 size) {
@@ -28,6 +28,7 @@ void assert(bool condition) {
 
 
 
+proc putchar     (c: u8)                                                 #foreign;
 proc print_int   (i: int)                                                #foreign;
 proc print_float (f: float)                                              #foreign;
 proc print_bool  (b: bool)                                               #foreign;
@@ -36,6 +37,42 @@ proc alloc       (size: int)                                    : rawptr #foreig
 proc free        (ptr: rawptr)                                           #foreign;
 proc assert      (condition: bool)                                       #foreign;
 proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
+
+
+
+proc print(fmt: string, args: ..any) {
+    var arg_index = 0;
+    for (var i = 0; i < fmt.count; i += 1) {
+        var c = fmt[i];
+        if (c == '%') {
+            if ((i+1) < fmt.count) {
+                if (fmt[i+1] == '%') {
+                    putchar('%');
+                    i += 1;
+                    continue;
+                }
+            }
+
+            var arg = args[arg_index];
+            if (arg.type == int) {
+                print_int(cast(^int, arg.data)^);
+            }
+            else if (arg.type == float) {
+                print_float(cast(^float, arg.data)^);
+            }
+            else if (arg.type == string) {
+                print_string(cast(^string, arg.data)^);
+            }
+            else if (arg.type == bool) {
+                print_bool(cast(^bool, arg.data)^);
+            }
+            arg_index += 1;
+        }
+        else {
+            putchar(c);
+        }
+    }
+}
 
 
 

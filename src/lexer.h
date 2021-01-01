@@ -29,6 +29,7 @@ enum Token_Kind {
     TK_IDENTIFIER,
     TK_NUMBER,
     TK_STRING,
+    TK_CHAR,
 
     TK_VAR,
     TK_CONST,

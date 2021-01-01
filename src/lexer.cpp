@@ -15,6 +15,7 @@ void init_lexer_globals() {
     token_string_map[TK_IDENTIFIER]            = "IDENTIFIER";
     token_string_map[TK_NUMBER]                = "NUMBER";
     token_string_map[TK_STRING]                = "STRING";
+    token_string_map[TK_CHAR]                  = "CHAR";
 
     token_string_map[TK_VAR]                   = "var";
     token_string_map[TK_CONST]                 = "const";
@@ -93,6 +94,7 @@ void init_lexer_globals() {
     token_name_map[TK_IDENTIFIER]            = "TK_IDENTIFIER";
     token_name_map[TK_NUMBER]                = "TK_NUMBER";
     token_name_map[TK_STRING]                = "TK_STRING";
+    token_name_map[TK_CHAR]                  = "TK_CHAR";
 
     token_name_map[TK_VAR]                   = "TK_VAR";
     token_name_map[TK_CONST]                 = "TK_CONST";
@@ -393,6 +395,20 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->kind = TK_NUMBER;
         out_token->text = number;
         out_token->has_a_dot = has_a_dot;
+    }
+    else if (lexer->text[lexer->location.index] == '\'') {
+        int scanner_length = 0;
+        int escaped_length = 0;
+        char *escaped_string = nullptr;
+        int newlines = 0;
+        char *string = scan_string('\'', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        lexer->location.line += newlines;
+        advance(lexer, scanner_length);
+        out_token->kind = TK_CHAR;
+        out_token->text = string;
+        out_token->escaped_text = escaped_string;
+        out_token->escaped_length = escaped_length;
+        out_token->scanner_length = scanner_length-2; // note(josh): -2 for the quotes
     }
     else if (lexer->text[lexer->location.index] == '`') {
         int scanner_length = 0;
