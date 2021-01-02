@@ -238,18 +238,13 @@ void main(int argc, char **argv) {
     // char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path);
     // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
 
-    String_Builder libs_sb = make_string_builder(default_allocator(), 128);
-    For (idx, g_all_foreign_import_directives) {
-        if (idx != 0) {
-            libs_sb.print(" ");
-        }
-        libs_sb.print(g_all_foreign_import_directives[idx]->path);
-    }
-
     String_Builder command_sb = make_string_builder(default_allocator(), 128);
     command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo /wd4028 ");
     if (build_debug) {
         command_sb.print("/Zi /Fd ");
+    }
+    For (idx, g_all_foreign_import_directives) {
+        command_sb.printf("%s ", g_all_foreign_import_directives[idx]->path);
     }
     command_sb.printf("/link /OUT:%s ", output_exe_name);
     if (build_debug) {
