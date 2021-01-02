@@ -1398,7 +1398,7 @@ enum Event_Type i32 {
     Last_Event = 0xFFFF;
 }
 
-enum Window_Event_ID i32 {
+enum Window_Event_ID u8 {
     None = 0;
     Shown;
     Hidden;

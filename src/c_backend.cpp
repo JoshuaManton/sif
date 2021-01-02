@@ -82,7 +82,7 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
 }
 
 void c_print_line_directive(String_Builder *sb, Location location) {
-    sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
+    // sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
 }
 
 void c_print_type_postfix(String_Builder *sb, Type *type) {
@@ -1006,6 +1006,8 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    }\n");
     sb.print("}\n");
 
+    sb.print("#define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(COND)?1:-1]\n");
+
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];
         sb.print(directive->text);
@@ -1066,6 +1068,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                     sb.print("    bool __dummy;\n");
                 }
                 sb.print("};\n");
+                sb.printf("STATIC_ASSERT(sizeof(%s %s) == %d, %s);\n", (structure->is_union ? "union" : "struct"), structure->name, structure->type->size, structure->name);
                 For (idx, structure->operator_overloads) {
                     c_print_procedure(&sb, structure->operator_overloads[idx]);
                 }

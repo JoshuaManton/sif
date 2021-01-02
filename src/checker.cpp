@@ -760,7 +760,7 @@ bool complete_type(Type *type) {
 
                             int size_delta = var->type->size;
                             if (next_alignment != -1) {
-                                size_delta += modulo((next_alignment - var->type->size), next_alignment);
+                                size_delta = align_forward(size+var->type->size, next_alignment) - size;
                             }
                             size += size_delta;
                             largest_alignment = max(largest_alignment, var->type->align);
@@ -772,8 +772,6 @@ bool complete_type(Type *type) {
                         }
                     }
                 }
-
-                // printf("%s size: %d, alignment: %d\n", (structure->name ? structure->name : "<no name>"), size, largest_alignment);
 
                 assert(is_power_of_two(largest_alignment)); // todo(josh): is this actually a requirement?
                 assert(size > 0);
