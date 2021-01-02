@@ -468,6 +468,13 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                             sb->print("!");
                             break;
                         }
+                        case TK_BIT_NOT: {
+                            sb->print("~");
+                            break;
+                        }
+                        default: {
+                            assert(false);
+                        }
                     }
                     sb->printf("%s;\n", rhs);
                     break;
@@ -658,6 +665,17 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     sb->print(" = ((");
                     c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
                     sb->printf(")%s);\n", rhs);
+                    break;
+                }
+                case EXPR_TRANSMUTE: {
+                    Expr_Transmute *transmute = (Expr_Transmute *)expr;
+                    char *rhs = c_print_expr(sb, transmute->rhs, indent_level);
+                    t = c_temporary();
+                    print_indents(sb, indent_level);
+                    c_print_type(sb, transmute->type_expr->operand.type_value, t);
+                    sb->print(" = *((");
+                    c_print_type(sb, get_or_create_type_pointer_to(transmute->type_expr->operand.type_value), "");
+                    sb->printf(")&%s);\n", rhs);
                     break;
                 }
                 case EXPR_NUMBER_LITERAL: {
@@ -994,10 +1012,6 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("        char c = string.data[i];\n");
     sb.print("        putchar(c);\n");
     sb.print("    }\n");
-    sb.print("}\n");
-    sb.print("void *alloc(i64 size) {\n");
-    sb.print("    char *memory = (char *)malloc(size);\n");
-    sb.print("    return memory;\n");
     sb.print("}\n");
     sb.print("void assert(bool condition) {\n");
     sb.print("    if (!condition) {\n");

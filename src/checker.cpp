@@ -28,7 +28,9 @@ Type *type_typeid;
 Type *type_string;
 Type *type_rawptr;
 
+Type *type_byte;
 Type *type_int;
+Type *type_uint;
 Type *type_float;
 
 Type *type_polymorphic;
@@ -101,7 +103,9 @@ void init_checker() {
     type_untyped_float   = SIF_NEW_CLONE(Type_Primitive("untyped float", -1, -1));   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
     type_untyped_null    = SIF_NEW_CLONE(Type_Primitive("untyped null", -1, -1));    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
 
+    type_byte = type_u8;
     type_int = type_i64;
+    type_uint = type_u64;
     type_float = type_f32;
 
     type_polymorphic = SIF_NEW_CLONE(Type_Primitive("type polymorphic", -1, -1)); type_polymorphic->flags = TF_POLYMORPHIC;
@@ -131,7 +135,8 @@ void add_global_declarations(Ast_Block *block) {
     register_declaration(SIF_NEW_CLONE(Type_Declaration("f32", type_f32, block)));
     register_declaration(SIF_NEW_CLONE(Type_Declaration("f64", type_f64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("int" ,  type_i64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("byte",  type_u8, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("int",   type_i64, block)));
     register_declaration(SIF_NEW_CLONE(Type_Declaration("uint",  type_u64, block)));
     register_declaration(SIF_NEW_CLONE(Type_Declaration("float", type_f32, block)));
 
@@ -1965,6 +1970,17 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     }
                     break;
                 }
+                case TK_BIT_NOT: {
+                    if (!is_type_integer(rhs_operand->type)) {
+                        report_error(rhs_operand->location, "Unary bitwise NOT requires an integer type.");
+                        return nullptr;
+                    }
+                    if (rhs_operand->flags & OPERAND_CONSTANT) {
+                        result_operand.uint_value = ~rhs_operand->int_value;
+                        result_operand.int_value = ~rhs_operand->int_value;
+                    }
+                    break;
+                }
                 case TK_NOT: {
                     if (!is_type_bool(rhs_operand->type)) {
                         report_error(rhs_operand->location, "Unary ! requires a bool.");
@@ -2059,6 +2075,43 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             if (!can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value)) {
                 report_error(expr_cast->location, "Cannot cast from %s to %s.", type_to_string(rhs_operand->type), type_operand->type_value);
+                return nullptr;
+            }
+            result_operand.type = type_operand->type_value;
+            result_operand.flags = OPERAND_RVALUE;
+            if (rhs_operand->flags & OPERAND_CONSTANT) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                result_operand.uint_value            = rhs_operand->uint_value;
+                result_operand.int_value             = rhs_operand->int_value;
+                result_operand.float_value           = rhs_operand->float_value;
+                result_operand.bool_value            = rhs_operand->bool_value;
+                result_operand.type_value            = rhs_operand->type_value;
+                result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
+                result_operand.scanned_string_length = rhs_operand->scanned_string_length;
+                result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
+                result_operand.escaped_string_length = rhs_operand->escaped_string_length;
+            }
+            break;
+        }
+        case EXPR_TRANSMUTE: {
+            Expr_Transmute *transmute = (Expr_Transmute *)expr;
+            Operand *type_operand = typecheck_expr(transmute->type_expr);
+            if (!type_operand) {
+                return nullptr;
+            }
+            if (!is_type_typeid(transmute->type_expr->operand.type)) {
+                report_error(transmute->type_expr->location, "Cast target must be a type.");
+                return nullptr;
+            }
+            Operand *rhs_operand = typecheck_expr(transmute->rhs);
+            if (!rhs_operand) {
+                return nullptr;
+            }
+            assert(type_operand->type_value->size > 0);
+            assert(rhs_operand->type->size > 0);
+            if (rhs_operand->type->size != type_operand->type_value->size) {
+                report_error(transmute->location, "Transmute requires both types to be the same size.");
+                report_info(transmute->location, "Size of target type '%s': %d, size of given expression type '%s': %d.", type_to_string(type_operand->type_value), type_operand->type_value->size, type_to_string(rhs_operand->type), rhs_operand->type->size);
                 return nullptr;
             }
             result_operand.type = type_operand->type_value;

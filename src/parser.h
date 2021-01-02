@@ -388,6 +388,7 @@ enum Expr_Kind {
     EXPR_SIZEOF,
     EXPR_TYPEOF,
     EXPR_CAST,
+    EXPR_TRANSMUTE,
 
     EXPR_SPREAD,
 
@@ -569,6 +570,16 @@ struct Expr_Cast : public Ast_Expr {
     Ast_Expr *rhs;
     Expr_Cast(Ast_Expr *type_expr, Ast_Expr *rhs, Location location)
     : Ast_Expr(EXPR_CAST, location)
+    , type_expr(type_expr)
+    , rhs(rhs)
+    {}
+};
+
+struct Expr_Transmute : public Ast_Expr {
+    Ast_Expr *type_expr = {};
+    Ast_Expr *rhs;
+    Expr_Transmute(Ast_Expr *type_expr, Ast_Expr *rhs, Location location)
+    : Ast_Expr(EXPR_TRANSMUTE, location)
     , type_expr(type_expr)
     , rhs(rhs)
     {}

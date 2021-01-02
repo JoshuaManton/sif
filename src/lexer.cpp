@@ -37,6 +37,7 @@ void init_lexer_globals() {
     token_string_map[TK_BREAK]                          = "break";
     token_string_map[TK_CONTINUE]                       = "continue";
     token_string_map[TK_CAST]                           = "cast";
+    token_string_map[TK_TRANSMUTE]                      = "transmute";
 
     token_string_map[TK_DIRECTIVE_PRINT]                = "#print";
     token_string_map[TK_DIRECTIVE_ASSERT]               = "#assert";
@@ -62,6 +63,7 @@ void init_lexer_globals() {
     token_string_map[TK_BIT_AND_ASSIGN]                 = "&=";
     token_string_map[TK_BIT_OR]                         = "|";
     token_string_map[TK_BIT_OR_ASSIGN]                  = "|=";
+    token_string_map[TK_BIT_NOT]                        = "~";
 
     token_string_map[TK_DOLLAR]                         = "$";
 
@@ -118,6 +120,7 @@ void init_lexer_globals() {
     token_name_map[TK_BREAK]                            = "TK_BREAK";
     token_name_map[TK_CONTINUE]                         = "TK_CONTINUE";
     token_name_map[TK_CAST]                             = "TK_CAST";
+    token_name_map[TK_TRANSMUTE]                        = "TK_TRANSMUTE";
 
     token_name_map[TK_DIRECTIVE_PRINT]                  = "TK_DIRECTIVE_PRINT";
     token_name_map[TK_DIRECTIVE_ASSERT]                 = "TK_DIRECTIVE_ASSERT";
@@ -143,6 +146,7 @@ void init_lexer_globals() {
     token_name_map[TK_BIT_AND_ASSIGN]                   = "TK_BIT_AND_ASSIGN";
     token_name_map[TK_BIT_OR]                           = "TK_BIT_OR";
     token_name_map[TK_BIT_OR_ASSIGN]                    = "TK_BIT_OR_ASSIGN";
+    token_name_map[TK_BIT_NOT]                          = "TK_BIT_NOT";
 
     token_name_map[TK_DOLLAR]                           = "TK_DOLLAR";
 
@@ -437,6 +441,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("break", TK_BREAK)
         else CHECK_KEYWORD("continue", TK_CONTINUE)
         else CHECK_KEYWORD("cast", TK_CAST)
+        else CHECK_KEYWORD("transmute", TK_TRANSMUTE)
     }
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;
@@ -695,6 +700,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else SIMPLE_TOKEN(',', TK_COMMA)
     else SIMPLE_TOKEN('^', TK_CARET)
     else SIMPLE_TOKEN('$', TK_DOLLAR)
+    else SIMPLE_TOKEN('~', TK_BIT_NOT)
     else {
         lexer->errored = true;
         report_error(token_location, "Unknown character: %c.", lexer->text[lexer->location.index]);

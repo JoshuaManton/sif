@@ -44,6 +44,7 @@ enum Token_Kind {
     TK_TRUE,
     TK_FALSE,
     TK_CAST,
+    TK_TRANSMUTE,
 
     TK_IF,
     TK_ELSE,
@@ -84,9 +85,9 @@ enum Token_Kind {
     TK_BIT_AND_ASSIGN,
     TK_BIT_OR,
     TK_BIT_OR_ASSIGN,
+    TK_BIT_NOT,
 
     // todo(josh): bitwise XOR
-    // todo(josh): bitwise NOR
 
     TK_NOT,
 

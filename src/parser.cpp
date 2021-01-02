@@ -1010,16 +1010,12 @@ bool is_cmp_op(Lexer *lexer) {
 }
 bool is_cmp_op(Token_Kind kind) {
     switch (kind) {
-        case TK_NOT_EQUAL_TO:
         case TK_LESS_THAN:
         case TK_LESS_THAN_OR_EQUAL:
         case TK_GREATER_THAN:
         case TK_GREATER_THAN_OR_EQUAL:
-        case TK_EQUAL_TO:
-        case TK_BOOLEAN_AND:
-        case TK_BOOLEAN_AND_ASSIGN:
-        case TK_BOOLEAN_OR:
-        case TK_BOOLEAN_OR_ASSIGN: {
+        case TK_NOT_EQUAL_TO:
+        case TK_EQUAL_TO: {
             return true;
         }
     }
@@ -1079,6 +1075,7 @@ bool is_unary_op(Token_Kind kind) {
         case TK_MINUS:
         case TK_PLUS:
         case TK_NOT:
+        case TK_BIT_NOT:
         case TK_DOT_DOT:
         case TK_SIZEOF:
         case TK_TYPEOF:
@@ -1243,6 +1240,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
             }
             case TK_MINUS:
             case TK_PLUS:
+            case TK_BIT_NOT:
             case TK_NOT: {
                 Ast_Expr *rhs = parse_unary_expr(lexer);
                 if (!rhs) {
@@ -1472,6 +1470,18 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Ast_Expr *rhs = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return SIF_NEW_CLONE(Expr_Cast(type_expr, rhs, token.location));
+        }
+        case TK_TRANSMUTE: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *type_expr = parse_expr(lexer);
+            if (!type_expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_COMMA, nullptr);
+            Ast_Expr *rhs = parse_expr(lexer);
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return SIF_NEW_CLONE(Expr_Transmute(type_expr, rhs, token.location));
         }
         case TK_DOLLAR: {
             eat_next_token(lexer);

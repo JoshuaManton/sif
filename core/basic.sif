@@ -3,13 +3,36 @@ proc print_int   (i: int)                                                #foreig
 proc print_float (f: float)                                              #foreign;
 proc print_bool  (b: bool)                                               #foreign;
 proc print_string(str: string)                                           #foreign;
-proc alloc       (size: int)                                    : rawptr #foreign;
+proc malloc      (size: int)                                    : rawptr #foreign;
 proc free        (ptr: rawptr)                                           #foreign;
 proc assert      (condition: bool)                                       #foreign;
 proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
 proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
 proc strlen      (cstr: ^u8)                                    : u64    #foreign;
 proc sin         (x: f64)                                       : f64    #foreign;
+
+
+
+proc is_power_of_two(n: int) : bool {
+    return n > 0 && (n & (n-1)) == 0;
+}
+
+proc align_forward(p: int, align: int) : int {
+    assert(is_power_of_two(align));
+    p = (p + (align - 1)) & (~(align - 1));
+    return p;
+}
+
+proc align_backward(p: int, align: int) : int {
+    return align_forward(p - align + 1, align);
+}
+
+proc zero_memory(memory: []byte) {
+    // todo(josh): we can do smarter things here but this is fine for now
+    for (var i = 0; i < memory.count; i += 1) {
+        memory[i] = 0;
+    }
+}
 
 
 
@@ -111,6 +134,39 @@ proc string_eq(var a: string, var b: string) : bool {
 
 
 
+struct Allocator {
+    var data: rawptr;
+    var alloc_proc: proc(allocator: rawptr, size: int, align: int) : rawptr;
+    var free_proc:  proc(allocator: rawptr, ptr: rawptr);
+}
+
+proc sif_alloc(allocator: Allocator, size: int, align: int) : rawptr {
+    assert(allocator.alloc_proc != null);
+    return allocator.alloc_proc(allocator.data, size, align);
+}
+
+proc sif_free(allocator: Allocator, ptr: rawptr) {
+    assert(allocator.free_proc != null);
+    allocator.free_proc(allocator.data, ptr);
+}
+
+
+
+proc default_allocator_alloc(allocator: rawptr, size: int, align: int) : rawptr {
+    return malloc(size);
+}
+proc default_allocator_free(allocator: rawptr, ptr: rawptr) {
+    free(ptr);
+}
+proc default_allocator() : Allocator {
+    var a: Allocator;
+    a.alloc_proc = default_allocator_alloc;
+    a.free_proc = default_allocator_free;
+    return a;
+}
+
+
+
 proc slice_ptr(ptr: ^$T, count: int) : []T {
     var slice: []T;
     slice.data = ptr;
@@ -123,4 +179,21 @@ proc string_ptr(ptr: ^u8, count: int) : string {
     str.data = ptr;
     str.count = count;
     return str;
+}
+
+
+
+const DEFAULT_ALIGNMENT = sizeof(rawptr)*2;
+
+proc new($T: typeid, allocator: Allocator) : ^T {
+    var ptr = cast(^T, sif_alloc(allocator, sizeof(T), DEFAULT_ALIGNMENT));
+    zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T)));
+    return ptr;
+}
+
+proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
+    var ptr = cast(^T, sif_alloc(allocator, sizeof(T) * count, DEFAULT_ALIGNMENT));
+    var slice = slice_ptr(ptr, count);
+    zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T) * count));
+    return slice;
 }
