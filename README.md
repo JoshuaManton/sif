@@ -73,6 +73,7 @@ proc main() : i32 {
     procedural_polymorphism();
     structural_polymorphism();
     any_type();
+    function_pointers();
     dynamic_arrays();
     return 0;
 }
@@ -432,6 +433,18 @@ proc print_things(args: ..any) {
 
 
 
+proc function_pointers() {
+    print("\n\n---- any ----\n");
+
+    var my_print1 = print; // uses type inference
+    my_print1("This is a function pointer! %\n", "cool");
+
+    var my_print2: proc(fmt: string, args: ..any) = print; // without type inference
+    my_print2("This is also % a function % pointer\n", 45.6, true);
+}
+
+
+
 // the following is a barebones implementation of a resizable array
 // using many of the features you've seen thus far including
 // structural and procedural polymorphism and operator overloading
@@ -451,7 +464,7 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) {
         dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
         dyn.array.count = new_cap;
         if (old_data != null) {
-            memcpy(dyn.array.data, old_data, cast(u32, dyn.count * sizeof(T)));
+            memcpy(dyn.array.data, old_data, cast(u64, dyn.count * sizeof(T)));
             free(old_data);
         }
     }

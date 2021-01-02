@@ -920,9 +920,7 @@ void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
 }
 
 String_Builder generate_c_main_file(Ast_Block *global_scope) {
-    // todo(josh): I think there's a bug in my String_Buffer implementation
-    //             as this crashes on resize sometimes
-    String_Builder sb = make_string_builder(g_global_linear_allocator, 128 * 1024);
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 512 * 1024);
 
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
