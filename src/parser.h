@@ -28,6 +28,7 @@ enum Ast_Kind {
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
     AST_DIRECTIVE_C_CODE,
+    AST_DIRECTIVE_FOREIGN_IMPORT,
 };
 
 struct Ast_Expr;
@@ -209,6 +210,16 @@ struct Ast_Directive_C_Code : public Ast_Node {
     {}
 };
 
+struct Ast_Directive_Foreign_Import : public Ast_Node {
+    char *name = {};
+    char *path = {};
+    Ast_Directive_Foreign_Import(char *name, char *path, Location location)
+    : Ast_Node(AST_DIRECTIVE_FOREIGN_IMPORT, location)
+    , name(name)
+    , path(path)
+    {}
+};
+
 struct Ast_Var : public Ast_Node {
     char *name = {};
     Ast_Expr *name_expr = {};
@@ -232,6 +243,7 @@ struct Ast_Var : public Ast_Node {
 };
 
 struct Ast_Struct : public Ast_Node {
+    bool is_union = {};
     char *name = nullptr;
     Type *type = nullptr; // todo(josh): this can probably be a Type_Struct *?
     Array<Ast_Var *> fields = {};
@@ -240,8 +252,9 @@ struct Ast_Struct : public Ast_Node {
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
     Array<Ast_Var *> polymorphic_parameters = {};
-    Ast_Struct(Location location)
+    Ast_Struct(bool is_union, Location location)
     : Ast_Node(AST_STRUCT, location)
+    , is_union(is_union)
     {
         fields.allocator = default_allocator();
         operator_overloads.allocator = default_allocator();
@@ -283,12 +296,14 @@ struct Enum_Field {
     char *name = {};
     Ast_Expr *expr = {};
     Enum_Value_Declaration *declaration = {};
+    bool resolved = {};
 };
 struct Ast_Enum : public Ast_Node {
     char *name = {};
     Array<Enum_Field> fields = {};
     Type_Enum *type = nullptr;
     Enum_Declaration *declaration = {};
+    Ast_Expr *base_type_expr = {};
     Ast_Enum(char *name, Location location)
     : Ast_Node(AST_ENUM, location)
     , name(name)
@@ -381,6 +396,7 @@ enum Expr_Kind {
     EXPR_ARRAY_TYPE,
     EXPR_SLICE_TYPE,
     EXPR_PROCEDURE_TYPE,
+    EXPR_STRUCT_TYPE,
 
     EXPR_PAREN,
 
@@ -439,11 +455,13 @@ struct Expr_Identifier : public Ast_Expr {
 };
 
 struct Expr_Number_Literal : public Ast_Expr {
-    char *number_string = nullptr;
+    i64 int_value = {};
+    f64 float_value = {};
     bool has_a_dot = false;
-    Expr_Number_Literal(char *number_string, bool has_a_dot, Location location)
+    Expr_Number_Literal(i64 int_value, f64 float_value, bool has_a_dot, Location location)
     : Ast_Expr(EXPR_NUMBER_LITERAL, location)
-    , number_string(number_string)
+    , int_value(int_value)
+    , float_value(float_value)
     , has_a_dot(has_a_dot)
     {}
 };
@@ -639,6 +657,14 @@ struct Expr_Procedure_Type : public Ast_Expr {
     {}
 };
 
+struct Expr_Struct_Type : public Ast_Expr {
+    Ast_Struct *structure = {};
+    Expr_Struct_Type(Ast_Struct *structure, Location location)
+    : Ast_Expr(EXPR_STRUCT_TYPE, location)
+    , structure(structure)
+    {}
+};
+
 struct Expr_Spread : public Ast_Expr {
     Ast_Expr *rhs = nullptr;
     Expr_Spread(Ast_Expr *rhs, Location location)
@@ -737,10 +763,11 @@ struct Constant_Declaration : Declaration {
     {}
 };
 
-extern Array<Declaration *>          g_all_declarations;
-extern Array<Ast_Directive_Assert *> g_all_assert_directives;
-extern Array<Ast_Directive_Print *>  g_all_print_directives;
-extern Array<Ast_Directive_C_Code *> g_all_c_code_directives;
+extern Array<Declaration *>                  g_all_declarations;
+extern Array<Ast_Directive_Assert *>         g_all_assert_directives;
+extern Array<Ast_Directive_Print *>          g_all_print_directives;
+extern Array<Ast_Directive_C_Code *>         g_all_c_code_directives;
+extern Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
 
 void init_parser();
 Ast_Block *push_ast_block(Ast_Block *block);
@@ -753,7 +780,7 @@ Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override = nullptr);
 Ast_Proc *parse_proc(Lexer *lexer, char *name_override = nullptr);
-Ast_Struct *parse_struct(Lexer *lexer, char *name_override = nullptr);
+Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override = nullptr);
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false, bool push_new_block = true);
 Ast_Node *parse_statement(Lexer *lexer);
 

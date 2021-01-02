@@ -5,20 +5,22 @@
 
 #include "parser.h"
 
-Array<Expr_Identifier *>      g_identifiers_to_resolve;
-Array<Declaration *>          g_all_declarations;
-Array<Ast_Directive_Assert *> g_all_assert_directives;
-Array<Ast_Directive_Print *>  g_all_print_directives;
-Array<Ast_Directive_C_Code *> g_all_c_code_directives;
+Array<Expr_Identifier *>              g_identifiers_to_resolve;
+Array<Declaration *>                  g_all_declarations;
+Array<Ast_Directive_Assert *>         g_all_assert_directives;
+Array<Ast_Directive_Print *>          g_all_print_directives;
+Array<Ast_Directive_C_Code *>         g_all_c_code_directives;
+Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
 
 Ast_Proc_Header *g_currently_parsing_proc;
 
 void init_parser() {
-    g_identifiers_to_resolve.allocator = default_allocator();
-    g_all_declarations.allocator       = default_allocator();
-    g_all_assert_directives.allocator  = default_allocator();
-    g_all_print_directives.allocator   = default_allocator();
-    g_all_c_code_directives.allocator  = default_allocator();
+    g_identifiers_to_resolve.allocator        = default_allocator();
+    g_all_declarations.allocator              = default_allocator();
+    g_all_assert_directives.allocator         = default_allocator();
+    g_all_print_directives.allocator          = default_allocator();
+    g_all_c_code_directives.allocator         = default_allocator();
+    g_all_foreign_import_directives.allocator = default_allocator();
 }
 
 Ast_Block *push_ast_block(Ast_Block *block) {
@@ -317,10 +319,22 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     return proc;
 }
 
-Ast_Struct *parse_struct(Lexer *lexer, char *name_override) {
+Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
     Token token;
-    EXPECT(lexer, TK_STRUCT, &token);
-    Ast_Struct *structure = new Ast_Struct(token.location);
+    if (!peek_next_token(lexer, &token)) {
+        assert(false && "unexpected EOF");
+        return nullptr;
+    }
+    bool is_union = false;
+    if (token.kind == TK_UNION) {
+        EXPECT(lexer, TK_UNION, &token);
+        is_union = true;
+    }
+    else {
+        EXPECT(lexer, TK_STRUCT, &token);
+    }
+
+    Ast_Struct *structure = new Ast_Struct(is_union, token.location);
 
     bool is_polymorphic = false;
     {
@@ -329,12 +343,26 @@ Ast_Struct *parse_struct(Lexer *lexer, char *name_override) {
         defer(pop_ast_block(old_block));
 
         // name
-        EXPECT(lexer, TK_IDENTIFIER, &token);
-        if (name_override == nullptr) {
-            structure->name = token.text;
+        Token name_token;
+        if (!peek_next_token(lexer, &name_token)) {
+            assert(false && "unexpected EOF");
+            return nullptr;
+        }
+        if (name_token.kind != TK_LEFT_CURLY) {
+            EXPECT(lexer, TK_IDENTIFIER, &name_token);
+            if (name_override == nullptr) {
+                structure->name = name_token.text;
+            }
+            else {
+                structure->name = name_override;
+            }
         }
         else {
-            structure->name = name_override;
+            static int num_anonymous_structs = 0;
+            num_anonymous_structs += 1;
+            String_Builder name_sb = make_string_builder(default_allocator(), 16);
+            name_sb.printf("Anonymous_Struct_%d", num_anonymous_structs);
+            structure->name = name_sb.string();
         }
 
         // polymorphic parameters
@@ -409,6 +437,10 @@ Ast_Struct *parse_struct(Lexer *lexer, char *name_override) {
 }
 
 Ast_Enum *parse_enum(Lexer *lexer) {
+    bool old_allow_compound_literals = lexer->allow_compound_literals;
+    lexer->allow_compound_literals = false;
+    defer(lexer->allow_compound_literals = old_allow_compound_literals);
+
     Token root_token;
     EXPECT(lexer, TK_ENUM, &root_token);
 
@@ -419,6 +451,15 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
     Array<Enum_Field> enum_fields = {};
     enum_fields.allocator = default_allocator();
+
+    Token maybe_type;
+    if (!peek_next_token(lexer, &maybe_type)) {
+        assert(false && "unexpected EOF");
+        return nullptr;
+    }
+    if (maybe_type.kind != TK_LEFT_CURLY) {
+        ast_enum->base_type_expr = parse_expr(lexer);
+    }
 
     EXPECT(lexer, TK_LEFT_CURLY, nullptr);
     {
@@ -534,7 +575,15 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         case TK_STRUCT: {
-            Ast_Struct *structure = parse_struct(lexer, name_override);
+            Ast_Struct *structure = parse_struct_or_union(lexer, name_override);
+            if (!structure) {
+                return nullptr;
+            }
+            return structure;
+        }
+
+        case TK_UNION: {
+            Ast_Struct *structure = parse_struct_or_union(lexer, name_override);
             if (!structure) {
                 return nullptr;
             }
@@ -574,6 +623,15 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 return nullptr;
             }
             return new Ast_Directive_Include(filename_token.text, root_token.location);
+        }
+
+        case TK_DIRECTIVE_FOREIGN_IMPORT: {
+            eat_next_token(lexer);
+            // Token import_name_token;
+            // EXPECT(lexer, TK_IDENTIFIER, &import_name_token);
+            Token path_token;
+            EXPECT(lexer, TK_STRING, &path_token);
+            return new Ast_Directive_Foreign_Import(nullptr, path_token.text, root_token.location);
         }
 
         case TK_DIRECTIVE_ASSERT: {
@@ -840,6 +898,11 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
                 g_all_c_code_directives.append(directive);
                 break;
             }
+            case AST_DIRECTIVE_FOREIGN_IMPORT: {
+                Ast_Directive_Foreign_Import *directive = (Ast_Directive_Foreign_Import *)node;
+                g_all_foreign_import_directives.append(directive);
+                break;
+            }
             case AST_EMPTY_STATEMENT: {
                 // note(josh): do nothing
                 break;
@@ -955,6 +1018,7 @@ bool is_add_op(Lexer *lexer) {
 }
 bool is_add_op(Token_Kind kind) {
     switch (kind) {
+        case TK_BIT_OR: // todo(josh): is this a good precedence for this?
         case TK_PLUS:
         case TK_MINUS: {
             return true;
@@ -1349,11 +1413,12 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_NUMBER: {
             eat_next_token(lexer);
-            return new Expr_Number_Literal(token.text, token.has_a_dot, token.location);
+            return new Expr_Number_Literal(token.int_value, token.float_value, token.has_a_dot, token.location);
         }
         case TK_CHAR: {
             eat_next_token(lexer);
             if (token.escaped_length != 1) {
+                printf("%d %d\n", token.escaped_length, token.scanner_length);
                 report_error(token.location, "Character literal must be length 1.");
                 return nullptr;
             }
@@ -1372,6 +1437,11 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         case TK_PROC: {
             Ast_Proc_Header *header = parse_proc_header(lexer);
             return new Expr_Procedure_Type(header, token.location);
+        }
+        case TK_STRUCT: // note(josh): fallthrough
+        case TK_UNION: {
+            Ast_Struct *structure = parse_struct_or_union(lexer);
+            return new Expr_Struct_Type(structure, token.location);
         }
         case TK_CAST: {
             eat_next_token(lexer);

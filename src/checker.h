@@ -39,6 +39,7 @@ enum Type_Flags {
     TF_POLYMORPHIC  = 1 << 13, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_VARARGS      = 1 << 14, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_ANY          = 1 << 15, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_ENUM         = 1 << 16, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
 };
 
 enum Check_State {
@@ -202,6 +203,7 @@ bool is_type_incomplete (Type *type);
 bool is_type_typeid     (Type *type);
 bool is_type_string     (Type *type);
 bool is_type_varargs    (Type *type);
+bool is_type_enum       (Type *type);
 
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Reference *get_or_create_type_reference_to(Type *type);

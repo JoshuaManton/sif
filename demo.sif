@@ -409,7 +409,7 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) {
         dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
         dyn.array.count = new_cap;
         if (old_data != null) {
-            memcpy(dyn.array.data, old_data, cast(u32, dyn.count * sizeof(T)));
+            memcpy(dyn.array.data, old_data, cast(u64, dyn.count * sizeof(T)));
             free(old_data);
         }
     }

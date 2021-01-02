@@ -20,7 +20,7 @@
 TODO:
 
 THINGS NEEDED FOR ME TO DRAW A TRIANGLE
--foreign system + D3D11 bindings
+-foreign system + win32 + D3D11 bindings (maybe I'll do SDL instead as a test?)
 -enum field values (probably)
 
 SMALL
@@ -230,8 +230,16 @@ void main(int argc, char **argv) {
     // char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path);
     // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
 
+    String_Builder libs_sb = make_string_builder(default_allocator(), 128);
+    For (idx, g_all_foreign_import_directives) {
+        if (idx != 0) {
+            libs_sb.print(" ");
+        }
+        libs_sb.print(g_all_foreign_import_directives[idx]->path);
+    }
+
     String_Builder command_sb = make_string_builder(default_allocator(), 128);
-    command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo /link /OUT:%s\"", output_exe_name);
+    command_sb.printf("cmd.exe /c \"cl.exe output.c /wd4028 %s /nologo /link /OUT:%s\"", libs_sb.string(), output_exe_name);
 
     if (system(command_sb.string()) != 0) {
         printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");

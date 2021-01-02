@@ -11,163 +11,167 @@ static char *token_string_map[TK_COUNT];
 static char *token_name_map[TK_COUNT];
 
 void init_lexer_globals() {
-    token_string_map[TK_INVALID]               = "INVALID";
-    token_string_map[TK_IDENTIFIER]            = "IDENTIFIER";
-    token_string_map[TK_NUMBER]                = "NUMBER";
-    token_string_map[TK_STRING]                = "STRING";
-    token_string_map[TK_CHAR]                  = "CHAR";
+    token_string_map[TK_INVALID]                        = "INVALID";
+    token_string_map[TK_IDENTIFIER]                     = "IDENTIFIER";
+    token_string_map[TK_NUMBER]                         = "NUMBER";
+    token_string_map[TK_STRING]                         = "STRING";
+    token_string_map[TK_CHAR]                           = "CHAR";
 
-    token_string_map[TK_VAR]                   = "var";
-    token_string_map[TK_CONST]                 = "const";
-    token_string_map[TK_PROC]                  = "proc";
-    token_string_map[TK_OPERATOR]              = "operator";
-    token_string_map[TK_STRUCT]                = "struct";
-    token_string_map[TK_ENUM]                  = "enum";
-    token_string_map[TK_RETURN]                = "return";
-    token_string_map[TK_NULL]                  = "null";
-    token_string_map[TK_TRUE]                  = "true";
-    token_string_map[TK_FALSE]                 = "false";
-    token_string_map[TK_SIZEOF]                = "sizeof";
-    token_string_map[TK_TYPEOF]                = "typeof";
-    token_string_map[TK_IF]                    = "if";
-    token_string_map[TK_ELSE]                  = "else";
-    token_string_map[TK_FOR]                   = "for";
-    token_string_map[TK_WHILE]                 = "while";
-    token_string_map[TK_BREAK]                 = "break";
-    token_string_map[TK_CONTINUE]              = "continue";
-    token_string_map[TK_CAST]                  = "cast";
+    token_string_map[TK_VAR]                            = "var";
+    token_string_map[TK_CONST]                          = "const";
+    token_string_map[TK_PROC]                           = "proc";
+    token_string_map[TK_OPERATOR]                       = "operator";
+    token_string_map[TK_STRUCT]                         = "struct";
+    token_string_map[TK_UNION]                          = "union";
+    token_string_map[TK_ENUM]                           = "enum";
+    token_string_map[TK_RETURN]                         = "return";
+    token_string_map[TK_NULL]                           = "null";
+    token_string_map[TK_TRUE]                           = "true";
+    token_string_map[TK_FALSE]                          = "false";
+    token_string_map[TK_SIZEOF]                         = "sizeof";
+    token_string_map[TK_TYPEOF]                         = "typeof";
+    token_string_map[TK_IF]                             = "if";
+    token_string_map[TK_ELSE]                           = "else";
+    token_string_map[TK_FOR]                            = "for";
+    token_string_map[TK_WHILE]                          = "while";
+    token_string_map[TK_BREAK]                          = "break";
+    token_string_map[TK_CONTINUE]                       = "continue";
+    token_string_map[TK_CAST]                           = "cast";
 
-    token_string_map[TK_DIRECTIVE_PRINT]       = "#print";
-    token_string_map[TK_DIRECTIVE_ASSERT]      = "#assert";
-    token_string_map[TK_DIRECTIVE_FOREIGN]     = "#foreign";
-    token_string_map[TK_DIRECTIVE_C_CODE]      = "#c_code";
-    token_string_map[TK_DIRECTIVE_INCLUDE]     = "#include";
+    token_string_map[TK_DIRECTIVE_PRINT]                = "#print";
+    token_string_map[TK_DIRECTIVE_ASSERT]               = "#assert";
+    token_string_map[TK_DIRECTIVE_FOREIGN]              = "#foreign";
+    token_string_map[TK_DIRECTIVE_C_CODE]               = "#c_code";
+    token_string_map[TK_DIRECTIVE_INCLUDE]              = "#include";
+    token_string_map[TK_DIRECTIVE_FOREIGN_IMPORT]       = "#foreign_import";
 
-    token_string_map[TK_ASSIGN]                = "=";
-    token_string_map[TK_PLUS]                  = "+";
-    token_string_map[TK_PLUS_ASSIGN]           = "+=";
-    token_string_map[TK_MINUS]                 = "-";
-    token_string_map[TK_MINUS_ASSIGN]          = "-=";
-    token_string_map[TK_MULTIPLY]              = "*";
-    token_string_map[TK_MULTIPLY_ASSIGN]       = "*=";
-    token_string_map[TK_DIVIDE]                = "/";
-    token_string_map[TK_DIVIDE_ASSIGN]         = "/=";
-    token_string_map[TK_LEFT_SHIFT]            = "<<";
-    token_string_map[TK_LEFT_SHIFT_ASSIGN]     = "<<=";
-    token_string_map[TK_RIGHT_SHIFT]           = ">>";
-    token_string_map[TK_RIGHT_SHIFT_ASSIGN]    = ">>=";
-    token_string_map[TK_AMPERSAND]             = "&";
-    token_string_map[TK_BIT_AND_ASSIGN]        = "&=";
-    token_string_map[TK_BIT_OR]                = "|";
-    token_string_map[TK_BIT_OR_ASSIGN]         = "|=";
+    token_string_map[TK_ASSIGN]                         = "=";
+    token_string_map[TK_PLUS]                           = "+";
+    token_string_map[TK_PLUS_ASSIGN]                    = "+=";
+    token_string_map[TK_MINUS]                          = "-";
+    token_string_map[TK_MINUS_ASSIGN]                   = "-=";
+    token_string_map[TK_MULTIPLY]                       = "*";
+    token_string_map[TK_MULTIPLY_ASSIGN]                = "*=";
+    token_string_map[TK_DIVIDE]                         = "/";
+    token_string_map[TK_DIVIDE_ASSIGN]                  = "/=";
+    token_string_map[TK_LEFT_SHIFT]                     = "<<";
+    token_string_map[TK_LEFT_SHIFT_ASSIGN]              = "<<=";
+    token_string_map[TK_RIGHT_SHIFT]                    = ">>";
+    token_string_map[TK_RIGHT_SHIFT_ASSIGN]             = ">>=";
+    token_string_map[TK_AMPERSAND]                      = "&";
+    token_string_map[TK_BIT_AND_ASSIGN]                 = "&=";
+    token_string_map[TK_BIT_OR]                         = "|";
+    token_string_map[TK_BIT_OR_ASSIGN]                  = "|=";
 
-    token_string_map[TK_DOLLAR]                = "$";
+    token_string_map[TK_DOLLAR]                         = "$";
 
-    token_string_map[TK_NOT]                   = "!";
-    token_string_map[TK_NOT_EQUAL_TO]          = "!=";
-    token_string_map[TK_LESS_THAN]             = "<";
-    token_string_map[TK_LESS_THAN_OR_EQUAL]    = "<=";
-    token_string_map[TK_GREATER_THAN]          = ">";
-    token_string_map[TK_GREATER_THAN_OR_EQUAL] = ">=";
-    token_string_map[TK_EQUAL_TO]              = "==";
-    token_string_map[TK_BOOLEAN_AND]           = "&&";
-    token_string_map[TK_BOOLEAN_AND_ASSIGN]    = "&&=";
-    token_string_map[TK_BOOLEAN_OR]            = "||";
-    token_string_map[TK_BOOLEAN_OR_ASSIGN]     = "||=";
+    token_string_map[TK_NOT]                            = "!";
+    token_string_map[TK_NOT_EQUAL_TO]                   = "!=";
+    token_string_map[TK_LESS_THAN]                      = "<";
+    token_string_map[TK_LESS_THAN_OR_EQUAL]             = "<=";
+    token_string_map[TK_GREATER_THAN]                   = ">";
+    token_string_map[TK_GREATER_THAN_OR_EQUAL]          = ">=";
+    token_string_map[TK_EQUAL_TO]                       = "==";
+    token_string_map[TK_BOOLEAN_AND]                    = "&&";
+    token_string_map[TK_BOOLEAN_AND_ASSIGN]             = "&&=";
+    token_string_map[TK_BOOLEAN_OR]                     = "||";
+    token_string_map[TK_BOOLEAN_OR_ASSIGN]              = "||=";
 
-    token_string_map[TK_LEFT_CURLY]            = "{";
-    token_string_map[TK_RIGHT_CURLY]           = "}";
-    token_string_map[TK_LEFT_SQUARE]           = "[";
-    token_string_map[TK_RIGHT_SQUARE]          = "]";
-    token_string_map[TK_LEFT_PAREN]            = "(";
-    token_string_map[TK_RIGHT_PAREN]           = ")";
-    token_string_map[TK_SEMICOLON]             = ";";
-    token_string_map[TK_COLON]                 = ":";
-    token_string_map[TK_DOT]                   = ".";
-    token_string_map[TK_DOT_DOT]               = "..";
-    token_string_map[TK_COMMA]                 = ",";
-    token_string_map[TK_CARET]                 = "^";
+    token_string_map[TK_LEFT_CURLY]                     = "{";
+    token_string_map[TK_RIGHT_CURLY]                    = "}";
+    token_string_map[TK_LEFT_SQUARE]                    = "[";
+    token_string_map[TK_RIGHT_SQUARE]                   = "]";
+    token_string_map[TK_LEFT_PAREN]                     = "(";
+    token_string_map[TK_RIGHT_PAREN]                    = ")";
+    token_string_map[TK_SEMICOLON]                      = ";";
+    token_string_map[TK_COLON]                          = ":";
+    token_string_map[TK_DOT]                            = ".";
+    token_string_map[TK_DOT_DOT]                        = "..";
+    token_string_map[TK_COMMA]                          = ",";
+    token_string_map[TK_CARET]                          = "^";
 
-    token_string_map[TK_COMMENT]               = "COMMENT";
+    token_string_map[TK_COMMENT]                        = "COMMENT";
 
-    token_name_map[TK_INVALID]               = "TK_INVALID";
-    token_name_map[TK_IDENTIFIER]            = "TK_IDENTIFIER";
-    token_name_map[TK_NUMBER]                = "TK_NUMBER";
-    token_name_map[TK_STRING]                = "TK_STRING";
-    token_name_map[TK_CHAR]                  = "TK_CHAR";
+    token_name_map[TK_INVALID]                          = "TK_INVALID";
+    token_name_map[TK_IDENTIFIER]                       = "TK_IDENTIFIER";
+    token_name_map[TK_NUMBER]                           = "TK_NUMBER";
+    token_name_map[TK_STRING]                           = "TK_STRING";
+    token_name_map[TK_CHAR]                             = "TK_CHAR";
 
-    token_name_map[TK_VAR]                   = "TK_VAR";
-    token_name_map[TK_CONST]                 = "TK_CONST";
-    token_name_map[TK_PROC]                  = "TK_PROC";
-    token_name_map[TK_OPERATOR]              = "TK_OPERATOR";
-    token_name_map[TK_STRUCT]                = "TK_STRUCT";
-    token_name_map[TK_ENUM]                  = "TK_ENUM";
-    token_name_map[TK_RETURN]                = "TK_RETURN";
-    token_name_map[TK_NULL]                  = "TK_NULL";
-    token_name_map[TK_TRUE]                  = "TK_TRUE";
-    token_name_map[TK_FALSE]                 = "TK_FALSE";
-    token_name_map[TK_SIZEOF]                = "TK_SIZEOF";
-    token_name_map[TK_TYPEOF]                = "TK_TYPEOF";
-    token_name_map[TK_IF]                    = "TK_IF";
-    token_name_map[TK_ELSE]                  = "TK_ELSE";
-    token_name_map[TK_FOR]                   = "TK_FOR";
-    token_name_map[TK_WHILE]                 = "TK_WHILE";
-    token_name_map[TK_BREAK]                 = "TK_BREAK";
-    token_name_map[TK_CONTINUE]              = "TK_CONTINUE";
-    token_name_map[TK_CAST]                  = "TK_CAST";
+    token_name_map[TK_VAR]                              = "TK_VAR";
+    token_name_map[TK_CONST]                            = "TK_CONST";
+    token_name_map[TK_PROC]                             = "TK_PROC";
+    token_name_map[TK_OPERATOR]                         = "TK_OPERATOR";
+    token_name_map[TK_STRUCT]                           = "TK_STRUCT";
+    token_name_map[TK_UNION]                            = "TK_UNION";
+    token_name_map[TK_ENUM]                             = "TK_ENUM";
+    token_name_map[TK_RETURN]                           = "TK_RETURN";
+    token_name_map[TK_NULL]                             = "TK_NULL";
+    token_name_map[TK_TRUE]                             = "TK_TRUE";
+    token_name_map[TK_FALSE]                            = "TK_FALSE";
+    token_name_map[TK_SIZEOF]                           = "TK_SIZEOF";
+    token_name_map[TK_TYPEOF]                           = "TK_TYPEOF";
+    token_name_map[TK_IF]                               = "TK_IF";
+    token_name_map[TK_ELSE]                             = "TK_ELSE";
+    token_name_map[TK_FOR]                              = "TK_FOR";
+    token_name_map[TK_WHILE]                            = "TK_WHILE";
+    token_name_map[TK_BREAK]                            = "TK_BREAK";
+    token_name_map[TK_CONTINUE]                         = "TK_CONTINUE";
+    token_name_map[TK_CAST]                             = "TK_CAST";
 
-    token_name_map[TK_DIRECTIVE_PRINT]       = "TK_DIRECTIVE_PRINT";
-    token_name_map[TK_DIRECTIVE_ASSERT]      = "TK_DIRECTIVE_ASSERT";
-    token_name_map[TK_DIRECTIVE_FOREIGN]     = "TK_DIRECTIVE_FOREIGN";
-    token_name_map[TK_DIRECTIVE_C_CODE]      = "TK_DIRECTIVE_C_CODE";
-    token_name_map[TK_DIRECTIVE_INCLUDE]     = "TK_DIRECTIVE_INCLUDE";
+    token_name_map[TK_DIRECTIVE_PRINT]                  = "TK_DIRECTIVE_PRINT";
+    token_name_map[TK_DIRECTIVE_ASSERT]                 = "TK_DIRECTIVE_ASSERT";
+    token_name_map[TK_DIRECTIVE_FOREIGN]                = "TK_DIRECTIVE_FOREIGN";
+    token_name_map[TK_DIRECTIVE_C_CODE]                 = "TK_DIRECTIVE_C_CODE";
+    token_name_map[TK_DIRECTIVE_INCLUDE]                = "TK_DIRECTIVE_INCLUDE";
+    token_name_map[TK_DIRECTIVE_FOREIGN_IMPORT]         = "TK_DIRECTIVE_FOREIGN_IMPORT";
 
-    token_name_map[TK_ASSIGN]                = "TK_ASSIGN";
-    token_name_map[TK_PLUS]                  = "TK_PLUS";
-    token_name_map[TK_PLUS_ASSIGN]           = "TK_PLUS_ASSIGN";
-    token_name_map[TK_MINUS]                 = "TK_MINUS";
-    token_name_map[TK_MINUS_ASSIGN]          = "TK_MINUS_ASSIGN";
-    token_name_map[TK_MULTIPLY]              = "TK_MULTIPLY";
-    token_name_map[TK_MULTIPLY_ASSIGN]       = "TK_MULTIPLY_ASSIGN";
-    token_name_map[TK_DIVIDE]                = "TK_DIVIDE";
-    token_name_map[TK_DIVIDE_ASSIGN]         = "TK_DIVIDE_ASSIGN";
-    token_name_map[TK_LEFT_SHIFT]            = "TK_LEFT_SHIFT";
-    token_name_map[TK_LEFT_SHIFT_ASSIGN]     = "TK_LEFT_SHIFT_ASSIGN";
-    token_name_map[TK_RIGHT_SHIFT]           = "TK_RIGHT_SHIFT";
-    token_name_map[TK_RIGHT_SHIFT_ASSIGN]    = "TK_RIGHT_SHIFT_ASSIGN";
-    token_name_map[TK_AMPERSAND]             = "TK_AMPERSAND";
-    token_name_map[TK_BIT_AND_ASSIGN]        = "TK_BIT_AND_ASSIGN";
-    token_name_map[TK_BIT_OR]                = "TK_BIT_OR";
-    token_name_map[TK_BIT_OR_ASSIGN]         = "TK_BIT_OR_ASSIGN";
+    token_name_map[TK_ASSIGN]                           = "TK_ASSIGN";
+    token_name_map[TK_PLUS]                             = "TK_PLUS";
+    token_name_map[TK_PLUS_ASSIGN]                      = "TK_PLUS_ASSIGN";
+    token_name_map[TK_MINUS]                            = "TK_MINUS";
+    token_name_map[TK_MINUS_ASSIGN]                     = "TK_MINUS_ASSIGN";
+    token_name_map[TK_MULTIPLY]                         = "TK_MULTIPLY";
+    token_name_map[TK_MULTIPLY_ASSIGN]                  = "TK_MULTIPLY_ASSIGN";
+    token_name_map[TK_DIVIDE]                           = "TK_DIVIDE";
+    token_name_map[TK_DIVIDE_ASSIGN]                    = "TK_DIVIDE_ASSIGN";
+    token_name_map[TK_LEFT_SHIFT]                       = "TK_LEFT_SHIFT";
+    token_name_map[TK_LEFT_SHIFT_ASSIGN]                = "TK_LEFT_SHIFT_ASSIGN";
+    token_name_map[TK_RIGHT_SHIFT]                      = "TK_RIGHT_SHIFT";
+    token_name_map[TK_RIGHT_SHIFT_ASSIGN]               = "TK_RIGHT_SHIFT_ASSIGN";
+    token_name_map[TK_AMPERSAND]                        = "TK_AMPERSAND";
+    token_name_map[TK_BIT_AND_ASSIGN]                   = "TK_BIT_AND_ASSIGN";
+    token_name_map[TK_BIT_OR]                           = "TK_BIT_OR";
+    token_name_map[TK_BIT_OR_ASSIGN]                    = "TK_BIT_OR_ASSIGN";
 
-    token_name_map[TK_DOLLAR]                = "TK_DOLLAR";
+    token_name_map[TK_DOLLAR]                           = "TK_DOLLAR";
 
-    token_name_map[TK_NOT]                   = "TK_NOT";
-    token_name_map[TK_NOT_EQUAL_TO]          = "TK_NOT_EQUAL_TO";
-    token_name_map[TK_LESS_THAN]             = "TK_LESS_THAN";
-    token_name_map[TK_LESS_THAN_OR_EQUAL]    = "TK_LESS_THAN_OR_EQUAL";
-    token_name_map[TK_GREATER_THAN]          = "TK_GREATER_THAN";
-    token_name_map[TK_GREATER_THAN_OR_EQUAL] = "TK_GREATER_THAN_OR_EQUAL";
-    token_name_map[TK_EQUAL_TO]              = "TK_EQUAL_TO";
-    token_name_map[TK_BOOLEAN_AND]           = "TK_BOOLEAN_AND";
-    token_name_map[TK_BOOLEAN_AND_ASSIGN]    = "TK_BOOLEAN_AND_ASSIGN";
-    token_name_map[TK_BOOLEAN_OR]            = "TK_BOOLEAN_OR";
-    token_name_map[TK_BOOLEAN_OR_ASSIGN]     = "TK_BOOLEAN_OR_ASSIGN";
+    token_name_map[TK_NOT]                              = "TK_NOT";
+    token_name_map[TK_NOT_EQUAL_TO]                     = "TK_NOT_EQUAL_TO";
+    token_name_map[TK_LESS_THAN]                        = "TK_LESS_THAN";
+    token_name_map[TK_LESS_THAN_OR_EQUAL]               = "TK_LESS_THAN_OR_EQUAL";
+    token_name_map[TK_GREATER_THAN]                     = "TK_GREATER_THAN";
+    token_name_map[TK_GREATER_THAN_OR_EQUAL]            = "TK_GREATER_THAN_OR_EQUAL";
+    token_name_map[TK_EQUAL_TO]                         = "TK_EQUAL_TO";
+    token_name_map[TK_BOOLEAN_AND]                      = "TK_BOOLEAN_AND";
+    token_name_map[TK_BOOLEAN_AND_ASSIGN]               = "TK_BOOLEAN_AND_ASSIGN";
+    token_name_map[TK_BOOLEAN_OR]                       = "TK_BOOLEAN_OR";
+    token_name_map[TK_BOOLEAN_OR_ASSIGN]                = "TK_BOOLEAN_OR_ASSIGN";
 
-    token_name_map[TK_LEFT_CURLY]            = "TK_LEFT_CURLY";
-    token_name_map[TK_RIGHT_CURLY]           = "TK_RIGHT_CURLY";
-    token_name_map[TK_LEFT_SQUARE]           = "TK_LEFT_SQUARE";
-    token_name_map[TK_RIGHT_SQUARE]          = "TK_RIGHT_SQUARE";
-    token_name_map[TK_LEFT_PAREN]            = "TK_LEFT_PAREN";
-    token_name_map[TK_RIGHT_PAREN]           = "TK_RIGHT_PAREN";
-    token_name_map[TK_SEMICOLON]             = "TK_SEMICOLON";
-    token_name_map[TK_COLON]                 = "TK_COLON";
-    token_name_map[TK_DOT]                   = "TK_DOT";
-    token_name_map[TK_DOT_DOT]               = "TK_DOT_DOT";
-    token_name_map[TK_COMMA]                 = "TK_COMMA";
-    token_name_map[TK_CARET]                 = "TK_CARET";
+    token_name_map[TK_LEFT_CURLY]                       = "TK_LEFT_CURLY";
+    token_name_map[TK_RIGHT_CURLY]                      = "TK_RIGHT_CURLY";
+    token_name_map[TK_LEFT_SQUARE]                      = "TK_LEFT_SQUARE";
+    token_name_map[TK_RIGHT_SQUARE]                     = "TK_RIGHT_SQUARE";
+    token_name_map[TK_LEFT_PAREN]                       = "TK_LEFT_PAREN";
+    token_name_map[TK_RIGHT_PAREN]                      = "TK_RIGHT_PAREN";
+    token_name_map[TK_SEMICOLON]                        = "TK_SEMICOLON";
+    token_name_map[TK_COLON]                            = "TK_COLON";
+    token_name_map[TK_DOT]                              = "TK_DOT";
+    token_name_map[TK_DOT_DOT]                          = "TK_DOT_DOT";
+    token_name_map[TK_COMMA]                            = "TK_COMMA";
+    token_name_map[TK_CARET]                            = "TK_CARET";
 
-    token_name_map[TK_COMMENT]               = "TK_COMMENT";
+    token_name_map[TK_COMMENT]                          = "TK_COMMENT";
 
     for (int i = 0; i < TK_COUNT; i++) {
         if (token_string_map[i] == nullptr) {
@@ -204,6 +208,10 @@ bool is_digit(char c) {
     return (c >= '0') && (c <= '9');
 }
 
+bool is_hex_char(char c) {
+    return is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
 bool is_one_to_nine(char c) {
     return (c >= '1') && (c <= '9');
 }
@@ -229,9 +237,7 @@ char *scan_identifier(char *text, int *out_length) {
 
 char *unescape_string(char *str, int *out_escaped_length) {
     // trim out quotes
-    assert(str[0] != '"');
     int string_length = strlen(str);
-    assert(str[string_length-1] != '"');
     int escaped_length = string_length;
 
     bool escape = false;
@@ -281,12 +287,18 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
     bool escaped = false;
     int newlines = 0;
     while ((*text != 0) && (*text != delim || escaped)) {
+        bool was_escaped = escaped;
         escaped = false;
         if (*text == '\n') {
             newlines += 1;
         }
-        if (*text == '\\') {
-            escaped = true;
+        if (!was_escaped) {
+            if (*text == '\\') {
+                escaped = true;
+            }
+        }
+        else {
+
         }
         text += 1;
     }
@@ -300,7 +312,7 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
     return duplicate;
 }
 
-char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
+char *scan_number(char *text, int *out_length, bool *out_has_a_dot, i64 *int_value, f64 *float_value) {
     char *start = text;
 
     if (*text == '0') {
@@ -315,6 +327,7 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
         assert(false && "scan_number called without being at a number");
     }
 
+    bool was_hex = false;
     if (*text == '.') {
         text += 1;
         *out_has_a_dot = true;
@@ -322,10 +335,44 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot) {
             text += 1;
         }
     }
+    else if (*text == 'x') {
+        text += 1;
+        while (is_hex_char(*text)) {
+            text += 1;
+        }
+        was_hex = true;
+    }
 
     int length = text - start;
     *out_length = length;
     char *result = clone_string(start, length);
+
+    if (!was_hex) {
+        *int_value   = atoi(result);
+        *float_value = atof(result);
+    }
+    else {
+        char *hex = result + 2; // skip the 0x
+        int len = strlen(hex) - 1;
+        int val = 0;
+        i64 decimal = 0;
+        for (int i = 0; hex[i] != '\0'; i++) {
+            if (hex[i] >= '0' && hex[i] <= '9') {
+                val = hex[i] - 48;
+            }
+            else if (hex[i] >= 'a' && hex[i] <= 'f') {
+                val = hex[i] - 97 + 10;
+            }
+            else if (hex[i] >= 'A' && hex[i] <= 'F') {
+                val = hex[i] - 65 + 10;
+            }
+
+            decimal += val * pow(16, len);
+            len -= 1;
+        }
+        *int_value = val;
+        *float_value = (f64)val;
+    }
     return result;
 }
 
@@ -374,6 +421,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD("proc", TK_PROC)
         else CHECK_KEYWORD("operator", TK_OPERATOR)
         else CHECK_KEYWORD("struct", TK_STRUCT)
+        else CHECK_KEYWORD("union", TK_UNION)
         else CHECK_KEYWORD("enum", TK_ENUM)
         else CHECK_KEYWORD("null", TK_NULL)
         else CHECK_KEYWORD("true", TK_TRUE)
@@ -391,7 +439,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;
         bool has_a_dot = false;
-        char *number = scan_number(&lexer->text[lexer->location.index], &length, &has_a_dot);
+        char *number = scan_number(&lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->int_value, &out_token->float_value);
         advance(lexer, length);
         out_token->kind = TK_NUMBER;
         out_token->text = number;
@@ -613,6 +661,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "include") == 0) {
             out_token->kind = TK_DIRECTIVE_INCLUDE;
             out_token->text = "#include";
+        }
+        else if (strcmp(identifier, "foreign_import") == 0) {
+            out_token->kind = TK_DIRECTIVE_FOREIGN_IMPORT;
+            out_token->text = "#foreign_import";
         }
         else {
             lexer->errored = true;

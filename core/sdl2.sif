@@ -1,0 +1,2047 @@
+const cstring = ^u8;
+
+proc SDL_AddEventWatch                    (filter: Event_Filter, userdata: rawptr)                                                                                                          #foreign;
+proc SDL_AddHintCallback                  (name: cstring, callback: Hint_Callback, userdata: rawptr)                                                                                        #foreign;
+proc SDL_AddTimer                         (interval: u32, callback: Timer_Callback, param: rawptr) : Timer_Id                                                                               #foreign;
+proc SDL_AllocFormat                      (pixel_format: u32) : ^Pixel_Format                                                                                                               #foreign;
+proc SDL_AllocPalette                     (ncolors: i32) : ^Palette                                                                                                                         #foreign;
+proc SDL_AllocRW                          () : ^Rw_Ops                                                                                                                                      #foreign;
+proc SDL_AtomicAdd                        (a: ^Atomic, v: i32) : i32                                                                                                                        #foreign;
+proc SDL_AtomicCAS                        (a: ^Atomic, oldval: i32, newval: i32) : Bool                                                                                                     #foreign;
+proc SDL_AtomicCASPtr                     (a: ^rawptr, oldval: rawptr, newval: rawptr) : Bool                                                                                               #foreign;
+proc SDL_AtomicGet                        (a: ^Atomic) : i32                                                                                                                                #foreign;
+proc SDL_AtomicGetPtr                     (a: ^rawptr) : rawptr                                                                                                                             #foreign;
+proc SDL_AtomicLock                       (lock: ^Spin_Lock)                                                                                                                                #foreign;
+proc SDL_AtomicSet                        (a: ^Atomic, v: i32) : i32                                                                                                                        #foreign;
+proc SDL_AtomicSetPtr                     (a: ^rawptr, v: rawptr) : rawptr                                                                                                                  #foreign;
+proc SDL_AtomicTryLock                    (lock: ^Spin_Lock) : Bool                                                                                                                         #foreign;
+proc SDL_AtomicUnlock                     (lock: ^Spin_Lock)                                                                                                                                #foreign;
+proc SDL_AudioInit                        (driver_name: cstring) : i32                                                                                                                      #foreign;
+proc SDL_AudioQuit                        ()                                                                                                                                                #foreign;
+proc SDL_BuildAudioCVT                    (cvt: ^Audio_Cvt, src_format: Audio_Format, src_channels: u8, src_rate: i32, dst_format: Audio_Format, dst_channels: u8, dst_rate: i32) : i32     #foreign;
+proc SDL_CalculateGammaRamp               (gamma: f32, ramp: ^u16)                                                                                                                          #foreign;
+proc SDL_CaptureMouse                     (enabled: Bool) : i32                                                                                                                             #foreign;
+proc SDL_ClearError                       ()                                                                                                                                                #foreign;
+proc SDL_ClearHints                       ()                                                                                                                                                #foreign;
+proc SDL_ClearQueuedAudio                 (dev: Audio_Device)                                                                                                                               #foreign;
+proc SDL_CloseAudio                       ()                                                                                                                                                #foreign;
+proc SDL_CloseAudioDevice                 (dev: Audio_Device)                                                                                                                               #foreign;
+proc SDL_CondBroadcast                    (cond: ^Cond) : i32                                                                                                                               #foreign;
+proc SDL_CondSignal                       (cond: ^Cond) : i32                                                                                                                               #foreign;
+proc SDL_CondWait                         (cond: ^Cond, mutex: ^Mutex) : i32                                                                                                                #foreign;
+proc SDL_CondWaitTimeout                  (cond: ^Cond, mutex: ^Mutex, ms: u32) : i32                                                                                                       #foreign;
+proc SDL_ConvertAudio                     (cvt: ^Audio_Cvt) : i32                                                                                                                           #foreign;
+proc SDL_ConvertPixels                    (width: i32, height: i32, src_format: u32, src: rawptr, src_pitch: i32, dst_format: u32, dst: rawptr, dst_pitch: i32) : i32                       #foreign;
+proc SDL_ConvertSurface                   (src: ^Surface, fmt: ^Pixel_Format, flags: u32) : ^Surface                                                                                        #foreign;
+proc SDL_ConvertSurfaceFormat             (src: ^Surface, pixel_format: u32, flags: u32) : ^Surface                                                                                         #foreign;
+proc SDL_CreateColorCursor                (surface: ^Surface, hot_x: i32, hot_y: i32) : ^Cursor                                                                                             #foreign;
+proc SDL_CreateCond                       () : ^Cond                                                                                                                                        #foreign;
+proc SDL_CreateCursor                     (data: ^u8, mask: ^u8, w: i32, h: i32, hot_x: i32, hot_y: i32) : ^Cursor                                                                          #foreign;
+proc SDL_CreateMutex                      () : ^Mutex                                                                                                                                       #foreign;
+proc SDL_CreateRGBSurface                 (flags: u32, width: i32, height: i32, depth: i32, Rmask: u32, Gmask: u32, Bmask: u32, Amask: u32) : ^Surface                                      #foreign;
+proc SDL_CreateRGBSurfaceFrom             (pixels: rawptr, width: i32, height: i32, depth: i32, pitch: i32, Rmask: u32, Gmask: u32, Bmask: u32, Amask: u32) : ^Surface                      #foreign;
+proc SDL_CreateRGBSurfaceWithFormat       (flags: u32, width: i32, height: i32, depth: i32, format: u32) : ^Surface                                                                         #foreign;
+proc SDL_CreateRGBSurfaceWithFormatFrom   (pixels: rawptr, width: i32, height: i32, depth: i32, pitch: i32, format: u32) : ^Surface                                                         #foreign;
+proc SDL_CreateRenderer                   (window: ^Window, index: i32, flags: Renderer_Flags) : ^Renderer                                                                                  #foreign;
+proc SDL_CreateSemaphore                  (initial_value: u32) : ^Sem                                                                                                                       #foreign;
+proc SDL_CreateShapedWindow               (title: cstring, x: u32, y: u32, w: u32, h: u32, flags: Window_Flags) : ^Window                                                                   #foreign;
+proc SDL_CreateSoftwareRenderer           (surface: ^Surface) : ^Renderer                                                                                                                   #foreign;
+proc SDL_CreateSystemCursor               (id: System_Cursor) : ^Cursor                                                                                                                     #foreign;
+proc SDL_CreateTexture                    (renderer: ^Renderer, format: u32, access: i32, w: i32, h: i32) : ^Texture                                                                        #foreign;
+proc SDL_CreateTextureFromSurface         (renderer: ^Renderer, surface: ^Surface) : ^Texture                                                                                               #foreign;
+proc SDL_CreateThread                     (fn: Thread_Function, name: cstring, data: rawptr) : ^Thread                                                                                      #foreign;
+proc SDL_CreateWindow                     (title: cstring, x: i32, y: i32, w: i32, h: i32, flags: Window_Flags) : ^Window                                                                   #foreign;
+proc SDL_CreateWindowAndRenderer          (width: i32, height: i32, window_flags: Window_Flags, window: ^^Window, renderer: ^^Renderer) : i32                                               #foreign;
+proc SDL_CreateWindowFrom                 (data: rawptr) : ^Window                                                                                                                          #foreign;
+proc SDL_DXGIGetOutputInfo                (display_index: i32, adapter_index: ^i32, output_index: ^i32) : Bool                                                                              #foreign;
+proc SDL_DelEventWatch                    (filter: Event_Filter, userdata: rawptr)                                                                                                          #foreign;
+proc SDL_DelHintCallback                  (name: cstring, callback: Hint_Callback, userdata: rawptr)                                                                                        #foreign;
+proc SDL_Delay                            (ms: u32)                                                                                                                                         #foreign;
+proc SDL_DequeueAudio                     (dev: Audio_Device_Id, data: rawptr, len: u32) : u32                                                                                              #foreign;
+proc SDL_DestroyCond                      (cond: ^Cond)                                                                                                                                     #foreign;
+proc SDL_DestroyMutex                     (mutex: ^Mutex)                                                                                                                                   #foreign;
+proc SDL_DestroyRenderer                  (renderer: ^Renderer)                                                                                                                             #foreign;
+proc SDL_DestroySemaphore                 (sem: ^Sem)                                                                                                                                       #foreign;
+proc SDL_DestroyTexture                   (texture: ^Texture)                                                                                                                               #foreign;
+proc SDL_DestroyWindow                    (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_DetachThread                     (thread: ^Thread)                                                                                                                                 #foreign;
+proc SDL_Direct3D9GetAdapterIndex         (display_index: i32) : i32                                                                                                                        #foreign;
+proc SDL_DisableScreenSaver               ()                                                                                                                                                #foreign;
+proc SDL_EnableScreenSaver                ()                                                                                                                                                #foreign;
+proc SDL_EnclosePoints                    (points: ^Point, count: i32, clip: ^Rect, result: ^Rect) : Bool                                                                                   #foreign;
+proc SDL_Error                            (code: Error_Code) : i32                                                                                                                          #foreign;
+proc SDL_EventState                       (event_type: u32, state: i32) : u8                                                                                                                #foreign;
+proc SDL_FillRect                         (dst: ^Surface, rect: ^Rect, color: u32) : i32                                                                                                    #foreign;
+proc SDL_FillRects                        (dst: ^Surface, rect: ^Rect, count: i32, color: u32) : i32                                                                                        #foreign;
+proc SDL_FilterEvents                     (filter: Event_Filter, userdata: rawptr)                                                                                                          #foreign;
+proc SDL_FlushEvent                       (event_type: u32)                                                                                                                                 #foreign;
+proc SDL_FlushEvents                      (min_type: u32, max_type: u32)                                                                                                                    #foreign;
+proc SDL_FreeCursor                       (cursor: ^Cursor)                                                                                                                                 #foreign;
+proc SDL_FreeFormat                       (format: ^Pixel_Format)                                                                                                                           #foreign;
+proc SDL_FreePalette                      (palette: ^Palette)                                                                                                                               #foreign;
+proc SDL_FreeRW                           (area: ^Rw_Ops)                                                                                                                                   #foreign;
+proc SDL_FreeSurface                      (surface: ^Surface)                                                                                                                               #foreign;
+proc SDL_FreeWAV                          (audio_buf: ^u8)                                                                                                                                  #foreign;
+proc SDL_GL_BindTexture                   (texture: ^Texture, texw: ^f32, texh: ^f32) : i32                                                                                                 #foreign;
+proc SDL_GL_CreateContext                 (window: ^Window) : GL_Context                                                                                                                    #foreign;
+proc SDL_GL_DeleteContext                 (gl_context: GL_Context)                                                                                                                          #foreign;
+proc SDL_GL_ExtensionSupported            (extension: cstring) : Bool                                                                                                                       #foreign;
+proc SDL_GL_GetAttribute                  (attr: GL_Attr, value: ^i32) : i32                                                                                                                #foreign;
+proc SDL_GL_GetCurrentContext             () : GL_Context                                                                                                                                   #foreign;
+proc SDL_GL_GetCurrentWindow              () : ^Window                                                                                                                                      #foreign;
+proc SDL_GL_GetDrawableSize               (window: ^Window, w: ^i32, h: ^i32)                                                                                                               #foreign;
+proc SDL_GL_GetProcAddress                (name: cstring) : rawptr                                                                                                                          #foreign;
+proc SDL_GL_GetSwapInterval               () : i32                                                                                                                                          #foreign;
+proc SDL_GL_LoadLibrary                   (path: cstring) : i32                                                                                                                             #foreign;
+proc SDL_GL_MakeCurrent                   (window: ^Window, gl_context: GL_Context) : i32                                                                                                   #foreign;
+proc SDL_GL_ResetAttributes               ()                                                                                                                                                #foreign;
+proc SDL_GL_SetAttribute                  (attr: GL_Attr, value: i32) : i32                                                                                                                 #foreign;
+proc SDL_GL_SetSwapInterval               (interval: i32) : i32                                                                                                                             #foreign;
+proc SDL_GL_SwapWindow                    (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_GL_UnbindTexture                 (texture: ^Texture) : i32                                                                                                                         #foreign;
+proc SDL_GL_UnloadLibrary                 ()                                                                                                                                                #foreign;
+proc SDL_GameControllerAddMapping         (mapping_string: cstring) : i32                                                                                                                   #foreign;
+proc SDL_GameControllerAddMappingsFromRW  (area: ^Rw_Ops, freerw: i32) : i32                                                                                                                #foreign;
+proc SDL_GameControllerClose              (game_controller: ^Game_Controller)                                                                                                               #foreign;
+proc SDL_GameControllerEventState         (state: i32) : i32                                                                                                                                #foreign;
+proc SDL_GameControllerFromInstanceID     (joy_id: Joystick_Id) :    ^Game_Controller                                                                                                       #foreign;
+proc SDL_GameControllerGetAttached        (game_controller: ^Game_Controller) : Bool                                                                                                        #foreign;
+proc SDL_GameControllerGetAxis            (game_controller: ^Game_Controller, axis: Game_Controller_Axis) : i16                                                                             #foreign;
+proc SDL_GameControllerGetAxisFromString  (pch_string: cstring) : cstring                                                                                                                   #foreign;
+proc SDL_GameControllerGetBindForAxis     (game_controller: ^Game_Controller, axis: Game_Controller_Axis) : Game_Controller_Button_Bind                                                     #foreign;
+proc SDL_GameControllerGetBindForButton   (game_controller: ^Game_Controller, button: Game_Controller_Button) : Game_Controller_Button_Bind                                                 #foreign;
+proc SDL_GameControllerGetButton          (game_controller: ^Game_Controller, button: Game_Controller_Button) : u8                                                                          #foreign;
+proc SDL_GameControllerGetButtonFromString(pch_string: cstring) : Game_Controller_Button                                                                                                    #foreign;
+proc SDL_GameControllerGetJoystick        (game_controller: ^Game_Controller) : ^Joystick                                                                                                   #foreign;
+proc SDL_GameControllerGetStringForAxis   (axis: Game_Controller_Axis) : cstring                                                                                                            #foreign;
+proc SDL_GameControllerGetStringForButton (button: Game_Controller_Button) : cstring                                                                                                        #foreign;
+proc SDL_GameControllerMapping            (game_controller: ^Game_Controller) : cstring                                                                                                     #foreign;
+proc SDL_GameControllerMappingForGUID     (guid: Joystick_Guid) : cstring                                                                                                                   #foreign;
+proc SDL_GameControllerName               (game_controller: ^Game_Controller) : cstring                                                                                                     #foreign;
+proc SDL_GameControllerNameForIndex       (joystick_index: i32) : cstring                                                                                                                   #foreign;
+proc SDL_GameControllerOpen               (joystick_index: i32) : ^Game_Controller                                                                                                          #foreign;
+proc SDL_GameControllerUpdate             ()                                                                                                                                                #foreign;
+proc SDL_GetAssertionHandler              (userdata: ^rawptr) : Assertion_Handler                                                                                                           #foreign;
+proc SDL_GetAssertionReport               () : ^Assert_Data                                                                                                                                 #foreign;
+proc SDL_GetAudioDeviceName               (index: i32, iscapture: i32) : cstring                                                                                                            #foreign;
+proc SDL_GetAudioDeviceStatus             (dev: Audio_Device_Id) : Audio_Status                                                                                                             #foreign;
+proc SDL_GetAudioDriver                   (index: i32) : cstring                                                                                                                            #foreign;
+proc SDL_GetAudioStatus                   () : Audio_Status                                                                                                                                 #foreign;
+proc SDL_GetBasePath                      () : cstring                                                                                                                                      #foreign;
+proc SDL_GetCPUCacheLineSize              () : i32                                                                                                                                          #foreign;
+proc SDL_GetCPUCount                      () : i32                                                                                                                                          #foreign;
+proc SDL_GetClipRect                      (surface: ^Surface, rect: ^Rect)                                                                                                                  #foreign;
+proc SDL_GetClipboardText                 () : cstring                                                                                                                                      #foreign;
+proc SDL_GetClosestDisplayMode            (display_index: i32, mode: ^Display_Mode, closest: ^Display_Mode) : ^Display_Mode                                                                 #foreign;
+proc SDL_GetColorKey                      (surface: ^Surface, key: ^u32) : i32                                                                                                              #foreign;
+proc SDL_GetCurrentAudioDriver            () : cstring                                                                                                                                      #foreign;
+proc SDL_GetCurrentDisplayMode            (display_index: i32, mode: ^Display_Mode) : i32                                                                                                   #foreign;
+proc SDL_GetCurrentVideoDriver            () : cstring                                                                                                                                      #foreign;
+proc SDL_GetCursor                        () : ^Cursor                                                                                                                                      #foreign;
+proc SDL_GetDefaultAssertionHandler       () : Assertion_Handler                                                                                                                            #foreign;
+proc SDL_GetDefaultCursor                 () : ^Cursor                                                                                                                                      #foreign;
+proc SDL_GetDesktopDisplayMode            (display_index: i32, mode: ^Display_Mode) : i32                                                                                                   #foreign;
+proc SDL_GetDisplayBounds                 (display_index: i32, rect: ^Rect) : i32                                                                                                           #foreign;
+proc SDL_GetDisplayDPI                    (display_index: i32, ddpi: ^f32, hdpi: ^f32, vdpi: ^f32) : i32                                                                                    #foreign;
+proc SDL_GetDisplayMode                   (display_index: i32, mode_index: i32, mode: ^Display_Mode) : i32                                                                                  #foreign;
+proc SDL_GetDisplayName                   (display_index: i32) : cstring                                                                                                                    #foreign;
+proc SDL_GetDisplayUsableBounds           (display_index: i32, rect: ^Rect) : i32                                                                                                           #foreign;
+proc SDL_GetError                         () : cstring                                                                                                                                      #foreign;
+proc SDL_GetEventFilter                   (filter: ^Event_Filter, userdata: ^rawptr) : Bool                                                                                                 #foreign;
+proc SDL_GetGlobalMouseState              (x: ^i32, y: ^i32) : u32                                                                                                                          #foreign;
+proc SDL_GetGrabbedWindow                 () : ^Window                                                                                                                                      #foreign;
+proc SDL_GetHint                          (name: cstring) : cstring                                                                                                                         #foreign;
+proc SDL_GetHintBoolean                   (name: cstring, default_value: Bool) : Bool                                                                                                       #foreign;
+proc SDL_GetKeyFromName                   (name: cstring) : Keycode                                                                                                                         #foreign;
+proc SDL_GetKeyFromScancode               (scancode: Scancode) : Keycode                                                                                                                    #foreign;
+proc SDL_GetKeyName                       (key: Keycode) : cstring                                                                                                                          #foreign;
+proc SDL_GetKeyboardFocus                 () : ^Window                                                                                                                                      #foreign;
+proc SDL_GetKeyboardState                 (numkeys: ^i32) : ^u8                                                                                                                             #foreign;
+proc SDL_GetModState                      () : Keymod                                                                                                                                       #foreign;
+proc SDL_GetMouseFocus                    () : ^Window                                                                                                                                      #foreign;
+proc SDL_GetMouseState                    (x: ^i32, y: ^i32) : u32                                                                                                                          #foreign;
+proc SDL_GetNumAudioDevices               (iscapture: i32) : i32                                                                                                                            #foreign;
+proc SDL_GetNumAudioDrivers               () : i32                                                                                                                                          #foreign;
+proc SDL_GetNumDisplayModes               (display_index: i32) : i32                                                                                                                        #foreign;
+proc SDL_GetNumRenderDrivers              () : i32                                                                                                                                          #foreign;
+proc SDL_GetNumTouchDevices               () : i32                                                                                                                                          #foreign;
+proc SDL_GetNumTouchFingers               (touch_id: Touch_Id) : i32                                                                                                                        #foreign;
+proc SDL_GetNumVideoDisplays              () : i32                                                                                                                                          #foreign;
+proc SDL_GetNumVideoDrivers               () : i32                                                                                                                                          #foreign;
+proc SDL_GetPerformanceCounter            () : u64                                                                                                                                          #foreign;
+proc SDL_GetPerformanceFrequency          () : u64                                                                                                                                          #foreign;
+proc SDL_GetPixelFormatName               (format: u32) : cstring                                                                                                                           #foreign;
+proc SDL_GetPlatform                      () : cstring                                                                                                                                      #foreign;
+proc SDL_GetPowerInfo                     (secs: i32, pct: ^i32) : Power_State                                                                                                              #foreign;
+proc SDL_GetPrefPath                      (org: cstring, app: cstring) : cstring                                                                                                            #foreign;
+proc SDL_GetQueuedAudioSize               (dev: Audio_Device_Id) : u32                                                                                                                      #foreign;
+proc SDL_GetRGB                           (pixel: u32, format: ^Pixel_Format, r: ^u8, g: ^u8, b: ^u8)                                                                                       #foreign;
+proc SDL_GetRGBA                          (pixel: u32, format: ^Pixel_Format, r: ^u8, g: ^u8, b: ^u8, a: ^u8)                                                                               #foreign;
+proc SDL_GetRelativeMouseMode             () : Bool                                                                                                                                         #foreign;
+proc SDL_GetRelativeMouseState            (x: ^i32, y: ^i32) : u32                                                                                                                          #foreign;
+proc SDL_GetRenderDrawBlendMode           (renderer: ^Renderer, blend_mode: ^Blend_Mode) : i32                                                                                              #foreign;
+proc SDL_GetRenderDrawColor               (renderer: ^Renderer, r: ^u8, g: ^u8, b: ^u8, a: ^u8) : i32                                                                                       #foreign;
+proc SDL_GetRenderDriverInfo              (index: i32, info: ^Renderer_Info) : i32                                                                                                          #foreign;
+proc SDL_GetRenderTarget                  (renderer: ^Renderer) : ^Texture                                                                                                                  #foreign;
+proc SDL_GetRenderer                      (window: ^Window) : ^Renderer                                                                                                                     #foreign;
+proc SDL_GetRendererInfo                  (renderer: ^Renderer, info: ^Renderer_Info) : i32                                                                                                 #foreign;
+proc SDL_GetRendererOutputSize            (renderer: ^Renderer, w: ^i32, h: ^i32) : i32                                                                                                     #foreign;
+proc SDL_GetRevision                      () : cstring                                                                                                                                      #foreign;
+proc SDL_GetRevisionNumber                () : i32                                                                                                                                          #foreign;
+proc SDL_GetScancodeFromKey               (key: Keycode) : Scancode                                                                                                                         #foreign;
+proc SDL_GetScancodeFromName              (name: cstring) : Scancode                                                                                                                        #foreign;
+proc SDL_GetScancodeName                  (scancode: Scancode) : cstring                                                                                                                    #foreign;
+proc SDL_GetShapedWindowMode              (window: ^Window, shape_mode: ^Window_Shape_Mode) : i32                                                                                           #foreign;
+proc SDL_GetSurfaceAlphaMod               (surface: ^Surface, alpha: ^u8) : i32                                                                                                             #foreign;
+proc SDL_GetSurfaceBlendMode              (surface: ^Surface, blend_mode: ^Blend_Mode) : i32                                                                                                #foreign;
+proc SDL_GetSurfaceColorMod               (surface: ^Surface, r: ^u8, g: ^u8, b: ^u8) : i32                                                                                                 #foreign;
+proc SDL_GetSystemRAM                     () : i32                                                                                                                                          #foreign;
+proc SDL_GetTextureAlphaMod               (texture: ^Texture, alpha: ^u8) : i32                                                                                                             #foreign;
+proc SDL_GetTextureBlendMode              (texture: ^Texture, blend_mode: ^Blend_Mode) : i32                                                                                                #foreign;
+proc SDL_GetTextureColorMod               (texture: ^Texture, r: ^u8, g: ^u8, b: ^u8) : i32                                                                                                 #foreign;
+proc SDL_GetThreadID                      (thread: ^Thread) : Thread_Id                                                                                                                     #foreign;
+proc SDL_GetThreadName                    (thread: ^Thread) : cstring                                                                                                                       #foreign;
+proc SDL_GetTicks                         () : u32                                                                                                                                          #foreign;
+proc SDL_GetTouchDevice                   (index: i32) : Touch_Id                                                                                                                           #foreign;
+proc SDL_GetTouchFinger                   (touch_id: Touch_Id, index: i32) : ^Finger                                                                                                        #foreign;
+proc SDL_GetVersion                       (ver: ^Version)                                                                                                                                   #foreign;
+proc SDL_GetVideoDriver                   (index: i32) : cstring                                                                                                                            #foreign;
+proc SDL_GetWindowBordersSize             (window: ^Window, top: ^i32, left: ^i32, bottom: ^i32, right: ^i32) : i32                                                                         #foreign;
+proc SDL_GetWindowBrightness              (window: ^Window) : f32                                                                                                                           #foreign;
+proc SDL_GetWindowData                    (window: ^Window, name: cstring) : rawptr                                                                                                         #foreign;
+proc SDL_GetWindowDisplayIndex            (window: ^Window) : i32                                                                                                                           #foreign;
+proc SDL_GetWindowDisplayMode             (window: ^Window, mode: ^Display_Mode) : i32                                                                                                      #foreign;
+proc SDL_GetWindowFlags                   (window: ^Window) : u32                                                                                                                           #foreign;
+proc SDL_GetWindowFromID                  (id: u32) : ^Window                                                                                                                               #foreign;
+proc SDL_GetWindowGammaRamp               (window: ^Window, r: u16, g: u16, b: u16) : i32                                                                                                   #foreign;
+proc SDL_GetWindowGrab                    (window: ^Window) : Bool                                                                                                                          #foreign;
+proc SDL_GetWindowID                      (window: ^Window) : u32                                                                                                                           #foreign;
+proc SDL_GetWindowMaximumSize             (window: ^Window, w: ^i32, h: ^i32)                                                                                                               #foreign;
+proc SDL_GetWindowMinimumSize             (window: ^Window, w: ^i32, h: ^i32)                                                                                                               #foreign;
+proc SDL_GetWindowOpacity                 (window: ^Window, opacity: ^f32) : i32                                                                                                            #foreign;
+proc SDL_GetWindowPixelFormat             (window: ^Window) : u32                                                                                                                           #foreign;
+proc SDL_GetWindowPosition                (window: ^Window, x: ^i32, y: ^i32)                                                                                                               #foreign;
+proc SDL_GetWindowSize                    (window: ^Window, w: ^i32, h: ^i32)                                                                                                               #foreign;
+proc SDL_GetWindowSurface                 (window: ^Window) : ^Surface                                                                                                                      #foreign;
+proc SDL_GetWindowTitle                   (window: ^Window) : cstring                                                                                                                       #foreign;
+proc SDL_GetWindowWMInfo                  (window: ^Window, info: ^Sys_Wm_Info) : Bool                                                                                                      #foreign;
+proc SDL_HapticClose                      (haptic: ^Haptic)                                                                                                                                 #foreign;
+proc SDL_HapticDestroyEffect              (haptic: ^Haptic, effect: i32)                                                                                                                    #foreign;
+proc SDL_HapticEffectSupported            (haptic: ^Haptic, effect: ^Haptic_Effect) : i32                                                                                                   #foreign;
+proc SDL_HapticGetEffectStatus            (haptic: ^Haptic, effect: i32) : i32                                                                                                              #foreign;
+proc SDL_HapticIndex                      (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticName                       (device_index: i32) : cstring                                                                                                                     #foreign;
+proc SDL_HapticNewEffect                  (haptic: ^Haptic, effect: ^Haptic_Effect) : i32                                                                                                   #foreign;
+proc SDL_HapticNumAxes                    (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticNumEffects                 (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticNumEffectsPlaying          (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticOpen                       (device_index: i32) : ^Haptic                                                                                                                     #foreign;
+proc SDL_HapticOpenFromJoystick           (joystick: ^Joystick) : ^Haptic                                                                                                                   #foreign;
+proc SDL_HapticOpenFromMouse              () : ^Haptic                                                                                                                                      #foreign;
+proc SDL_HapticOpened                     (device_index: i32) : i32                                                                                                                         #foreign;
+proc SDL_HapticPause                      (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticQuery                      (haptic: ^Haptic) : u32                                                                                                                           #foreign;
+proc SDL_HapticRumbleInit                 (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticRumblePlay                 (haptic: ^Haptic, strength: f32, length: u32) : i32                                                                                               #foreign;
+proc SDL_HapticRumbleStop                 (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticRumbleSupported            (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticRunEffect                  (haptic: ^Haptic, effect: i32, iterations: u32) : i32                                                                                             #foreign;
+proc SDL_HapticSetAutocenter              (haptic: ^Haptic, autocenter: i32) : i32                                                                                                          #foreign;
+proc SDL_HapticSetGain                    (haptic: ^Haptic, gain: i32) : i32                                                                                                                #foreign;
+proc SDL_HapticStopAll                    (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticStopEffect                 (haptic: ^Haptic, effect: i32) : i32                                                                                                              #foreign;
+proc SDL_HapticUnpause                    (haptic: ^Haptic) : i32                                                                                                                           #foreign;
+proc SDL_HapticUpdateEffect               (haptic: ^Haptic, effect: i32, data: ^Haptic_Effect) : i32                                                                                        #foreign;
+proc SDL_Has3DNow                         () : Bool                                                                                                                                         #foreign;
+proc SDL_HasAVX                           () : Bool                                                                                                                                         #foreign;
+proc SDL_HasAVX2                          () : Bool                                                                                                                                         #foreign;
+proc SDL_HasAltiVec                       () : Bool                                                                                                                                         #foreign;
+proc SDL_HasClipboardText                 () : Bool                                                                                                                                         #foreign;
+proc SDL_HasEvent                         (event_type: u32) : Bool                                                                                                                          #foreign;
+proc SDL_HasEvents                        (min_type: u32, max_type: u32) : Bool                                                                                                             #foreign;
+proc SDL_HasIntersection                  (a: ^Rect, b: ^Rect) : Bool                                                                                                                       #foreign;
+proc SDL_HasMMX                           () : Bool                                                                                                                                         #foreign;
+proc SDL_HasRDTSC                         () : Bool                                                                                                                                         #foreign;
+proc SDL_HasSSE                           () : Bool                                                                                                                                         #foreign;
+proc SDL_HasSSE2                          () : Bool                                                                                                                                         #foreign;
+proc SDL_HasSSE3                          () : Bool                                                                                                                                         #foreign;
+proc SDL_HasSSE41                         () : Bool                                                                                                                                         #foreign;
+proc SDL_HasSSE42                         () : Bool                                                                                                                                         #foreign;
+proc SDL_HasScreenKeyboardSupport         () : Bool                                                                                                                                         #foreign;
+proc SDL_HideWindow                       (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_Init                             (flags: Init_Flags) : i32                                                                                                                         #foreign;
+proc SDL_InitSubSystem                    (flags: u32) : i32                                                                                                                                #foreign;
+proc SDL_IntersectRect                    (a: ^Rect, b: ^Rect, result: ^Rect) : Bool                                                                                                        #foreign;
+proc SDL_IntersectRectAndLine             (rect: ^Rect, x1: ^i32, y1: ^i32, x2: ^i32, y2: ^i32) : Bool                                                                                      #foreign;
+proc SDL_IsGameController                 (joystick_index: i32) : Bool                                                                                                                      #foreign;
+proc SDL_IsScreenKeyboardShown            (window: ^Window) : Bool                                                                                                                          #foreign;
+proc SDL_IsScreenSaverEnabled             () : Bool                                                                                                                                         #foreign;
+proc SDL_IsShapedWindow                   (window: Window) : Bool                                                                                                                           #foreign;
+proc SDL_IsTextInputActive                () : Bool                                                                                                                                         #foreign;
+proc SDL_JoystickClose                    (joystick: ^Joystick)                                                                                                                             #foreign;
+proc SDL_JoystickCurrentPowerLevel        (joystick: ^Joystick) : Joystick_Power_Level                                                                                                      #foreign;
+proc SDL_JoystickEventState               (state: i32) : i32                                                                                                                                #foreign;
+proc SDL_JoystickFromInstanceID           (joystick_id: ^Joystick_Id) : ^Joystick                                                                                                           #foreign;
+proc SDL_JoystickGetAttached              (joystick: ^Joystick) : Bool                                                                                                                      #foreign;
+proc SDL_JoystickGetAxis                  (joystick: ^Joystick, axis: i32) : i16                                                                                                            #foreign;
+proc SDL_JoystickGetBall                  (joystick: ^Joystick, ball: i32, dx: ^i32, dy: ^i32) : i32                                                                                        #foreign;
+proc SDL_JoystickGetButton                (joystick: ^Joystick, button: i32) : u8                                                                                                           #foreign;
+proc SDL_JoystickGetDeviceGUID            (device_index: i32) : Joystick_Guid                                                                                                               #foreign;
+proc SDL_JoystickGetGUID                  (joystick: ^Joystick) : Joystick_Guid                                                                                                             #foreign;
+proc SDL_JoystickGetGUIDFromString        (pch_guid: cstring) : Joystick_Guid                                                                                                               #foreign;
+proc SDL_JoystickGetGUIDString            (guid: Joystick_Guid, psz_guid: ^u8, cb_guid: i32)                                                                                                #foreign;
+proc SDL_JoystickGetHat                   (joystick: ^Joystick, hat: i32) : u8                                                                                                              #foreign;
+proc SDL_JoystickInstanceID               (joystick: ^Joystick) : Joystick_Id                                                                                                               #foreign;
+proc SDL_JoystickIsHaptic                 (joystick: ^Joystick) : i32                                                                                                                       #foreign;
+proc SDL_JoystickName                     (joystick: ^Joystick) : cstring                                                                                                                   #foreign;
+proc SDL_JoystickNameForIndex             (device_index: i32) : cstring                                                                                                                     #foreign;
+proc SDL_JoystickNumAxes                  (joystick: ^Joystick) : i32                                                                                                                       #foreign;
+proc SDL_JoystickNumBalls                 (joystick: ^Joystick) : i32                                                                                                                       #foreign;
+proc SDL_JoystickNumButtons               (joystick: ^Joystick) :  i32                                                                                                                      #foreign;
+proc SDL_JoystickNumHats                  (joystick: ^Joystick) : i32                                                                                                                       #foreign;
+proc SDL_JoystickOpen                     (device_index: i32) : ^Joystick                                                                                                                   #foreign;
+proc SDL_JoystickUpdate                   ()                                                                                                                                                #foreign;
+proc SDL_LoadBMP_RW                       (src: ^Rw_Ops, freerw: i32) : ^Surface                                                                                                            #foreign;
+proc SDL_LoadDollarTemplates              (touch_id: Touch_Id, src: ^Rw_Ops) : i32                                                                                                          #foreign;
+proc SDL_LoadFunction                     (handle: rawptr, name: cstring) : rawptr                                                                                                          #foreign;
+proc SDL_LoadObject                       (sofile: cstring) : cstring                                                                                                                       #foreign;
+proc SDL_LoadWAV_RW                       (src: ^Rw_Ops, freesrc: i32, spec: ^Audio_Spec, audio_buf: ^^u8, audio_len: ^u32) : ^Audio_Spec                                                   #foreign;
+proc SDL_LockAudio                        ()                                                                                                                                                #foreign;
+proc SDL_LockAudioDevice                  (dev: Audio_Device_Id)                                                                                                                            #foreign;
+proc SDL_LockMutex                        (mutex: ^Mutex) : i32                                                                                                                             #foreign;
+proc SDL_LockSurface                      (surface: ^Surface) : i32                                                                                                                         #foreign;
+proc SDL_LockTexture                      (texture: ^Texture, rect: ^Rect, pixels: ^rawptr, pitch: ^i32) : i32                                                                              #foreign;
+proc SDL_Log                              (fmt: ..cstring)                                                                                                                                  #foreign;
+proc SDL_LogCritical                      (category: Log_Category, fmt: ..cstring)                                                                                                          #foreign;
+proc SDL_LogDebug                         (category: Log_Category, fmt: ..cstring)                                                                                                          #foreign;
+proc SDL_LogError                         (category: Log_Category, fmt: ..cstring)                                                                                                          #foreign;
+proc SDL_LogGetOutputFunction             (callback: ^Log_Output_Function, userdata: ^rawptr)                                                                                               #foreign;
+proc SDL_LogGetPriority                   (category: Log_Category) : Log_Priority                                                                                                           #foreign;
+proc SDL_LogInfo                          (category: Log_Category, fmt: ..cstring)                                                                                                          #foreign;
+proc SDL_LogMessage                       (category: Log_Category, priority: Log_Priority, fmt: ..cstring)                                                                                  #foreign;
+proc SDL_LogMessageV                      (category: Log_Category, priority: Log_Priority, fmt: cstring, va_list: cstring)                                                                  #foreign;
+proc SDL_LogResetPriorities               ()                                                                                                                                                #foreign;
+proc SDL_LogSetAllPriority                (priority: Log_Priority)                                                                                                                          #foreign;
+proc SDL_LogSetOutputFunction             (callback: Log_Output_Function, userdata: rawptr)                                                                                                 #foreign;
+proc SDL_LogSetPriority                   (category: Log_Category, priority: Log_Priority)                                                                                                  #foreign;
+proc SDL_LogVerbose                       (category: Log_Category, fmt: ..cstring)                                                                                                          #foreign;
+proc SDL_LogWarn                          (category: Log_Category, fmt: ..cstring)                                                                                                          #foreign;
+proc SDL_LowerBlit                        (src: ^Surface, srcrect: ^Rect, dst: ^Surface, dstrect: ^Rect) : i32                                                                              #foreign;
+proc SDL_LowerBlitScaled                  (src: ^Surface, srcrect: ^Rect, dst: ^Surface, dstrect: ^Rect) : i32                                                                              #foreign;
+proc SDL_MapRGB                           (format: ^Pixel_Format, r: u8, g: u8, b: u8) : u32                                                                                                #foreign;
+proc SDL_MapRGBA                          (format: ^Pixel_Format, r: u8, g: u8, b: u8, a: u8) : u32                                                                                         #foreign;
+proc SDL_MasksToPixelFormatEnum           (bpp: i32, r_mask: u32, g_mask: u32, b_mask: u32, a_mask: u32) : u32                                                                              #foreign;
+proc SDL_MaximizeWindow                   (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_MinimizeWindow                   (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_MixAudio                         (dst: ^u8, src: ^u8, len: u32, volume: i32)                                                                                                       #foreign;
+proc SDL_MixAudioFormat                   (dst: ^u8, src: ^u8, format: Audio_Format, len: u32, volume: i32)                                                                                 #foreign;
+proc SDL_MouseIsHaptic                    () : i32                                                                                                                                          #foreign;
+proc SDL_NumHaptics                       () : i32                                                                                                                                          #foreign;
+proc SDL_NumJoysticks                     () : i32                                                                                                                                          #foreign;
+proc SDL_OpenAudio                        (desired: ^Audio_Spec, obtained: ^Audio_Spec) : i32                                                                                               #foreign;
+proc SDL_OpenAudioDevice                  (device: cstring, iscapture: i32, desired: ^Audio_Spec, obtained: ^Audio_Spec, allowed_changed: i32) : Audio_Device_Id                            #foreign;
+proc SDL_PauseAudio                       (pause_on: i32)                                                                                                                                   #foreign;
+proc SDL_PauseAudioDevice                 (dev: Audio_Device_Id, pause_on: i32)                                                                                                             #foreign;
+proc SDL_PeepEvents                       (events: ^Event, num_events: i32, action: Event_Action, min_type: u32, max_type: u32) : i32                                                       #foreign;
+proc SDL_PixelFormatEnumToMasks           (format: u32, bpp: ^i32, r_mask: ^u32, g_mask: ^u32, b_mask: ^u32, a_mask: ^u32) : Bool                                                           #foreign;
+proc SDL_PollEvent                        (event: ^Event) : i32                                                                                                                             #foreign;
+proc SDL_PumpEvents                       ()                                                                                                                                                #foreign;
+proc SDL_PushEvent                        (event: ^Event) : i32                                                                                                                             #foreign;
+proc SDL_QueryTexture                     (texture: ^Texture, format: ^u32, access: ^i32, w: ^i32, h: ^i32) : i32                                                                           #foreign;
+proc SDL_QueueAudio                       (dev: Audio_Device_Id, data: rawptr, len: u32) : i32                                                                                              #foreign;
+proc SDL_Quit                             ()                                                                                                                                                #foreign;
+proc SDL_QuitSubSystem                    (flags: u32)                                                                                                                                      #foreign;
+proc SDL_RaiseWindow                      (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_ReadBE16                         (src: ^Rw_Ops) : u16                                                                                                                              #foreign;
+proc SDL_ReadBE32                         (src: ^Rw_Ops) : u32                                                                                                                              #foreign;
+proc SDL_ReadBE64                         (src: ^Rw_Ops) : u64                                                                                                                              #foreign;
+proc SDL_ReadLE16                         (src: ^Rw_Ops) : u16                                                                                                                              #foreign;
+proc SDL_ReadLE32                         (src: ^Rw_Ops) : u32                                                                                                                              #foreign;
+proc SDL_ReadLE64                         (src: ^Rw_Ops) : u64                                                                                                                              #foreign;
+proc SDL_ReadU8                           (src: ^Rw_Ops) : u8                                                                                                                               #foreign;
+proc SDL_RecordGesture                    (touch_id: Touch_Id) : i32                                                                                                                        #foreign;
+proc SDL_RegisterApp                      (name: cstring, style: u32, h_inst: rawptr) : i32                                                                                                 #foreign;
+proc SDL_RegisterEvents                   (num_events: i32) : u32                                                                                                                           #foreign;
+proc SDL_RemoveTimer                      (id: Timer_Id) : Bool                                                                                                                             #foreign;
+proc SDL_RenderClear                      (renderer: ^Renderer) : i32                                                                                                                       #foreign;
+proc SDL_RenderCopy                       (renderer: ^Renderer, texture: ^Texture, srcrect: ^Rect, dstrect: ^Rect) : i32                                                                    #foreign;
+proc SDL_RenderCopyEx                     (renderer: ^Renderer, texture: ^Texture, srcrect: ^Rect, dstrect: ^Rect, angle: f64, center: ^Point, flip: Renderer_Flip) : i32                   #foreign;
+proc SDL_RenderDrawLine                   (renderer: ^Renderer, x1: i32, y1: i32, x2: i32, y2: i32) : i32                                                                                   #foreign;
+proc SDL_RenderDrawLines                  (renderer: ^Renderer, points: ^Point, count: i32) : i32                                                                                           #foreign;
+proc SDL_RenderDrawPoint                  (renderer: ^Renderer, x: i32, y: i32) : i32                                                                                                       #foreign;
+proc SDL_RenderDrawPoints                 (renderer: ^Renderer, points: ^Point, count: i32) : i32                                                                                           #foreign;
+proc SDL_RenderDrawRect                   (renderer: ^Renderer, rect: ^Rect) : i32                                                                                                          #foreign;
+proc SDL_RenderDrawRects                  (renderer: ^Renderer, rects: ^Rect, count: i32) : i32                                                                                             #foreign;
+proc SDL_RenderFillRect                   (dst: ^Renderer, rect: ^Rect) : i32                                                                                                               #foreign;
+proc SDL_RenderFillRects                  (dst: ^Renderer, rect: ^Rect, count: i32) : i32                                                                                                   #foreign;
+proc SDL_RenderGetClipRect                (surface: ^Surface, rect: ^Rect)                                                                                                                  #foreign;
+proc SDL_RenderGetD3D9Device              (renderer: ^Renderer) :   ^IDirect3D_Device9                                                                                                      #foreign;
+proc SDL_RenderGetIntegerScale            (renderer: ^Renderer) : Bool                                                                                                                      #foreign;
+proc SDL_RenderGetLogicalSize             (renderer: ^Renderer, w: ^i32, h: ^i32)                                                                                                           #foreign;
+proc SDL_RenderGetScale                   (renderer: ^Renderer, scale_x: ^f32, scale_y: ^f32)                                                                                               #foreign;
+proc SDL_RenderGetViewport                (renderer: ^Renderer, rect: ^Rect)                                                                                                                #foreign;
+proc SDL_RenderIsClipEnabled              (renderer: ^Renderer) : Bool                                                                                                                      #foreign;
+proc SDL_RenderPresent                    (renderer: ^Renderer)                                                                                                                             #foreign;
+proc SDL_RenderReadPixels                 (renderer: ^Renderer, rect: ^Rect, format: u32, pixels: rawptr, pitch: i32) : i32                                                                 #foreign;
+proc SDL_RenderSetClipRect                (surface: ^Surface, rect: ^Rect) : Bool                                                                                                           #foreign;
+proc SDL_RenderSetIntegerScale            (renderer: ^Renderer, enable: Bool) : i32                                                                                                         #foreign;
+proc SDL_RenderSetLogicalSize             (renderer: ^Renderer, w: i32, h: i32) : i32                                                                                                       #foreign;
+proc SDL_RenderSetScale                   (renderer: ^Renderer, scale_x: f32, scale_y: f32) : i32                                                                                           #foreign;
+proc SDL_RenderSetViewport                (renderer: ^Renderer, rect: ^Rect)                                                                                                                #foreign;
+proc SDL_RenderTargetSupported            (renderer: ^Renderer) : Bool                                                                                                                      #foreign;
+proc SDL_ResetAssertionReport             ()                                                                                                                                                #foreign;
+proc SDL_RestoreWindow                    (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_RWFromConstMem                   (mem: rawptr, size: i32) : ^Rw_Ops                                                                                                                #foreign;
+proc SDL_RWFromFP                         (fp: rawptr, auto_close: Bool) : ^Rw_Ops                                                                                                          #foreign;
+proc SDL_RWFromFile                       (file: cstring, mode: cstring) : ^Rw_Ops                                                                                                          #foreign;
+proc SDL_RWFromMem                        (mem: rawptr, size:i32) : ^Rw_Ops                                                                                                                 #foreign;
+proc SDL_SaveAllDollarTemplates           (dst: ^Rw_Ops) : i32                                                                                                                              #foreign;
+proc SDL_SaveBMP_RW                       (surface: ^Surface, dst: ^Rw_Ops, free_dst: i32) : i32                                                                                            #foreign;
+proc SDL_SaveDollarTemplate               (gesture_id: Gesture_Id, dst: ^Rw_Ops) : i32                                                                                                      #foreign;
+proc SDL_SemPost                          (sem: Sem) : i32                                                                                                                                  #foreign;
+proc SDL_SemTryWait                       (sem: Sem) : i32                                                                                                                                  #foreign;
+proc SDL_SemValue                         (sem: Sem) : u32                                                                                                                                  #foreign;
+proc SDL_SemWait                          (sem: Sem) : i32                                                                                                                                  #foreign;
+proc SDL_SemWaitTimeout                   (sem: Sem, ms: u32) : i32                                                                                                                         #foreign;
+proc SDL_SetAssertionHandler              (handler: Assertion_Handler, userdata: rawptr)                                                                                                    #foreign;
+proc SDL_SetClipRect                      (surface: ^Surface, rect: ^Rect) : Bool                                                                                                           #foreign;
+proc SDL_SetClipboardText                 (text: cstring) : i32                                                                                                                             #foreign;
+proc SDL_SetColorKey                      (surface: ^Surface, flag: i32, key: u32) : i32                                                                                                    #foreign;
+proc SDL_SetCursor                        (cursor: ^Cursor)                                                                                                                                 #foreign;
+proc SDL_SetError                         (fmt: ..cstring) : i32                                                                                                                            #foreign;
+proc SDL_SetEventFilter                   (filter: Event_Filter, userdata: rawptr)                                                                                                          #foreign;
+proc SDL_SetHint                          (name: cstring, value: cstring) : Bool                                                                                                            #foreign;
+proc SDL_SetHintWithPriority              (name: cstring, value: cstring, priority: Hint_Priority) : Bool                                                                                   #foreign;
+proc SDL_SetMainReady                     ()                                                                                                                                                #foreign;
+proc SDL_SetModState                      (modstate: Keymod)                                                                                                                                #foreign;
+proc SDL_SetPaletteColors                 (palette: ^Palette, colors: ^Color, firstcolor: i32, ncolors: i32) : i32                                                                          #foreign;
+proc SDL_SetPixelFormatPalette            (format: ^Pixel_Format, palette: ^Palette) : i32                                                                                                  #foreign;
+proc SDL_SetRelativeMouseMode             (enabled: Bool) : i32                                                                                                                             #foreign;
+proc SDL_SetRenderDrawBlendMode           (renderer: ^Renderer, blend_mode: Blend_Mode) : i32                                                                                               #foreign;
+proc SDL_SetRenderDrawColor               (renderer: ^Renderer, r: u8, g: u8, b: u8, a: u8) : i32                                                                                           #foreign;
+proc SDL_SetRenderTarget                  (renderer: ^Renderer, texture: ^Texture) : i32                                                                                                    #foreign;
+proc SDL_SetSurfaceAlphaMod               (surface: ^Surface, alpha: u8) : i32                                                                                                              #foreign;
+proc SDL_SetSurfaceBlendMode              (surface: ^Surface, blend_mode: Blend_Mode) : i32                                                                                                 #foreign;
+proc SDL_SetSurfaceColorMod               (surface: ^Surface, r: u8, g: u8, b: u8) : i32                                                                                                    #foreign;
+proc SDL_SetSurfacePalette                (surface: ^Surface, palette: ^Palette) : i32                                                                                                      #foreign;
+proc SDL_SetSurfaceRLE                    (surface: ^Surface, flag: i32) : i32                                                                                                              #foreign;
+proc SDL_SetTextInputRect                 (rect: ^Rect)                                                                                                                                     #foreign;
+proc SDL_SetTextureAlphaMod               (texture: ^Texture, alpha: u8) : i32                                                                                                              #foreign;
+proc SDL_SetTextureBlendMode              (texture: ^Texture, blend_mode: Blend_Mode) : i32                                                                                                 #foreign;
+proc SDL_SetTextureColorMod               (texture: ^Texture, r: u8, g: u8, b: u8) : i32                                                                                                    #foreign;
+proc SDL_SetThreadPriority                (priority: Thread_Priority) : i32                                                                                                                 #foreign;
+proc SDL_SetWindowBordered                (window: ^Window, bordered: Bool)                                                                                                                 #foreign;
+proc SDL_SetWindowBrightness              (window: ^Window, brightness: f32) : i32                                                                                                          #foreign;
+proc SDL_SetWindowData                    (window: ^Window, name: cstring, userdata: rawptr) : rawptr                                                                                       #foreign;
+proc SDL_SetWindowDisplayMode             (window: ^Window, mode: ^Display_Mode) : i32                                                                                                      #foreign;
+proc SDL_SetWindowFullscreen              (window: ^Window, flags: u32) : i32                                                                                                               #foreign;
+proc SDL_SetWindowGammaRamp               (window: ^Window, r: ^u16, g: ^u16, b: ^u16) : i32                                                                                                #foreign;
+proc SDL_SetWindowGrab                    (window: ^Window, grabbed: Bool)                                                                                                                  #foreign;
+proc SDL_SetWindowHitTest                 (window: ^Window, callback: Hit_Test, callback_data: rawptr) : i32                                                                                #foreign;
+proc SDL_SetWindowIcon                    (window: ^Window, icon: ^Surface)                                                                                                                 #foreign;
+proc SDL_SetWindowInputFocus              (window: ^Window) : i32                                                                                                                           #foreign;
+proc SDL_SetWindowMaximumSize             (window: ^Window, w: i32, h: i32)                                                                                                                 #foreign;
+proc SDL_SetWindowMinimumSize             (window: ^Window, w: i32, h: i32)                                                                                                                 #foreign;
+proc SDL_SetWindowModalFor                (window: ^Window, parent_window: ^Window) : i32                                                                                                   #foreign;
+proc SDL_SetWindowOpacity                 (window: ^Window, opacity: f32) : i32                                                                                                             #foreign;
+proc SDL_SetWindowPosition                (window: ^Window, x: i32, y: i32)                                                                                                                 #foreign;
+proc SDL_SetWindowResizable               (window: ^Window, resizable: Bool)                                                                                                                #foreign;
+proc SDL_SetWindowShape                   (window: ^Window, shape: ^Surface, shape_mode: Window_Shape_Mode) : i32                                                                           #foreign;
+proc SDL_SetWindowSize                    (window: ^Window, w: i32, h: i32)                                                                                                                 #foreign;
+proc SDL_SetWindowTitle                   (window: ^Window, title: cstring)                                                                                                                 #foreign;
+proc SDL_SetWindowsMessageHook            (callback: Windows_Message_Hook, userdata: rawptr)                                                                                                #foreign;
+proc SDL_ShowCursor                       (toggle: i32) : i32                                                                                                                               #foreign;
+proc SDL_ShowMessageBox                   (message_box_data: ^Message_Box_Data, button_id: ^i32) : i32                                                                                      #foreign;
+proc SDL_ShowSimpleMessageBox             (flags: u32, title: cstring, message: cstring, window: ^Window) : i32                                                                             #foreign;
+proc SDL_ShowWindow                       (window: ^Window)                                                                                                                                 #foreign;
+proc SDL_SoftStretch                      (src: ^Surface, srcrect: ^Rect, dst: ^Surface, dstrect: ^Rect) : i32                                                                              #foreign;
+proc SDL_StartTextInput                   ()                                                                                                                                                #foreign;
+proc SDL_StopTextInput                    ()                                                                                                                                                #foreign;
+proc SDL_TLSCreate                        () : Tls_Id                                                                                                                                       #foreign;
+proc SDL_TLSGet                           (id: Tls_Id) : rawptr                                                                                                                             #foreign;
+proc SDL_TLSSet                           (id: Tls_Id, value: rawptr, destructor: proc(data: rawptr)) : i32                                                                                 #foreign;
+proc SDL_ThreadID                         () : Thread_Id                                                                                                                                    #foreign;
+proc SDL_TryLockMutex                     (mutex: ^Mutex) : i32                                                                                                                             #foreign;
+proc SDL_UnionRect                        (a: ^Rect, b: ^Rect, result: ^Rect)                                                                                                               #foreign;
+proc SDL_UnloadObject                     (handle: rawptr)                                                                                                                                  #foreign;
+proc SDL_UnlockAudio                      ()                                                                                                                                                #foreign;
+proc SDL_UnlockAudioDevice                (dev: Audio_Device_Id)                                                                                                                            #foreign;
+proc SDL_UnlockMutex                      (mutex: ^Mutex) : i32                                                                                                                             #foreign;
+proc SDL_UnlockSurface                    (surface: ^Surface)                                                                                                                               #foreign;
+proc SDL_UnlockTexture                    (texture: ^Texture)                                                                                                                               #foreign;
+proc SDL_UnregisterApp                    ()                                                                                                                                                #foreign;
+proc SDL_UpdateTexture                    (texture: ^Texture, rect: ^Rect, pixels: rawptr, pitch: i32)                                                                                      #foreign;
+proc SDL_UpdateWindowSurface              (window: ^Window) : i32                                                                                                                           #foreign;
+proc SDL_UpdateWindowSurfaceRects         (window: ^Window, rects: ^Rect, num_rects: i32) : i32                                                                                             #foreign;
+proc SDL_UpdateYUVTexture                 (texture: ^Texture, rect: ^Rect, y_plane: ^u8, y_pitch: i32, u_plane: ^u8, u_pitch: i32, v_plane: ^u8, v_pitch: i32) : i32                        #foreign;
+proc SDL_UpperBlit                        (src: ^Surface, srcrect: ^Rect, dst: ^Surface, dstrect: ^Rect) : i32                                                                              #foreign;
+proc SDL_UpperBlitScaled                  (src: ^Surface, srcrect: ^Rect, dst: ^Surface, dstrect: ^Rect) : i32                                                                              #foreign;
+proc SDL_VideoInit                        (driver_name: cstring) : i32                                                                                                                      #foreign;
+proc SDL_VideoQuit                        ()                                                                                                                                                #foreign;
+proc SDL_WaitEvent                        (event: ^Event) : i32                                                                                                                             #foreign;
+proc SDL_WaitEventTimeout                 (event: ^Event, timeout: i32) : i32                                                                                                               #foreign;
+proc SDL_WaitThread                       (thread: ^Thread, status: ^i32)                                                                                                                   #foreign;
+proc SDL_WarpMouseGlobal                  (x: i32, y: i32) : i32                                                                                                                            #foreign;
+proc SDL_WarpMouseInWindow                (window: ^Window, x: i32, y: i32)                                                                                                                 #foreign;
+proc SDL_WasInit                          (flags: u32) : u32                                                                                                                                #foreign;
+proc SDL_WriteBE16                        (dst: ^Rw_Ops, value: u16) : u64                                                                                                                  #foreign;
+proc SDL_WriteBE32                        (dst: ^Rw_Ops, value: u32) : u64                                                                                                                  #foreign;
+proc SDL_WriteBE64                        (dst: ^Rw_Ops, value: u64) : u64                                                                                                                  #foreign;
+proc SDL_WriteLE16                        (dst: ^Rw_Ops, value: u16) : u64                                                                                                                  #foreign;
+proc SDL_WriteLE32                        (dst: ^Rw_Ops, value: u32) : u64                                                                                                                  #foreign;
+proc SDL_WriteLE64                        (dst: ^Rw_Ops, value: u64) : u64                                                                                                                  #foreign;
+proc SDL_WriteU8                          (dst: ^Rw_Ops, value: u8) : u64                                                                                                                   #foreign;
+
+enum Init_Flags i32 {
+    Timer = 0x00000001;
+    Audio = 0x00000010;
+    Video = 0x00000020;
+    Joystick = 0x00000200;
+    Haptic = 0x00001000;
+    GameController = 0x00002000;
+    Events = 0x00004000;
+    NoParachute = 0x00100000;
+    Everything = Timer | Audio | Video | Events | Joystick | Haptic | GameController;
+}
+
+enum Window_Flags i32 {
+    Fullscreen = 0x00000001;
+    Open_GL = 0x00000002;
+    Shown = 0x00000004;
+    Hidden = 0x00000008;
+    Borderless = 0x00000010;
+    Resizable = 0x00000020;
+    Minimized = 0x00000040;
+    Maximized = 0x00000080;
+    Input_Grabbed = 0x00000100;
+    Input_Focus = 0x00000200;
+    Mouse_Focus = 0x00000400;
+    Fullscreen_Desktop = Fullscreen | 0x00001000;
+    Foreign = 0x00000800;
+    Allow_High_DPI = 0x00002000;
+    Mouse_Capture = 0x00004000;
+    Always_On_Top = 0x00008000;
+    Skip_Taskbar = 0x00010000;
+    Utility = 0x00020000;
+    Tooltip = 0x00040000;
+    Popup_Menu = 0x00080000;
+    Vulkan = 0x00100000;
+}
+
+enum Window_Pos i32 {
+    Undefined = 0x1FFF0000;
+    Centered = 0x2FFF0000;
+}
+
+enum Renderer_Flags i32 {
+    Software = 0x00000001;
+    Accelerated = 0x00000002;
+    Present_VSync = 0x00000004;
+    Target_Texture = 0x00000008;
+}
+
+enum Texture_Access i32 {
+    Static = 0;
+    Streaming;
+    Target;
+}
+
+enum Blend_Mode i32 {
+    None = 0x00000000;
+    Blend = 0x00000001;
+    Add = 0x00000002;
+    Mod = 0x00000004;
+}
+
+enum Error_Code i32 {
+    No_Mem;
+    FRead;
+    FWrite;
+    FSeek;
+    Unsupported;
+    Last_Error;
+}
+
+enum Joystick_Power_Level i32 {
+    Unknown = -1;
+    Empty;
+    Low;
+    Medium;
+    Full;
+    Wired;
+    Max;
+}
+
+enum Hint_Priority i32 {
+    Default;
+    Normal;
+    Override;
+}
+
+enum Thread_Priority i32 {
+    Low;
+    Normal;
+    High;
+}
+
+enum Assert_State i32 {
+    Retry;
+    Break;
+    Abort;
+    Ignore;
+    Always_Ignore;
+}
+
+enum Event_Action i32 {
+    Add_Event;
+    Peek_Event;
+    Get_Event;
+}
+
+enum Hit_Test_Result i32 {
+    Normal;
+    Draggable;
+    Resize_Top_Left;
+    Resize_Top;
+    Resize_Top_Right;
+    Resize_Right;
+    Resize_Bottom_Right;
+    Resize_Bottom;
+    Resize_Bottom_Left;
+    Resize_Left;
+}
+
+enum Bool i32 {
+    False;
+    True;
+}
+
+enum Window_Shape_Modes i32 {
+    Default;
+    Binarize_Alpha;
+    Reverse_Binarize_Alpha;
+    Color_Key;
+}
+
+enum Keymod i32 {
+    None = 0x0000;
+    LShift = 0x0001;
+    RShift = 0x0002;
+    LCtrl = 0x0040;
+    RCtrl = 0x0080;
+    LAlt = 0x0100;
+    RAlt = 0x0200;
+    LGui = 0x0400;
+    RGui = 0x0800;
+    Num = 0x1000;
+    Caps = 0x2000;
+    Mode = 0x4000;
+    Reserved = 0x8000;
+}
+
+enum Renderer_Flip i32 {
+    None = 0x00000000;
+    Horizontal = 0x00000001;
+    Vertical = 0x00000002;
+}
+
+enum GL_Attr i32 {
+    Red_Size;
+    Green_Size;
+    Blue_Size;
+    Alpha_Size;
+    Buffer_Size;
+    Doublebuffer;
+    Depth_Size;
+    Stencil_Size;
+    Accum_Red_Size;
+    Accum_Green_Size;
+    Accum_Blue_Size;
+    Accum_Alpha_Size;
+    Stereo;
+    Multisamplebuffers;
+    Multisample_Samples;
+    Accelerated_Visual;
+    Retained_Backing;
+    Context_Major_Version;
+    Context_Minor_Version;
+    Context_EGL;
+    Context_Flags;
+    Context_Profile_Mask;
+    Share_With_Current_Context;
+    Framebuffer_SRGB_Capable;
+    Context_Release_Behavior;
+}
+
+enum GL_Context_Flag i32 {
+    Debug              = 0x0001;
+    Forward_Compatible = 0x0002;
+    Robust_Access      = 0x0004;
+    Reset_Isolation    = 0x0008;
+}
+
+enum GL_Context_Profile i32 {
+    Core           = 0x0001;
+    Compatibility  = 0x0002;
+    ES             = 0x0004;
+}
+
+enum Message_Box_Color_Type i32 {
+    Background;
+    Text;
+    Button_Border;
+    Button_Background;
+    Button_Selected;
+    Max;
+}
+
+enum Audio_Status i32 {
+    Stopped = 0;
+    Playing;
+    Paused;
+}
+
+enum Power_State i32 {
+    Unknown;
+    On_Battery;
+    No_Battery;
+    Charging;
+    Charged;
+}
+
+enum Log_Category i32 {
+    Application;
+    Error;
+    Assert;
+    System;
+    Audio;
+    Video;
+    Render;
+    Input;
+    Test;
+
+    Custom = 19;
+}
+
+enum Log_Priority i32 {
+    Verbose = 1;
+    Debug;
+    Info;
+    Warn;
+    Error;
+    Critical;
+    Num_Log_Priorities;
+}
+
+// Input stuff
+
+
+enum Game_Controller_Button i32 {
+    Invalid = -1;
+    A;
+    B;
+    X;
+    Y;
+    Back;
+    Guide;
+    Start;
+    Left_Stick;
+    Right_Stick;
+    Left_Shoulder;
+    Right_Shoulder;
+    DPad_Up;
+    DPad_Down;
+    DPad_Left;
+    DPad_Right;
+    Max;
+}
+
+enum Game_Controller_Axis i32 {
+    Invalid = -1;
+    LeftX;
+    LeftY;
+    RightX;
+    RightY;
+    Trigger_Left;
+    Trigger_Right;
+    Max;
+}
+
+enum Game_Controller_Bind_Type i32 {
+    None = 0;
+    Button;
+    Axis;
+    Hat;
+}
+
+enum System_Cursor i32 {
+    Arrow;
+    IBeam;
+    Wait;
+    Crosshair;
+    Wait_Arrow;
+    Size_NWSE;
+    Size_NESW;
+    Size_WE;
+    Size_NS;
+    Size_All;
+    No;
+    Hand;
+    Num_System_Cursors;
+}
+
+
+enum Scancode i32 {
+    Unknown = 0;
+
+    A = 4;
+    B = 5;
+    C = 6;
+    D = 7;
+    E = 8;
+    F = 9;
+    G = 10;
+    H = 11;
+    I = 12;
+    J = 13;
+    K = 14;
+    L = 15;
+    M = 16;
+    N = 17;
+    O = 18;
+    P = 19;
+    Q = 20;
+    R = 21;
+    S = 22;
+    T = 23;
+    U = 24;
+    V = 25;
+    W = 26;
+    X = 27;
+    Y = 28;
+    Z = 29;
+
+    // Number row
+    Nr1 = 30;
+    Nr2 = 31;
+    Nr3 = 32;
+    Nr4 = 33;
+    Nr5 = 34;
+    Nr6 = 35;
+    Nr7 = 36;
+    Nr8 = 37;
+    Nr9 = 38;
+    Nr0 = 39;
+
+    Return = 40;
+    Escape = 41;
+    Backspace = 42;
+    Tab = 43;
+    Space = 44;
+
+    Minus = 45;
+    Equals = 46;
+    Leftbracket = 47;
+    Rightbracket = 48;
+    Backslash = 49;
+    Nonushash = 50; // ???
+    Semicolon = 51;
+    Apostrophe = 52;
+    Grave = 53;
+    Comma = 54;
+    Period = 55;
+    Slash = 56;
+
+    Caps_Lock = 57;
+
+    F1 = 58;
+    F2 = 59;
+    F3 = 60;
+    F4 = 61;
+    F5 = 62;
+    F6 = 63;
+    F7 = 64;
+    F8 = 65;
+    F9 = 66;
+    F10 = 67;
+    F11 = 68;
+    F12 = 69;
+
+    Print_Screen = 70;
+    Scroll_Lock = 71;
+    Pause = 72;
+    Insert = 73;
+    Home = 74;
+    Page_Up = 75;
+    Delete = 76;
+    End = 77;
+    Page_Down = 78;
+    Right = 79;
+    Left = 80;
+    Down = 81;
+    Up = 82;
+
+    Num_Lock_Clear = 83;
+    Kp_Divide = 84;
+    Kp_Multiply = 85;
+    Kp_Minus = 86;
+    Kp_Plus = 87;
+    Kp_Enter = 88;
+    Kp_1 = 89;
+    Kp_2 = 90;
+    Kp_3 = 91;
+    Kp_4 = 92;
+    Kp_5 = 93;
+    Kp_6 = 94;
+    Kp_7 = 95;
+    Kp_8 = 96;
+    Kp_9 = 97;
+    Kp_0 = 98;
+    Kp_Period = 99;
+
+    Non_US_Backslash = 100;
+    Application = 101;
+    Power = 102;
+    Kp_Equals = 103;
+    F13 = 104;
+    F14 = 105;
+    F15 = 106;
+    F16 = 107;
+    F17 = 108;
+    F18 = 109;
+    F19 = 110;
+    F20 = 111;
+    F21 = 112;
+    F22 = 113;
+    F23 = 114;
+    F24 = 115;
+    Execute = 116;
+    Help = 117;
+    Menu = 118;
+    Select = 119;
+    Stop = 120;
+    Again = 121;
+    Undo = 122;
+    Cut = 123;
+    Copy = 124;
+    Paste = 125;
+    Find = 126;
+    Mute = 127;
+    Volume_Up = 128;
+    Volume_Down = 129;
+    Kp_Comma = 133;
+    Kp_Equals_AS400 = 134;
+
+    International1 = 135;
+    International2 = 136;
+    International3 = 137;
+    International4 = 138;
+    International5 = 139;
+    International6 = 140;
+    International7 = 141;
+    International8 = 142;
+    International9 = 143;
+    Lang1 = 144;
+    Lang2 = 145;
+    Lang3 = 146;
+    Lang4 = 147;
+    Lang5 = 148;
+    Lang6 = 149;
+    Lang7 = 150;
+    Lang8 = 151;
+    Lang9 = 152;
+
+    Alt_Erase = 153;
+    Sys_Req = 154;
+    Cancel = 155;
+    Clear = 156;
+    Prior = 157;
+    Return2 = 158;
+    Separator = 159;
+    Out = 160;
+    Oper = 161;
+    Clear_Again = 162;
+    Cr_Sel = 163;
+    Ex_Sel = 164;
+
+    Kp_00 = 176;
+    Kp_000 = 177;
+    Thousands_Separator = 178;
+    Decimal_Separator = 179;
+    Currency_Unit = 180;
+    Currency_Sub_Unit = 181;
+    Kp_Left_Paren = 182;
+    Kp_Right_Paren = 183;
+    Kp_Left_Brace = 184;
+    Kp_Right_Brace = 185;
+    Kp_Tab = 186;
+    Kp_Backspace = 187;
+    Kp_A = 188;
+    Kp_B = 189;
+    Kp_C = 190;
+    Kp_D = 191;
+    Kp_E = 192;
+    Kp_F = 193;
+    Kp_Xor = 194;
+    Kp_Power = 195;
+    Kp_Percent = 196;
+    Kp_Less = 197;
+    Kp_Greater = 198;
+    Kp_Ampersand = 199;
+    Kp_Dbl_Ampersand = 200;
+    Kp_Vertical_Bar = 201;
+    Kp_Dbl_Vertical_Bar = 202;
+    Kp_Colon = 203;
+    Kp_Hash = 204;
+    Kp_Space = 205;
+    Kp_At = 206;
+    Kp_Exclam = 207;
+    Kp_Mem_Store = 208;
+    Kp_Mem_Recall = 209;
+    Kp_Mem_Clear = 210;
+    Kp_Mem_Add = 211;
+    Kp_Mem_Subtract = 212;
+    Kp_Mem_Multiply = 213;
+    Kp_Mem_Divide = 214;
+    Kp_Plus_Minus = 215;
+    Kp_Clear = 216;
+    Kp_Clear_Entry = 217;
+    Kp_Binary = 218;
+    Kp_Octal = 219;
+    Kp_Decimal = 220;
+    Kp_Hexadecimal = 221;
+
+    LCtrl = 224;
+    LShift = 225;
+    LAlt = 226;
+    LGui = 227;
+    RCtrl = 228;
+    RShift = 229;
+    RAlt = 230;
+    RGui = 231;
+
+    Mode = 257;
+
+    Audio_Next = 258;
+    Audio_Prev = 259;
+    Audio_Stop = 260;
+    Audio_Play = 261;
+    Audio_Mute = 262;
+    Media_Select = 263;
+    WWW = 264;
+    Mail = 265;
+    Calculator = 266;
+    Computer = 267;
+    Ac_Search = 268;
+    Ac_Home = 269;
+    Ac_Back = 270;
+    Ac_Forward = 271;
+    Ac_Stop = 272;
+    Ac_Refresh = 273;
+    Ac_Bookmarks = 274;
+
+    Brightness_Down = 275;
+    Brightness_Up = 276;
+    Display_Switch = 277;
+    Kb_Dillum_Toggle = 278;
+    Kb_Dillum_Down = 279;
+    Kb_Dillum_Up = 280;
+    Eject = 281;
+    Sleep = 282;
+
+    App1 = 283;
+    App2 = 284;
+
+    Num_Scancodes = 512;
+}
+
+const SDLK_UNKNOWN            = 0;
+
+const SDLK_RETURN             = '\r';
+// const SDLK_ESCAPE             = '\033'; // todo(josh)
+const SDLK_BACKSPACE          = '\b';
+const SDLK_TAB                = '\t';
+const SDLK_SPACE              = ' ';
+const SDLK_EXCLAIM            = '!';
+const SDLK_QUOTEDBL           = '"';
+const SDLK_HASH               = '#';
+const SDLK_PERCENT            = '%';
+const SDLK_DOLLAR             = '$';
+const SDLK_AMPERSAND          = '&';
+const SDLK_QUOTE              = '\'';
+const SDLK_LEFTPAREN          = '(';
+const SDLK_RIGHTPAREN         = ')';
+const SDLK_ASTERISK           = '*';
+const SDLK_PLUS               = '+';
+const SDLK_COMMA              = ',';
+const SDLK_MINUS              = '-';
+const SDLK_PERIOD             = '.';
+const SDLK_SLASH              = '/';
+const SDLK_0                  = '0';
+const SDLK_1                  = '1';
+const SDLK_2                  = '2';
+const SDLK_3                  = '3';
+const SDLK_4                  = '4';
+const SDLK_5                  = '5';
+const SDLK_6                  = '6';
+const SDLK_7                  = '7';
+const SDLK_8                  = '8';
+const SDLK_9                  = '9';
+const SDLK_COLON              = ':';
+const SDLK_SEMICOLON          = ';';
+const SDLK_LESS               = '<';
+const SDLK_EQUALS             = '=';
+const SDLK_GREATER            = '>';
+const SDLK_QUESTION           = '?';
+const SDLK_AT                 = '@';
+
+const SDLK_LEFTBRACKET        = '[';
+const SDLK_BACKSLASH          = '\\';
+const SDLK_RIGHTBRACKET       = ']';
+const SDLK_CARET              = '^';
+const SDLK_UNDERSCORE         = '_';
+const SDLK_BACKQUOTE          = '`';
+const SDLK_a                  = 'a';
+const SDLK_b                  = 'b';
+const SDLK_c                  = 'c';
+const SDLK_d                  = 'd';
+const SDLK_e                  = 'e';
+const SDLK_f                  = 'f';
+const SDLK_g                  = 'g';
+const SDLK_h                  = 'h';
+const SDLK_i                  = 'i';
+const SDLK_j                  = 'j';
+const SDLK_k                  = 'k';
+const SDLK_l                  = 'l';
+const SDLK_m                  = 'm';
+const SDLK_n                  = 'n';
+const SDLK_o                  = 'o';
+const SDLK_p                  = 'p';
+const SDLK_q                  = 'q';
+const SDLK_r                  = 'r';
+const SDLK_s                  = 's';
+const SDLK_t                  = 't';
+const SDLK_u                  = 'u';
+const SDLK_v                  = 'v';
+const SDLK_w                  = 'w';
+const SDLK_x                  = 'x';
+const SDLK_y                  = 'y';
+const SDLK_z                  = 'z';
+
+const SDLK_CAPSLOCK           = Scancode.Caps_Lock | SDLK_SCANCODE_MASK;
+
+const SDLK_F1                 = Scancode.F1 | SDLK_SCANCODE_MASK;
+const SDLK_F2                 = Scancode.F2 | SDLK_SCANCODE_MASK;
+const SDLK_F3                 = Scancode.F3 | SDLK_SCANCODE_MASK;
+const SDLK_F4                 = Scancode.F4 | SDLK_SCANCODE_MASK;
+const SDLK_F5                 = Scancode.F5 | SDLK_SCANCODE_MASK;
+const SDLK_F6                 = Scancode.F6 | SDLK_SCANCODE_MASK;
+const SDLK_F7                 = Scancode.F7 | SDLK_SCANCODE_MASK;
+const SDLK_F8                 = Scancode.F8 | SDLK_SCANCODE_MASK;
+const SDLK_F9                 = Scancode.F9 | SDLK_SCANCODE_MASK;
+const SDLK_F10                = Scancode.F10 | SDLK_SCANCODE_MASK;
+const SDLK_F11                = Scancode.F11 | SDLK_SCANCODE_MASK;
+const SDLK_F12                = Scancode.F12 | SDLK_SCANCODE_MASK;
+
+const SDLK_PRINTSCREEN        = Scancode.Print_Screen | SDLK_SCANCODE_MASK;
+const SDLK_SCROLLLOCK         = Scancode.Scroll_Lock | SDLK_SCANCODE_MASK;
+const SDLK_PAUSE              = Scancode.Pause | SDLK_SCANCODE_MASK;
+const SDLK_INSERT             = Scancode.Insert | SDLK_SCANCODE_MASK;
+const SDLK_HOME               = Scancode.Home | SDLK_SCANCODE_MASK;
+const SDLK_PAGEUP             = Scancode.Page_Up | SDLK_SCANCODE_MASK;
+// const SDLK_DELETE             = '\177';  // todo(josh)
+const SDLK_END                = Scancode.End | SDLK_SCANCODE_MASK;
+const SDLK_PAGEDOWN           = Scancode.Page_Down | SDLK_SCANCODE_MASK;
+const SDLK_RIGHT              = Scancode.Right | SDLK_SCANCODE_MASK;
+const SDLK_LEFT               = Scancode.Left | SDLK_SCANCODE_MASK;
+const SDLK_DOWN               = Scancode.Down | SDLK_SCANCODE_MASK;
+const SDLK_UP                 = Scancode.Up | SDLK_SCANCODE_MASK;
+
+const SDLK_NUMLOCKCLEAR       = Scancode.Num_Lock_Clear | SDLK_SCANCODE_MASK;
+const SDLK_KP_DIVIDE          = Scancode.Kp_Divide | SDLK_SCANCODE_MASK;
+const SDLK_KP_MULTIPLY        = Scancode.Kp_Multiply | SDLK_SCANCODE_MASK;
+const SDLK_KP_MINUS           = Scancode.Kp_Minus | SDLK_SCANCODE_MASK;
+const SDLK_KP_PLUS            = Scancode.Kp_Plus | SDLK_SCANCODE_MASK;
+const SDLK_KP_ENTER           = Scancode.Kp_Enter | SDLK_SCANCODE_MASK;
+const SDLK_KP_1               = Scancode.Kp_1 | SDLK_SCANCODE_MASK;
+const SDLK_KP_2               = Scancode.Kp_2 | SDLK_SCANCODE_MASK;
+const SDLK_KP_3               = Scancode.Kp_3 | SDLK_SCANCODE_MASK;
+const SDLK_KP_4               = Scancode.Kp_4 | SDLK_SCANCODE_MASK;
+const SDLK_KP_5               = Scancode.Kp_5 | SDLK_SCANCODE_MASK;
+const SDLK_KP_6               = Scancode.Kp_6 | SDLK_SCANCODE_MASK;
+const SDLK_KP_7               = Scancode.Kp_7 | SDLK_SCANCODE_MASK;
+const SDLK_KP_8               = Scancode.Kp_8 | SDLK_SCANCODE_MASK;
+const SDLK_KP_9               = Scancode.Kp_9 | SDLK_SCANCODE_MASK;
+const SDLK_KP_0               = Scancode.Kp_0 | SDLK_SCANCODE_MASK;
+const SDLK_KP_PERIOD          = Scancode.Kp_Period | SDLK_SCANCODE_MASK;
+
+const SDLK_APPLICATION        = Scancode.Application | SDLK_SCANCODE_MASK;
+const SDLK_POWER              = Scancode.Power | SDLK_SCANCODE_MASK;
+const SDLK_KP_EQUALS          = Scancode.Kp_Equals | SDLK_SCANCODE_MASK;
+const SDLK_F13                = Scancode.F13 | SDLK_SCANCODE_MASK;
+const SDLK_F14                = Scancode.F14 | SDLK_SCANCODE_MASK;
+const SDLK_F15                = Scancode.F15 | SDLK_SCANCODE_MASK;
+const SDLK_F16                = Scancode.F16 | SDLK_SCANCODE_MASK;
+const SDLK_F17                = Scancode.F17 | SDLK_SCANCODE_MASK;
+const SDLK_F18                = Scancode.F18 | SDLK_SCANCODE_MASK;
+const SDLK_F19                = Scancode.F19 | SDLK_SCANCODE_MASK;
+const SDLK_F20                = Scancode.F20 | SDLK_SCANCODE_MASK;
+const SDLK_F21                = Scancode.F21 | SDLK_SCANCODE_MASK;
+const SDLK_F22                = Scancode.F22 | SDLK_SCANCODE_MASK;
+const SDLK_F23                = Scancode.F23 | SDLK_SCANCODE_MASK;
+const SDLK_F24                = Scancode.F24 | SDLK_SCANCODE_MASK;
+const SDLK_EXECUTE            = Scancode.Execute | SDLK_SCANCODE_MASK;
+const SDLK_HELP               = Scancode.Help | SDLK_SCANCODE_MASK;
+const SDLK_MENU               = Scancode.Menu | SDLK_SCANCODE_MASK;
+const SDLK_SELECT             = Scancode.Select | SDLK_SCANCODE_MASK;
+const SDLK_STOP               = Scancode.Stop | SDLK_SCANCODE_MASK;
+const SDLK_AGAIN              = Scancode.Again | SDLK_SCANCODE_MASK;
+const SDLK_UNDO               = Scancode.Undo | SDLK_SCANCODE_MASK;
+const SDLK_CUT                = Scancode.Cut | SDLK_SCANCODE_MASK;
+const SDLK_COPY               = Scancode.Copy | SDLK_SCANCODE_MASK;
+const SDLK_PASTE              = Scancode.Paste | SDLK_SCANCODE_MASK;
+const SDLK_FIND               = Scancode.Find | SDLK_SCANCODE_MASK;
+const SDLK_MUTE               = Scancode.Mute | SDLK_SCANCODE_MASK;
+const SDLK_VOLUMEUP           = Scancode.Volume_Up | SDLK_SCANCODE_MASK;
+const SDLK_VOLUMEDOWN         = Scancode.Volume_Down | SDLK_SCANCODE_MASK;
+const SDLK_KP_COMMA           = Scancode.Kp_Comma | SDLK_SCANCODE_MASK;
+const SDLK_KP_EQUALSAS400     = Scancode.Kp_Equals_AS400 | SDLK_SCANCODE_MASK;
+
+const SDLK_ALTERASE           = Scancode.Alt_Erase | SDLK_SCANCODE_MASK;
+const SDLK_SYSREQ             = Scancode.Sys_Req | SDLK_SCANCODE_MASK;
+const SDLK_CANCEL             = Scancode.Cancel | SDLK_SCANCODE_MASK;
+const SDLK_CLEAR              = Scancode.Clear | SDLK_SCANCODE_MASK;
+const SDLK_PRIOR              = Scancode.Prior | SDLK_SCANCODE_MASK;
+const SDLK_RETURN2            = Scancode.Return2 | SDLK_SCANCODE_MASK;
+const SDLK_SEPARATOR          = Scancode.Separator | SDLK_SCANCODE_MASK;
+const SDLK_OUT                = Scancode.Out | SDLK_SCANCODE_MASK;
+const SDLK_OPER               = Scancode.Oper | SDLK_SCANCODE_MASK;
+const SDLK_CLEARAGAIN         = Scancode.Clear_Again | SDLK_SCANCODE_MASK;
+const SDLK_CRSEL              = Scancode.Cr_Sel | SDLK_SCANCODE_MASK;
+const SDLK_EXSEL              = Scancode.Ex_Sel | SDLK_SCANCODE_MASK;
+
+const SDLK_KP_00              = Scancode.Kp_00 | SDLK_SCANCODE_MASK;
+const SDLK_KP_000             = Scancode.Kp_000 | SDLK_SCANCODE_MASK;
+const SDLK_THOUSANDSSEPARATOR = Scancode.Thousands_Separator | SDLK_SCANCODE_MASK;
+const SDLK_DECIMALSEPARATOR   = Scancode.Decimal_Separator | SDLK_SCANCODE_MASK;
+const SDLK_CURRENCYUNIT       = Scancode.Currency_Unit | SDLK_SCANCODE_MASK;
+const SDLK_CURRENCYSUBUNIT    = Scancode.Currency_Sub_Unit | SDLK_SCANCODE_MASK;
+const SDLK_KP_LEFTPAREN       = Scancode.Kp_Left_Paren | SDLK_SCANCODE_MASK;
+const SDLK_KP_RIGHTPAREN      = Scancode.Kp_Right_Paren | SDLK_SCANCODE_MASK;
+const SDLK_KP_LEFTBRACE       = Scancode.Kp_Left_Brace | SDLK_SCANCODE_MASK;
+const SDLK_KP_RIGHTBRACE      = Scancode.Kp_Right_Brace | SDLK_SCANCODE_MASK;
+const SDLK_KP_TAB             = Scancode.Kp_Tab | SDLK_SCANCODE_MASK;
+const SDLK_KP_BACKSPACE       = Scancode.Kp_Backspace | SDLK_SCANCODE_MASK;
+const SDLK_KP_A               = Scancode.Kp_A | SDLK_SCANCODE_MASK;
+const SDLK_KP_B               = Scancode.Kp_B | SDLK_SCANCODE_MASK;
+const SDLK_KP_C               = Scancode.Kp_C | SDLK_SCANCODE_MASK;
+const SDLK_KP_D               = Scancode.Kp_D | SDLK_SCANCODE_MASK;
+const SDLK_KP_E               = Scancode.Kp_E | SDLK_SCANCODE_MASK;
+const SDLK_KP_F               = Scancode.Kp_F | SDLK_SCANCODE_MASK;
+const SDLK_KP_XOR             = Scancode.Kp_Xor | SDLK_SCANCODE_MASK;
+const SDLK_KP_POWER           = Scancode.Kp_Power | SDLK_SCANCODE_MASK;
+const SDLK_KP_PERCENT         = Scancode.Kp_Percent | SDLK_SCANCODE_MASK;
+const SDLK_KP_LESS            = Scancode.Kp_Less | SDLK_SCANCODE_MASK;
+const SDLK_KP_GREATER         = Scancode.Kp_Greater | SDLK_SCANCODE_MASK;
+const SDLK_KP_AMPERSAND       = Scancode.Kp_Ampersand | SDLK_SCANCODE_MASK;
+const SDLK_KP_DBLAMPERSAND    = Scancode.Kp_Dbl_Ampersand | SDLK_SCANCODE_MASK;
+const SDLK_KP_VERTICALBAR     = Scancode.Kp_Vertical_Bar | SDLK_SCANCODE_MASK;
+const SDLK_KP_DBLVERTICALBAR  = Scancode.Kp_Dbl_Vertical_Bar | SDLK_SCANCODE_MASK;
+const SDLK_KP_COLON           = Scancode.Kp_Colon | SDLK_SCANCODE_MASK;
+const SDLK_KP_HASH            = Scancode.Kp_Hash | SDLK_SCANCODE_MASK;
+const SDLK_KP_SPACE           = Scancode.Kp_Space | SDLK_SCANCODE_MASK;
+const SDLK_KP_AT              = Scancode.Kp_At | SDLK_SCANCODE_MASK;
+const SDLK_KP_EXCLAM          = Scancode.Kp_Exclam | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMSTORE        = Scancode.Kp_Mem_Store | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMRECALL       = Scancode.Kp_Mem_Recall | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMCLEAR        = Scancode.Kp_Mem_Clear | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMADD          = Scancode.Kp_Mem_Add | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMSUBTRACT     = Scancode.Kp_Mem_Subtract | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMMULTIPLY     = Scancode.Kp_Mem_Multiply | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMDIVIDE       = Scancode.Kp_Mem_Divide | SDLK_SCANCODE_MASK;
+const SDLK_KP_PLUSMINUS       = Scancode.Kp_Plus_Minus | SDLK_SCANCODE_MASK;
+const SDLK_KP_CLEAR           = Scancode.Kp_Clear | SDLK_SCANCODE_MASK;
+const SDLK_KP_CLEARENTRY      = Scancode.Kp_Clear_Entry | SDLK_SCANCODE_MASK;
+const SDLK_KP_BINARY          = Scancode.Kp_Binary | SDLK_SCANCODE_MASK;
+const SDLK_KP_OCTAL           = Scancode.Kp_Octal | SDLK_SCANCODE_MASK;
+const SDLK_KP_DECIMAL         = Scancode.Kp_Decimal | SDLK_SCANCODE_MASK;
+const SDLK_KP_HEXADECIMAL     = Scancode.Kp_Hexadecimal | SDLK_SCANCODE_MASK;
+
+const SDLK_LCTRL              = Scancode.LCtrl | SDLK_SCANCODE_MASK;
+const SDLK_LSHIFT             = Scancode.LShift | SDLK_SCANCODE_MASK;
+const SDLK_LALT               = Scancode.LAlt | SDLK_SCANCODE_MASK;
+const SDLK_LGUI               = Scancode.LGui | SDLK_SCANCODE_MASK;
+const SDLK_RCTRL              = Scancode.RCtrl | SDLK_SCANCODE_MASK;
+const SDLK_RSHIFT             = Scancode.RShift | SDLK_SCANCODE_MASK;
+const SDLK_RALT               = Scancode.RAlt | SDLK_SCANCODE_MASK;
+const SDLK_RGUI               = Scancode.RGui | SDLK_SCANCODE_MASK;
+
+const SDLK_MODE               = Scancode.Mode | SDLK_SCANCODE_MASK;
+
+const SDLK_AUDIONEXT          = Scancode.Audio_Next | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOPREV          = Scancode.Audio_Prev | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOSTOP          = Scancode.Audio_Stop | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOPLAY          = Scancode.Audio_Play | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOMUTE          = Scancode.Audio_Mute | SDLK_SCANCODE_MASK;
+const SDLK_MEDIASELECT        = Scancode.Media_Select | SDLK_SCANCODE_MASK;
+const SDLK_WWW                = Scancode.WWW | SDLK_SCANCODE_MASK;
+const SDLK_MAIL               = Scancode.Mail | SDLK_SCANCODE_MASK;
+const SDLK_CALCULATOR         = Scancode.Calculator | SDLK_SCANCODE_MASK;
+const SDLK_COMPUTER           = Scancode.Computer | SDLK_SCANCODE_MASK;
+const SDLK_AC_SEARCH          = Scancode.Ac_Search | SDLK_SCANCODE_MASK;
+const SDLK_AC_HOME            = Scancode.Ac_Home | SDLK_SCANCODE_MASK;
+const SDLK_AC_BACK            = Scancode.Ac_Back | SDLK_SCANCODE_MASK;
+const SDLK_AC_FORWARD         = Scancode.Ac_Forward | SDLK_SCANCODE_MASK;
+const SDLK_AC_STOP            = Scancode.Ac_Stop | SDLK_SCANCODE_MASK;
+const SDLK_AC_REFRESH         = Scancode.Ac_Refresh | SDLK_SCANCODE_MASK;
+const SDLK_AC_BOOKMARKS       = Scancode.Ac_Bookmarks | SDLK_SCANCODE_MASK;
+
+const SDLK_BRIGHTNESSDOWN     = Scancode.Brightness_Down | SDLK_SCANCODE_MASK;
+const SDLK_BRIGHTNESSUP       = Scancode.Brightness_Up | SDLK_SCANCODE_MASK;
+const SDLK_DISPLAYSWITCH      = Scancode.Display_Switch | SDLK_SCANCODE_MASK;
+const SDLK_KBDILLUMTOGGLE     = Scancode.Kb_Dillum_Toggle | SDLK_SCANCODE_MASK;
+const SDLK_KBDILLUMDOWN       = Scancode.Kb_Dillum_Down | SDLK_SCANCODE_MASK;
+const SDLK_KBDILLUMUP         = Scancode.Kb_Dillum_Up | SDLK_SCANCODE_MASK;
+const SDLK_EJECT              = Scancode.Eject | SDLK_SCANCODE_MASK;
+const SDLK_SLEEP              = Scancode.Sleep | SDLK_SCANCODE_MASK;
+
+const SDLK_SCANCODE_MASK      = cast(Scancode, 1<<30);
+
+enum Mousecode i32 {
+    Left   = 1 << 0;
+    Middle = 1 << 1;
+    Right  = 1 << 2;
+    X1     = 1 << 3;
+    X2     = 1 << 4;
+}
+
+
+enum Hat i32 {
+    Centered = 0x00;
+    Up = 0x01;
+    Right = 0x02;
+    Down = 0x04;
+    Left = 0x08;
+    Right_Up = Right | Up;
+    Right_Down = Right | Down;
+    Left_Up = Left | Up;
+    Left_Down = Left | Down;
+}
+
+enum Event_Type i32 {
+    First_Event = 0;
+
+    Quit = 0x100;
+
+    App_Terminating = 257;
+    App_Low_Memory = 258;
+    App_Will_Enter_Background = 259;
+    App_Did_Enter_Background = 260;
+    App_Will_Enter_Foreground = 261;
+    App_Did_Enter_Foreground = 262;
+
+    Window_Event = 0x200;
+    Sys_Wm_Event = 513;
+
+    Key_Down = 0x300;
+    Key_Up = 769;
+    Text_Editing = 770;
+    Text_Input = 771;
+    Key_Map_Changed = 772;
+
+    Mouse_Motion = 0x400;
+    Mouse_Button_Down = 1025;
+    Mouse_Button_Up = 1026;
+    Mouse_Wheel = 1027;
+
+    Joy_Axis_Motion = 0x600;
+    Joy_Ball_Motion = 1537;
+    Joy_Hat_Motion = 1538;
+    Joy_Button_Down = 1539;
+    Joy_Button_Up = 1540;
+    Joy_Device_Added = 1541;
+    Joy_Device_Removed = 1542;
+
+    Controller_Axis_Motion = 0x650;
+    Controller_Button_Down = 1617;
+    Controller_Button_Up = 1618;
+    Controller_Device_Added = 1619;
+    Controller_Device_Removed = 1620;
+    Controller_Device_Remapped = 1621;
+
+    Finger_Down = 0x700;
+    Finger_Up = 1793;
+    Finger_Motion = 1794;
+
+    Dollar_Gesture = 0x800;
+    Dollar_Record = 2049;
+    Multigesture = 2050;
+
+    Clipboard_Update = 0x900;
+
+    Drop_File = 0x1000;
+    Drop_Text = 4097;
+    Drop_Begin = 4098;
+    Drop_Complete = 4099;
+
+    Audio_Device_Added = 0x1100;
+    Audio_Device_Removed = 4353;
+
+    Render_Targets_Reset = 0x2000;
+    Render_Device_Reset = 8193;
+
+    User_Event = 0x8000;
+
+    Last_Event = 0xFFFF;
+}
+
+enum Window_Event_ID i32 {
+    None = 0;
+    Shown;
+    Hidden;
+    Exposed;
+    Moved;
+    Resized;
+    Size_Changed;
+    Minimized;
+    Maximized;
+    Restored;
+    Enter;
+    Leave;
+    Focus_Gained;
+    Focus_Lost;
+    Close;
+    Take_Focus;
+    Hit_Test;
+}
+
+const GL_Context = rawptr;
+
+struct Blit_Map          {};
+struct Window            {};
+struct Renderer          {};
+struct Texture           {};
+struct Cond              {};
+struct Mutex             {};
+struct Sem               {};
+struct Thread            {};
+struct Haptic            {};
+struct Joystick          {};
+struct Game_Controller   {};
+struct Cursor            {};
+struct IDirect3D_Device9 {};
+struct Rw_Ops            {};
+
+// Unsure of these
+struct Sys_Wm_Info       {};
+struct Sys_Wm_Msg        {};
+
+const Joystick_Id     = i32;
+const Timer_Id        = i32;
+const Spin_Lock       = i32;
+const Tls_Id          = u32;
+const Audio_Device_Id = u32;
+const Audio_Device    = u32;
+const Audio_Format    = u16;
+const Keycode         = i32;
+const Thread_Id       = u64;
+const Touch_Id        = i64;
+const Gesture_Id      = i64;
+const Finger_Id       = i64;
+
+const Hint_Callback        = proc(interval: u32, param: rawptr) : u32;
+const Event_Filter         = proc(userdata: rawptr, param: ^Event) : i32;
+const Timer_Callback       = proc(interval: u32, param: rawptr) : u32;
+const Audio_Callback       = proc(userdata: rawptr, stream: ^u8, len: i32);
+const Assertion_Handler    = proc(data: ^Assert_Data, userdata: rawptr) : Assert_State;
+const Audio_Filter         = proc(cvt: ^Audio_Cvt, format: Audio_Format);
+const Thread_Function      = proc(data: rawptr) : i32;
+const Hit_Test             = proc(window: ^Window, area: ^Point, data: rawptr) : Hit_Test_Result;
+const Windows_Message_Hook = proc(userdata: rawptr, hwnd: rawptr, message: u32, wparam: u64, lparam: i64);
+const Log_Output_Function  = proc(userdata: rawptr, category: Log_Category, priority: Log_Priority, message: cstring);
+
+struct Game_Controller_Button_Bind {
+    var bind_type: Game_Controller_Bind_Type;
+    var value: union {
+        var button: i32;
+        var axis:   i32;
+        var hat_mask: struct {
+            var hat: i32;
+            var mask: i32;
+        };
+    };
+}
+
+struct Message_Box_Data {
+    var flags: u32;
+    var window: ^Window;
+    var title: cstring;
+    var message: cstring;
+
+    var num_buttons: i32;
+    var buttons: ^Message_Box_Button_Data;
+
+    var color_scheme: ^Message_Box_Color_Scheme;
+}
+
+struct Message_Box_Button_Data {
+    var flags: u32;
+    var button_id: i32;
+    var text: cstring;
+}
+
+struct Message_Box_Color_Scheme {
+    var colors: [cast(int, Message_Box_Color_Type.Max)]Message_Box_Color;
+}
+
+struct Message_Box_Color {
+    var r: u8;
+    var g: u8;
+    var b: u8;
+}
+
+struct Assert_Data {
+    var always_ignore: i32;
+    var trigger_count: u32;
+    var condition: cstring;
+    var filename: cstring;
+    var linenum: i32;
+    var function: cstring;
+    var next: ^Assert_Data;
+}
+
+union Window_Shape_Params {
+    var binarization_cutoff: u8;
+    var color_key: Color;
+}
+
+struct Window_Shape_Mode {
+    var mode: Window_Shape_Modes;
+    var parameters: Window_Shape_Params;
+}
+
+struct Point {
+    var x: i32;
+    var y: i32;
+}
+
+struct Renderer_Info {
+    var name: cstring;
+    var flags: u32;
+    var num_texture_formats: u32;
+    var texture_formats: [16]u32;
+    var max_texture_width: i32;
+    var max_texture_height: i32;
+}
+
+struct Version {
+    var major: u8;
+    var minor: u8;
+    var patch: u8;
+}
+
+struct Display_Mode {
+    var format: u32;
+    var w: i32;
+    var h: i32;
+    var refresh_rate: i32;
+    var driver_data: rawptr;
+}
+
+struct Finger {
+    var id: Finger_Id;
+    var x: f32;
+    var y: f32;
+    var pressure: f32;
+}
+
+struct Audio_Spec {
+    var freq: i32;
+    var format: Audio_Format;
+    var channels: u8;
+    var silence: u8;
+    var samples: u16;
+    var padding: u16;
+    var size: u32;
+    var callback: Audio_Callback;
+    var userdata: rawptr;
+}
+
+struct Joystick_Guid {
+    var data: [16]u8;
+}
+
+struct Audio_Cvt {
+    var needed: i32;
+    var src_format: Audio_Format;
+    var dst_format: Audio_Format;
+    var rate_incr: i64;
+    var buf: ^u8;
+    var len: i32;
+    var len_cvt: i32;
+    var len_mult: i32;
+    var len_ratio: i64;
+    var filters: [10]Audio_Filter;
+    var filter_index: i32;
+}
+
+struct Surface {
+    var flags: u32;
+    var format: ^Pixel_Format;
+    var w: i32;
+    var h: i32;
+    var pitch: i32;
+    var pixels: rawptr;
+
+    var userdata: rawptr;
+
+    var locked: i32;
+    var lock_data: rawptr;
+
+    var clip_rect: Rect;
+    var blip_map: ^Blit_Map;
+
+    var refcount: i32;
+}
+
+struct Color {
+    var r: u8;
+    var g: u8;
+    var b: u8;
+    var a: u8;
+}
+
+struct Palette {
+    var num_colors: i32;
+    var colors: ^Color;
+    var version: u32;
+    var ref_count: i32;
+}
+
+struct Pixel_Format {
+    var format: u32;
+    var palette: ^Palette;
+    var bits_per_pixel: u8;
+    var bytes_per_pixel: u8;
+    var padding: [2]u8;
+    var r_mask: u32;
+    var g_mask: u32;
+    var b_mask: u32;
+    var a_mask: u32;
+    var r_loss: u8;
+    var g_loss: u8;
+    var b_loss: u8;
+    var a_loss: u8;
+    var r_shift: u8;
+    var g_shift: u8;
+    var b_shift: u8;
+    var a_shift: u8;
+    var ref_count: i32;
+    var next: ^Pixel_Format;
+}
+
+struct Rect {
+    var x: i32;
+    var y: i32;
+    var w: i32;
+    var h: i32;
+}
+
+struct Atomic {
+    var value: i32;
+}
+
+struct Keysym {
+    var scancode: Scancode;
+    var sym: i32;
+    var mod: u16;
+    var unused: u32;
+}
+
+union Haptic_Effect {
+    var haptic_type: u16;
+    var constant: Haptic_Constant;
+    var periodic: Haptic_Periodic;
+    var condition: Haptic_Condition;
+    var ramp: Haptic_Ramp;
+    var left_right: Haptic_Left_Right;
+    var custom: Haptic_Custom;
+}
+
+struct Haptic_Constant {
+    var haptic_type: u16;
+    var direction: Haptic_Direction;
+
+    var length: u32;
+    var delay: u16;
+
+    var button: u16;
+    var interval: u16;
+
+    var level: i16;
+
+    var attack_length: u16;
+    var attack_level: u16;
+    var fade_length: u16;
+    var fade_level: u16;
+}
+
+struct Haptic_Periodic {
+    var haptic_type: u16;
+    var direction: Haptic_Direction;
+
+    var length: u32;
+    var delay: u16;
+
+    var button: u16;
+    var interval: u16;
+
+    var period: u16;
+    var magnitude: i16;
+    var offset: i16;
+    var phase: u16;
+
+    var attack_length: u16;
+    var attack_level: u16;
+    var fade_length: u16;
+    var fade_level: u16;
+}
+
+struct Haptic_Direction {
+    var haptic_type: u8;
+    var dir: [3]i32;
+}
+
+struct Haptic_Condition {
+    var haptic_type: u16;
+    var direction: Haptic_Direction;
+
+    var length: u32;
+    var delay: u16;
+
+    var button: u16;
+    var interval: u16;
+
+    var right_sat: [3]u16;
+    var left_sat: [3]u16;
+    var right_coeff: [3]i16;
+    var left_coeff: [3]i16;
+    var dead_band: [3]u16;
+    var center: [3]i16;
+}
+
+struct Haptic_Ramp {
+    var haptic_type: u16;
+    var direction: Haptic_Direction;
+
+    var length: u32;
+    var delay: u16;
+
+    var button: u16;
+    var interval: u16;
+
+    var start: i16;
+    var end: i16;
+
+    var attack_length: u16;
+    var attack_level: u16;
+    var fade_length: u16;
+    var fade_level: u16;
+}
+
+struct Haptic_Left_Right {
+    var haptic_type: u16;
+
+    var length: u32;
+
+    var large_magnitude: u16;
+    var small_magnitude: u16;
+}
+
+struct Haptic_Custom {
+    var haptic_type: u16;
+    var direction: Haptic_Direction;
+
+    var length: u32;
+    var delay: u16;
+
+    var button: u16;
+    var interval: u16;
+
+    var channels: u8;
+    var period: u16;
+    var samples: u16;
+    var data: ^u16;
+
+    var attack_length: u16;
+    var attack_level: u16;
+    var fade_length: u16;
+    var fade_level: u16;
+}
+
+union Event {
+    var type: Event_Type;
+    var common: Common_Event;
+    var window: Window_Event;
+    var key: Keyboard_Event;
+    var edit: Text_Editing_Event;
+    var text: Text_Input_Event;
+    var motion: Mouse_Motion_Event;
+    var button: Mouse_Button_Event;
+    var wheel: Mouse_Wheel_Event;
+    var jaxis: Joy_Axis_Event;
+    var jball: Joy_Ball_Event;
+    var jhat: Joy_Hat_Event;
+    var jbutton: Joy_Button_Event;
+    var jdevice: Joy_Device_Event;
+    var caxis: Controller_Axis_Event;
+    var cbutton: Controller_Button_Event;
+    var cdevice: Controller_Device_Event;
+    var adevice: Audio_Device_Event;
+    var quit: Quit_Event;
+    var user: User_Event;
+    var syswm: Sys_Wm_Event;
+    var tfinger: Touch_Finger_Event;
+    var mgesture: Multi_Gesture_Event;
+    var dgesture: Dollar_Gesture_Event;
+    var drop: Drop_Event;
+
+    var padding: [56]u8;
+}
+
+struct Common_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+}
+
+struct Window_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var event: Window_Event_ID;
+    var padding1: u8;
+    var padding2: u8;
+    var padding3: u8;
+    var data1: i32;
+    var data2: i32;
+}
+
+struct Keyboard_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var state: u8;
+    var repeat: u8;
+    var padding2: u8;
+    var padding3: u8;
+    var keysym: Keysym;
+}
+
+const TEXT_EDITING_EVENT_TEXT_SIZE = 32;
+struct Text_Editing_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var text: [TEXT_EDITING_EVENT_TEXT_SIZE]u8;
+    var start: i32;
+    var length: i32;
+}
+
+
+const TEXT_INPUT_EVENT_TEXT_SIZE = 32;
+struct Text_Input_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var text: [TEXT_INPUT_EVENT_TEXT_SIZE]u8;
+}
+
+struct Mouse_Motion_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var which: u32;
+    var state: u32;
+    var x: i32;
+    var y: i32;
+    var xrel: i32;
+    var yrel: i32;
+}
+
+struct Mouse_Button_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var which: u32;
+    var button: u8;
+    var state: u8;
+    var clicks: u8;
+    var padding1: u8;
+    var x: i32;
+    var y: i32;
+}
+
+struct Mouse_Wheel_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var which: u32;
+    var x: i32;
+    var y: i32;
+    var direction: u32;
+}
+
+struct Joy_Axis_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+    var axis: u8;
+    var padding1: u8;
+    var padding2: u8;
+    var padding3: u8;
+    var value: i16;
+    var padding4: u16;
+}
+
+struct Joy_Ball_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+    var ball: u8;
+    var padding1: u8;
+    var padding2: u8;
+    var padding3: u8;
+    var xrel: i16;
+    var yrel: i16;
+}
+
+struct Joy_Hat_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+    var hat: u8;
+    var value: u8;
+    var padding1: u8;
+    var padding2: u8;
+}
+
+struct Joy_Button_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+    var button: u8;
+    var state: u8;
+    var padding1: u8;
+    var padding2: u8;
+}
+
+struct Joy_Device_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+}
+
+struct Controller_Axis_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+    var axis: u8;
+    var padding1: u8;
+    var padding2: u8;
+    var padding3: u8;
+    var value: i16;
+    var padding4: u16;
+}
+
+struct Controller_Button_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+    var button: u8;
+    var state: u8;
+    var padding1: u8;
+    var padding2: u8;
+}
+
+struct Controller_Device_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: i32;
+}
+
+struct Audio_Device_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var which: u32;
+    var iscapture: u8;
+    var padding1: u8;
+    var padding2: u8;
+    var padding3: u8;
+}
+
+struct Touch_Finger_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var touch_id: i64;
+    var finger_id: i64;
+    var x: f32;
+    var y: f32;
+    var dx: f32;
+    var dy: f32;
+    var pressure: f32;
+}
+
+struct Multi_Gesture_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var touch_id: i64;
+    var d_theta: f32;
+    var d_dist: f32;
+    var x: f32;
+    var y: f32;
+    var num_fingers: u16;
+    var padding: u16;
+}
+
+struct Dollar_Gesture_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var touch_id: i64;
+    var gesture_id: i64;
+    var num_fingers: u32;
+    var error: f32;
+    var x: f32;
+    var y: f32;
+}
+
+struct Drop_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var file: cstring;
+    var window_id: u32;
+}
+
+struct Quit_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+}
+
+struct OS_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+}
+
+struct User_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var window_id: u32;
+    var code: i32;
+    var data1: ^rawptr;
+    var data2: ^rawptr;
+}
+
+struct Sys_Wm_Event {
+    var type: Event_Type;
+    var timestamp: u32;
+    var msg: ^Sys_Wm_Msg;
+}

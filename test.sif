@@ -1,5 +1,31 @@
 #include "core:basic.sif"
+#include "core:sdl2.sif"
+
+#foreign_import "SDL2_image.lib"
+#foreign_import "SDL2.lib"
 
 proc main() : i32 {
+    if (SDL_Init(Init_Flags.Video) < 0) {
+        log_sdl_error();
+        return 1;
+    }
 
+    var name = "My Fancy Window";
+    var window = SDL_CreateWindow(&name[0], cast(i32, Window_Pos.Undefined), cast(i32, Window_Pos.Undefined), 1920, 1080, Window_Flags.Shown | Window_Flags.Borderless);
+    if (window == null) {
+        log_sdl_error();
+        return 1;
+    }
+
+    print("%\n", 0xffff);
+    var screen_surface = SDL_GetWindowSurface(window);
+    SDL_FillRect(screen_surface, null, SDL_MapRGB(screen_surface.format, 255, 0, 255));
+    SDL_UpdateWindowSurface(window);
+    SDL_Delay(2000);
+}
+
+proc log_sdl_error() {
+    var error = SDL_GetError();
+    var str = string_ptr(error, cast(i64, strlen(error)));
+    print("SDL ERROR: %\n", str.count);
 }

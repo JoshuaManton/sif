@@ -142,12 +142,12 @@ void add_global_declarations(Ast_Block *block) {
     register_declaration(new Type_Declaration("any", type_any, block));
 }
 
-Type_Struct *make_incomplete_type_for_struct(Struct_Declaration *struct_decl) {
-    Type_Struct *incomplete_type = new Type_Struct(struct_decl->structure);
+Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
+    Type_Struct *incomplete_type = new Type_Struct(structure);
     incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
     all_types.append(incomplete_type);
     incomplete_type->id = all_types.count;
-    struct_decl->structure->type = incomplete_type;
+    structure->type = incomplete_type;
     return incomplete_type;
 }
 
@@ -161,7 +161,7 @@ void make_incomplete_types_for_all_structs() {
             continue;
         }
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
-        make_incomplete_type_for_struct(struct_decl);
+        make_incomplete_type_for_struct(struct_decl->structure);
     }
 }
 
@@ -183,6 +183,7 @@ bool is_type_incomplete (Type *type) { return type->flags & TF_INCOMPLETE;  }
 bool is_type_typeid     (Type *type) { return type == type_typeid;          }
 bool is_type_string     (Type *type) { return type == type_string;          }
 bool is_type_varargs    (Type *type) { return type->flags & TF_VARARGS;     }
+bool is_type_enum       (Type *type) { return type->flags & TF_ENUM;        }
 
 Type *get_most_concrete_type(Type *a, Type *b) {
     if (a->flags & TF_UNTYPED) {
@@ -271,39 +272,61 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         case DECL_ENUM: {
             Enum_Declaration *enum_decl = (Enum_Declaration *)decl;
             Type_Enum *enum_type = new Type_Enum(enum_decl->name);
+            Type *enum_base_type = type_int;
+            if (enum_decl->ast_enum->base_type_expr) {
+                Operand *type_operand = typecheck_expr(enum_decl->ast_enum->base_type_expr, type_typeid);
+                if (!type_operand) {
+                    return false;
+                }
+                assert(is_type_typeid(type_operand->type));
+                if (!is_type_integer(type_operand->type_value)) {
+                    report_error(enum_decl->ast_enum->base_type_expr->location, "Enum base type must be an integer type.");
+                    return false;
+                }
+                enum_base_type = type_operand->type_value;
+            }
+            assert(is_type_integer(enum_base_type));
+            enum_type->flags = enum_base_type->flags | TF_ENUM;
+            enum_type->size = enum_base_type->size;
+            enum_type->align = enum_base_type->align;
             enum_decl->ast_enum->type = enum_type;
             int enum_field_value = 0;
-            For (idx, enum_decl->ast_enum->fields) {
-                Enum_Field field = enum_decl->ast_enum->fields[idx];
-                Operand *expr_operand = nullptr;
-                if (field.expr) {
-                    report_error(field.expr->location, "Enum field expressions are not yet supported.");
-                    return false;
-                    expr_operand = typecheck_expr(field.expr);
-                    if (!expr_operand) {
-                        return false;
+            bool made_progress = true;
+            while (made_progress) {
+                made_progress = false;
+                For (idx, enum_decl->ast_enum->fields) {
+                    Enum_Field *field = &enum_decl->ast_enum->fields[idx];
+                    if (field->resolved) {
+                        continue;
                     }
-                }
-                Operand field_operand; // todo(josh): location info?
-                field_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-                field_operand.type = enum_type;
-                if (expr_operand) {
-                    if (!(expr_operand->flags & OPERAND_CONSTANT)) {
-                        report_error(expr_operand->location, "Enum fields must be constant.");
-                        return false;
+
+                    if (field->expr) {
+                        // todo(josh): pass a silent flag to typecheck_expr
+                        Operand *expr_operand = typecheck_expr(field->expr);
+                        if (!expr_operand) {
+                            continue;
+                        }
+                        if (!(expr_operand->flags & OPERAND_CONSTANT)) {
+                            report_error(expr_operand->location, "Enum fields must be constant.");
+                            return false;
+                        }
+                        if (!is_type_integer(expr_operand->type)) {
+                            report_error(expr_operand->location, "Enum fields must be integers.");
+                            return false;
+                        }
+                        enum_field_value = expr_operand->int_value;
                     }
-                    if (!is_type_integer(expr_operand->type)) {
-                        report_error(expr_operand->location, "Enum fields must be integers.");
-                        return false;
-                    }
-                    field_operand.int_value = expr_operand->int_value;
-                }
-                else {
+                    Operand field_operand; // todo(josh): location info?
+                    field_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                    field_operand.type = enum_type;
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
+                    add_constant_type_field(enum_type, field->name, field_operand);
+                    field->resolved = true;
+                    made_progress = true;
                 }
-                add_constant_type_field(enum_type, field.name, field_operand);
             }
+
             decl_operand.type = type_typeid;
             decl_operand.type_value = enum_decl->ast_enum->type;
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
@@ -685,18 +708,21 @@ bool complete_type(Type *type) {
                         if (!complete_type(var->type)) {
                             return false;
                         }
-                    }
-
-                    For (idx, structure->fields) {
-                        Ast_Var *var = structure->fields[idx];
                         if (var->is_constant) {
                             assert(var->expr != nullptr);
                             assert(var->constant_operand.type != nullptr);
                             assert(var->constant_operand.flags & OPERAND_CONSTANT);
                             add_constant_type_field(struct_type, var->name, var->constant_operand);
                         }
-                        else {
-                            assert(var->type->size > 0);
+                    }
+
+                    For (idx, structure->fields) {
+                        Ast_Var *var = structure->fields[idx];
+                        if (var->is_constant) {
+                            continue;
+                        }
+                        assert(var->type->size > 0);
+                        if (!structure->is_union) {
                             int next_alignment = -1;
                             for (int i = idx; i < (structure->fields.count-1); i++) {
                                 Ast_Var *next_var = structure->fields[i+1];
@@ -715,15 +741,23 @@ bool complete_type(Type *type) {
                             size += size_delta;
                             largest_alignment = max(largest_alignment, var->type->align);
                         }
+                        else {
+                            size = max(size, var->type->size);
+                            largest_alignment = max(largest_alignment, var->type->align);
+                        }
                     }
                 }
 
+                // printf("%s size: %d, alignment: %d\n", (structure->name ? structure->name : "<no name>"), size, largest_alignment);
+
+                assert(is_power_of_two(largest_alignment)); // todo(josh): is this actually a requirement?
                 assert(size > 0);
                 struct_type->size = (int)align_forward((uintptr_t)size, (uintptr_t)largest_alignment);
                 struct_type->align = largest_alignment;
                 struct_type->flags &= ~(TF_INCOMPLETE);
 
-                assert(structure->parent_block->flags & BF_IS_GLOBAL_SCOPE);
+                assert(structure->name);
+                assert(structure->declaration);
                 ordered_declarations.append(structure->declaration);
                 break;
             }
@@ -960,10 +994,13 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
 bool can_cast(Ast_Expr *expr, Type *type) {
     assert(expr != nullptr);
     assert(type != nullptr);
-    if ((expr->operand.type->flags & TF_NUMBER) && (type->flags & TF_NUMBER)) {
+    if (is_type_number(expr->operand.type) && is_type_enum(type)) {
         return true;
     }
-    if ((expr->operand.type->flags & TF_POINTER) && (type->flags & TF_POINTER)) {
+    if (is_type_number(expr->operand.type) && is_type_number(type)) {
+        return true;
+    }
+    if (is_type_pointer(expr->operand.type) && is_type_pointer(type)) {
         return true;
     }
     return false;
@@ -1641,7 +1678,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
         case AST_STRUCT: {
             Ast_Struct *structure_polymorph = (Ast_Struct *)new_parse;
             structure_polymorph->declaration->is_polymorphic = false;
-            Type_Struct *incomplete_type = make_incomplete_type_for_struct(structure_polymorph->declaration);
+            Type_Struct *incomplete_type = make_incomplete_type_for_struct(structure_polymorph);
             incomplete_type->polymorphic_parameter_values = parameters;
             incomplete_type->is_polymorph_of = (Ast_Struct *)node_to_polymorph;
             // todo(josh): I'm not sure if this should be here or if it should just happen with each usage like with every other time with call complete_type()
@@ -1887,7 +1924,28 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     Operand result_operand(expr->location);
     switch (expr->expr_kind) {
         case EXPR_UNARY: {
-            UNIMPLEMENTED(EXPR_UNARY);
+            // todo(josh): error messages
+            Expr_Unary *unary = (Expr_Unary *)expr;
+            Operand *rhs_operand = typecheck_expr(unary->rhs, expected_type);
+            if (rhs_operand == nullptr) {
+                return nullptr;
+            }
+            assert(is_type_number(rhs_operand->type));
+            switch (unary->op) {
+                case TK_MINUS: {
+                    if (rhs_operand->flags & OPERAND_CONSTANT) {
+                        result_operand.int_value = -rhs_operand->int_value;
+                        result_operand.float_value = -rhs_operand->float_value;
+                    }
+                    break;
+                }
+                default: {
+                    assert(false);
+                }
+            }
+
+            result_operand.flags = rhs_operand->flags;
+            result_operand.type = rhs_operand->type;
             break;
         }
         case EXPR_BINARY: {
@@ -1955,15 +2013,31 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!type_operand) {
                 return nullptr;
             }
-            assert(expr_cast->type_expr->operand.type == type_typeid);
+            if (!is_type_typeid(expr_cast->type_expr->operand.type)) {
+                report_error(expr_cast->type_expr->location, "Cast target must be a type.");
+                return nullptr;
+            }
             Operand *rhs_operand = typecheck_expr(expr_cast->rhs);
             if (!rhs_operand) {
                 return nullptr;
             }
-            assert(can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value));
+            if (!can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value)) {
+                report_error(expr_cast->location, "Cannot cast from %s to %s.", type_to_string(rhs_operand->type), type_operand->type_value);
+                return nullptr;
+            }
             result_operand.type = type_operand->type_value;
             result_operand.flags = OPERAND_RVALUE;
-            // todo(josh): constant propagation
+            if (rhs_operand->flags & OPERAND_CONSTANT) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                result_operand.int_value             = rhs_operand->int_value;
+                result_operand.float_value           = rhs_operand->float_value;
+                result_operand.bool_value            = rhs_operand->bool_value;
+                result_operand.type_value            = rhs_operand->type_value;
+                result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
+                result_operand.scanned_string_length = rhs_operand->scanned_string_length;
+                result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
+                result_operand.escaped_string_length = rhs_operand->escaped_string_length;
+            }
             break;
         }
         case EXPR_ADDRESS_OF: {
@@ -2245,8 +2319,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 result_operand.type = type_untyped_integer;
             }
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.int_value   = atoi(number->number_string);
-            result_operand.float_value = atof(number->number_string);
+            result_operand.int_value   = number->int_value;
+            result_operand.float_value = number->float_value;
             break;
         }
         case EXPR_STRING_LITERAL: {
@@ -2313,6 +2387,15 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(expr_operand->type != nullptr);
             result_operand.type = type_typeid;
             result_operand.type_value = expr_operand->type;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            break;
+        }
+        case EXPR_STRUCT_TYPE: {
+            Expr_Struct_Type *anonymous_struct = (Expr_Struct_Type *)expr;
+            assert(anonymous_struct->structure != nullptr);
+            assert(anonymous_struct->structure->type != nullptr);
+            result_operand.type = type_typeid;
+            result_operand.type_value = anonymous_struct->structure->type;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
             break;
         }

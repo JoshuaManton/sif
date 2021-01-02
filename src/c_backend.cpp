@@ -274,36 +274,38 @@ void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name) {
 }
 
 void c_print_var(String_Builder *sb, const char *var_name, Type *type, Ast_Expr *expr, int indent_level) {
+
+}
+
+void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
+    assert(!var->is_constant);
     char *rhs = nullptr;
-    if (expr) {
-        rhs = c_print_expr(sb, expr, indent_level, type);
+    if (var->expr) {
+        rhs = c_print_expr(sb, var->expr, indent_level, var->type);
     }
     print_indents(sb, indent_level);
-    c_print_type(sb, type, var_name);
+    c_print_type(sb, var->type, var->name);
     if (rhs) {
         sb->printf(" = %s", rhs);
     }
 }
 
-void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
-    assert(!var->is_constant);
-    c_print_var(sb, var->name, var->type, var->expr, indent_level);
-}
-
 void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
     assert(header->name != nullptr);
-    c_print_type(sb, header->type->return_type, header->name);
-    sb->print("(");
+    String_Builder header_name_sb = make_string_builder(default_allocator(), 32);
+    header_name_sb.print(header->name);
+    header_name_sb.print("(");
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
         assert(!parameter->is_constant);
         assert(!parameter->is_polymorphic_value);
         if (idx != 0) {
-            sb->print(", ");
+            header_name_sb.print(", ");
         }
-        c_print_var(sb, parameter, 0);
+        c_print_var(&header_name_sb, parameter, 0);
     }
-    sb->print(")");
+    header_name_sb.print(")");
+    c_print_type(sb, header->type->return_type, header_name_sb.string());
 }
 
 int total_num_temporaries_emitted = 0;
@@ -955,6 +957,9 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    return any;\n");
     sb.print("};\n");
 
+    sb.print("void print_char(u8 c) {\n");
+    sb.print("    printf(\"%c\", c);\n");
+    sb.print("}\n");
     sb.print("void print_int(i64 i) {\n");
     sb.print("    printf(\"%lld\", i);\n");
     sb.print("}\n");
@@ -1001,10 +1006,8 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             }
             case DECL_PROC: {
                 Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
-                if (!proc_decl->header->is_foreign) {
-                    c_print_procedure_header(&sb, proc_decl->header);
-                    sb.print(";\n");
-                }
+                c_print_procedure_header(&sb, proc_decl->header);
+                sb.print(";\n");
                 break;
             }
             case DECL_TYPE: {
@@ -1028,13 +1031,19 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
                 Ast_Struct *structure = struct_decl->structure;
                 sb.printf("struct %s {\n", structure->name);
+                bool did_print_at_least_one_member = false;
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
                     if (var->is_constant) {
                         continue;
                     }
+                    did_print_at_least_one_member = true;
                     c_print_var(&sb, var, 1);
                     sb.print(";\n");
+                }
+                if (!did_print_at_least_one_member) {
+                    assert(structure->type->size == 1);
+                    sb.print("    bool __dummy;\n");
                 }
                 sb.print("};\n");
                 For (idx, structure->operator_overloads) {

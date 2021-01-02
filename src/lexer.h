@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "basic.h"
 
 struct Location {
     const char *filepath = nullptr;
@@ -36,6 +36,7 @@ enum Token_Kind {
     TK_PROC,
     TK_OPERATOR,
     TK_STRUCT,
+    TK_UNION,
     TK_ENUM,
     TK_RETURN,
     TK_NULL,
@@ -58,6 +59,7 @@ enum Token_Kind {
     TK_DIRECTIVE_FOREIGN,
     TK_DIRECTIVE_C_CODE,
     TK_DIRECTIVE_INCLUDE,
+    TK_DIRECTIVE_FOREIGN_IMPORT,
 
     TK_ASSIGN,
 
@@ -126,6 +128,8 @@ struct Token {
     bool has_a_dot = false;
     int escaped_length = {};
     int scanner_length = {};
+    i64 int_value = {};
+    f64 float_value = {};
 };
 
 void init_lexer_globals();

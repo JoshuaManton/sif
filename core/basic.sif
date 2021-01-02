@@ -1,4 +1,4 @@
-proc putchar     (c: u8)                                                 #foreign;
+proc print_char  (c: u8)                                                 #foreign;
 proc print_int   (i: int)                                                #foreign;
 proc print_float (f: float)                                              #foreign;
 proc print_bool  (b: bool)                                               #foreign;
@@ -6,8 +6,9 @@ proc print_string(str: string)                                           #foreig
 proc alloc       (size: int)                                    : rawptr #foreign;
 proc free        (ptr: rawptr)                                           #foreign;
 proc assert      (condition: bool)                                       #foreign;
-proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
-proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u32) : rawptr #foreign;
+proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
+proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
+proc strlen      (cstr: ^u8)                                    : u64    #foreign;
 
 
 
@@ -18,7 +19,7 @@ proc print(fmt: string, args: ..any) {
         if (c == '%') {
             if ((i+1) < fmt.count) {
                 if (fmt[i+1] == '%') {
-                    putchar('%');
+                    print_char('%');
                     i += 1;
                     continue;
                 }
@@ -40,7 +41,7 @@ proc print(fmt: string, args: ..any) {
             arg_index += 1;
         }
         else {
-            putchar(c);
+            print_char(c);
         }
     }
 }
@@ -48,7 +49,7 @@ proc print(fmt: string, args: ..any) {
 proc printa(args: ..any) {
     for (var i = 0; i < args.count; i += 1) {
         if (i != 0) {
-            putchar(' ');
+            print_char(' ');
         }
 
         var arg = args[i];
@@ -65,7 +66,7 @@ proc printa(args: ..any) {
             print_bool(cast(^bool, arg.data)^);
         }
     }
-    putchar('\n');
+    print_char('\n');
 }
 
 
