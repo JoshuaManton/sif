@@ -21,7 +21,6 @@ TODO:
 
 SMALL
 -handle unary operators nicer, currently quick-and-dirty
--constant bounds checks i.e. var arr: [4]int; arr[232];
 -deduplicate #include paths
 -opt=N
 -debug flag
@@ -30,6 +29,7 @@ SMALL
 -block comments
 -@notes on declarations
 -intern identifiers and remove strcmps
+-add allocators to demo
 
 MEDIUM
 -allow custom entrypoints

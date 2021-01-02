@@ -2165,6 +2165,13 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 elem_type = array_type->array_of;
                 result_operand.type = elem_type;
                 result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+
+                if (index_operand->flags & OPERAND_CONSTANT) {
+                    if ((index_operand->int_value < 0) || (index_operand->int_value >= array_type->count)) {
+                        report_error(subscript->index->location, "Index %d out of bounds 0..<%d.", index_operand->int_value, array_type->count);
+                        return nullptr;
+                    }
+                }
             }
             else if (is_type_slice(lhs_operand->type)) {
                 Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;

@@ -1,23 +1,8 @@
 #include "core:basic.sif"
-#include "core:allocators.sif"
 
 proc main() : i32 {
-    var arena: Arena_Allocator;
-    init_arena(&arena, new_slice(byte, 64, default_allocator()), true);
-    var arena_allocator = arena_to_allocator(&arena);
-
-    var a = new(int, arena_allocator);
-    print("cursor: %\n", arena.cur_offset);
-    var b = new(int, arena_allocator);
-    print("cursor: %\n", arena.cur_offset);
-    var c = new(int, arena_allocator);
-    print("cursor: %\n", arena.cur_offset);
-
-    a^ = 1;
-    b^ = 2;
-    c^ = 4;
-
-    for (var i = 0; i < arena.memory.count; i += 1) {
-        print("%\n", arena.memory[i]);
-    }
+    var arr: [4]int;
+    print("%\n", arr[3]);
+    print("%\n", arr[4]);
+    print("%\n", arr[5]);
 }
