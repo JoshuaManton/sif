@@ -1,4 +1,5 @@
-const cstring = ^u8;
+#foreign_import "SDL2_image.lib"
+#foreign_import "SDL2.lib"
 
 proc SDL_AddEventWatch                    (filter: Event_Filter, userdata: rawptr)                                                                                                          #foreign;
 proc SDL_AddHintCallback                  (name: cstring, callback: Hint_Callback, userdata: rawptr)                                                                                        #foreign;
@@ -491,6 +492,8 @@ proc SDL_WriteLE16                        (dst: ^Rw_Ops, value: u16) : u64      
 proc SDL_WriteLE32                        (dst: ^Rw_Ops, value: u32) : u64                                                                                                                  #foreign;
 proc SDL_WriteLE64                        (dst: ^Rw_Ops, value: u64) : u64                                                                                                                  #foreign;
 proc SDL_WriteU8                          (dst: ^Rw_Ops, value: u8) : u64                                                                                                                   #foreign;
+
+const cstring = ^u8;
 
 enum Init_Flags i32 {
     Timer = 0x00000001;

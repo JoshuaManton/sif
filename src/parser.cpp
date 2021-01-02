@@ -927,7 +927,15 @@ bool parse_file(const char *filename, Location include_location) {
         report_error(include_location, "Couldn't find file '%s'.", filename);
         return false;
     }
-    Lexer lexer(filename, root_file_text);
+    int length = strlen(filename);
+    char *clean_filename = (char *)alloc(default_allocator(), length+1);
+    memcpy(clean_filename, filename, length);
+    for (char *c = clean_filename; *c != '\0'; c++) {
+        if (*c == '\\') {
+            *c = './';
+        }
+    }
+    Lexer lexer(clean_filename, root_file_text);
     Ast_Block *block = parse_block(&lexer, false, false);
     if (!block) {
         return false;

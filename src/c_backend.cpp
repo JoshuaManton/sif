@@ -81,6 +81,10 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
     }
 }
 
+void c_print_line_directive(String_Builder *sb, Location location) {
+    sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
+}
+
 void c_print_type_postfix(String_Builder *sb, Type *type) {
     // todo(josh): handle procedure types
     switch (type->kind) {
@@ -337,6 +341,7 @@ void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, 
                     char *rhs_name = c_print_expr(sb, spread->rhs, indent_level);
                     spread_name = c_temporary();
                     print_indents(sb, indent_level);
+                    c_print_line_directive(sb, spread->location);
                     sb->printf("Slice %s = MAKE_SLICE(&%s.elements[0], %d);\n", spread_name, rhs_name, array_type->count);
                 }
                 else {
@@ -354,6 +359,7 @@ void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, 
                 For (idx, root_expr->vararg_parameters) {
                     Ast_Expr *param = root_expr->vararg_parameters[idx];
                     char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
+                    c_print_line_directive(sb, param->location);
                     print_indents(sb, indent_level);
                     sb->printf("%s[%d] = %s;\n", t, idx, param_name);
                 }
@@ -374,6 +380,8 @@ void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, 
 
 char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     char *t = nullptr;
+
+    c_print_line_directive(sb, expr->location);
 
     if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
         assert(expr->operand.type != nullptr);
@@ -770,6 +778,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
             Ast_Assign *assign = (Ast_Assign *)node;
             char *lhs = c_print_expr(sb, assign->lhs, indent_level);
             char *rhs = c_print_expr(sb, assign->rhs, indent_level, assign->lhs->operand.type);
+            c_print_line_directive(sb, assign->location);
             print_indents(sb, indent_level);
             sb->print(lhs);
             switch (assign->op) {

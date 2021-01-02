@@ -9,8 +9,56 @@ proc assert      (condition: bool)                                       #foreig
 proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
 proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
 proc strlen      (cstr: ^u8)                                    : u64    #foreign;
+proc sin         (x: f64)                                       : f64    #foreign;
 
 
+
+proc print_arg(arg: any) {
+    if (arg.type == i8) {
+        print_int(cast(int, cast(^i8, arg.data)^));
+    }
+    else if (arg.type == i16) {
+        print_int(cast(int, cast(^i16, arg.data)^));
+    }
+    else if (arg.type == i32) {
+        print_int(cast(int, cast(^i32, arg.data)^));
+    }
+    else if (arg.type == i64) {
+        print_int(cast(int, cast(^i64, arg.data)^));
+    }
+
+    else if (arg.type == u8) {
+        print_int(cast(int, cast(^u8, arg.data)^));
+    }
+    else if (arg.type == u16) {
+        print_int(cast(int, cast(^u16, arg.data)^));
+    }
+    else if (arg.type == u32) {
+        print_int(cast(int, cast(^u32, arg.data)^));
+    }
+    else if (arg.type == u64) {
+        print_int(cast(int, cast(^u64, arg.data)^));
+    }
+
+    else if (arg.type == f32) {
+        print_float(cast(f32, cast(^f32, arg.data)^));
+    }
+    else if (arg.type == f64) {
+        print_float(cast(f32, cast(^f64, arg.data)^));
+    }
+
+    else if (arg.type == string) {
+        print_string(cast(^string, arg.data)^);
+    }
+
+    else if (arg.type == bool) {
+        print_bool(cast(^bool, arg.data)^);
+    }
+
+    else {
+        print("<unhandled type>");
+    }
+}
 
 proc print(fmt: string, args: ..any) {
     var arg_index = 0;
@@ -26,50 +74,7 @@ proc print(fmt: string, args: ..any) {
             }
 
             var arg = args[arg_index];
-            if (arg.type == i8) {
-                print_int(cast(int, cast(^i8, arg.data)^));
-            }
-            else if (arg.type == i16) {
-                print_int(cast(int, cast(^i16, arg.data)^));
-            }
-            else if (arg.type == i32) {
-                print_int(cast(int, cast(^i32, arg.data)^));
-            }
-            else if (arg.type == i64) {
-                print_int(cast(int, cast(^i64, arg.data)^));
-            }
-
-            else if (arg.type == u8) {
-                print_int(cast(int, cast(^u8, arg.data)^));
-            }
-            else if (arg.type == u16) {
-                print_int(cast(int, cast(^u16, arg.data)^));
-            }
-            else if (arg.type == u32) {
-                print_int(cast(int, cast(^u32, arg.data)^));
-            }
-            else if (arg.type == u64) {
-                print_int(cast(int, cast(^u64, arg.data)^));
-            }
-
-            else if (arg.type == f32) {
-                print_float(cast(f32, cast(^f32, arg.data)^));
-            }
-            else if (arg.type == f64) {
-                print_float(cast(f32, cast(^f64, arg.data)^));
-            }
-
-            else if (arg.type == string) {
-                print_string(cast(^string, arg.data)^);
-            }
-
-            else if (arg.type == bool) {
-                print_bool(cast(^bool, arg.data)^);
-            }
-
-            else {
-                print("<unhandled type>");
-            }
+            print_arg(arg);
             arg_index += 1;
         }
         else {
@@ -85,18 +90,7 @@ proc printa(args: ..any) {
         }
 
         var arg = args[i];
-        if (arg.type == int) {
-            print_int(cast(^int, arg.data)^);
-        }
-        else if (arg.type == float) {
-            print_float(cast(^float, arg.data)^);
-        }
-        else if (arg.type == string) {
-            print_string(cast(^string, arg.data)^);
-        }
-        else if (arg.type == bool) {
-            print_bool(cast(^bool, arg.data)^);
-        }
+        print_arg(arg);
     }
     print_char('\n');
 }

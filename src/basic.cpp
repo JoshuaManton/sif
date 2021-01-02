@@ -403,3 +403,28 @@ char *path_filename(const char *filepath, Allocator allocator) {
     new_str[length_to_end] = '\0';
     return new_str;
 }
+
+// path/to/file.txt -> file.txt
+// file.txt         -> file.txt
+// file             -> file
+// path/to/         -> <null>
+char *path_filename_with_extension(const char *filepath, Allocator allocator) {
+    int length = strlen(filepath);
+    int slash_index = length;
+    for (; slash_index >= 0; slash_index--) {
+        if (filepath[slash_index] == '/' || filepath[slash_index] == '\\') {
+            break;
+        }
+    }
+    int start = slash_index+1;
+    int end = length;
+    if (start == end) {
+        return nullptr;
+    }
+    assert(end >= start);
+    int length_to_end = end - start;
+    char *new_str = (char *)alloc(allocator, length_to_end+1);
+    memcpy(new_str, &filepath[start], length_to_end);
+    new_str[length_to_end] = '\0';
+    return new_str;
+}

@@ -672,3 +672,4 @@ bool starts_with(char *str, char *start);
 bool ends_with(char *str, char *end);
 char *path_directory(const char *filepath, Allocator allocator);
 char *path_filename(const char *filepath, Allocator allocator);
+char *path_filename_with_extension(const char *filepath, Allocator allocator);

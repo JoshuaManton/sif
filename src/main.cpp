@@ -24,6 +24,7 @@ SMALL
 -constant bounds checks i.e. var arr: [4]int; arr[232];
 -deduplicate #include paths
 -opt=N
+-debug flag
 -unknown directives don't stop compilation
 -error when instantiating a polymorphic struct without parameters
 -block comments
@@ -233,7 +234,7 @@ void main(int argc, char **argv) {
     }
 
     String_Builder command_sb = make_string_builder(default_allocator(), 128);
-    command_sb.printf("cmd.exe /c \"cl.exe output.c /wd4028 %s /nologo /link /OUT:%s\"", libs_sb.string(), output_exe_name);
+    command_sb.printf("cmd.exe /c \"cl.exe /Zi /Fd output.c /wd4028 %s /nologo /link /DEBUG /OUT:%s\"", libs_sb.string(), output_exe_name);
 
     if (system(command_sb.string()) != 0) {
         printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
