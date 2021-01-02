@@ -1,6 +1,7 @@
 #pragma once
 
 #include "basic.h"
+#include "common.h"
 
 struct Location {
     const char *filepath = nullptr;

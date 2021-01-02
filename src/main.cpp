@@ -38,7 +38,6 @@ MEDIUM
 -runtime bounds checks
 -switch statements
 -emit #line directives in backend
--change everything to use custom allocators
 -slicing
 -transmute
 -build to dll
@@ -51,6 +50,7 @@ MEDIUM
 -polymorphic structs should register their parameters as local constants
 -locally scoped structs and procs
 -tagged unions
+-use microsoft_craziness.h
 
 BIG
 -control flow graph analysis
@@ -111,6 +111,8 @@ void print_usage() {
 
 char *sif_core_lib_path;
 
+Allocator g_global_linear_allocator;
+
 void main(int argc, char **argv) {
     Timer timer = {};
     init_timer(&timer);
@@ -120,6 +122,10 @@ void main(int argc, char **argv) {
         print_usage();
         return;
     }
+
+    Dynamic_Arena dynamic_arena = {};
+    init_dynamic_arena(&dynamic_arena, 10 * 1024 * 1024, default_allocator());
+    g_global_linear_allocator = dynamic_arena_allocator(&dynamic_arena);
 
     wchar_t exe_path_wide[MAX_PATH];
     GetModuleFileNameW(nullptr, exe_path_wide, MAX_PATH);
@@ -252,12 +258,14 @@ void main(int argc, char **argv) {
         printf("-----------------------------\n");
         printf("|    sif compile timings    |\n");
         printf("-----------------------------\n");
-        printf("Setup     time: %fms\n", (parsing_start_time   - application_start_time));
-        printf("Parse     time: %fms\n", (checking_start_time  - parsing_start_time));
-        printf("Check     time: %fms\n", (codegen_start_time   - checking_start_time));
-        printf("Codegen   time: %fms\n", (c_compile_start_time - codegen_start_time));
-        printf("C compile time: %fms\n", (compilation_end_time - c_compile_start_time));
-        printf("Total     time: %fms\n", (compilation_end_time - application_start_time));
+        printf("  Setup time: %fms\n", (parsing_start_time   - application_start_time));
+        printf("  Parse time: %fms\n", (checking_start_time  - parsing_start_time));
+        printf("  Check time: %fms\n", (codegen_start_time   - checking_start_time));
+        printf("Codegen time: %fms\n", (c_compile_start_time - codegen_start_time));
+        printf(" cl.exe time: %fms\n", (compilation_end_time - c_compile_start_time));
+        printf("\n");
+        printf("  Sif time: %fms\n", (c_compile_start_time - application_start_time));
+        printf("Total time: %fms\n", (compilation_end_time - application_start_time));
     }
 
     if (is_run) {

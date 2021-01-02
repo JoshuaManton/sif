@@ -73,38 +73,38 @@ void add_constant_type_field(Type *type, const char *name, Operand operand) {
 }
 
 void init_checker() {
-    all_types.allocator = default_allocator();
-    ordered_declarations.allocator = default_allocator();
+    all_types.allocator = g_global_linear_allocator;
+    ordered_declarations.allocator = g_global_linear_allocator;
 
-    type_i8  = new Type_Primitive("i8", 1, 1);  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8); type_i8->id = all_types.count;
-    type_i16 = new Type_Primitive("i16", 2, 2); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16); type_i16->id = all_types.count;
-    type_i32 = new Type_Primitive("i32", 4, 4); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32); type_i32->id = all_types.count;
-    type_i64 = new Type_Primitive("i64", 8, 8); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64); type_i64->id = all_types.count;
+    type_i8  = SIF_NEW_CLONE(Type_Primitive("i8", 1, 1));  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8); type_i8->id = all_types.count;
+    type_i16 = SIF_NEW_CLONE(Type_Primitive("i16", 2, 2)); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16); type_i16->id = all_types.count;
+    type_i32 = SIF_NEW_CLONE(Type_Primitive("i32", 4, 4)); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32); type_i32->id = all_types.count;
+    type_i64 = SIF_NEW_CLONE(Type_Primitive("i64", 8, 8)); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64); type_i64->id = all_types.count;
 
-    type_u8  = new Type_Primitive("u8", 1, 1);  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8); type_u8->id = all_types.count;
-    type_u16 = new Type_Primitive("u16", 2, 2); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16); type_u16->id = all_types.count;
-    type_u32 = new Type_Primitive("u32", 4, 4); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32); type_u32->id = all_types.count;
-    type_u64 = new Type_Primitive("u64", 8, 8); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64); type_u64->id = all_types.count;
+    type_u8  = SIF_NEW_CLONE(Type_Primitive("u8", 1, 1));  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8); type_u8->id = all_types.count;
+    type_u16 = SIF_NEW_CLONE(Type_Primitive("u16", 2, 2)); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16); type_u16->id = all_types.count;
+    type_u32 = SIF_NEW_CLONE(Type_Primitive("u32", 4, 4)); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32); type_u32->id = all_types.count;
+    type_u64 = SIF_NEW_CLONE(Type_Primitive("u64", 8, 8)); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64); type_u64->id = all_types.count;
 
-    type_f32 = new Type_Primitive("f32", 4, 4); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32); type_f32->id = all_types.count;
-    type_f64 = new Type_Primitive("f64", 8, 8); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64); type_f64->id = all_types.count;
+    type_f32 = SIF_NEW_CLONE(Type_Primitive("f32", 4, 4)); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32); type_f32->id = all_types.count;
+    type_f64 = SIF_NEW_CLONE(Type_Primitive("f64", 8, 8)); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64); type_f64->id = all_types.count;
 
-    type_bool = new Type_Primitive("bool", 1, 1); all_types.append(type_bool); type_bool->id = all_types.count;
+    type_bool = SIF_NEW_CLONE(Type_Primitive("bool", 1, 1)); all_types.append(type_bool); type_bool->id = all_types.count;
 
-    type_typeid = new Type_Primitive("typeid", 8, 8); all_types.append(type_typeid); type_typeid->id = all_types.count;
-    type_string = new Type_Primitive("string", 16, 8); all_types.append(type_string); type_string->id = all_types.count;
-    type_rawptr = new Type_Primitive("rawptr", 8, 8); type_rawptr->flags = TF_POINTER; all_types.append(type_rawptr); type_rawptr->id = all_types.count;
+    type_typeid = SIF_NEW_CLONE(Type_Primitive("typeid", 8, 8)); all_types.append(type_typeid); type_typeid->id = all_types.count;
+    type_string = SIF_NEW_CLONE(Type_Primitive("string", 16, 8)); all_types.append(type_string); type_string->id = all_types.count;
+    type_rawptr = SIF_NEW_CLONE(Type_Primitive("rawptr", 8, 8)); type_rawptr->flags = TF_POINTER; all_types.append(type_rawptr); type_rawptr->id = all_types.count;
 
-    type_any = new Type_Primitive("any", 16, 8); type_any->flags = TF_ANY; all_types.append(type_any); type_any->id = all_types.count;
+    type_any = SIF_NEW_CLONE(Type_Primitive("any", 16, 8)); type_any->flags = TF_ANY; all_types.append(type_any); type_any->id = all_types.count;
 
-    type_untyped_integer = new Type_Primitive("untyped integer", -1, -1); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
-    type_untyped_float   = new Type_Primitive("untyped float", -1, -1);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
-    type_untyped_null    = new Type_Primitive("untyped null", -1, -1);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
+    type_untyped_integer = SIF_NEW_CLONE(Type_Primitive("untyped integer", -1, -1)); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
+    type_untyped_float   = SIF_NEW_CLONE(Type_Primitive("untyped float", -1, -1));   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
+    type_untyped_null    = SIF_NEW_CLONE(Type_Primitive("untyped null", -1, -1));    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
 
     type_int = type_i64;
     type_float = type_f32;
 
-    type_polymorphic = new Type_Primitive("type polymorphic", -1, -1); type_polymorphic->flags = TF_POLYMORPHIC;
+    type_polymorphic = SIF_NEW_CLONE(Type_Primitive("type polymorphic", -1, -1)); type_polymorphic->flags = TF_POLYMORPHIC;
 
 
 
@@ -118,34 +118,34 @@ void init_checker() {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    register_declaration(new Type_Declaration("i8",  type_i8, block));
-    register_declaration(new Type_Declaration("i16", type_i16, block));
-    register_declaration(new Type_Declaration("i32", type_i32, block));
-    register_declaration(new Type_Declaration("i64", type_i64, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("i8",  type_i8, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("i16", type_i16, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("i32", type_i32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("i64", type_i64, block)));
 
-    register_declaration(new Type_Declaration("u8",  type_u8, block));
-    register_declaration(new Type_Declaration("u16", type_u16, block));
-    register_declaration(new Type_Declaration("u32", type_u32, block));
-    register_declaration(new Type_Declaration("u64", type_u64, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("u8",  type_u8, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("u16", type_u16, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("u32", type_u32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("u64", type_u64, block)));
 
-    register_declaration(new Type_Declaration("f32", type_f32, block));
-    register_declaration(new Type_Declaration("f64", type_f64, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("f32", type_f32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("f64", type_f64, block)));
 
-    register_declaration(new Type_Declaration("int" ,  type_i64, block));
-    register_declaration(new Type_Declaration("uint",  type_u64, block));
-    register_declaration(new Type_Declaration("float", type_f32, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("int" ,  type_i64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("uint",  type_u64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("float", type_f32, block)));
 
-    register_declaration(new Type_Declaration("bool", type_bool, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("bool", type_bool, block)));
 
-    register_declaration(new Type_Declaration("typeid", type_typeid, block));
-    register_declaration(new Type_Declaration("string", type_string, block));
-    register_declaration(new Type_Declaration("rawptr", type_rawptr, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("typeid", type_typeid, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("string", type_string, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("rawptr", type_rawptr, block)));
 
-    register_declaration(new Type_Declaration("any", type_any, block));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration("any", type_any, block)));
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
-    Type_Struct *incomplete_type = new Type_Struct(structure);
+    Type_Struct *incomplete_type = SIF_NEW_CLONE(Type_Struct(structure));
     incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
     incomplete_type->is_union = structure->is_union;
     all_types.append(incomplete_type);
@@ -274,7 +274,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
         case DECL_ENUM: {
             Enum_Declaration *enum_decl = (Enum_Declaration *)decl;
-            Type_Enum *enum_type = new Type_Enum(enum_decl->name);
+            Type_Enum *enum_type = SIF_NEW_CLONE(Type_Enum(enum_decl->name));
             Type *enum_base_type = type_int;
             if (enum_decl->ast_enum->base_type_expr) {
                 Operand *type_operand = typecheck_expr(enum_decl->ast_enum->base_type_expr, type_typeid);
@@ -334,7 +334,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
                     add_constant_type_field(enum_type, field->name, field_operand);
-                    if (!register_declaration(new Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->constants_block, field->location))) {
+                    if (!register_declaration(SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->constants_block, field->location)))) {
                         return false;
                     }
                     field->resolved = true;
@@ -562,7 +562,7 @@ void sbprint_constant_operand(String_Builder *sb, Operand operand) {
 }
 
 char *type_to_string(Type *type) {
-    String_Builder sb = make_string_builder(default_allocator(), 128);
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *primitive = (Type_Primitive *)type;
@@ -640,7 +640,7 @@ char *type_to_string(Type *type) {
 }
 
 char *type_to_string_plain(Type *type) {
-    String_Builder sb = make_string_builder(default_allocator(), 128);
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *primitive = (Type_Primitive *)type;
@@ -798,7 +798,7 @@ bool complete_type(Type *type) {
                 array_type->align = array_type->array_of->align;
                 assert(array_type->size > 0);
                 array_type->flags &= ~(TF_INCOMPLETE);
-                ordered_declarations.append(new Type_Declaration("", array_type, nullptr));
+                ordered_declarations.append(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr)));
                 break;
             }
         }
@@ -877,7 +877,7 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
             }
         }
     }
-    Type_Pointer *new_type = new Type_Pointer(pointer_to);
+    Type_Pointer *new_type = SIF_NEW_CLONE(Type_Pointer(pointer_to));
     new_type->flags = TF_POINTER;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
@@ -897,7 +897,7 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
             }
         }
     }
-    Type_Reference *new_type = new Type_Reference(reference_to);
+    Type_Reference *new_type = SIF_NEW_CLONE(Type_Reference(reference_to));
     new_type->flags = TF_REFERENCE;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
@@ -918,7 +918,7 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
             }
         }
     }
-    Type_Array *new_type = new Type_Array(array_of, count);
+    Type_Array *new_type = SIF_NEW_CLONE(Type_Array(array_of, count));
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
     add_variable_type_field(new_type, "data", type_rawptr, 0);
     Operand operand = {};
@@ -943,7 +943,7 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
         }
     }
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(slice_of);
-    Type_Slice *new_type = new Type_Slice(slice_of, pointer_to_element_type);
+    Type_Slice *new_type = SIF_NEW_CLONE(Type_Slice(slice_of, pointer_to_element_type));
     new_type->flags = TF_SLICE;
     new_type->size  = 16;
     new_type->align = 8;
@@ -967,7 +967,7 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     }
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(varargs_of);
     Type_Slice *slice_type = get_or_create_type_slice_of(varargs_of);
-    Type_Varargs *new_type = new Type_Varargs(varargs_of, pointer_to_element_type, slice_type);
+    Type_Varargs *new_type = SIF_NEW_CLONE(Type_Varargs(varargs_of, pointer_to_element_type, slice_type));
     new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
@@ -1002,7 +1002,7 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
             }
         }
     }
-    Type_Procedure *new_type = new Type_Procedure(parameter_types, return_type);
+    Type_Procedure *new_type = SIF_NEW_CLONE(Type_Procedure(parameter_types, return_type));
     new_type->flags = TF_PROCEDURE | TF_POINTER;
     For (idx, parameter_types) {
         if (is_type_polymorphic(parameter_types[idx])) {
@@ -1171,10 +1171,10 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 else if (is_type_string(lhs.type)  && is_type_string(rhs.type)) {
                     int total_length_scanned = (lhs.scanned_string_length + rhs.scanned_string_length);
                     int total_length_escaped = (lhs.escaped_string_length + rhs.escaped_string_length);
-                    char *new_scanned_string = (char *)alloc(default_allocator(), total_length_scanned+1);
+                    char *new_scanned_string = (char *)alloc(g_global_linear_allocator, total_length_scanned+1);
                     memcpy(new_scanned_string, lhs.scanned_string_value, lhs.scanned_string_length);
                     memcpy(new_scanned_string+lhs.scanned_string_length, rhs.scanned_string_value, rhs.scanned_string_length);
-                    char *new_escaped_string = (char *)alloc(default_allocator(), total_length_escaped+1);
+                    char *new_escaped_string = (char *)alloc(g_global_linear_allocator, total_length_escaped+1);
                     memcpy(new_escaped_string, lhs.escaped_string_value, lhs.escaped_string_length);
                     memcpy(new_escaped_string+lhs.escaped_string_length, rhs.escaped_string_value, rhs.escaped_string_length);
                     new_scanned_string[total_length_scanned] = '\0';
@@ -1399,7 +1399,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
                 return false;
             }
             assert(parameter_operand.type != nullptr);
-            out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, parameter_operand, nullptr, parameter_operand.location));
+            out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, nullptr, parameter_operand.location)));
             break;
         }
         default: {
@@ -1437,7 +1437,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
             type_operand.type = type_typeid;
             type_operand.type_value = concrete_type;
-            out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_location));
+            out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_location)));
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
@@ -1472,7 +1472,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
                 Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)poly_expr;
                 Operand param_operand = struct_type->polymorphic_parameter_values[idx];
                 assert(param_operand.type != nullptr);
-                out_polymorphic_declarations->append(new Constant_Declaration(poly->ident->name, param_operand, nullptr, param_operand.location));
+                out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, param_operand, nullptr, param_operand.location)));
             }
             break;
         }
@@ -1534,7 +1534,7 @@ bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, 
 
 Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Operand> parameters, Location polymorph_location, Array<int> *polymorphic_constants) {
     Array<Declaration *> polymorphic_declarations;
-    polymorphic_declarations.allocator = default_allocator();
+    polymorphic_declarations.allocator = g_global_linear_allocator;
 
     // create polymorphic declarations and deduplicate polymorphs
     {
@@ -1649,7 +1649,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     lexer.location.index = 0;
     Ast_Block *old_block = push_ast_block(node_to_polymorph->parent_block);
     defer(pop_ast_block(old_block));
-    String_Builder sb = make_string_builder(default_allocator());
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     sb.print(original_name);
     sb.printf("__polymorph_%d", total_num_polymorphs);
     total_num_polymorphs += 1;
@@ -1678,7 +1678,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     assert(block_to_insert_declarations_into != nullptr);
 
     Array<Operand> polymorph_values;
-    polymorph_values.allocator = default_allocator();
+    polymorph_values.allocator = g_global_linear_allocator;
     For (idx, polymorphic_declarations) {
         Declaration *poly_decl = polymorphic_declarations[idx];
         insert_polymorph_replacement(block_to_insert_declarations_into, poly_decl);
@@ -1733,7 +1733,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
 Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_location, Array<Ast_Expr *> parameters, Array<int> *polymorphic_constants) {
     // todo(josh): compress this out with the one in polymorph_struct()
     Array<Operand> parameter_operands = {};
-    parameter_operands.allocator = default_allocator();
+    parameter_operands.allocator = g_global_linear_allocator;
     For (idx, parameters) {
         Ast_Expr *parameter = parameters[idx];
         Operand *param_operand = typecheck_expr(parameter);
@@ -1752,7 +1752,7 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_lo
 Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location, Array<Ast_Expr *> parameters) {
     // todo(josh): compress this out with the one in polymorph_procedure()
     Array<Operand> parameter_operands = {};
-    parameter_operands.allocator = default_allocator();
+    parameter_operands.allocator = g_global_linear_allocator;
     For (idx, parameters) {
         Ast_Expr *parameter = parameters[idx];
         Operand *param_operand = typecheck_expr(parameter);
@@ -1764,7 +1764,7 @@ Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location,
     }
 
     Array<int> parameter_indices_to_remove;
-    parameter_indices_to_remove.allocator = default_allocator();
+    parameter_indices_to_remove.allocator = g_global_linear_allocator;
     Ast_Node *struct_polymorph_node = polymorph_node(structure, structure->name, parameter_operands, polymorph_location, &parameter_indices_to_remove);
     if (!struct_polymorph_node) {
         return nullptr;
@@ -1777,7 +1777,7 @@ Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location,
 bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<Ast_Expr *> parameters, Operand *out_operand) {
     // copy all the exprs into params_to_emit
     Array<Ast_Expr *> params_to_emit = {};
-    params_to_emit.allocator = default_allocator();
+    params_to_emit.allocator = g_global_linear_allocator;
     For (idx, parameters) {
         params_to_emit.append(parameters[idx]);
     }
@@ -1789,7 +1789,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
         Ast_Proc *referenced_procedure = ((Proc_Declaration *)procedure_operand.referenced_declaration)->header->procedure;
 
         Array<int> parameter_indices_to_remove;
-        parameter_indices_to_remove.allocator = default_allocator();
+        parameter_indices_to_remove.allocator = g_global_linear_allocator;
         Ast_Proc *procedure_polymorph = polymorph_procedure(referenced_procedure, expr->location, parameters, &parameter_indices_to_remove);
         if (procedure_polymorph == nullptr) {
             return false;
@@ -1809,7 +1809,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
 
     // typecheck parameters now that we have concrete types for the procedure parameters
     Array<Ast_Expr *> vararg_parameters;
-    vararg_parameters.allocator = default_allocator();
+    vararg_parameters.allocator = g_global_linear_allocator;
     int param_index = 0;
     int has_started_assigning_to_varargs = false;
     for (int idx = 0; idx < target_procedure_type->parameter_types.count && param_index < params_to_emit.count; idx += 1) {
@@ -1909,7 +1909,7 @@ bool try_resolve_operator_overload(Ast_Struct *structure, Ast_Expr *root_expr, A
     assert(lhs->operand.type != nullptr);
     assert(rhs->operand.type != nullptr);
     Array<Ast_Expr *> parameters = {};
-    parameters.allocator = default_allocator();
+    parameters.allocator = g_global_linear_allocator;
     parameters.append(lhs);
     parameters.append(rhs);
     Ast_Proc *overload_proc = find_operator_overload(structure, parameters, op);
@@ -2636,7 +2636,7 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         return &header->operand;
     }
     Array<Type *> parameter_types = {};
-    parameter_types.allocator = default_allocator();
+    parameter_types.allocator = g_global_linear_allocator;
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
         if (parameter->is_constant) {
@@ -2673,13 +2673,13 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
     if (header->operator_to_overload != TK_INVALID) {
         assert(header->name == nullptr);
         assert(header->struct_to_operator_overload != nullptr);
-        String_Builder op_overload_name_sb = make_string_builder(default_allocator(), 64);
+        String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
         op_overload_name_sb.printf("__operator_overload_%s_%s_", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
         assert(header->parameters.count == 2);
         op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
         header->name = op_overload_name_sb.string();
         assert(header->declaration == nullptr);
-        header->declaration = new Proc_Declaration(header, header->parent_block);
+        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block));
     }
     else {
         assert(header->operator_to_overload == TK_INVALID);

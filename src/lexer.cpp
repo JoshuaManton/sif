@@ -241,7 +241,7 @@ char *unescape_string(char *str, int *out_escaped_length) {
     int escaped_length = string_length;
 
     bool escape = false;
-    String_Builder sb = make_string_builder(default_allocator(), 1024);
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 1024);
     for (char *c = str; (*c != '\0' || escape); c++) {
         if (!escape) {
             if (*c == '\\') {

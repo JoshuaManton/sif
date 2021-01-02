@@ -145,15 +145,16 @@ Allocator null_allocator() {
 
 
 
-void init_arena(Arena *arena, byte *backing, int backing_size) {
-    arena->memory = backing;
+void init_arena(Arena *arena, void *backing, int backing_size, bool panic_on_oom) {
+    arena->memory = (byte *)backing;
     arena->memory_size = backing_size;
     arena->cur_offset = 0;
+    arena->panic_on_oom = panic_on_oom;
 }
 
 void *arena_alloc(void *allocator, int size, int align) {
     Arena *arena = (Arena *)allocator;
-    return buffer_allocate(arena->memory, arena->memory_size, &arena->cur_offset, size, align);
+    return buffer_allocate(arena->memory, arena->memory_size, &arena->cur_offset, size, align, arena->panic_on_oom);
 }
 
 void arena_free(void *allocator, void *ptr) {
@@ -170,6 +171,77 @@ Allocator arena_allocator(Arena *arena) {
     a.alloc_proc = arena_alloc;
     a.free_proc = arena_free;
     return a;
+}
+
+
+
+void init_dynamic_arena(Dynamic_Arena *dyn, int starting_chunk_size, Allocator backing_allocator) {
+    dyn->chunk_size = starting_chunk_size;
+    dyn->backing_allocator = backing_allocator;
+    dyn->arenas = make_array<Arena>(backing_allocator);
+    Arena *arena = dyn->arenas.append();
+    init_arena(arena, alloc(backing_allocator, starting_chunk_size), starting_chunk_size, false);
+}
+
+void *dynamic_arena_alloc(void *allocator, int size, int align) {
+    Dynamic_Arena *dyn = (Dynamic_Arena *)allocator;
+    Arena *current_arena = &dyn->arenas[dyn->current_arena_index];
+    void *ptr = arena_alloc(current_arena, size, align);
+    if (!ptr) {
+        // we've reached the end of the arena
+        if (dyn->current_arena_index+1 >= dyn->arenas.count) {
+            // make a new arena
+            current_arena = dyn->arenas.append();
+            dyn->chunk_size *= 2;
+            init_arena(current_arena, alloc(dyn->backing_allocator, dyn->chunk_size), dyn->chunk_size, false);
+        }
+        else {
+            // use the next one in the list
+            current_arena = &dyn->arenas[dyn->current_arena_index+1];
+        }
+        dyn->current_arena_index += 1;
+
+        // retry the allocation
+        ptr = arena_alloc(current_arena, size, align);
+        if (!ptr) {
+            // if it STILL failed then that means that the allocation is too big for our chunk size. fallback to the backing allocator
+            ptr = alloc(dyn->backing_allocator, size, align);
+            assert(ptr != nullptr);
+            dyn->leaked_allocations.append(ptr);
+        }
+    }
+    assert(ptr != nullptr);
+    return ptr;
+}
+
+void dynamic_arena_free(void *allocator, void *ptr) {
+    // note(josh): freeing from arenas does nothing
+}
+
+void dynamic_arena_clear(Dynamic_Arena *dyn) {
+    For (idx, dyn->arenas) {
+        arena_clear(&dyn->arenas[idx]);
+    }
+    dyn->current_arena_index = 0;
+}
+
+Allocator dynamic_arena_allocator(Dynamic_Arena *dyn) {
+    Allocator a = {};
+    a.data = dyn;
+    a.alloc_proc = dynamic_arena_alloc;
+    a.free_proc = dynamic_arena_free;
+    return a;
+}
+
+void destroy_dynamic_arena(Dynamic_Arena *dyn) {
+    For (idx, dyn->arenas) {
+        free(dyn->backing_allocator, dyn->arenas[idx].memory);
+    }
+    dyn->arenas.destroy();
+    For (idx, dyn->leaked_allocations) {
+        free(dyn->backing_allocator, dyn->leaked_allocations[idx]);
+    }
+    dyn->leaked_allocations.destroy();
 }
 
 

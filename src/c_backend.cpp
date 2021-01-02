@@ -279,10 +279,6 @@ void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name) {
     c_print_type_plain_postfix(sb, type);
 }
 
-void c_print_var(String_Builder *sb, const char *var_name, Type *type, Ast_Expr *expr, int indent_level) {
-
-}
-
 void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
     assert(!var->is_constant);
     char *rhs = nullptr;
@@ -298,7 +294,7 @@ void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
 
 void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
     assert(header->name != nullptr);
-    String_Builder header_name_sb = make_string_builder(default_allocator(), 32);
+    String_Builder header_name_sb = make_string_builder(g_global_linear_allocator, 128);
     header_name_sb.print(header->name);
     header_name_sb.print("(");
     For (idx, header->parameters) {
@@ -318,7 +314,7 @@ int total_num_temporaries_emitted = 0;
 
 char *c_temporary() {
     total_num_temporaries_emitted += 1;
-    String_Builder sb = make_string_builder(default_allocator(), 32); // todo(josh): this is very dumb. use an arena or something
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 128); // todo(josh): this is very dumb. use an arena or something
     sb.printf("__t%d", total_num_temporaries_emitted);
     return sb.string();
 }
@@ -388,7 +384,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
     }
 
     String_Builder reference_prefix_sb = {};
-    reference_prefix_sb.buf.allocator = default_allocator();
+    reference_prefix_sb.buf.allocator = g_global_linear_allocator;
 
     if (expr->operand.reference_type != nullptr) {
         assert(is_type_reference(expr->operand.reference_type));
@@ -405,7 +401,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
         assert(expr->desugared_procedure_to_call != nullptr);
         assert(expr->desugared_procedure_to_call->header->name != nullptr);
         Array<char *> params;
-        params.allocator = default_allocator();
+        params.allocator = g_global_linear_allocator;
         c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->desugared_procedure_parameters, indent_level, &params);
         print_indents(sb, indent_level);
         if (expr->desugared_procedure_to_call->header->type->return_type) {
@@ -521,7 +517,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     assert(!is_type_polymorphic(call->target_procedure_type));
                     char *procedure_name = c_print_expr(sb, call->lhs, indent_level);
                     Array<char *> params;
-                    params.allocator = default_allocator();
+                    params.allocator = g_global_linear_allocator;
                     c_print_procedure_call_parameters(sb, call, call->target_procedure_type, call->parameters_to_emit, indent_level, &params);
                     if (call->target_procedure_type->return_type) {
                         t = c_temporary();
@@ -543,7 +539,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     Expr_Subscript *subscript = (Expr_Subscript *)expr;
                     char *lhs = c_print_expr(sb, subscript->lhs, indent_level);
                     char *index = c_print_expr(sb, subscript->index, indent_level);
-                    String_Builder subscript_sb = make_string_builder(default_allocator(), 32);
+                    String_Builder subscript_sb = make_string_builder(g_global_linear_allocator, 128);
                     if (is_type_slice(subscript->lhs->operand.type) || is_type_varargs(subscript->lhs->operand.type)) {
                         Type_Slice *slice_type = nullptr;
                         if (is_type_slice(subscript->lhs->operand.type)) {
@@ -576,7 +572,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 case EXPR_COMPOUND_LITERAL: {
                     Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
                     Array<char *> expr_names;
-                    expr_names.allocator = default_allocator();
+                    expr_names.allocator = g_global_linear_allocator;
                     For (idx, compound_literal->exprs) {
                         char *name = c_print_expr(sb, compound_literal->exprs[idx], indent_level);
                         expr_names.append(name);
@@ -613,7 +609,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 case EXPR_ADDRESS_OF: {
                     Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
                     char *rhs = c_print_expr(sb, address_of->rhs, indent_level);
-                    String_Builder address_sb = make_string_builder(default_allocator(), 64);
+                    String_Builder address_sb = make_string_builder(g_global_linear_allocator, 128);
                     address_sb.printf("&%s", rhs);
                     t = address_sb.string();
                     break;
@@ -621,7 +617,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 case EXPR_DEREFERENCE: {
                     Expr_Dereference *dereference = (Expr_Dereference *)expr;
                     char *lhs = c_print_expr(sb, dereference->lhs, indent_level);
-                    String_Builder deref_sb = make_string_builder(default_allocator(), 64);
+                    String_Builder deref_sb = make_string_builder(g_global_linear_allocator, 128);
                     deref_sb.printf("(*%s)", lhs);
                     t = deref_sb.string();
                     break;
@@ -630,7 +626,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     Expr_Selector *selector = (Expr_Selector *)expr;
                     char *lhs = c_print_expr(sb, selector->lhs, indent_level);
                     assert(lhs);
-                    String_Builder selector_sb = make_string_builder(default_allocator(), 64);
+                    String_Builder selector_sb = make_string_builder(g_global_linear_allocator, 128);
                     bool is_accessing_slice_data_field = false;
                     if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
                         is_accessing_slice_data_field = true;
@@ -738,7 +734,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
 
     if (target_type) {
         if (target_type == type_any && (expr->operand.type != type_any)) {
-            String_Builder any_sb = make_string_builder(default_allocator(), 32);
+            String_Builder any_sb = make_string_builder(g_global_linear_allocator, 128);
             any_sb.printf("MAKE_ANY(&%s, %d)", t, expr->operand.type->id);
             t = any_sb.string();
         }
@@ -926,7 +922,7 @@ void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
 String_Builder generate_c_main_file(Ast_Block *global_scope) {
     // todo(josh): I think there's a bug in my String_Buffer implementation
     //             as this crashes on resize sometimes
-    String_Builder sb = make_string_builder(default_allocator(), 50 * 1024);
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 128 * 1024);
 
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
@@ -1103,7 +1099,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                     c_print_type(&sb, array_type, "");
                     sb.printf(" {\n");
                     sb.printf("    ");
-                    String_Builder elements_name_sb = make_string_builder(default_allocator(), 32);
+                    String_Builder elements_name_sb = make_string_builder(g_global_linear_allocator, 128);
                     elements_name_sb.printf("elements[%d]", array_type->count);
                     c_print_type(&sb, array_type->array_of, elements_name_sb.string());
                     sb.printf(";\n};\n");

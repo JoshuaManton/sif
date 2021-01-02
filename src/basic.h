@@ -63,7 +63,6 @@ int max(int a, int b);
 int modulo(int a, int b);
 
 
-byte *buffer_allocate(byte *buffer, int buffer_len, int *offset, int size, int alignment, bool panic_on_oom = true);
 
 #ifndef DEFAULT_ALIGNMENT
 #define DEFAULT_ALIGNMENT sizeof(void *) * 2
@@ -80,85 +79,6 @@ void free(Allocator allocator, void *ptr);
 #define NEW(allocator, type) ((type *)alloc(allocator, sizeof(type), alignof(type)))
 #define MAKE(allocator, type, count) ((type *)alloc(allocator, sizeof(type) * count, alignof(type)))
 
-void *default_allocator_alloc(void *allocator, int size, int alignment);
-void default_allocator_free(void *allocator, void *ptr);
-Allocator default_allocator();
-
-
-
-Allocator null_allocator();
-
-
-
-struct Arena {
-    byte *memory;
-    int memory_size;
-    int cur_offset;
-};
-
-void init_arena(Arena *arena, byte *backing, int backing_size);
-void *arena_alloc(void *allocator, int size, int align = DEFAULT_ALIGNMENT);
-void arena_free(void *allocator, void *ptr);
-void arena_clear(Arena *arena);
-Allocator arena_allocator(Arena *arena);
-
-
-
-struct Pool_Allocator {
-    byte *memory;
-    int memory_size;
-    int slot_size;
-    int num_slots;
-    int *generations;
-    int *slots_freelist;
-    int freelist_count;
-    Allocator backing_allocator;
-};
-
-void  init_pool_allocator(Pool_Allocator *pool, Allocator backing_allocator, int slot_size, int num_slots);
-void *pool_get(Pool_Allocator *pool, int *out_generation, int *out_index);
-void  pool_return(Pool_Allocator *pool, void *ptr);
-int   pool_get_slot_index(Pool_Allocator *pool, void *ptr);
-void *pool_get_slot_by_index(Pool_Allocator *pool, int slot);
-void *pool_alloc(void *allocator, int size, int align = DEFAULT_ALIGNMENT);
-void  pool_free(void *allocator, void *ptr);
-Allocator pool_allocator(Pool_Allocator *pool);
-void destroy_pool(Pool_Allocator pool);
-
-
-
-// todo(josh): read_entire_file should be in a different file I think
-char *read_entire_file(const char *filename, int *len);
-void write_entire_file(const char *filename, const char *data);
-
-// note(josh): defer implementation stolen from gb.h
-#if !defined(GB_NO_DEFER) && defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1400) || (__cplusplus >= 201103L))
-extern "C++" {
-    // NOTE(bill): Stupid fucking templates
-    template <typename T> struct gbRemoveReference       { typedef T Type; };
-    template <typename T> struct gbRemoveReference<T &>  { typedef T Type; };
-    template <typename T> struct gbRemoveReference<T &&> { typedef T Type; };
-
-    /// NOTE(bill): "Move" semantics - invented because the C++ committee are idiots (as a collective not as indiviuals (well a least some aren't))
-    template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &t)  { return static_cast<T &&>(t); }
-    template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &&t) { return static_cast<T &&>(t); }
-    template <typename T> inline T &&gb_move   (T &&t)                                   { return static_cast<typename gbRemoveReference<T>::Type &&>(t); }
-    template <typename F>
-    struct gbprivDefer {
-        F f;
-        gbprivDefer(F &&f) : f(gb_forward<F>(f)) {}
-        ~gbprivDefer() { f(); }
-    };
-    template <typename F> gbprivDefer<F> gb__defer_func(F &&f) { return gbprivDefer<F>(gb_forward<F>(f)); }
-
-    #define GB_DEFER_1(x, y) x##y
-    #define GB_DEFER_2(x, y) GB_DEFER_1(x, y)
-    #define GB_DEFER_3(x)    GB_DEFER_2(x, __COUNTER__)
-    #define defer(code)      auto GB_DEFER_3(_defer_) = gb__defer_func([&]()->void{code;})
-}
-#endif
-
-
 
 
 template<typename T>
@@ -168,6 +88,7 @@ struct Array {
     int capacity = {};
     Allocator allocator = {};
 
+    T *append();
     T *append(T element);
     T *insert(int index, T element);
     void reserve(int capacity);
@@ -198,6 +119,17 @@ Array<T> make_array(T *buffer, int capacity) {
     array.data = buffer;
     array.capacity = capacity;
     return array;
+}
+
+template<typename T>
+T *Array<T>::append() {
+    if (count >= capacity) {
+        reserve(8 + (capacity * 2));
+    }
+    T *ptr = &data[count];
+    *ptr = {};
+    count += 1;
+    return ptr;
 }
 
 template<typename T>
@@ -287,6 +219,111 @@ T Array<T>::unordered_remove(int index) {
 
 #define Foreach(var, array) for (auto *var = (array).data; (uintptr_t)var < (uintptr_t)(&(array).data[(array).count]); var++)
 #define For(idx, array) for (int idx = 0; idx < (array).count; idx++)
+
+
+
+byte *buffer_allocate(byte *buffer, int buffer_len, int *offset, int size, int alignment, bool panic_on_oom = true);
+
+
+
+void *default_allocator_alloc(void *allocator, int size, int alignment);
+void default_allocator_free(void *allocator, void *ptr);
+Allocator default_allocator();
+
+
+
+Allocator null_allocator();
+
+
+
+struct Arena {
+    byte *memory = {};
+    int memory_size = {};
+    int cur_offset = {};
+    bool panic_on_oom = {};
+};
+
+void init_arena(Arena *arena, byte *backing, int backing_size, bool panic_on_oom);
+void *arena_alloc(void *allocator, int size, int align = DEFAULT_ALIGNMENT);
+void arena_free(void *allocator, void *ptr);
+void arena_clear(Arena *arena);
+Allocator arena_allocator(Arena *arena);
+
+
+
+struct Dynamic_Arena {
+    Array<Arena> arenas = {};
+    int current_arena_index = {};
+    Allocator backing_allocator = {};
+    int chunk_size = {};
+    Array<void *> leaked_allocations = {}; // if an allocation is bigger than the chunk size, we fall back to the backing allocator and save it here to be freed later
+};
+
+void init_dynamic_arena(Dynamic_Arena *dyn, int starting_chunk_size, Allocator backing_allocator);
+void *dynamic_arena_alloc(void *allocator, int size, int align);
+void dynamic_arena_free(void *allocator, void *ptr);
+void dynamic_arena_clear(Dynamic_Arena *dyn);
+Allocator dynamic_arena_allocator(Dynamic_Arena *dyn);
+void destroy_dynamic_arena(Dynamic_Arena *dyn);
+
+
+struct Pool_Allocator {
+    byte *memory;
+    int memory_size;
+    int slot_size;
+    int num_slots;
+    int *generations;
+    int *slots_freelist;
+    int freelist_count;
+    Allocator backing_allocator;
+};
+
+void  init_pool_allocator(Pool_Allocator *pool, Allocator backing_allocator, int slot_size, int num_slots);
+void *pool_get(Pool_Allocator *pool, int *out_generation, int *out_index);
+void  pool_return(Pool_Allocator *pool, void *ptr);
+int   pool_get_slot_index(Pool_Allocator *pool, void *ptr);
+void *pool_get_slot_by_index(Pool_Allocator *pool, int slot);
+void *pool_alloc(void *allocator, int size, int align = DEFAULT_ALIGNMENT);
+void  pool_free(void *allocator, void *ptr);
+Allocator pool_allocator(Pool_Allocator *pool);
+void destroy_pool(Pool_Allocator pool);
+
+
+
+// todo(josh): read_entire_file should be in a different file I think
+char *read_entire_file(const char *filename, int *len);
+void write_entire_file(const char *filename, const char *data);
+
+// note(josh): defer implementation stolen from gb.h
+#if !defined(GB_NO_DEFER) && defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1400) || (__cplusplus >= 201103L))
+extern "C++" {
+    // NOTE(bill): Stupid fucking templates
+    template <typename T> struct gbRemoveReference       { typedef T Type; };
+    template <typename T> struct gbRemoveReference<T &>  { typedef T Type; };
+    template <typename T> struct gbRemoveReference<T &&> { typedef T Type; };
+
+    /// NOTE(bill): "Move" semantics - invented because the C++ committee are idiots (as a collective not as indiviuals (well a least some aren't))
+    template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &t)  { return static_cast<T &&>(t); }
+    template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &&t) { return static_cast<T &&>(t); }
+    template <typename T> inline T &&gb_move   (T &&t)                                   { return static_cast<typename gbRemoveReference<T>::Type &&>(t); }
+    template <typename F>
+    struct gbprivDefer {
+        F f;
+        gbprivDefer(F &&f) : f(gb_forward<F>(f)) {}
+        ~gbprivDefer() { f(); }
+    };
+    template <typename F> gbprivDefer<F> gb__defer_func(F &&f) { return gbprivDefer<F>(gb_forward<F>(f)); }
+
+    #define GB_DEFER_1(x, y) x##y
+    #define GB_DEFER_2(x, y) GB_DEFER_1(x, y)
+    #define GB_DEFER_3(x)    GB_DEFER_2(x, __COUNTER__)
+    #define defer(code)      auto GB_DEFER_3(_defer_) = gb__defer_func([&]()->void{code;})
+}
+#endif
+
+
+
+
 
 
 
