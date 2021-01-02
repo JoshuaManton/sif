@@ -20,7 +20,6 @@
 TODO:
 
 THINGS NEEDED FOR ME TO DRAW A TRIANGLE
--function pointers
 -foreign system + D3D11 bindings
 -enum field values (probably)
 
@@ -60,7 +59,6 @@ MEDIUM
 
 BIG
 -control flow graph analysis
--function pointers
 -type_info
 -#if
 -C varargs for bindings
