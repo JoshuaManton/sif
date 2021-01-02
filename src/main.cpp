@@ -23,7 +23,6 @@ SMALL
 -handle unary operators nicer, currently quick-and-dirty
 -deduplicate #include paths
 -opt=N
--debug flag
 -unknown directives don't stop compilation
 -error when instantiating a polymorphic struct without parameters
 -block comments
@@ -158,6 +157,8 @@ void main(int argc, char **argv) {
 
     bool show_timings = false;
     bool keep_temp_files = false;
+    bool build_debug = false;
+    bool log_cl_command = false;
 
     char *output_exe_name = nullptr;
 
@@ -168,6 +169,12 @@ void main(int argc, char **argv) {
         }
         else if (strcmp(arg, "-keep-temp-files") == 0) {
             keep_temp_files = true;
+        }
+        else if (strcmp(arg, "-debug") == 0) {
+            build_debug = true;
+        }
+        else if (strcmp(arg, "-log-cl-command") == 0) {
+            log_cl_command = true;
         }
         else if (strcmp(arg, "-o") == 0) {
             if ((i+1) >= argc) {
@@ -240,7 +247,19 @@ void main(int argc, char **argv) {
     }
 
     String_Builder command_sb = make_string_builder(default_allocator(), 128);
-    command_sb.printf("cmd.exe /c \"cl.exe /Zi /Fd output.c /wd4028 %s /nologo /link /DEBUG /OUT:%s\"", libs_sb.string(), output_exe_name);
+    command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo /wd4028 ");
+    if (build_debug) {
+        command_sb.print("/Zi /Fd ");
+    }
+    command_sb.printf("/link /OUT:%s ", output_exe_name);
+    if (build_debug) {
+        command_sb.print("/DEBUG ");
+    }
+    command_sb.printf("\"", output_exe_name);
+
+    if (log_cl_command) {
+        printf("%s\n", command_sb.string());
+    }
 
     if (system(command_sb.string()) != 0) {
         printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");

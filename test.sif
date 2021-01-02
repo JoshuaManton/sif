@@ -3,6 +3,6 @@
 proc main() : i32 {
     var arr: [4]int;
     print("%\n", arr[3]);
-    print("%\n", arr[4]);
-    print("%\n", arr[5]);
+    // print("%\n", arr[4]);
+    // print("%\n", arr[5]);
 }
