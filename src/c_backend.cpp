@@ -34,11 +34,13 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
         }
         case TYPE_STRUCT: {
             Type_Struct *type_struct = (Type_Struct *)type;
-            sb->printf("struct %s ", type_struct->name);
+            sb->printf("%s %s ", (type_struct->is_union ? "union" : "struct"), type_struct->name);
             break;
         }
         case TYPE_ENUM: {
-            sb->printf("i64 ");
+            Type_Enum *enum_type = (Type_Enum *)type;
+            assert(enum_type->base_type != nullptr);
+            c_print_type_prefix(sb, enum_type->base_type);
             break;
         }
         case TYPE_REFERENCE: {
@@ -447,8 +449,23 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     break;
                 }
                 case EXPR_UNARY: {
-                    UNIMPLEMENTED(EXPR_UNARY);
                     Expr_Unary *unary = (Expr_Unary *)expr;
+                    t = c_temporary();
+                    char *rhs = c_print_expr(sb, unary->rhs, indent_level);
+                    print_indents(sb, indent_level);
+                    c_print_type(sb, unary->operand.type, t);
+                    sb->print(" = ");
+                    switch (unary->op) {
+                        case TK_MINUS: {
+                            sb->print("-");
+                            break;
+                        }
+                        case TK_NOT: {
+                            sb->print("!");
+                            break;
+                        }
+                    }
+                    sb->printf("%s;\n", rhs);
                     break;
                 }
                 case EXPR_BINARY: {
@@ -1000,7 +1017,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
         switch (decl->kind) {
             case DECL_STRUCT: {
                 Struct_Declaration *structure = (Struct_Declaration *)decl;
-                sb.printf("struct %s", decl->name);
+                sb.printf("%s %s", (structure->structure->is_union ? "union" : "struct"), decl->name);
                 sb.print(";\n");
                 break;
             }
@@ -1030,7 +1047,7 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_STRUCT: {
                 Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
                 Ast_Struct *structure = struct_decl->structure;
-                sb.printf("struct %s {\n", structure->name);
+                sb.printf("%s %s {\n", (structure->is_union ? "union" : "struct"), structure->name);
                 bool did_print_at_least_one_member = false;
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];

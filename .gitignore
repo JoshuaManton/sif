@@ -5,6 +5,7 @@
 *.obj
 *.bc
 *.dmp
+output.c
 
 .build/
 .vs/

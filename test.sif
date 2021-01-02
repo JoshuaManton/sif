@@ -11,17 +11,35 @@ proc main() : i32 {
     }
 
     var name = "My Fancy Window";
-    var window = SDL_CreateWindow(&name[0], cast(i32, Window_Pos.Undefined), cast(i32, Window_Pos.Undefined), 1920, 1080, Window_Flags.Shown | Window_Flags.Borderless);
+    var window = SDL_CreateWindow(&name[0], cast(i32, Window_Pos.Undefined), cast(i32, Window_Pos.Undefined), 1920, 1080, Window_Flags.Shown | Window_Flags.Resizable);
     if (window == null) {
         log_sdl_error();
         return 1;
     }
 
-    print("%\n", 0xffff);
     var screen_surface = SDL_GetWindowSurface(window);
-    SDL_FillRect(screen_surface, null, SDL_MapRGB(screen_surface.format, 255, 0, 255));
-    SDL_UpdateWindowSurface(window);
-    SDL_Delay(2000);
+
+    var evt: SDL_Event;
+    var quit = false;
+    while (!quit) {
+        while (SDL_PollEvent(&evt) != 0) {
+            if (evt.type == Event_Type.Quit) {
+                quit = true;
+                break;
+            }
+
+            if (evt.type == Event_Type.Window_Event) {
+                if (evt.window.event == Window_Event_ID.Close) {
+                    quit = true;
+                    break;
+                }
+            }
+        }
+
+        SDL_FillRect(screen_surface, null, SDL_MapRGB(screen_surface.format, 0xff, 0xff, 0xff));
+        SDL_UpdateWindowSurface(window);
+        SDL_Delay(32);
+    }
 }
 
 proc log_sdl_error() {

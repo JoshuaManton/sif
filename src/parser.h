@@ -44,7 +44,6 @@ struct Struct_Declaration;
 struct Enum_Declaration;
 struct Proc_Declaration;
 struct Var_Declaration;
-struct Enum_Value_Declaration;
 struct Polymorphic_Declaration;
 
 struct Type;
@@ -69,6 +68,7 @@ struct Operand {
     u64 flags = {};
     Type *type = {};
 
+    u64 uint_value     = {};
     i64 int_value      = {};
     f64 float_value    = {};
     bool bool_value    = {};
@@ -295,11 +295,12 @@ struct Ast_While_Loop : public Ast_Node {
 struct Enum_Field {
     char *name = {};
     Ast_Expr *expr = {};
-    Enum_Value_Declaration *declaration = {};
     bool resolved = {};
+    Location location = {};
 };
 struct Ast_Enum : public Ast_Node {
     char *name = {};
+    Ast_Block *constants_block = {};
     Array<Enum_Field> fields = {};
     Type_Enum *type = nullptr;
     Enum_Declaration *declaration = {};
@@ -455,11 +456,13 @@ struct Expr_Identifier : public Ast_Expr {
 };
 
 struct Expr_Number_Literal : public Ast_Expr {
+    u64 uint_value = {};
     i64 int_value = {};
     f64 float_value = {};
     bool has_a_dot = false;
-    Expr_Number_Literal(i64 int_value, f64 float_value, bool has_a_dot, Location location)
+    Expr_Number_Literal(u64 uint_value, i64 int_value, f64 float_value, bool has_a_dot, Location location)
     : Ast_Expr(EXPR_NUMBER_LITERAL, location)
+    , uint_value(uint_value)
     , int_value(int_value)
     , float_value(float_value)
     , has_a_dot(has_a_dot)

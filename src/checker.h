@@ -86,6 +86,7 @@ struct Type_Struct : public Type {
     Ast_Struct *ast_struct = {};
     Ast_Struct *is_polymorph_of = {};
     Array<Operand> polymorphic_parameter_values = {};
+    bool is_union = {};
     Type_Struct(Ast_Struct *structure)
     : Type(TYPE_STRUCT)
     , name(structure->name)
@@ -97,6 +98,7 @@ struct Type_Struct : public Type {
 
 struct Type_Enum : public Type {
     char *name = nullptr;
+    Type *base_type = {};
     Type_Enum(char *name)
     : Type(TYPE_ENUM)
     , name(name)

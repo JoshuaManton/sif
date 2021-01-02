@@ -37,6 +37,8 @@ Type *type_any;
 
 Array<Declaration *> ordered_declarations;
 
+bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
+
 char *type_to_string(Type *type);
 bool complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
@@ -145,6 +147,7 @@ void add_global_declarations(Ast_Block *block) {
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
     Type_Struct *incomplete_type = new Type_Struct(structure);
     incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
+    incomplete_type->is_union = structure->is_union;
     all_types.append(incomplete_type);
     incomplete_type->id = all_types.count;
     structure->type = incomplete_type;
@@ -289,10 +292,16 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             enum_type->flags = enum_base_type->flags | TF_ENUM;
             enum_type->size = enum_base_type->size;
             enum_type->align = enum_base_type->align;
+            enum_type->base_type = enum_base_type;
             enum_decl->ast_enum->type = enum_type;
+
+            assert(!g_silence_errors);
+            g_silence_errors = true;
+
+            int count_left_to_resolve = enum_decl->ast_enum->fields.count;
             int enum_field_value = 0;
             bool made_progress = true;
-            while (made_progress) {
+            while ((made_progress && count_left_to_resolve > 0) || !g_silence_errors) {
                 made_progress = false;
                 For (idx, enum_decl->ast_enum->fields) {
                     Enum_Field *field = &enum_decl->ast_enum->fields[idx];
@@ -304,7 +313,10 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                         // todo(josh): pass a silent flag to typecheck_expr
                         Operand *expr_operand = typecheck_expr(field->expr);
                         if (!expr_operand) {
-                            continue;
+                            if (g_silence_errors) {
+                                continue;
+                            }
+                            return false;
                         }
                         if (!(expr_operand->flags & OPERAND_CONSTANT)) {
                             report_error(expr_operand->location, "Enum fields must be constant.");
@@ -322,11 +334,23 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
                     add_constant_type_field(enum_type, field->name, field_operand);
+                    if (!register_declaration(new Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->constants_block, field->location))) {
+                        return false;
+                    }
                     field->resolved = true;
                     made_progress = true;
+                    count_left_to_resolve -= 1;
+                }
+
+                if (!made_progress) {
+                    g_silence_errors = false;
                 }
             }
 
+            assert(count_left_to_resolve == 0);
+
+            assert(g_silence_errors);
+            g_silence_errors = false;
             decl_operand.type = type_typeid;
             decl_operand.type_value = enum_decl->ast_enum->type;
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
@@ -742,6 +766,7 @@ bool complete_type(Type *type) {
                             largest_alignment = max(largest_alignment, var->type->align);
                         }
                         else {
+                            add_variable_type_field(struct_type, var->name, var->type, 0);
                             size = max(size, var->type->size);
                             largest_alignment = max(largest_alignment, var->type->align);
                         }
@@ -1930,12 +1955,25 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (rhs_operand == nullptr) {
                 return nullptr;
             }
-            assert(is_type_number(rhs_operand->type));
             switch (unary->op) {
                 case TK_MINUS: {
+                    if (!is_type_number(rhs_operand->type)) {
+                        report_error(rhs_operand->location, "Unary minus requires a numeric type.");
+                        return nullptr;
+                    }
                     if (rhs_operand->flags & OPERAND_CONSTANT) {
                         result_operand.int_value = -rhs_operand->int_value;
                         result_operand.float_value = -rhs_operand->float_value;
+                    }
+                    break;
+                }
+                case TK_NOT: {
+                    if (!is_type_bool(rhs_operand->type)) {
+                        report_error(rhs_operand->location, "Unary ! requires a bool.");
+                        return nullptr;
+                    }
+                    if (rhs_operand->flags & OPERAND_CONSTANT) {
+                        result_operand.bool_value = !rhs_operand->bool_value;
                     }
                     break;
                 }
@@ -2029,6 +2067,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.flags = OPERAND_RVALUE;
             if (rhs_operand->flags & OPERAND_CONSTANT) {
                 result_operand.flags |= OPERAND_CONSTANT;
+                result_operand.uint_value            = rhs_operand->uint_value;
                 result_operand.int_value             = rhs_operand->int_value;
                 result_operand.float_value           = rhs_operand->float_value;
                 result_operand.bool_value            = rhs_operand->bool_value;
@@ -2107,6 +2146,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SELECTOR: {
+            // todo(josh): use some sort of constants_block thing for constant fields
+
             Expr_Selector *selector = (Expr_Selector *)expr;
             Operand *lhs_operand = typecheck_expr(selector->lhs);
             if (!lhs_operand) {
@@ -2319,6 +2360,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 result_operand.type = type_untyped_integer;
             }
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+            result_operand.uint_value  = number->uint_value;
             result_operand.int_value   = number->int_value;
             result_operand.float_value = number->float_value;
             break;
@@ -2337,7 +2379,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_u8;
-            result_operand.int_value = char_literal->c;
+            result_operand.uint_value = char_literal->c;
+            result_operand.int_value  = char_literal->c;
             break;
         }
         case EXPR_NULL: {
@@ -2374,7 +2417,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(!is_type_incomplete(expr_operand->type_value));
             assert(expr_operand->type_value->size > 0);
             result_operand.type = type_untyped_integer;
-            result_operand.int_value = expr_operand->type_value->size;
+            result_operand.uint_value = expr_operand->type_value->size;
+            result_operand.int_value  = expr_operand->type_value->size;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             break;
         }

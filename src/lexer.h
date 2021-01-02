@@ -129,6 +129,7 @@ struct Token {
     int escaped_length = {};
     int scanner_length = {};
     i64 int_value = {};
+    u64 uint_value = {};
     f64 float_value = {};
 };
 

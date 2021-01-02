@@ -342,11 +342,11 @@ proc SDL_OpenAudio                        (desired: ^Audio_Spec, obtained: ^Audi
 proc SDL_OpenAudioDevice                  (device: cstring, iscapture: i32, desired: ^Audio_Spec, obtained: ^Audio_Spec, allowed_changed: i32) : Audio_Device_Id                            #foreign;
 proc SDL_PauseAudio                       (pause_on: i32)                                                                                                                                   #foreign;
 proc SDL_PauseAudioDevice                 (dev: Audio_Device_Id, pause_on: i32)                                                                                                             #foreign;
-proc SDL_PeepEvents                       (events: ^Event, num_events: i32, action: Event_Action, min_type: u32, max_type: u32) : i32                                                       #foreign;
+proc SDL_PeepEvents                       (events: ^SDL_Event, num_events: i32, action: Event_Action, min_type: u32, max_type: u32) : i32                                                       #foreign;
 proc SDL_PixelFormatEnumToMasks           (format: u32, bpp: ^i32, r_mask: ^u32, g_mask: ^u32, b_mask: ^u32, a_mask: ^u32) : Bool                                                           #foreign;
-proc SDL_PollEvent                        (event: ^Event) : i32                                                                                                                             #foreign;
+proc SDL_PollEvent                        (event: ^SDL_Event) : i32                                                                                                                             #foreign;
 proc SDL_PumpEvents                       ()                                                                                                                                                #foreign;
-proc SDL_PushEvent                        (event: ^Event) : i32                                                                                                                             #foreign;
+proc SDL_PushEvent                        (event: ^SDL_Event) : i32                                                                                                                             #foreign;
 proc SDL_QueryTexture                     (texture: ^Texture, format: ^u32, access: ^i32, w: ^i32, h: ^i32) : i32                                                                           #foreign;
 proc SDL_QueueAudio                       (dev: Audio_Device_Id, data: rawptr, len: u32) : i32                                                                                              #foreign;
 proc SDL_Quit                             ()                                                                                                                                                #foreign;
@@ -478,8 +478,8 @@ proc SDL_UpperBlit                        (src: ^Surface, srcrect: ^Rect, dst: ^
 proc SDL_UpperBlitScaled                  (src: ^Surface, srcrect: ^Rect, dst: ^Surface, dstrect: ^Rect) : i32                                                                              #foreign;
 proc SDL_VideoInit                        (driver_name: cstring) : i32                                                                                                                      #foreign;
 proc SDL_VideoQuit                        ()                                                                                                                                                #foreign;
-proc SDL_WaitEvent                        (event: ^Event) : i32                                                                                                                             #foreign;
-proc SDL_WaitEventTimeout                 (event: ^Event, timeout: i32) : i32                                                                                                               #foreign;
+proc SDL_WaitEvent                        (event: ^SDL_Event) : i32                                                                                                                             #foreign;
+proc SDL_WaitEventTimeout                 (event: ^SDL_Event, timeout: i32) : i32                                                                                                               #foreign;
 proc SDL_WaitThread                       (thread: ^Thread, status: ^i32)                                                                                                                   #foreign;
 proc SDL_WarpMouseGlobal                  (x: i32, y: i32) : i32                                                                                                                            #foreign;
 proc SDL_WarpMouseInWindow                (window: ^Window, x: i32, y: i32)                                                                                                                 #foreign;
@@ -1450,7 +1450,7 @@ const Gesture_Id      = i64;
 const Finger_Id       = i64;
 
 const Hint_Callback        = proc(interval: u32, param: rawptr) : u32;
-const Event_Filter         = proc(userdata: rawptr, param: ^Event) : i32;
+const Event_Filter         = proc(userdata: rawptr, param: ^SDL_Event) : i32;
 const Timer_Callback       = proc(interval: u32, param: rawptr) : u32;
 const Audio_Callback       = proc(userdata: rawptr, stream: ^u8, len: i32);
 const Assertion_Handler    = proc(data: ^Assert_Data, userdata: rawptr) : Assert_State;
@@ -1779,7 +1779,7 @@ struct Haptic_Custom {
     var fade_level: u16;
 }
 
-union Event {
+union SDL_Event {
     var type: Event_Type;
     var common: Common_Event;
     var window: Window_Event;

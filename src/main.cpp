@@ -19,12 +19,8 @@
 /*
 TODO:
 
-THINGS NEEDED FOR ME TO DRAW A TRIANGLE
--foreign system + win32 + D3D11 bindings (maybe I'll do SDL instead as a test?)
--enum field values (probably)
-
 SMALL
--unions
+-handle unary operators nicer, currently quick-and-dirty
 -constant bounds checks i.e. var arr: [4]int; arr[232];
 -deduplicate #include paths
 -opt=N
@@ -37,9 +33,7 @@ SMALL
 MEDIUM
 -allow custom entrypoints
 -enforce entrypoints returning i32, or do it implicitly in the backend
--enum field expressions
 -defer
--foreign system
 -runtime bounds checks
 -switch statements
 -emit #line directives in backend

@@ -312,7 +312,7 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
     return duplicate;
 }
 
-char *scan_number(char *text, int *out_length, bool *out_has_a_dot, i64 *int_value, f64 *float_value) {
+char *scan_number(char *text, int *out_length, bool *out_has_a_dot, u64 *uint_value, i64 *int_value, f64 *float_value) {
     char *start = text;
 
     if (*text == '0') {
@@ -348,30 +348,32 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot, i64 *int_val
     char *result = clone_string(start, length);
 
     if (!was_hex) {
+        *uint_value  = atoi(result);
         *int_value   = atoi(result);
         *float_value = atof(result);
     }
     else {
         char *hex = result + 2; // skip the 0x
         int len = strlen(hex) - 1;
-        int val = 0;
-        i64 decimal = 0;
+        u64 decimal = 0;
         for (int i = 0; hex[i] != '\0'; i++) {
+            u64 value = 0;
             if (hex[i] >= '0' && hex[i] <= '9') {
-                val = hex[i] - 48;
+                value = hex[i] - 48;
             }
             else if (hex[i] >= 'a' && hex[i] <= 'f') {
-                val = hex[i] - 97 + 10;
+                value = hex[i] - 97 + 10;
             }
             else if (hex[i] >= 'A' && hex[i] <= 'F') {
-                val = hex[i] - 65 + 10;
+                value = hex[i] - 65 + 10;
             }
 
-            decimal += val * pow(16, len);
+            decimal += value * pow(16, len);
             len -= 1;
         }
-        *int_value = val;
-        *float_value = (f64)val;
+        *uint_value = decimal;
+        *int_value = (i64)decimal;
+        *float_value = (f64)decimal;
     }
     return result;
 }
@@ -439,7 +441,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;
         bool has_a_dot = false;
-        char *number = scan_number(&lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->int_value, &out_token->float_value);
+        char *number = scan_number(&lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->uint_value, &out_token->int_value, &out_token->float_value);
         advance(lexer, length);
         out_token->kind = TK_NUMBER;
         out_token->text = number;
@@ -718,7 +720,15 @@ void eat_next_token(Lexer *lexer, Token *out_token) {
     assert(ok);
 }
 
+// todo(josh): please for the love of all that is holy delete this soon
+// todo(josh): please for the love of all that is holy delete this soon
+// todo(josh): please for the love of all that is holy delete this soon
+extern bool g_silence_errors; // sigh. really should have a Context struct that gets passed around
+
 void report_error(Location location, const char *fmt, ...) {
+    if (g_silence_errors) {
+        return;
+    }
     printf("%s(%d:%d) Error: ", location.filepath, location.line, location.character);
     va_list args;
     va_start(args, fmt);

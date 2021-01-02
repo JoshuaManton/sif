@@ -463,8 +463,8 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
     EXPECT(lexer, TK_LEFT_CURLY, nullptr);
     {
-        Ast_Block *enum_block = new Ast_Block(lexer->location);
-        Ast_Block *old_block = push_ast_block(enum_block);
+        ast_enum->constants_block = new Ast_Block(lexer->location);
+        Ast_Block *old_block = push_ast_block(ast_enum->constants_block);
         defer(pop_ast_block(old_block));
 
         Token right_curly;
@@ -495,6 +495,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
             Enum_Field field = {};
             field.name = ident_token.text;
             field.expr = expr;
+            field.location = ident_token.location;
             enum_fields.append(field);
         }
     }
@@ -1413,7 +1414,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_NUMBER: {
             eat_next_token(lexer);
-            return new Expr_Number_Literal(token.int_value, token.float_value, token.has_a_dot, token.location);
+            return new Expr_Number_Literal(token.uint_value, token.int_value, token.float_value, token.has_a_dot, token.location);
         }
         case TK_CHAR: {
             eat_next_token(lexer);
