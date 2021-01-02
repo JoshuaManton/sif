@@ -36,6 +36,11 @@ proc zero_memory(memory: []byte) {
 
 
 
+proc min(a: $T, b: T) : T { if (a < b) { return a; } return b; }
+proc max(a: $T, b: T) : T { if (a > b) { return a; } return b; }
+
+
+
 proc print_arg(arg: any) {
     if (arg.type == i8) {
         print_int(cast(int, cast(^i8, arg.data)^));
@@ -191,9 +196,21 @@ proc new($T: typeid, allocator: Allocator) : ^T {
     return ptr;
 }
 
+proc delete(ptr: ^$T, allocator: Allocator) {
+    sif_free(allocator, ptr);
+}
+
 proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
     var ptr = cast(^T, sif_alloc(allocator, sizeof(T) * count, DEFAULT_ALIGNMENT));
     var slice = slice_ptr(ptr, count);
     zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T) * count));
     return slice;
+}
+
+proc delete_slice(slice: []$T, allocator: Allocator) {
+    sif_free(allocator, slice.data);
+}
+
+proc copy_slice(dst: []$T, src: []T) {
+    memcpy(&dst[0], &src[0], cast(u64, min(dst.count, src.count) * sizeof(T)));
 }

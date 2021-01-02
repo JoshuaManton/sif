@@ -373,6 +373,9 @@ proc print_things(args: ..any) {
         else if (arg.type == float) {
             print("%\n", cast(^float, arg.data)^);
         }
+        else {
+            print("<unknown type>\n");
+        }
     }
 }
 
@@ -404,13 +407,12 @@ struct Dynamic_Array!($T: typeid) {
 
 proc append(dyn: ^Dynamic_Array!($T), value: T) {
     if (dyn.count == dyn.array.count) {
-        var old_data = dyn.array.data;
+        var old_data = dyn.array;
         var new_cap = 8 + dyn.array.count * 2;
-        dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
-        dyn.array.count = new_cap;
-        if (old_data != null) {
-            memcpy(dyn.array.data, old_data, cast(u64, dyn.count * sizeof(T)));
-            free(old_data);
+        dyn.array = new_slice(T, new_cap, default_allocator());
+        if (old_data.data != null) {
+            copy_slice(dyn.array, old_data);
+            delete_slice(old_data, default_allocator());
         }
     }
     assert(dyn.count < dyn.array.count);
@@ -446,10 +448,10 @@ proc dynamic_arrays() {
     assert(dyn[1].y == 4);
     assert(dyn[1].z == 9);
     for (var i = 0; i < dyn.count; i += 1) {
-        print("%\n", i);
-        print("%\n", dyn[i].x);
-        print("%\n", dyn[i].y);
-        print("%\n", dyn[i].z);
+        print("index %\n", i);
+        print("  %\n", dyn[i].x);
+        print("  %\n", dyn[i].y);
+        print("  %\n", dyn[i].z);
     }
     destroy_dynamic_array(dyn);
 }
