@@ -14,6 +14,7 @@ proc main() : i32 {
         return 1;
     }
 
+    var renderer = SDL_CreateRenderer(window, -1, 0);
     var screen_surface = SDL_GetWindowSurface(window);
 
     var evt: SDL_Event;
@@ -33,11 +34,25 @@ proc main() : i32 {
             }
         }
 
+        var window_width: i32;
+        var window_height: i32;
+        SDL_GetWindowSize(window, &window_width, &window_height);
+
         var r = sin(cast(f64, SDL_GetTicks()) * 0.0004);  r *= r;
         var g = sin(cast(f64, SDL_GetTicks()) * 0.0003);  g *= g;
         var b = sin(cast(f64, SDL_GetTicks()) * 0.00025); b *= b;
-        SDL_FillRect(screen_surface, null, SDL_MapRGB(screen_surface.format, cast(u8, r*255), cast(u8, g*255), cast(u8, b*255)));
-        SDL_UpdateWindowSurface(window);
+        SDL_SetRenderDrawColor(renderer, cast(u8, r*255), cast(u8, g*255), cast(u8, b*255), 255);
+        SDL_RenderClear(renderer);
+
+        SDL_SetRenderDrawColor(renderer, cast(u8, r/2*255), cast(u8, g/2*255), cast(u8, b/2*255), 255);
+        var rect: Rect;
+        rect.x = window_width / 2 - 96;
+        rect.y = window_height / 2 - 64;
+        rect.w = 192;
+        rect.h = 128;
+        SDL_RenderFillRect(renderer, &rect);
+
+        SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
 }

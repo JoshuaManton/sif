@@ -14,7 +14,7 @@ proc main() : i32 {
 
 ## Features
 
-- The basic stuff: ints, floats, bool, pointers, arrays, etc
+- The basic stuff: variables, procedures, structs, ints, floats, bool, pointers, arrays, etc
 - Length-delimited strings, not null-terminated
 - Operator overloading
 - Procedural and structural polymorphism
@@ -24,10 +24,9 @@ proc main() : i32 {
 ## Features Planned
 
 - Runtime type information
-- Tagged unions (and normal unions, haven't done that yet)
+- Tagged unions
 - defer statement
 - `using` statement for namespace inclusion
-- First-class procedures
 - Runtime bounds checks
 - Other small things you'd expect like static #if, switch statements, etc
 - Currently the code-generator outputs C code, in the future I'd like to either try to use LLVM or write a custom x64 backend
