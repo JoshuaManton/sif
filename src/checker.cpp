@@ -315,7 +315,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     }
 
                     if (field->expr) {
-                        // todo(josh): pass a silent flag to typecheck_expr
                         Operand *expr_operand = typecheck_expr(field->expr);
                         if (!expr_operand) {
                             if (g_silence_errors) {
@@ -333,7 +332,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                         }
                         enum_field_value = expr_operand->int_value;
                     }
-                    Operand field_operand; // todo(josh): location info?
+                    Operand field_operand(field->location);
                     field_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
                     field_operand.type = enum_type;
                     field_operand.int_value = enum_field_value;
@@ -823,7 +822,11 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
 
     if (expected_type == type_any) {
         operand->type = try_concretize_type_without_context(operand->type);
-        assert(operand->type != nullptr); // todo(josh): handle the case of untyped null
+        if (!operand->type) {
+            assert(operand->type == type_untyped_null);
+            report_error(operand->location, "todo(josh): allow assigning null to `any` to clear the value.");
+            return false;
+        }
         return true;
     }
 
@@ -1434,7 +1437,9 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             assert(poly->poly_decl->declaration == nullptr);
             Type *concrete_type = try_concretize_type_without_context(parameter_type);
             if (!concrete_type) {
-                assert(false && "todo(josh): error message");
+                assert(parameter_type == type_untyped_null);
+                report_error(parameter_location, "Cannot infer type for polymorphic value '%s' from untyped null.", poly->ident->name);
+                return false;
             }
             Operand type_operand(parameter_location);
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
@@ -1685,10 +1690,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     For (idx, polymorphic_declarations) {
         Declaration *poly_decl = polymorphic_declarations[idx];
         insert_polymorph_replacement(block_to_insert_declarations_into, poly_decl);
-        if (!check_declaration(poly_decl, polymorph_location)) { // todo(josh): put the real parameter location in here
-            report_info(polymorph_location, "Error during polymorph triggered here.");
-            return nullptr;
-        }
+        assert(poly_decl->check_state == CS_CHECKED);
         assert(poly_decl->operand.type != nullptr);
         polymorph_values.append(poly_decl->operand);
     }
@@ -1764,6 +1766,11 @@ Ast_Struct *polymorph_struct(Ast_Struct *structure, Location polymorph_location,
             return nullptr;
         }
         parameter_operands.append(*param_operand);
+    }
+
+    if (parameters.count != structure->polymorphic_parameters.count) {
+        report_error(polymorph_location, "Expected %d parmeter(s) for polymorphic struct '%s', got %d.", structure->polymorphic_parameters.count, structure->name, parameters.count);
+        return nullptr;
     }
 
     Array<int> parameter_indices_to_remove;
@@ -2243,7 +2250,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 if (strcmp(field.name, selector->field_name) == 0) {
                     if (!is_instance_of_type_rather_that_a_type_itself) {
                         if (!(field.operand.flags & OPERAND_CONSTANT)) {
-                            // todo(josh): there's no real reason why we _can't_ support this, it's just weird
+                            // note(josh): there's no real reason why we _can't_ support this, it's just weird
                             report_error(selector->location, "Cannot access instance fields from type.");
                             return nullptr;
                         }
@@ -2614,8 +2621,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             //      ^^^^^^^^^^^^^^^^^^^^^^^^
 
             Expr_Polymorphic_Type *poly_type = (Expr_Polymorphic_Type *)expr;
-            assert(poly_type->parameters.count > 0); // todo(josh)
-
             Operand *type_operand = typecheck_expr(poly_type->type_expr);
             if (!type_operand) {
                 return nullptr;
@@ -2856,7 +2861,7 @@ bool typecheck_node(Ast_Node *node) {
             if (!statement_operand) {
                 return false;
             }
-            if (unparen_expr(stmt->expr)->expr_kind != EXPR_PROCEDURE_CALL) { // todo(josh): this check won't work if the procedure call is nested like `(foo());`
+            if (unparen_expr(stmt->expr)->expr_kind != EXPR_PROCEDURE_CALL) {
                 report_error(stmt->expr->location, "Statement doesn't have side-effects.");
                 return false;
             }

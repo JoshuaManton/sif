@@ -1,8 +1,9 @@
 #include "core:basic.sif"
 
+proc foo(t: $T) {
+
+}
+
 proc main() : i32 {
-    var arr: [4]int;
-    print("%\n", arr[3]);
-    // print("%\n", arr[4]);
-    // print("%\n", arr[5]);
+    foo(null);
 }

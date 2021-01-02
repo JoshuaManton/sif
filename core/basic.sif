@@ -1,3 +1,9 @@
+#foreign_import "msvcrt.lib"
+#foreign_import "ucrt.lib"
+#foreign_import "libcmt.lib"
+#foreign_import "vcruntime.lib"
+#foreign_import "Ntdll.lib"
+
 proc print_char  (c: u8)                                                 #foreign;
 proc print_int   (i: int)                                                #foreign;
 proc print_float (f: float)                                              #foreign;

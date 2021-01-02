@@ -7,6 +7,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+// todo(josh): microsoft craziness
 // #define MICROSOFT_CRAZINESS_IMPLEMENTATION
 // #include "microsoft_craziness.h"
 
@@ -231,22 +232,34 @@ void main(int argc, char **argv) {
 
     double c_compile_start_time = query_timer(&timer);
 
+    // todo(josh): microsoft craziness
     // Find_Result fr = find_visual_studio_and_windows_sdk();
-    // todo(josh): get the vs and windows sdk paths
+    // char *windows_sdk_root = wide_to_cstring(fr.windows_sdk_root);
     // char *exe_path = wide_to_cstring(fr.vs_exe_path);
     // char *lib_path = wide_to_cstring(fr.vs_library_path);
     // char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path);
     // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
+    // printf("win sdk root   %s\n", windows_sdk_root);
+    // printf("exe_path:      %s\n", exe_path);
+    // printf("lib_path:      %s\n", lib_path);
+    // printf("um_lib_path:   %s\n", um_lib_path);
+    // printf("ucrt_lib_path: %s\n", ucrt_lib_path);
 
     String_Builder command_sb = make_string_builder(default_allocator(), 128);
-    command_sb.printf("cmd.exe /c \"cl.exe output.c /nologo /wd4028 ");
+    command_sb.printf("cmd.exe /c \"cl.exe ");
     if (build_debug) {
         command_sb.print("/Zi /Fd ");
     }
+    command_sb.print("output.c /nologo /wd4028 ");
     For (idx, g_all_foreign_import_directives) {
         command_sb.printf("%s ", g_all_foreign_import_directives[idx]->path);
     }
     command_sb.printf("/link /OUT:%s ", output_exe_name);
+    // todo(josh): microsoft craziness
+    // command_sb.printf("/libpath:\"%s\" ", lib_path);
+    // command_sb.printf("/libpath:\"%s\" ", ucrt_lib_path);
+    // command_sb.printf("/libpath:\"%s\" ", um_lib_path);
+    // command_sb.printf("-nodefaultlib ");
     if (build_debug) {
         command_sb.print("/DEBUG ");
     }
