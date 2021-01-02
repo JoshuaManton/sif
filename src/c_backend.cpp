@@ -50,8 +50,6 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
         }
         case TYPE_POINTER: {
             // note(josh): identical to TYPE_REFERENCE
-            // note(josh): identical to TYPE_REFERENCE
-            // note(josh): identical to TYPE_REFERENCE
             Type_Pointer *type_pointer = (Type_Pointer *)type;
             c_print_type_prefix(sb, type_pointer->pointer_to);
             sb->print("*");
@@ -207,8 +205,8 @@ void c_print_type_plain_prefix(String_Builder *sb, Type *type) {
         }
         case TYPE_PROCEDURE: {
             Type_Procedure *type_procedure = (Type_Procedure *)type;
+            sb->print("function_pointer_");
             c_print_type_plain_prefix(sb, type_procedure->return_type);
-            sb->print("(*");
             break;
         }
         default: {
@@ -244,14 +242,13 @@ void c_print_type_plain_postfix(String_Builder *sb, Type *type) {
         }
         case TYPE_PROCEDURE: {
             Type_Procedure *type_procedure = (Type_Procedure *)type;
-            sb->print(")(");
+            sb->print("parameters_");
             For (idx, type_procedure->parameter_types) {
                 c_print_type_plain(sb, type_procedure->parameter_types[idx], "");
                 if (idx != (type_procedure->parameter_types.count-1)) {
-                    sb->print(", ");
+                    sb->print("_");
                 }
             }
-            sb->print(")");
             break;
         }
         case TYPE_SLICE: {
@@ -1071,9 +1068,10 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                     c_print_type(&sb, array_type, "");
                     sb.printf(" {\n");
                     sb.printf("    ");
-                    c_print_type(&sb, array_type->array_of, "");
-                    sb.printf(" elements[%d];\n", array_type->count);
-                    sb.printf("};\n");
+                    String_Builder elements_name_sb = make_string_builder(default_allocator(), 32);
+                    elements_name_sb.printf("elements[%d]", array_type->count);
+                    c_print_type(&sb, array_type->array_of, elements_name_sb.string());
+                    sb.printf(";\n};\n");
                 }
                 break;
             }

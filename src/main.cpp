@@ -19,6 +19,11 @@
 /*
 TODO:
 
+THINGS NEEDED FOR ME TO DRAW A TRIANGLE
+-function pointers
+-foreign system + D3D11 bindings
+-enum field values (probably)
+
 SMALL
 -unions
 -constant bounds checks i.e. var arr: [4]int; arr[232];
@@ -38,6 +43,7 @@ MEDIUM
 -foreign system
 -runtime bounds checks
 -switch statements
+-emit #line directives in backend
 -change everything to use custom allocators
 -slicing
 -transmute
@@ -62,6 +68,7 @@ BIG
 -default procedure parameters
 -#caller_location
 -#location()
+-multiple return values
 -iterative solver for polymorphism
 -implicit polymorphism
 -namespaced imports i.e. `#include Foo "foo.sif"`
@@ -69,7 +76,6 @@ BIG
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
-
 -figure out if I should allow shadowing (maybe with a keyword?)
 */
 

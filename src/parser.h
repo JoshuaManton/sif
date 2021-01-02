@@ -380,6 +380,7 @@ enum Expr_Kind {
     EXPR_REFERENCE_TYPE,
     EXPR_ARRAY_TYPE,
     EXPR_SLICE_TYPE,
+    EXPR_PROCEDURE_TYPE,
 
     EXPR_PAREN,
 
@@ -630,6 +631,14 @@ struct Expr_Slice_Type : public Ast_Expr {
     {}
 };
 
+struct Expr_Procedure_Type : public Ast_Expr {
+    Ast_Proc_Header *header = {};
+    Expr_Procedure_Type(Ast_Proc_Header *header, Location location)
+    : Ast_Expr(EXPR_PROCEDURE_TYPE, location)
+    , header(header)
+    {}
+};
+
 struct Expr_Spread : public Ast_Expr {
     Ast_Expr *rhs = nullptr;
     Expr_Spread(Ast_Expr *rhs, Location location)
@@ -742,6 +751,7 @@ Ast_Block *begin_parsing(const char *filename);
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true, char *name_override = nullptr);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
+Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override = nullptr);
 Ast_Proc *parse_proc(Lexer *lexer, char *name_override = nullptr);
 Ast_Struct *parse_struct(Lexer *lexer, char *name_override = nullptr);
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement = false, bool push_new_block = true);

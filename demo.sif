@@ -18,6 +18,7 @@ proc main() : i32 {
     procedural_polymorphism();
     structural_polymorphism();
     any_type();
+    function_pointers();
     dynamic_arrays();
     return 0;
 }
@@ -373,6 +374,18 @@ proc print_things(args: ..any) {
             print("%\n", cast(^float, arg.data)^);
         }
     }
+}
+
+
+
+proc function_pointers() {
+    print("\n\n---- any ----\n");
+
+    var my_print1 = print; // uses type inference
+    my_print1("This is a function pointer! %\n", "cool");
+
+    var my_print2: proc(fmt: string, args: ..any) = print; // without type inference
+    my_print2("This is also % a function % pointer\n", 45.6, true);
 }
 
 

@@ -161,9 +161,15 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         char *proc_name = nullptr;
         if (token.kind == TK_PROC) {
             eat_next_token(lexer, &token);
-            // name
-            EXPECT(lexer, TK_IDENTIFIER, &token);
-            proc_name = token.text;
+            Token name_token = {};
+            if (!peek_next_token(lexer, &name_token)) {
+                assert(false && "unexpected EOF");
+                return nullptr;
+            }
+            if (name_token.kind != TK_LEFT_PAREN) {
+                EXPECT(lexer, TK_IDENTIFIER, &name_token);
+                proc_name = name_token.text;
+            }
         }
         else if (token.kind == TK_OPERATOR) {
             is_operator_overload = true;
@@ -268,17 +274,6 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         header = new Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, proc_location);
     }
 
-    if (header->operator_to_overload == TK_INVALID) {
-        assert(header->name != nullptr);
-        header->declaration = new Proc_Declaration(header, current_block);
-        header->declaration->is_polymorphic = header->is_polymorphic;
-        if (!register_declaration(header->declaration)) {
-            return nullptr;
-        }
-    }
-    else {
-        assert(header->name == nullptr);
-    }
     return header;
 }
 
@@ -303,6 +298,18 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
         }
 
         EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
+    }
+
+    if (header->operator_to_overload == TK_INVALID) {
+        assert(header->name != nullptr);
+        header->declaration = new Proc_Declaration(header, current_block);
+        header->declaration->is_polymorphic = header->is_polymorphic;
+        if (!register_declaration(header->declaration)) {
+            return nullptr;
+        }
+    }
+    else {
+        assert(header->name == nullptr);
     }
 
     Ast_Proc *proc = new Ast_Proc(header, body, header->location);
@@ -1361,6 +1368,10 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Ast_Expr *nested = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return new Expr_Paren(nested, token.location);
+        }
+        case TK_PROC: {
+            Ast_Proc_Header *header = parse_proc_header(lexer);
+            return new Expr_Procedure_Type(header, token.location);
         }
         case TK_CAST: {
             eat_next_token(lexer);
