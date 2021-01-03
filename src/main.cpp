@@ -41,7 +41,6 @@ MEDIUM
 -switch statements
 -emit #line directives in backend
 -slicing
--transmute
 -build to dll
 -read command line parameters
 -check for use-before-declaration of local vars

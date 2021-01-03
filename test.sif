@@ -6,19 +6,14 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
         return null;
     }
 
-    // why is the first argument not implicitly casting? it's supposed to be untyped
-    var query_num_chars = MultiByteToWideChar(cast(u32, CP_ACP), 0,
-                                                   my_str.data, cast(i32, my_str.count),
-                                                   null, 0);
+    var query_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), null, 0);
     if (query_num_chars <= 0) {
         return null;
     }
 
     var name = "";
     var name_u16s = cast(^u16, sif_alloc(allocator, cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT)); // 2 extra bytes for zero termination WCHAR.
-    var result_num_chars = MultiByteToWideChar(cast(u32, CP_ACP), 0,
-                                                    my_str.data, cast(i32, my_str.count),  // @Robustness: Silent failure if too long. @Cleanup.
-                                                    name_u16s, query_num_chars);
+    var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), name_u16s, query_num_chars);
 
     if (result_num_chars > 0) {
         assert(result_num_chars <= query_num_chars);
@@ -36,9 +31,13 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
 proc main() : i32 {
     const CLASS_NAME = "my window class";
 
+    const ASD = 123;
+    var bbb: u32 = ASD;
+    var ccc: i8 = ASD;
+
     var wc: WNDCLASSEXW;
     wc.cbSize = sizeof(WNDCLASSEXW);
-    wc.style = cast(u32, CS_OWNDC);
+    wc.style = CS_OWNDC;
     wc.hCursor = LoadCursorW(null, cast(^u8, IDC_ARROW));
     wc.lpfnWndProc = win32_proc;
     wc.hInstance = GetModuleHandleW(null);
@@ -54,7 +53,7 @@ proc main() : i32 {
         0,
         to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length),
         to_wide_string("My Cool Window", default_allocator(), &success, &string_length),
-        cast(u32, WS_OVERLAPPEDWINDOW | WS_VISIBLE),
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         300, 150, cast(i32, window_width), cast(i32, window_height),
         null,
         null,
@@ -64,7 +63,7 @@ proc main() : i32 {
 
     // assert(window.handle != null && "window.handle was null");
     var dc = GetDC(window_handle);
-    Sleep(20000);
+    Sleep(2000);
     print("Done!\n");
 }
 

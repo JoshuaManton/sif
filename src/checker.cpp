@@ -383,19 +383,23 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 }
                 if (declared_type) {
                     if (!match_types(expr_operand, declared_type)) {
-                        assert(false);
+                        report_error(var->expr->location, "Variable was declared with type '%s' but was given an expression of type '%s'.", type_to_string(declared_type), type_to_string(expr_operand->type));
+                        return false;
                     }
                 }
                 else {
-                    declared_type = try_concretize_type_without_context(expr_operand->type);
-                    expr_operand->type = declared_type;
-                    if (declared_type == nullptr) {
-                        assert(expr_operand->type == type_untyped_null);
-                        report_error(var->location, "Cannot infer type from expression `null`.");
+                    if (!var->is_constant) {
+                        expr_operand->type = try_concretize_type_without_context(expr_operand->type);
+                        if (expr_operand->type == nullptr) {
+                            assert(expr_operand->type == type_untyped_null);
+                            report_error(var->location, "Cannot infer type from expression `null`.");
+                            return false;
+                        }
+                        assert(!is_type_untyped(expr_operand->type));
                     }
+                    assert(expr_operand->type != nullptr);
+                    declared_type = expr_operand->type;
                 }
-
-                assert(!is_type_untyped(expr_operand->type));
 
                 if (var->is_constant) {
                     if (!(expr_operand->flags & OPERAND_CONSTANT)) {
