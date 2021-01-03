@@ -30,6 +30,8 @@ SMALL
 -@notes on declarations
 -intern identifiers and remove strcmps
 -add allocators to demo
+-underscores in numbers
+-crash when you don't pass enough parameters?
 
 MEDIUM
 -allow custom entrypoints

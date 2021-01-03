@@ -420,30 +420,66 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
     }
     else {
         if (expr->operand.flags & OPERAND_CONSTANT) {
-            assert(!is_type_untyped(expr->operand.type));
-            t = c_temporary();
-            print_indents(sb, indent_level);
-            c_print_type(sb, expr->operand.type, t);
-            sb->print(" = ");
-            if (is_type_float(expr->operand.type)) {
-                sb->printf("%f", expr->operand.float_value);
-            }
-            else if (is_type_integer(expr->operand.type)) {
-                sb->printf("%d", expr->operand.int_value);
-            }
-            else if (expr->operand.type == type_bool) {
-                sb->print(expr->operand.bool_value ? "true" : "false");
-            }
-            else if (expr->operand.type == type_string) {
-                sb->printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-            }
-            else if (is_type_typeid(expr->operand.type)) {
-                sb->printf("%d", expr->operand.type_value->id);
+            if (target_type == type_any) {
+                assert(!is_type_untyped(expr->operand.type));
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, expr->operand.type, t);
+                sb->print(" = ");
+                if (is_type_float(expr->operand.type)) {
+                    sb->printf("%f", expr->operand.float_value);
+                }
+                else if (is_type_integer(expr->operand.type)) {
+                    sb->printf("%d", expr->operand.int_value);
+                }
+                else if (expr->operand.type == type_bool) {
+                    sb->print(expr->operand.bool_value ? "true" : "false");
+                }
+                else if (expr->operand.type == type_string) {
+                    sb->printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+                }
+                else if (is_type_typeid(expr->operand.type)) {
+                    sb->printf("%d", expr->operand.type_value->id);
+                }
+                else if (is_type_pointer(expr->operand.type)) {
+                    sb->printf("((void *)%d)", expr->operand.int_value);
+                }
+                else {
+                    assert(false);
+                }
+                sb->print(";\n");
             }
             else {
-                assert(false);
+                assert(!is_type_untyped(expr->operand.type));
+                String_Builder tsb = make_string_builder(g_global_linear_allocator, 32);
+                if (is_type_float(expr->operand.type)) {
+                    tsb.printf("%f", expr->operand.float_value);
+                }
+                else if (is_type_integer(expr->operand.type)) {
+                    tsb.printf("%d", expr->operand.int_value);
+                }
+                else if (expr->operand.type == type_bool) {
+                    tsb.print(expr->operand.bool_value ? "true" : "false");
+                }
+                else if (expr->operand.type == type_string) {
+                    tsb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+                }
+                else if (is_type_typeid(expr->operand.type)) {
+                    tsb.printf("%d", expr->operand.type_value->id);
+                }
+                else if (is_type_pointer(expr->operand.type)) {
+                    tsb.printf("((void *)%d)", expr->operand.int_value);
+                }
+                else {
+                    assert(false);
+                }
+                t = tsb.string();
             }
-            sb->print(";\n");
+        }
+        else if (is_type_typeid(expr->operand.type) && (expr->operand.flags & OPERAND_CONSTANT)) {
+            String_Builder tsb = make_string_builder(g_global_linear_allocator, 32);
+            tsb.printf("%d", expr->operand.type_value->id);
+            t = tsb.string();
         }
         else {
             switch (expr->expr_kind) {
@@ -679,15 +715,27 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     break;
                 }
                 case EXPR_NUMBER_LITERAL: {
-                    assert(false);
+                    String_Builder tsb = make_string_builder(g_global_linear_allocator, 128);
+                    if (is_type_float(expr->operand.type)) {
+                        tsb.printf("%f", expr->operand.float_value);
+                    }
+                    else if (is_type_integer(expr->operand.type)) {
+                        tsb.printf("%d", expr->operand.int_value);
+                    }
+                    t = tsb.string();
                     break;
                 }
                 case EXPR_CHAR_LITERAL: {
-                    assert(false);
+                    assert(is_type_integer(expr->operand.type));
+                    String_Builder tsb = make_string_builder(g_global_linear_allocator, 128);
+                    tsb.printf("%d", expr->operand.int_value);
+                    t = tsb.string();
                     break;
                 }
                 case EXPR_STRING_LITERAL: {
-                    assert(false);
+                    String_Builder tsb = make_string_builder(g_global_linear_allocator, 128);
+                    tsb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+                    t = tsb.string();
                     break;
                 }
                 case EXPR_POINTER_TYPE: {
@@ -714,11 +762,11 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     break;
                 }
                 case EXPR_TRUE: {
-                    assert(false);
+                    t = "true";
                     break;
                 }
                 case EXPR_FALSE: {
-                    assert(false);
+                    t = "false";
                     break;
                 }
                 case EXPR_SIZEOF: {

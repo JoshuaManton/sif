@@ -1,9 +1,73 @@
 #include "core:basic.sif"
+#include "core:windows.sif"
 
-proc foo(t: $T) {
+proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
+    if (my_str.data == null) {
+        return null;
+    }
 
+    // why is the first argument not implicitly casting? it's supposed to be untyped
+    var query_num_chars = MultiByteToWideChar(cast(u32, CP_ACP), 0,
+                                                   my_str.data, cast(i32, my_str.count),
+                                                   null, 0);
+    if (query_num_chars <= 0) {
+        return null;
+    }
+
+    var name = "";
+    var name_u16s = cast(^u16, sif_alloc(allocator, cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT)); // 2 extra bytes for zero termination WCHAR.
+    var result_num_chars = MultiByteToWideChar(cast(u32, CP_ACP), 0,
+                                                    my_str.data, cast(i32, my_str.count),  // @Robustness: Silent failure if too long. @Cleanup.
+                                                    name_u16s, query_num_chars);
+
+    if (result_num_chars > 0) {
+        assert(result_num_chars <= query_num_chars);
+        var name_slice = slice_ptr(name_u16s, cast(i64, result_num_chars));
+        // todo(josh): this looks sketch
+        name_slice[cast(i64, result_num_chars)] = 0;
+        out_success^ = true;
+        out_result_length_in_bytes^ = result_num_chars * 2;
+        return name_u16s;
+    }
+
+    return name_u16s;
 }
 
 proc main() : i32 {
-    foo(null);
+    const CLASS_NAME = "my window class";
+
+    var wc: WNDCLASSEXW;
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.style = cast(u32, CS_OWNDC);
+    wc.hCursor = LoadCursorW(null, cast(^u8, IDC_ARROW));
+    wc.lpfnWndProc = win32_proc;
+    wc.hInstance = GetModuleHandleW(null);
+    var success: bool;
+    var string_length: i32;
+    wc.lpszClassName = to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length);
+    var class = RegisterClassExW(&wc);
+    assert(class != 0);
+
+    var window_width = 1280;
+    var window_height = 720;
+    var window_handle = CreateWindowExW(
+        0,
+        to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length),
+        to_wide_string("My Cool Window", default_allocator(), &success, &string_length),
+        cast(u32, WS_OVERLAPPEDWINDOW | WS_VISIBLE),
+        300, 150, cast(i32, window_width), cast(i32, window_height),
+        null,
+        null,
+        wc.hInstance,
+        null
+    );
+
+    // assert(window.handle != null && "window.handle was null");
+    var dc = GetDC(window_handle);
+    Sleep(20000);
+    print("Done!\n");
+}
+
+proc win32_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) : LRESULT {
+    return DefWindowProcW(hwnd, msg, w, l);
 }

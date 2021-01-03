@@ -430,6 +430,9 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             else {
                 assert(decl_operand.flags != 0 && "decl_operand should have been filled in above");
                 assert(decl_operand.type != nullptr && "decl_operand should have been filled in above");
+                if (is_type_typeid(decl_operand.type)) {
+                    assert(decl_operand.type_value != nullptr);
+                }
             }
             break;
         }
@@ -1025,11 +1028,16 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
 bool can_cast(Ast_Expr *expr, Type *type) {
     assert(expr != nullptr);
     assert(type != nullptr);
-    if (is_type_number(expr->operand.type) && is_type_enum(type)) {
-        return true;
-    }
-    if (is_type_number(expr->operand.type) && is_type_number(type)) {
-        return true;
+    if (is_type_number(expr->operand.type)) {
+        if (is_type_enum(type)) {
+            return true;
+        }
+        if (is_type_number(type)) {
+            return true;
+        }
+        if (is_type_pointer(type)) {
+            return true;
+        }
     }
     if (is_type_pointer(expr->operand.type) && is_type_pointer(type)) {
         return true;
@@ -2081,7 +2089,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             if (!can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value)) {
-                report_error(expr_cast->location, "Cannot cast from %s to %s.", type_to_string(rhs_operand->type), type_operand->type_value);
+                report_error(expr_cast->location, "Cannot cast from %s to %s.", type_to_string(rhs_operand->type), type_to_string(type_operand->type_value));
                 return nullptr;
             }
             result_operand.type = type_operand->type_value;
