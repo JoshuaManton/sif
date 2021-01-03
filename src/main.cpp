@@ -3,15 +3,12 @@
 #include <string.h>
 #include <cassert>
 
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
 // todo(josh): microsoft craziness
 // #define MICROSOFT_CRAZINESS_IMPLEMENTATION
 // #include "microsoft_craziness.h"
 
 #include "common.h"
+#include "os_windows.h"
 #include "lexer.h"
 #include "parser.h"
 #include "checker.h"
@@ -22,16 +19,15 @@ TODO:
 
 SMALL
 -handle unary operators nicer, currently quick-and-dirty
--deduplicate #include paths
 -opt=N
 -unknown directives don't stop compilation
--error when instantiating a polymorphic struct without parameters
 -block comments
--@notes on declarations
 -intern identifiers and remove strcmps
 -add allocators to demo
 -underscores in numbers
 -crash when you don't pass enough parameters?
+-cstring type
+-prevent identifiers from being C keywords in the backend, like `signed`
 
 MEDIUM
 -allow custom entrypoints
@@ -52,13 +48,13 @@ MEDIUM
 -locally scoped structs and procs
 -tagged unions
 -use microsoft_craziness.h
+-enum arrays
 
 BIG
 -control flow graph analysis
 -type_info
 -#if
 -C varargs for bindings
--cstring type
 -default procedure parameters
 -#caller_location
 -#location()
@@ -72,33 +68,6 @@ BIG
 -foreach loops
 -figure out if I should allow shadowing (maybe with a keyword?)
 */
-
-struct Timer {
-    double frequency = {};
-};
-
-void init_timer(Timer *timer) {
-    LARGE_INTEGER large_integer_frequency = {};
-    assert(QueryPerformanceFrequency(&large_integer_frequency) != 0);
-    timer->frequency = large_integer_frequency.QuadPart/1000.0;
-}
-
-double query_timer(Timer *timer) {
-    LARGE_INTEGER large_integer_counter = {};
-    assert(QueryPerformanceCounter(&large_integer_counter) != 0);
-    return large_integer_counter.QuadPart / timer->frequency;
-}
-
-char *wide_to_cstring(wchar_t *wide) {
-    int query_result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
-    assert(query_result > 0);
-
-    char *cstring = (char *)alloc(default_allocator(), query_result);
-    int result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, cstring, query_result, nullptr, nullptr);
-
-    assert(result == query_result);
-    return cstring;
-}
 
 void print_usage() {
     printf("Usage:\n");
@@ -128,11 +97,9 @@ void main(int argc, char **argv) {
     init_dynamic_arena(&dynamic_arena, 10 * 1024 * 1024, default_allocator());
     g_global_linear_allocator = dynamic_arena_allocator(&dynamic_arena);
 
-    wchar_t exe_path_wide[MAX_PATH];
-    GetModuleFileNameW(nullptr, exe_path_wide, MAX_PATH);
-    char *sif_exe_path = wide_to_cstring(exe_path_wide);
-    char *sif_root = path_directory(sif_exe_path, default_allocator());
-    String_Builder core_lib_builder = make_string_builder(default_allocator(), 64);
+    char *sif_exe_path = get_current_exe_name(g_global_linear_allocator);
+    char *sif_root = path_directory(sif_exe_path, g_global_linear_allocator);
+    String_Builder core_lib_builder = make_string_builder(g_global_linear_allocator, 64);
     core_lib_builder.printf("%s/../core", sif_root);
     sif_core_lib_path = core_lib_builder.string();
 
@@ -198,8 +165,8 @@ void main(int argc, char **argv) {
     }
 
     if (output_exe_name == nullptr) {
-        char *file_to_compile_without_extension = path_filename(file_to_compile, default_allocator());
-        String_Builder output_exe_name_sb = make_string_builder(default_allocator(), 64);
+        char *file_to_compile_without_extension = path_filename(file_to_compile, g_global_linear_allocator);
+        String_Builder output_exe_name_sb = make_string_builder(g_global_linear_allocator, 64);
         output_exe_name_sb.printf("%s.exe", file_to_compile_without_extension);
         output_exe_name = output_exe_name_sb.string();
     }
@@ -246,7 +213,7 @@ void main(int argc, char **argv) {
     // printf("um_lib_path:   %s\n", um_lib_path);
     // printf("ucrt_lib_path: %s\n", ucrt_lib_path);
 
-    String_Builder command_sb = make_string_builder(default_allocator(), 128);
+    String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
     command_sb.printf("cmd.exe /c \"cl.exe ");
     if (build_debug) {
         command_sb.print("/Zi /Fd ");
@@ -276,8 +243,8 @@ void main(int argc, char **argv) {
     }
 
     if (!keep_temp_files) {
-        DeleteFileA("output.c");
-        DeleteFileA("output.obj");
+        delete_file("output.c");
+        delete_file("output.obj");
     }
 
     double compilation_end_time = query_timer(&timer);
@@ -297,7 +264,7 @@ void main(int argc, char **argv) {
     }
 
     if (is_run) {
-        String_Builder run_command_sb = make_string_builder(default_allocator(), 64);
+        String_Builder run_command_sb = make_string_builder(g_global_linear_allocator, 64);
         run_command_sb.printf("cmd.exe /c \"%s\"", output_exe_name);
         system(run_command_sb.string());
     }

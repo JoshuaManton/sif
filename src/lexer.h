@@ -46,6 +46,8 @@ enum Token_Kind {
     TK_CAST,
     TK_TRANSMUTE,
 
+    TK_NOTE,
+
     TK_IF,
     TK_ELSE,
     TK_FOR,

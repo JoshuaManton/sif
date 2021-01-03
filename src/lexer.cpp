@@ -39,6 +39,8 @@ void init_lexer_globals() {
     token_string_map[TK_CAST]                           = "cast";
     token_string_map[TK_TRANSMUTE]                      = "transmute";
 
+    token_string_map[TK_NOTE]                           = "@note";
+
     token_string_map[TK_DIRECTIVE_PRINT]                = "#print";
     token_string_map[TK_DIRECTIVE_ASSERT]               = "#assert";
     token_string_map[TK_DIRECTIVE_FOREIGN]              = "#foreign";
@@ -121,6 +123,8 @@ void init_lexer_globals() {
     token_name_map[TK_CONTINUE]                         = "TK_CONTINUE";
     token_name_map[TK_CAST]                             = "TK_CAST";
     token_name_map[TK_TRANSMUTE]                        = "TK_TRANSMUTE";
+
+    token_name_map[TK_NOTE]                             = "TK_NOTE";
 
     token_name_map[TK_DIRECTIVE_PRINT]                  = "TK_DIRECTIVE_PRINT";
     token_name_map[TK_DIRECTIVE_ASSERT]                 = "TK_DIRECTIVE_ASSERT";
@@ -497,6 +501,15 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->escaped_length = escaped_length;
         out_token->scanner_length = scanner_length-2; // note(josh): -2 for the quotes
     }
+    else if (lexer->text[lexer->location.index] == '@') {
+        advance(lexer, 1);
+        assert(is_letter_or_underscore(lexer->text[lexer->location.index])); // todo(josh): error message
+        int length;
+        char *note = scan_identifier(&lexer->text[lexer->location.index], &length);
+        advance(lexer, length);
+        out_token->kind = TK_NOTE;
+        out_token->text = note;
+    }
     // todo(josh): make a macro for these operators
     else if (lexer->text[lexer->location.index] == '+') {
         advance(lexer, 1);
@@ -744,7 +757,7 @@ void report_error(Location location, const char *fmt, ...) {
 }
 
 void report_info(Location location, const char *fmt, ...) {
-    printf("%s(%d:%d)        ", location.filepath, location.line, location.character);
+    printf("%s(%d:%d) ", location.filepath, location.line, location.character);
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);

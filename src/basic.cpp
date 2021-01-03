@@ -398,7 +398,7 @@ void String_Builder::destroy() {
 
 
 
-bool starts_with(char *str, char *start) {
+bool starts_with(const char *str, const char *start) {
     for (int i = 0; start[i] != '\0'; i++) {
         if (str[i] != start[i]) {
             return false;
@@ -407,7 +407,7 @@ bool starts_with(char *str, char *start) {
     return true;
 }
 
-bool ends_with(char *str, char *end) {
+bool ends_with(const char *str, const char *end) {
     int str_length = strlen(str);
     int end_length = strlen(end);
     if (str_length < end_length) {

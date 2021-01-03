@@ -9,11 +9,6 @@ proc print_int   (i: int)                                                #foreig
 proc print_float (f: float)                                              #foreign;
 proc print_bool  (b: bool)                                               #foreign;
 proc print_string(str: string)                                           #foreign;
-proc malloc      (size: int)                                    : rawptr #foreign;
-proc free        (ptr: rawptr)                                           #foreign;
-proc assert      (condition: bool)                                       #foreign;
-proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
-proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign;
 proc strlen      (cstr: ^u8)                                    : u64    #foreign;
 proc sin         (x: f64)                                       : f64    #foreign;
 
@@ -127,53 +122,6 @@ proc printa(args: ..any) {
         print_arg(arg);
     }
     print_char('\n');
-}
-
-
-
-proc string_eq(var a: string, var b: string) : bool {
-    if (a.count != b.count) {
-        return false;
-    }
-    for (var i = 0; i < a.count; i += 1) {
-        if (a[i] != b[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-
-
-struct Allocator {
-    var data: rawptr;
-    var alloc_proc: proc(allocator: rawptr, size: int, align: int) : rawptr;
-    var free_proc:  proc(allocator: rawptr, ptr: rawptr);
-}
-
-proc sif_alloc(allocator: Allocator, size: int, align: int) : rawptr {
-    assert(allocator.alloc_proc != null);
-    return allocator.alloc_proc(allocator.data, size, align);
-}
-
-proc sif_free(allocator: Allocator, ptr: rawptr) {
-    assert(allocator.free_proc != null);
-    allocator.free_proc(allocator.data, ptr);
-}
-
-
-
-proc default_allocator_alloc(allocator: rawptr, size: int, align: int) : rawptr {
-    return malloc(size);
-}
-proc default_allocator_free(allocator: rawptr, ptr: rawptr) {
-    free(ptr);
-}
-proc default_allocator() : Allocator {
-    var a: Allocator;
-    a.alloc_proc = default_allocator_alloc;
-    a.free_proc = default_allocator_free;
-    return a;
 }
 
 

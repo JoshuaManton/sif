@@ -57,6 +57,11 @@ const HRESULT = i32; // LONG
 // const INFINITE: u32 = 0xffff_ffff; // todo(josh): underscores in numbers
 const INFINITE: u32 = 0xffffffff;
 
+proc HIWORDW(w: WPARAM) : u16 { return cast(u16, ((cast(u32, w) >> 16) & 0xffff)); }
+proc HIWORDL(l: LPARAM) : i16 { return cast(i16, ((cast(u32, l) >> 16) & 0xffff)); }
+proc LOWORDW(w: WPARAM) : u16 { return cast(u16, w); }
+proc LOWORDL(l: LPARAM) : i16 { return cast(i16, l); }
+
 // Structs:
 
 union LARGE_INTEGER {

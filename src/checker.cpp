@@ -521,6 +521,18 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 bool typecheck_global_scope(Ast_Block *block) {
     assert(block->flags & BF_IS_GLOBAL_SCOPE);
     make_incomplete_types_for_all_structs(); // todo(josh): this is kinda goofy. should be able to just do this as we traverse the program
+
+    For (idx, block->declarations) {
+        Declaration *decl = block->declarations[idx];
+        For (note_idx, decl->notes) {
+            char *note = decl->notes[note_idx];
+            if (strcmp(note, "sif_runtime") == 0) {
+                assert(check_declaration(decl, decl->location));
+                break;
+            }
+        }
+    }
+
     For (idx, block->declarations) {
         Declaration *decl = block->declarations[idx];
         if (decl->is_polymorphic) {
@@ -2794,9 +2806,29 @@ bool do_print_directives() {
         if (!expr_operand) {
             return false;
         }
-        assert(expr_operand->flags & OPERAND_CONSTANT);
-        assert(expr_operand->type->flags & TF_INTEGER);
-        printf("%s(%d:%d) #print directive: %lld\n", print_directive->location.filepath, print_directive->location.line, print_directive->location.character, expr_operand->int_value);
+        if (!(expr_operand->flags & OPERAND_CONSTANT)) {
+            report_error(print_directive->expr->location, "#print directive require a constant.");
+            return false;
+        }
+
+        if (is_type_integer(expr_operand->type)) {
+            report_info(print_directive->location, "%lld", expr_operand->int_value);
+        }
+        else if (is_type_float(expr_operand->type)) {
+            report_info(print_directive->location, "%f", expr_operand->float_value);
+        }
+        else if (expr_operand->type == type_bool) {
+            report_info(print_directive->location, (expr_operand->bool_value ? "true" : "false"));
+        }
+        else if (is_type_string(expr_operand->type)) {
+            report_info(print_directive->location, "%s", expr_operand->escaped_string_value);
+        }
+        else if (is_type_typeid(expr_operand->type)) {
+            report_info(print_directive->location, "%s", type_to_string(expr_operand->type_value));
+        }
+        else {
+            assert(false);
+        }
     }
     return true;
 }

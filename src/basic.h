@@ -705,8 +705,8 @@ void Hashtable<Key, Value>::get_key_header(Key key, Key_Header<Key> **out_header
 //  }
 // }
 
-bool starts_with(char *str, char *start);
-bool ends_with(char *str, char *end);
+bool starts_with(const char *str, const char *start);
+bool ends_with(const char *str, const char *end);
 char *path_directory(const char *filepath, Allocator allocator);
 char *path_filename(const char *filepath, Allocator allocator);
 char *path_filename_with_extension(const char *filepath, Allocator allocator);

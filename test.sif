@@ -1,5 +1,17 @@
 #include "core:basic.sif"
+#include "core:basic.sif"
+#include "core:basic.sif"
+#include "core:basic.sif"
+#include "core:basic.sif"
+#include "core:basic.sif"
 #include "core:windows.sif"
+#include "core:windows.sif"
+#include "core:windows.sif"
+#include "core:windows.sif"
+#include "core:math.sif"
+#include "core:math.sif"
+#include "core:math.sif"
+#include "core:math.sif"
 
 proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
     if (my_str.data == null) {
@@ -28,12 +40,35 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
     return name_u16s;
 }
 
-proc main() : i32 {
-    const CLASS_NAME = "my window class";
+var window_should_close: bool;
 
-    const ASD = 123;
-    var bbb: u32 = ASD;
-    var ccc: i8 = ASD;
+proc main() : i32 {
+    var window = create_window("My Cool Window", 1920, 1080);
+
+    while (!window.should_close) {
+        update_window(&window);
+        Sleep(16);
+    }
+}
+
+
+
+struct Window {
+    var should_close: bool;
+
+    var width: int;
+    var height: int;
+    var aspect: float;
+    var size: Vector2;
+
+    var is_focused: bool;
+
+    var handle: HWND;
+    var dc: HDC;
+}
+
+proc create_window(name: string, width: int, height: int) : Window {
+    const CLASS_NAME = "my window class";
 
     var wc: WNDCLASSEXW;
     wc.cbSize = sizeof(WNDCLASSEXW);
@@ -47,26 +82,192 @@ proc main() : i32 {
     var class = RegisterClassExW(&wc);
     assert(class != 0);
 
-    var window_width = 1280;
-    var window_height = 720;
+    var window: Window;
+    window.width = width;
+    window.height = height;
+    assert(g_currently_processing_window == null);
+    g_currently_processing_window = &window;
     var window_handle = CreateWindowExW(
         0,
         to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length),
         to_wide_string("My Cool Window", default_allocator(), &success, &string_length),
         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        300, 150, cast(i32, window_width), cast(i32, window_height),
+        300, 150, cast(i32, width), cast(i32, height),
         null,
         null,
         wc.hInstance,
         null
     );
 
-    // assert(window.handle != null && "window.handle was null");
+    assert(window_handle != null);
     var dc = GetDC(window_handle);
-    Sleep(2000);
-    print("Done!\n");
+    window.handle = window_handle;
+    window.dc = dc;
+    g_currently_processing_window = null;
+
+    return window;
 }
 
+proc update_window(window: ^Window) {
+    g_currently_processing_window = window;
+
+    var msg: MSG;
+    while (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) != 0) {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+
+    g_currently_processing_window = null; // @defer
+}
+
+var g_currently_processing_window: ^Window;
+
 proc win32_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) : LRESULT {
+    if (msg == WM_ACTIVATEAPP) {
+        g_currently_processing_window.is_focused = w != 0;
+        return 0;
+    }
+    else if (msg == WM_CLOSE) {
+        g_currently_processing_window.should_close = true;
+        return 0;
+    }
+    else if (msg == WM_DESTROY) {
+        PostQuitMessage(0);
+        return 0;
+    }
+    else if (msg == WM_SIZE) {
+        assert(g_currently_processing_window != null);
+
+        // if (w == 0) { } // SIZE_RESTORED
+        // if (w == 1) { } // SIZE_MINIMIZED
+        // if (w == 2) { } // SIZE_MAXIMIZED
+        // if (w == 3) { } // SIZE_MAXSHOW
+        // if (w == 4) { } // SIZE_MAXHIDE
+
+        var width  = LOWORDL(l);
+        var height = HIWORDL(l);
+
+        if (width  <= 0) width  = 1;
+        if (height <= 0) height = 1;
+
+        print("New window size: %x%\n", width, height);
+        g_currently_processing_window.width  = cast(i64, width);
+        g_currently_processing_window.height = cast(i64, height);
+        g_currently_processing_window.aspect = cast(float, width) / cast(float, height);
+        g_currently_processing_window.size   = Vector2{cast(float, g_currently_processing_window.width), cast(float, g_currently_processing_window.height)};
+        return 0;
+    }
+    else if (msg == WM_KEYDOWN) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // if !g_currently_processing_window.inputs_held[input] {
+        //     g_currently_processing_window.inputs_down[input] = true;
+        // }
+        // g_currently_processing_window.inputs_held[input] = true;
+        // return 0;
+    }
+    else if (msg == WM_KEYUP) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // g_currently_processing_window.inputs_up[input] = true;
+        // g_currently_processing_window.inputs_held[input] = false;
+        // return 0;
+    }
+    else if (msg == WM_SYSKEYDOWN) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // if !g_currently_processing_window.inputs_held[input] {
+        //     g_currently_processing_window.inputs_down[input] = true;
+        // }
+        // g_currently_processing_window.inputs_held[input] = true;
+        // return 0;
+    }
+    else if (msg == WM_SYSKEYUP) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // g_currently_processing_window.inputs_up[input] = true;
+        // g_currently_processing_window.inputs_held[input] = false;
+        // return 0;
+    }
+    else if (msg == WM_MOUSEMOVE) {
+        // x := LOWORDL(l);
+        // y := HIWORDL(l);
+        // old_pos := g_currently_processing_window.mouse_position_pixel;
+        // g_currently_processing_window.mouse_position_pixel = Vector2{cast(float, x), g_currently_processing_window.size.y - cast(float, y)};
+        // g_currently_processing_window.mouse_position_unit.x = g_currently_processing_window.mouse_position_pixel.x / g_currently_processing_window.size.x;
+        // g_currently_processing_window.mouse_position_unit.y = g_currently_processing_window.mouse_position_pixel.y / g_currently_processing_window.size.y;
+        // if g_currently_processing_window.updated_at_least_once {
+        //     g_currently_processing_window.mouse_position_pixel_delta = g_currently_processing_window.mouse_position_pixel - old_pos;
+        // }
+        // return 0;
+    }
+    else if (msg == WM_MOUSEWHEEL) {
+        // scroll := (cast,trunc(s16)HIWORD(w)) / 120; // note(josh): 120 is WHEEL_DELTA in windows
+        // g_currently_processing_window.mouse_scroll = cast(float)scroll;
+        // return 0;
+    }
+    else if (msg == WM_LBUTTONDOWN) {
+        // if g_currently_processing_window.mouse_capture_sum == 0  SetCapture(g_currently_processing_window.handle);
+        // g_currently_processing_window.mouse_capture_sum += 1;
+
+        // if !g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_LEFT] {
+        //     g_currently_processing_window.inputs_down[cast(int)Input.MOUSE_LEFT] = true;
+        // }
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_LEFT] = true;
+        // return 0;
+    }
+    else if (msg == WM_LBUTTONUP) {
+        // g_currently_processing_window.mouse_capture_sum -= 1;
+        // if g_currently_processing_window.mouse_capture_sum == 0  ReleaseCapture();
+
+        // g_currently_processing_window.inputs_up[cast(int)Input.MOUSE_LEFT]   = true;
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_LEFT] = false;
+        // return 0;
+    }
+    else if (msg == WM_MBUTTONDOWN) {
+        // if g_currently_processing_window.mouse_capture_sum == 0 SetCapture(g_currently_processing_window.handle);
+        // g_currently_processing_window.mouse_capture_sum += 1;
+
+        // if !g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_MIDDLE] {
+        //     g_currently_processing_window.inputs_down[cast(int)Input.MOUSE_MIDDLE] = true;
+        // }
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_MIDDLE] = true;
+        // return 0;
+    }
+    else if (msg == WM_MBUTTONUP) {
+        // g_currently_processing_window.mouse_capture_sum -= 1;
+        // if g_currently_processing_window.mouse_capture_sum == 0 ReleaseCapture();
+
+        // g_currently_processing_window.inputs_up[cast(int)Input.MOUSE_MIDDLE]   = true;
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_MIDDLE] = false;
+        // return 0;
+    }
+    else if (msg == WM_RBUTTONDOWN) {
+        // if g_currently_processing_window.mouse_capture_sum == 0 SetCapture(g_currently_processing_window.handle);
+        // g_currently_processing_window.mouse_capture_sum += 1;
+
+        // if !g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_RIGHT] {
+        //     g_currently_processing_window.inputs_down[cast(int)Input.MOUSE_RIGHT] = true;
+        // }
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_RIGHT] = true;
+        // return 0;
+    }
+    else if (msg == WM_RBUTTONUP) {
+        // g_currently_processing_window.mouse_capture_sum -= 1;
+        // if g_currently_processing_window.mouse_capture_sum == 0 ReleaseCapture();
+
+        // g_currently_processing_window.inputs_up[cast(int)Input.MOUSE_RIGHT]   = true;
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_RIGHT] = false;
+        // return 0;
+    }
+    else if (msg == WM_CHAR) {
+        // io := ImGui.GetIO();
+        // io.AddInputCharacter(io, cast,trunc(u16)w);
+        // return 0;
+    }
+    else {
+        // print("Unhandled windows message: %\n", msg);
+    }
+
     return DefWindowProcW(hwnd, msg, w, l);
 }

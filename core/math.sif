@@ -1,0 +1,65 @@
+struct Vector2 {
+    var x: float;
+    var y: float;
+    operator +(a: Vector2, b: Vector2) : Vector2 {
+        return Vector2{a.x + b.x, a.y + b.y};
+    }
+    operator -(a: Vector2, b: Vector2) : Vector2 {
+        return Vector2{a.x - b.x, a.y - b.y};
+    }
+    operator *(a: Vector2, b: Vector2) : Vector2 {
+        return Vector2{a.x * b.x, a.y * b.y};
+    }
+    operator /(a: Vector2, b: Vector2) : Vector2 {
+        return Vector2{a.x / b.x, a.y / b.y};
+    }
+
+    operator *(a: Vector2, f: float) : Vector2 {
+        return Vector2{a.x * f, a.y * f};
+    }
+}
+
+struct Vector3 {
+    var x: float;
+    var y: float;
+    var z: float;
+    operator +(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+    }
+    operator -(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
+    }
+    operator *(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x * b.x, a.y * b.y, a.z * b.z};
+    }
+    operator /(a: Vector3, b: Vector3) : Vector3 {
+        return Vector3{a.x / b.x, a.y / b.y, a.z / b.z};
+    }
+
+    operator *(a: Vector3, f: float) : Vector3 {
+        return Vector3{a.x * f, a.y * f, a.z * f};
+    }
+}
+
+struct Vector4 {
+    var x: float;
+    var y: float;
+    var z: float;
+    var w: float;
+    operator +(a: Vector4, b: Vector4) : Vector4 {
+        return Vector4{a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+    }
+    operator -(a: Vector4, b: Vector4) : Vector4 {
+        return Vector4{a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+    }
+    operator *(a: Vector4, b: Vector4) : Vector4 {
+        return Vector4{a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+    }
+    operator /(a: Vector4, b: Vector4) : Vector4 {
+        return Vector4{a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+    }
+
+    operator *(a: Vector4, f: float) : Vector4 {
+        return Vector4{a.x * f, a.y * f, a.z * f, a.w * f};
+    }
+}

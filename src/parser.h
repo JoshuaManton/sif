@@ -713,6 +713,7 @@ struct Declaration {
     Operand operand = {};
     Location location = {};
     bool is_polymorphic = {};
+    Array<char *> notes = {};
     Declaration(char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)

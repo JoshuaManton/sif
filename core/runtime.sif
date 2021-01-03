@@ -1,0 +1,148 @@
+proc malloc      (size: int)                                    : rawptr #foreign; @sif_runtime
+proc free        (ptr: rawptr)                                           #foreign; @sif_runtime
+proc assert      (condition: bool)                                       #foreign; @sif_runtime
+proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
+proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
+
+
+
+struct Allocator {
+    var data: rawptr;
+    var alloc_proc: proc(allocator: rawptr, size: int, align: int) : rawptr;
+    var free_proc:  proc(allocator: rawptr, ptr: rawptr);
+} @sif_runtime
+
+proc sif_alloc(allocator: Allocator, size: int, align: int) : rawptr {
+    assert(allocator.alloc_proc != null);
+    return allocator.alloc_proc(allocator.data, size, align);
+} @sif_runtime
+
+proc sif_free(allocator: Allocator, ptr: rawptr) {
+    assert(allocator.free_proc != null);
+    allocator.free_proc(allocator.data, ptr);
+} @sif_runtime
+
+
+
+proc default_allocator_alloc(allocator: rawptr, size: int, align: int) : rawptr {
+    return malloc(size);
+} @sif_runtime
+proc default_allocator_free(allocator: rawptr, ptr: rawptr) {
+    free(ptr);
+} @sif_runtime
+proc default_allocator() : Allocator {
+    var a: Allocator;
+    a.alloc_proc = default_allocator_alloc;
+    a.free_proc = default_allocator_free;
+    return a;
+} @sif_runtime
+
+
+
+proc string_eq(var a: string, var b: string) : bool {
+    if (a.count != b.count) {
+        return false;
+    }
+    for (var i = 0; i < a.count; i += 1) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+    return true;
+} @sif_runtime
+
+
+
+// type info doesn't exist yet. just messing around here
+enum Type_Info_Kind {
+    INTEGER;
+    FLOAT;
+    BOOL;
+    STRING;
+    STRUCT;
+    UNION;
+    ENUM;
+    POINTER;
+    SLICE;
+    ARRAY;
+    REFERENCE;
+    PROCEDURE;
+} @sif_runtime
+
+struct Type_Info {
+    var kind: Type_Info_Kind;
+    var id: typeid;
+    var size: int;
+    var align: int;
+} @sif_runtime
+
+struct Type_Info_Integer {
+    var base: Type_Info;
+    var is_signed: bool;
+} @sif_runtime
+
+struct Type_Info_Float {
+    var base: Type_Info;
+} @sif_runtime
+
+struct Type_Info_Bool {
+    var base: Type_Info;
+} @sif_runtime
+
+struct Type_Info_String {
+    var base: Type_Info;
+} @sif_runtime
+
+struct Type_Info_Struct_Field {
+    var name: string;
+    var type: ^Type_Info;
+    var offset: int;
+} @sif_runtime
+struct Type_Info_Struct {
+    var base: Type_Info;
+    var name: string;
+    var fields: []Type_Info_Struct_Field;
+} @sif_runtime
+
+struct Type_Info_Union {
+    var base: Type_Info;
+    var name: string;
+    var fields: []Type_Info_Struct_Field;
+} @sif_runtime
+
+struct Type_Info_Enum_Field {
+    var name: string;
+    var value: int;
+} @sif_runtime
+struct Type_Info_Enum {
+    var base: Type_Info;
+    var base_type: ^Type_Info;
+    var fields: []Type_Info_Enum_Field;
+} @sif_runtime
+
+struct Type_Info_Pointer {
+    var base: Type_Info;
+    var pointer_to: ^Type_Info;
+} @sif_runtime
+
+struct Type_Info_Slice {
+    var base: Type_Info;
+    var slice_of: ^Type_Info;
+} @sif_runtime
+
+struct Type_Info_Array {
+    var base: Type_Info;
+    var array_of: ^Type_Info;
+    var count: int;
+} @sif_runtime
+
+struct Type_Info_Reference {
+    var base: Type_Info;
+    var reference_to: ^Type_Info;
+} @sif_runtime
+
+struct Type_Info_Procedure {
+    var base: Type_Info;
+    var parameter_types: []^Type_Info;
+    var return_type: ^Type_Info;
+} @sif_runtime

@@ -1,3 +1,5 @@
+
+
 proc buffer_allocate(buffer: []byte, offset: ^int, size: int, alignment: int, panic_on_oom: bool) : rawptr {
     // Don't allow allocations of zero size. This would likely return a
     // pointer to a different allocation, causing many problems.

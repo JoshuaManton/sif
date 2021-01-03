@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "parser.h"
+#include "os_windows.h"
 
 Array<Expr_Identifier *>              g_identifiers_to_resolve;
 Array<Declaration *>                  g_all_declarations;
@@ -11,6 +12,8 @@ Array<Ast_Directive_Assert *>         g_all_assert_directives;
 Array<Ast_Directive_Print *>          g_all_print_directives;
 Array<Ast_Directive_C_Code *>         g_all_c_code_directives;
 Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
+
+Array<char *> g_all_included_files; // note(josh): for deduplicating #includes
 
 Ast_Proc_Header *g_currently_parsing_proc;
 
@@ -21,6 +24,7 @@ void init_parser() {
     g_all_print_directives.allocator          = g_global_linear_allocator;
     g_all_c_code_directives.allocator         = g_global_linear_allocator;
     g_all_foreign_import_directives.allocator = g_global_linear_allocator;
+    g_all_included_files.allocator            = g_global_linear_allocator;
 }
 
 Ast_Block *push_ast_block(Ast_Block *block) {
@@ -51,6 +55,20 @@ bool register_declaration(Declaration *new_declaration) {
 
 
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
+
+
+
+Array<char *> parse_notes(Lexer *lexer) {
+    Array<char *> notes = {};
+    notes.allocator = g_global_linear_allocator;
+    Token note_token;
+    while (peek_next_token(lexer, &note_token) && note_token.kind == TK_NOTE) {
+        eat_next_token(lexer);
+        assert(note_token.text[0] != '@');
+        notes.append(note_token.text);
+    }
+    return notes;
+}
 
 
 
@@ -135,6 +153,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, did_parse_polymorphic_thing, root_token.location));
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, current_block));
+    var->declaration->notes = parse_notes(lexer);
 
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
@@ -306,6 +325,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     if (header->operator_to_overload == TK_INVALID) {
         assert(header->name != nullptr);
         header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, current_block));
+        header->declaration->notes = parse_notes(lexer);
         header->declaration->is_polymorphic = header->is_polymorphic;
         if (!register_declaration(header->declaration)) {
             return nullptr;
@@ -430,6 +450,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
     }
 
     structure->declaration = SIF_NEW_CLONE(Struct_Declaration(structure, current_block));
+    structure->declaration->notes = parse_notes(lexer);
     structure->declaration->is_polymorphic = is_polymorphic;
     if (!register_declaration(structure->declaration)) {
         return nullptr;
@@ -483,15 +504,8 @@ Ast_Enum *parse_enum(Lexer *lexer) {
             if (maybe_equals.kind == TK_ASSIGN) {
                 eat_next_token(lexer);
                 expr = parse_expr(lexer);
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
             }
-            else if (maybe_equals.kind == TK_SEMICOLON) {
-                eat_next_token(lexer);
-            }
-            else {
-                report_error(maybe_equals.location, "Enums may only contain statements of the form `FOO;` and `FOO = <constant numeric expression>;`.");
-                return nullptr;
-            }
+            EXPECT(lexer, TK_SEMICOLON, nullptr);
 
             Enum_Field field = {};
             field.name = ident_token.text;
@@ -504,6 +518,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
     ast_enum->fields = enum_fields;
     ast_enum->declaration = SIF_NEW_CLONE(Enum_Declaration(ast_enum, current_block));
+    ast_enum->declaration->notes = parse_notes(lexer);
     if (!register_declaration(ast_enum->declaration)) {
         return nullptr;
     }
@@ -613,15 +628,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer);
             Token filename_token;
             EXPECT(lexer, TK_STRING, &filename_token);
-            String_Builder include_sb = make_string_builder(g_global_linear_allocator, 128);
-            if (starts_with(filename_token.text, "core:")) {
-                char *filename = filename_token.text + 5;
-                include_sb.printf("%s/%s", sif_core_lib_path, filename);
-            }
-            else {
-                include_sb.print(filename_token.text);
-            }
-            bool ok = parse_file(include_sb.string(), filename_token.location);
+            bool ok = parse_file(filename_token.text, filename_token.location);
             if (!ok) {
                 return nullptr;
             }
@@ -930,6 +937,24 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
 }
 
 bool parse_file(const char *filename, Location include_location) {
+    String_Builder include_sb = make_string_builder(g_global_linear_allocator, 128);
+    if (starts_with(filename, "core:")) {
+        filename = filename + 5;
+        include_sb.printf("%s/%s", sif_core_lib_path, filename);
+        filename = include_sb.string();
+    }
+
+    char *absolute_path = get_absolute_path(filename, g_global_linear_allocator);
+
+    For (idx, g_all_included_files) {
+        if (strcmp(g_all_included_files[idx], absolute_path) == 0) {
+            // we've already included this file, no need to do it again
+            return true;
+        }
+    }
+
+    g_all_included_files.append(absolute_path);
+
     int len = 0;
     char *root_file_text = read_entire_file(filename, &len);
     if (root_file_text == nullptr) {
@@ -958,7 +983,10 @@ Ast_Block *begin_parsing(const char *filename) {
     global_scope->flags |= BF_IS_GLOBAL_SCOPE;
     Ast_Block *old_block = push_ast_block(global_scope);
 
-    bool ok = parse_file(filename, {});
+    bool ok = parse_file("core:runtime.sif", {});
+    assert(ok);
+
+    ok = parse_file(filename, {});
 
     pop_ast_block(old_block);
     if (!ok) {
