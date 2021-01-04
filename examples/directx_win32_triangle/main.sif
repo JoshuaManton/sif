@@ -1,0 +1,661 @@
+#include "core:basic.sif"
+#include "core:windows.sif"
+#include "core:math.sif"
+#include "core:allocators.sif"
+#include "core:d3d11.sif"
+
+struct Vertex {
+    var position: Vector3;
+    var uv:       Vector3;
+    var color:    Vector4;
+}
+
+proc main() : i32 {
+    var window = create_window("My Cool Window", 1920, 1080);
+    init_directx(&window);
+    var vertex_shader_blob: ^ID3D10Blob;
+    var vertex_shader = compile_vertex_shader_from_file("basic_vertex.hlsl", &vertex_shader_blob);
+    var pixel_shader  = compile_pixel_shader_from_file("basic_pixel.hlsl");
+
+    var sv_position_semantic = "SV_POSITION";
+    var texcoord_semantic = "TEXCOORD";
+    var color_semantic = "COLOR";
+    var vertex_fields = ([3]D3D11_INPUT_ELEMENT_DESC){
+        D3D11_INPUT_ELEMENT_DESC{&sv_position_semantic[0], 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
+        D3D11_INPUT_ELEMENT_DESC{&texcoord_semantic[0],    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        D3D11_INPUT_ELEMENT_DESC{&color_semantic[0],       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    var vertex_format: ^ID3D11InputLayout;
+    var result = directx_device.vtbl.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.vtbl.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.vtbl.GetBufferSize(vertex_shader_blob), &vertex_format);
+    assert(result == S_OK);
+
+    var vertices = ([3]Vertex) {
+        Vertex{Vector3{-0.5, -0.5, 0}, Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}},
+        Vertex{Vector3{0.5, -0.5, 0},  Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}},
+        Vertex{Vector3{0, 0.5, 0},     Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}}
+    };
+    var vb = create_vertex_buffer(&vertices[0], sizeof(Vertex) * 3);
+
+    while (!window.should_close) {
+        update_window(&window);
+
+        bind_shaders(vertex_shader, pixel_shader);
+        directx_device_context.vtbl.IASetInputLayout(directx_device_context, vertex_format);
+
+        directx_device_context.vtbl.OMSetRenderTargets(directx_device_context, 1, &swap_chain_rtv, null);
+
+        var clear_color = ([4]float){1, 0.5, 0.2, 1};
+        directx_device_context.vtbl.ClearRenderTargetView(directx_device_context, swap_chain_rtv, &clear_color[0]);
+
+        var stride: u32 = sizeof(Vertex);
+        var offset: u32 = 0;
+        bind_vertex_buffers(&vb, 1, 0, &stride, &offset);
+
+        directx_device_context.vtbl.Draw(directx_device_context, 3, 0);
+
+        swap_chain_handle.vtbl.Present(swap_chain_handle, 1, 0);
+    }
+}
+
+
+
+var directx_device: ^ID3D11Device;
+var directx_device_context: ^ID3D11DeviceContext;
+var swap_chain_handle: ^IDXGISwapChain;
+var swap_chain_rtv: ^ID3D11RenderTargetView;
+
+proc init_directx(window: ^Window) {
+    // dx_texture_format_mapping[TF_R8_UINT]            = DXGI_FORMAT_R8_UNORM;
+    // dx_texture_format_mapping[TF_R16_FLOAT]          = DXGI_FORMAT_R16_FLOAT;
+    // dx_texture_format_mapping[TF_R32_INT]            = DXGI_FORMAT_R32_SINT;
+    // dx_texture_format_mapping[TF_R32_FLOAT]          = DXGI_FORMAT_R32_FLOAT;
+    // dx_texture_format_mapping[TF_R16G16_FLOAT]       = DXGI_FORMAT_R16G16_FLOAT;
+    // dx_texture_format_mapping[TF_R16G16B16A16_FLOAT] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    // dx_texture_format_mapping[TF_R32G32B32A32_FLOAT] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    // dx_texture_format_mapping[TF_R8G8B8A8_UINT]      = DXGI_FORMAT_R8G8B8A8_UNORM;
+    // dx_texture_format_mapping[TF_R8G8B8A8_UINT_SRGB] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    // dx_texture_format_mapping[TF_DEPTH_STENCIL]      = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+    // // make sure all texture formats have a mapping
+    // for (int i = 0; i < ARRAYSIZE(dx_texture_format_mapping); i++) {
+    //     if (dx_texture_format_mapping[i] == 0) {
+    //         if ((Texture_Format)i != TF_INVALID && (Texture_Format)i != TF_COUNT) {
+    //             printf("Missing dx texture format mapping for %d\n", i);
+    //             ASSERT(false);
+    //         }
+    //     }
+    // }
+
+    // Create swap chain
+    var swap_chain_desc: DXGI_SWAP_CHAIN_DESC;
+    swap_chain_desc.BufferCount                        = 2;
+    swap_chain_desc.SwapEffect                         = DXGI_SWAP_EFFECT_FLIP_DISCARD; // todo(josh): use DXGI_SWAP_EFFECT_DISCARD (or something else) on non-Windows 10
+    swap_chain_desc.BufferDesc.Width                   = cast(u32, window.width);
+    swap_chain_desc.BufferDesc.Height                  = cast(u32, window.height);
+    swap_chain_desc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swap_chain_desc.BufferDesc.RefreshRate.Numerator   = 60; // todo(josh): query monitor refresh rate.
+    swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
+    swap_chain_desc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swap_chain_desc.OutputWindow                       = window.handle;
+    swap_chain_desc.SampleDesc.Count                   = 1;
+    swap_chain_desc.SampleDesc.Quality                 = 0;
+    swap_chain_desc.Windowed                           = BOOL.TRUE;
+
+    // directx.swap_chain_width  = window->width;
+    // directx.swap_chain_height = window->height;
+
+
+    var requested_feature_level: D3D_FEATURE_LEVEL = D3D_FEATURE_LEVEL_11_0;
+    var actual_feature_level: D3D_FEATURE_LEVEL;
+    var result = D3D11CreateDeviceAndSwapChain(
+        null,
+        D3D_DRIVER_TYPE_HARDWARE,
+        null,
+        D3D11_CREATE_DEVICE_DEBUG,
+        &requested_feature_level,
+        1,
+        D3D11_SDK_VERSION, // jake pls
+        &swap_chain_desc,
+        &swap_chain_handle,
+        &directx_device,
+        &actual_feature_level,
+        &directx_device_context);
+
+    // todo(josh): if the hardware device fails, try making a WARP device
+    assert(result == S_OK);
+
+
+
+    var render_target_view_desc: D3D11_RENDER_TARGET_VIEW_DESC;
+    render_target_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    var backing_texture: ^ID3D11Texture2D;
+    result = swap_chain_handle.vtbl.GetBuffer(swap_chain_handle, 0, &uid(ID3D11Texture2D.uuid), cast(^rawptr, &backing_texture));
+    assert(result == S_OK);
+    result = directx_device.vtbl.CreateRenderTargetView(directx_device, cast(^ID3D11Resource, backing_texture), &render_target_view_desc, &swap_chain_rtv);
+    assert(result == S_OK);
+
+
+
+    // Texture_Description depth_texture_desc = {};
+    // depth_texture_desc.type = TT_2D;
+    // depth_texture_desc.format = TF_DEPTH_STENCIL;
+    // depth_texture_desc.wrap_mode = TWM_POINT_CLAMP;
+    // depth_texture_desc.width = window->width;
+    // depth_texture_desc.height = window->height;
+    // depth_texture_desc.render_target = true;
+    // directx.swap_chain_depth_buffer = create_texture(depth_texture_desc);
+
+    var no_cull_rasterizer: ^ID3D11RasterizerState;
+
+    // // Make no cull rasterizer
+    var no_cull_rasterizer_desc: D3D11_RASTERIZER_DESC;
+    no_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+    no_cull_rasterizer_desc.CullMode = D3D11_CULL_NONE;
+    no_cull_rasterizer_desc.DepthClipEnable = BOOL.FALSE;
+    no_cull_rasterizer_desc.MultisampleEnable = BOOL.TRUE; // todo(josh): can I just have multisample enabled on all rasterizers?
+    result = directx_device.vtbl.CreateRasterizerState(directx_device, &no_cull_rasterizer_desc, &no_cull_rasterizer);
+    assert(result == S_OK);
+
+    // // Make backface cull rasterizer
+    // D3D11_RASTERIZER_DESC backface_cull_rasterizer_desc = {};
+    // backface_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+    // backface_cull_rasterizer_desc.CullMode = D3D11_CULL_BACK;
+    // backface_cull_rasterizer_desc.DepthClipEnable = true;
+    // backface_cull_rasterizer_desc.MultisampleEnable = true; // todo(josh): can I just have multisample enabled on all rasterizers?
+    // result = directx_device.vtbl.CreateRasterizerState(directx_device, &backface_cull_rasterizer_desc, &directx.backface_cull_rasterizer);
+    // ASSERT(result == S_OK);
+
+    // // Make frontface cull rasterizer
+    // D3D11_RASTERIZER_DESC frontface_cull_rasterizer_desc = {};
+    // frontface_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+    // frontface_cull_rasterizer_desc.CullMode = D3D11_CULL_FRONT;
+    // frontface_cull_rasterizer_desc.DepthClipEnable = true;
+    // frontface_cull_rasterizer_desc.MultisampleEnable = true; // todo(josh): can I just have multisample enabled on all rasterizers?
+    // result = directx_device.vtbl.CreateRasterizerState(directx_device, &frontface_cull_rasterizer_desc, &directx.frontface_cull_rasterizer);
+    // ASSERT(result == S_OK);
+
+    var depth_test_state: ^ID3D11DepthStencilState;
+
+    // // Depth test state
+    var depth_test_stencil_desc: D3D11_DEPTH_STENCIL_DESC;
+    depth_test_stencil_desc.DepthEnable                  = BOOL.TRUE;
+    depth_test_stencil_desc.DepthWriteMask               = D3D11_DEPTH_WRITE_MASK_ALL;
+    depth_test_stencil_desc.DepthFunc                    = D3D11_COMPARISON_LESS_EQUAL;
+    depth_test_stencil_desc.StencilEnable                = BOOL.TRUE;
+    depth_test_stencil_desc.StencilReadMask              = 0xff;
+    depth_test_stencil_desc.StencilWriteMask             = 0xff;
+    depth_test_stencil_desc.FrontFace.StencilFunc        = D3D11_COMPARISON_ALWAYS;
+    depth_test_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    depth_test_stencil_desc.FrontFace.StencilPassOp      = D3D11_STENCIL_OP_KEEP;
+    depth_test_stencil_desc.FrontFace.StencilFailOp      = D3D11_STENCIL_OP_KEEP;
+    depth_test_stencil_desc.BackFace.StencilFunc         = D3D11_COMPARISON_ALWAYS;
+    depth_test_stencil_desc.BackFace.StencilDepthFailOp  = D3D11_STENCIL_OP_KEEP;
+    depth_test_stencil_desc.BackFace.StencilPassOp       = D3D11_STENCIL_OP_KEEP;
+    depth_test_stencil_desc.BackFace.StencilFailOp       = D3D11_STENCIL_OP_KEEP;
+    result = directx_device.vtbl.CreateDepthStencilState(directx_device, &depth_test_stencil_desc, &depth_test_state);
+    assert(result == S_OK);
+
+    // // No depth test state
+    // // todo(josh): should we disable stencil here?
+    // D3D11_DEPTH_STENCIL_DESC no_depth_test_stencil_desc = depth_test_stencil_desc;
+    // no_depth_test_stencil_desc.DepthEnable = false;
+    // no_depth_test_stencil_desc.DepthFunc   = D3D11_COMPARISON_ALWAYS;
+    // result = directx_device.vtbl.CreateDepthStencilState(directx_device, &no_depth_test_stencil_desc, &directx.no_depth_test_state);
+    // ASSERT(result == S_OK);
+
+    var linear_wrap_sampler: ^ID3D11SamplerState;
+
+    // // linear wrap sampler
+    var linear_wrap_sampler_desc: D3D11_SAMPLER_DESC;
+    linear_wrap_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    linear_wrap_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    linear_wrap_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    linear_wrap_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    linear_wrap_sampler_desc.MinLOD = -F32_MAX;
+    linear_wrap_sampler_desc.MaxLOD = F32_MAX;
+    result = directx_device.vtbl.CreateSamplerState(directx_device, &linear_wrap_sampler_desc, &linear_wrap_sampler);
+    assert(result == S_OK);
+
+    // // linear clamp sampler
+    // D3D11_SAMPLER_DESC linear_clamp_sampler_desc = {};
+    // linear_clamp_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    // linear_clamp_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // linear_clamp_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // linear_clamp_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // linear_clamp_sampler_desc.MinLOD = -FLT_MAX;
+    // linear_clamp_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx_device.vtbl.CreateSamplerState(directx_device, &linear_clamp_sampler_desc, &directx.linear_clamp_sampler);
+    // ASSERT(result == S_OK);
+
+    // // point wrap sampler
+    // D3D11_SAMPLER_DESC point_wrap_sampler_desc = {};
+    // point_wrap_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    // point_wrap_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    // point_wrap_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    // point_wrap_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    // point_wrap_sampler_desc.MinLOD = -FLT_MAX;
+    // point_wrap_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx_device.vtbl.CreateSamplerState(directx_device, &point_wrap_sampler_desc, &directx.point_wrap_sampler);
+    // ASSERT(result == S_OK);
+
+    // // point clamp sampler
+    // D3D11_SAMPLER_DESC point_clamp_sampler_desc = {};
+    // point_clamp_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    // point_clamp_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // point_clamp_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // point_clamp_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // point_clamp_sampler_desc.MinLOD = -FLT_MAX;
+    // point_clamp_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx_device.vtbl.CreateSamplerState(directx_device, &point_clamp_sampler_desc, &directx.point_clamp_sampler);
+    // ASSERT(result == S_OK);
+
+    var alpha_blend_state: ^ID3D11BlendState;
+
+    // // alpha blend state
+    var alpha_blend_desc: D3D11_BLEND_DESC;
+    alpha_blend_desc.RenderTarget[0].BlendEnable    = BOOL.TRUE;
+    alpha_blend_desc.RenderTarget[0].SrcBlend       = D3D11_BLEND_SRC_ALPHA;
+    alpha_blend_desc.RenderTarget[0].DestBlend      = D3D11_BLEND_INV_SRC_ALPHA;
+    alpha_blend_desc.RenderTarget[0].BlendOp        = D3D11_BLEND_OP_ADD;
+    alpha_blend_desc.RenderTarget[0].SrcBlendAlpha  = D3D11_BLEND_SRC_ALPHA;
+    alpha_blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+    alpha_blend_desc.RenderTarget[0].BlendOpAlpha   = D3D11_BLEND_OP_ADD;
+    alpha_blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    result = directx_device.vtbl.CreateBlendState(directx_device, &alpha_blend_desc, &alpha_blend_state);
+    assert(result == S_OK);
+
+    // // no alpha blend state
+    // D3D11_BLEND_DESC no_blend_desc = {};
+    // no_blend_desc.RenderTarget[0].BlendEnable    = false;
+    // no_blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    // result = directx_device.vtbl.CreateBlendState(directx_device, &no_blend_desc, &directx.no_alpha_blend_state);
+    // ASSERT(result == S_OK);
+
+    // // init_dear_imgui(window, directx_device, directx_device_context);
+    // init_dear_imgui();
+
+    directx_device_context.vtbl.OMSetDepthStencilState(directx_device_context, depth_test_state, 0);
+    directx_device_context.vtbl.RSSetState(directx_device_context, no_cull_rasterizer);
+    directx_device_context.vtbl.PSSetSamplers(directx_device_context, 0, 1, &linear_wrap_sampler);
+    var blend_factor = ([4]FLOAT){1, 1, 1, 1};
+    directx_device_context.vtbl.OMSetBlendState(directx_device_context, alpha_blend_state, &blend_factor[0], 0xffffffff);
+
+    var viewport: D3D11_VIEWPORT;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.Width = cast(f32, window.width);
+    viewport.Height = cast(f32, window.height);
+    viewport.MinDepth = 0;
+    viewport.MaxDepth = 1;
+    directx_device_context.vtbl.RSSetViewports(directx_device_context, 1, &viewport);
+
+    directx_device_context.vtbl.IASetPrimitiveTopology(directx_device_context, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+
+
+proc create_vertex_buffer(data: rawptr, len: int) : ^ID3D11Buffer {
+    var buffer_desc: D3D11_BUFFER_DESC;
+    buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+    buffer_desc.ByteWidth = cast(u32, len);
+    buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    var buffer_data: D3D11_SUBRESOURCE_DATA;
+    buffer_data.pSysMem = data;
+
+    var ptr_buffer: ^D3D11_SUBRESOURCE_DATA;
+    if (data != null) {
+        ptr_buffer = &buffer_data;
+    }
+    var buffer: ^ID3D11Buffer;
+    var result = directx_device.vtbl.CreateBuffer(directx_device, &buffer_desc, ptr_buffer, &buffer);
+    assert(result == S_OK);
+    return buffer;
+}
+proc bind_vertex_buffers(buffers: ^^ID3D11Buffer, num_buffers: int, start_slot: u32, strides: ^u32, offsets: ^u32) {
+    directx_device_context.vtbl.IASetVertexBuffers(directx_device_context, start_slot, cast(u32, num_buffers), buffers, strides, offsets);
+}
+
+
+
+const D3D_SHADER_COMPILE_FLAGS = D3DCOMPILE_DEBUG | D3DCOMPILE_WARNINGS_ARE_ERRORS;
+
+proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) : ^ID3D11VertexShader { // todo(josh): use a temp allocator to go from char * to wchar_t *
+    var errors: ^ID3D10Blob;
+    var vertex_shader_blob: ^ID3D10Blob;
+    var entry = "main";
+    var compiler = "vs_5_0";
+    var success: bool;
+    var result_length_in_bytes: i32;
+    var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
+    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), &entry[0], &compiler[0], D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
+    if (errors != null) {
+        var str = cast(^u8, errors.vtbl.GetBufferPointer(errors));
+        print(string_ptr(str, cast(i64, strlen(str))));
+        assert(false);
+    }
+    sif_free(filename_wide, default_allocator());
+    assert(result == S_OK);
+    var vertex_shader_handle: ^ID3D11VertexShader;
+    result = directx_device.vtbl.CreateVertexShader(directx_device, vertex_shader_blob.vtbl.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.vtbl.GetBufferSize(vertex_shader_blob), null, &vertex_shader_handle);
+    assert(result == S_OK);
+    if (errors != null) errors.vtbl.Release(errors);
+    out_blob^ = vertex_shader_blob;
+    return vertex_shader_handle;
+}
+
+proc compile_pixel_shader_from_file(filename: string) : ^ID3D11PixelShader {
+    var errors: ^ID3D10Blob;
+    var pixel_shader_blob: ^ID3D10Blob;
+    var entry = "main";
+    var compiler = "ps_5_0";
+    var success: bool;
+    var result_length_in_bytes: i32;
+    var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
+    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), &entry[0], &compiler[0], D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
+    if (errors != null) {
+        var str = cast(^u8, errors.vtbl.GetBufferPointer(errors));
+        print(string_ptr(str, cast(i64, strlen(str))));
+        assert(false);
+    }
+    assert(result == S_OK);
+    var pixel_shader: ^ID3D11PixelShader;
+    result = directx_device.vtbl.CreatePixelShader(directx_device, pixel_shader_blob.vtbl.GetBufferPointer(pixel_shader_blob), pixel_shader_blob.vtbl.GetBufferSize(pixel_shader_blob), null, &pixel_shader);
+    assert(result == S_OK);
+    if (errors != null) errors.vtbl.Release(errors);
+    pixel_shader_blob.vtbl.Release(pixel_shader_blob);
+    return pixel_shader;
+}
+
+proc bind_shaders(vertex: ^ID3D11VertexShader, pixel: ^ID3D11PixelShader) {
+    directx_device_context.vtbl.VSSetShader(directx_device_context, vertex, null, 0);
+    directx_device_context.vtbl.PSSetShader(directx_device_context, pixel, null, 0);
+}
+
+
+
+struct Window {
+    var should_close: bool;
+
+    var width: int;
+    var height: int;
+    var aspect: float;
+    var size: Vector2;
+
+    var is_focused: bool;
+
+    var handle: HWND;
+    var dc: HDC;
+}
+
+proc create_window(name: string, width: int, height: int) : Window {
+    const CLASS_NAME = "my window class";
+
+    var wc: WNDCLASSEXW;
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.style = CS_OWNDC;
+    wc.hCursor = LoadCursorW(null, cast(^u8, IDC_ARROW));
+    wc.lpfnWndProc = win32_proc;
+    wc.hInstance = GetModuleHandleW(null);
+    var success: bool;
+    var string_length: i32;
+    wc.lpszClassName = to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length);
+    var class = RegisterClassExW(&wc);
+    assert(class != 0);
+
+    var window: Window;
+    window.width = width;
+    window.height = height;
+    assert(g_currently_processing_window == null);
+    g_currently_processing_window = &window;
+    var window_handle = CreateWindowExW(
+        0,
+        to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length),
+        to_wide_string("My Cool Window", default_allocator(), &success, &string_length),
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        300, 150, cast(i32, width), cast(i32, height),
+        null,
+        null,
+        wc.hInstance,
+        null
+    );
+
+    assert(window_handle != null);
+    var dc = GetDC(window_handle);
+    window.handle = window_handle;
+    window.dc = dc;
+    g_currently_processing_window = null;
+
+    return window;
+}
+
+proc update_window(window: ^Window) {
+    g_currently_processing_window = window;
+
+    var msg: MSG;
+    while (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) != 0) {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+
+    g_currently_processing_window = null; // @defer
+}
+
+var g_currently_processing_window: ^Window;
+
+proc win32_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) : LRESULT {
+    if (msg == WM_ACTIVATEAPP) {
+        g_currently_processing_window.is_focused = w != 0;
+        return 0;
+    }
+    else if (msg == WM_CLOSE) {
+        g_currently_processing_window.should_close = true;
+        return 0;
+    }
+    else if (msg == WM_DESTROY) {
+        PostQuitMessage(0);
+        return 0;
+    }
+    else if (msg == WM_SIZE) {
+        assert(g_currently_processing_window != null);
+
+        // if (w == 0) { } // SIZE_RESTORED
+        // if (w == 1) { } // SIZE_MINIMIZED
+        // if (w == 2) { } // SIZE_MAXIMIZED
+        // if (w == 3) { } // SIZE_MAXSHOW
+        // if (w == 4) { } // SIZE_MAXHIDE
+
+        var width  = LOWORDL(l);
+        var height = HIWORDL(l);
+
+        if (width  <= 0) width  = 1;
+        if (height <= 0) height = 1;
+
+        print("New window size: %x%\n", width, height);
+        g_currently_processing_window.width  = cast(i64, width);
+        g_currently_processing_window.height = cast(i64, height);
+        g_currently_processing_window.aspect = cast(float, width) / cast(float, height);
+        g_currently_processing_window.size   = Vector2{cast(float, g_currently_processing_window.width), cast(float, g_currently_processing_window.height)};
+        return 0;
+    }
+    else if (msg == WM_KEYDOWN) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // if !g_currently_processing_window.inputs_held[input] {
+        //     g_currently_processing_window.inputs_down[input] = true;
+        // }
+        // g_currently_processing_window.inputs_held[input] = true;
+        // return 0;
+    }
+    else if (msg == WM_KEYUP) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // g_currently_processing_window.inputs_up[input] = true;
+        // g_currently_processing_window.inputs_held[input] = false;
+        // return 0;
+    }
+    else if (msg == WM_SYSKEYDOWN) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // if !g_currently_processing_window.inputs_held[input] {
+        //     g_currently_processing_window.inputs_down[input] = true;
+        // }
+        // g_currently_processing_window.inputs_held[input] = true;
+        // return 0;
+    }
+    else if (msg == WM_SYSKEYUP) {
+        // assert(g_currently_processing_window != null);
+        // input := windows_key_mapping[w];
+        // g_currently_processing_window.inputs_up[input] = true;
+        // g_currently_processing_window.inputs_held[input] = false;
+        // return 0;
+    }
+    else if (msg == WM_MOUSEMOVE) {
+        // x := LOWORDL(l);
+        // y := HIWORDL(l);
+        // old_pos := g_currently_processing_window.mouse_position_pixel;
+        // g_currently_processing_window.mouse_position_pixel = Vector2{cast(float, x), g_currently_processing_window.size.y - cast(float, y)};
+        // g_currently_processing_window.mouse_position_unit.x = g_currently_processing_window.mouse_position_pixel.x / g_currently_processing_window.size.x;
+        // g_currently_processing_window.mouse_position_unit.y = g_currently_processing_window.mouse_position_pixel.y / g_currently_processing_window.size.y;
+        // if g_currently_processing_window.updated_at_least_once {
+        //     g_currently_processing_window.mouse_position_pixel_delta = g_currently_processing_window.mouse_position_pixel - old_pos;
+        // }
+        // return 0;
+    }
+    else if (msg == WM_MOUSEWHEEL) {
+        // scroll := (cast,trunc(s16)HIWORD(w)) / 120; // note(josh): 120 is WHEEL_DELTA in windows
+        // g_currently_processing_window.mouse_scroll = cast(float)scroll;
+        // return 0;
+    }
+    else if (msg == WM_LBUTTONDOWN) {
+        // if g_currently_processing_window.mouse_capture_sum == 0  SetCapture(g_currently_processing_window.handle);
+        // g_currently_processing_window.mouse_capture_sum += 1;
+
+        // if !g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_LEFT] {
+        //     g_currently_processing_window.inputs_down[cast(int)Input.MOUSE_LEFT] = true;
+        // }
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_LEFT] = true;
+        // return 0;
+    }
+    else if (msg == WM_LBUTTONUP) {
+        // g_currently_processing_window.mouse_capture_sum -= 1;
+        // if g_currently_processing_window.mouse_capture_sum == 0  ReleaseCapture();
+
+        // g_currently_processing_window.inputs_up[cast(int)Input.MOUSE_LEFT]   = true;
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_LEFT] = false;
+        // return 0;
+    }
+    else if (msg == WM_MBUTTONDOWN) {
+        // if g_currently_processing_window.mouse_capture_sum == 0 SetCapture(g_currently_processing_window.handle);
+        // g_currently_processing_window.mouse_capture_sum += 1;
+
+        // if !g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_MIDDLE] {
+        //     g_currently_processing_window.inputs_down[cast(int)Input.MOUSE_MIDDLE] = true;
+        // }
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_MIDDLE] = true;
+        // return 0;
+    }
+    else if (msg == WM_MBUTTONUP) {
+        // g_currently_processing_window.mouse_capture_sum -= 1;
+        // if g_currently_processing_window.mouse_capture_sum == 0 ReleaseCapture();
+
+        // g_currently_processing_window.inputs_up[cast(int)Input.MOUSE_MIDDLE]   = true;
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_MIDDLE] = false;
+        // return 0;
+    }
+    else if (msg == WM_RBUTTONDOWN) {
+        // if g_currently_processing_window.mouse_capture_sum == 0 SetCapture(g_currently_processing_window.handle);
+        // g_currently_processing_window.mouse_capture_sum += 1;
+
+        // if !g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_RIGHT] {
+        //     g_currently_processing_window.inputs_down[cast(int)Input.MOUSE_RIGHT] = true;
+        // }
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_RIGHT] = true;
+        // return 0;
+    }
+    else if (msg == WM_RBUTTONUP) {
+        // g_currently_processing_window.mouse_capture_sum -= 1;
+        // if g_currently_processing_window.mouse_capture_sum == 0 ReleaseCapture();
+
+        // g_currently_processing_window.inputs_up[cast(int)Input.MOUSE_RIGHT]   = true;
+        // g_currently_processing_window.inputs_held[cast(int)Input.MOUSE_RIGHT] = false;
+        // return 0;
+    }
+    else if (msg == WM_CHAR) {
+        // io := ImGui.GetIO();
+        // io.AddInputCharacter(io, cast,trunc(u16)w);
+        // return 0;
+    }
+    else {
+        // print("Unhandled windows message: %\n", msg);
+    }
+
+    return DefWindowProcW(hwnd, msg, w, l);
+}
+
+
+
+proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
+    if (my_str.data == null) {
+        return null;
+    }
+
+    var query_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), null, 0);
+    if (query_num_chars <= 0) {
+        return null;
+    }
+
+    var name = "";
+    var name_u16s = cast(^u16, sif_alloc(cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT, allocator)); // 2 extra bytes for zero termination WCHAR.
+    var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), name_u16s, query_num_chars);
+
+    if (result_num_chars > 0) {
+        assert(result_num_chars <= query_num_chars);
+        var name_slice = slice_ptr(name_u16s, cast(i64, result_num_chars));
+        // todo(josh): this looks sketch
+        name_slice[cast(i64, result_num_chars)] = 0;
+        out_success^ = true;
+        out_result_length_in_bytes^ = result_num_chars * 2;
+        return name_u16s;
+    }
+
+    return name_u16s;
+}
+
+proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) : string {
+    out_success^ = false;
+
+    // length of -1 means it's zero-terminated.
+    // WARNING: length >= 0 has not been tested and is probably wrong.
+    // See note in bstr_to_utf8.
+    var query_result = WideCharToMultiByte(CP_ACP, 0,
+                                        data, -1,
+                                        null, 0,
+                                        null, null);
+
+    if (query_result <= 0) {
+        return "";
+    }
+
+    var name_bytes = cast(^u8, sif_alloc(cast(i64, query_result), DEFAULT_ALIGNMENT, allocator));
+    var result = WideCharToMultiByte(CP_ACP, 0,
+                                          data, -1,
+                                          name_bytes, query_result,
+                                          null, null);
+
+    if (result > 0) {
+        assert(result <= query_result);
+
+        var name: string;
+        name.data  = name_bytes;
+        name.count = cast(i64, result)-1;  // Do not include the terminating zero.
+        assert(name[name.count] == 0);
+
+        out_success^ = true;
+        return name;
+    }
+
+    return "";
+}

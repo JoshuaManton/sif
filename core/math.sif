@@ -1,3 +1,15 @@
+const F32_MIN        = 0x00800000;
+const F32_MAX        = 0x7F7FFFFF;
+const F32_INFINITY   = 0x7F800000;
+const F32_NAN        = 0x7FBFFFFF;
+
+const F64_MIN        = 0x0010000000000000;
+const F64_MAX        = 0x7FEFFFFFFFFFFFFF;
+const F64_INFINITY   = 0x7FF0000000000000;
+const F64_NAN        = 0x7FF7FFFFFFFFFFFF;
+
+
+
 struct Vector2 {
     var x: float;
     var y: float;

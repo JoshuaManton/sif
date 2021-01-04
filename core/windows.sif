@@ -4170,48 +4170,48 @@ struct IUnknown {
 //     <<b = null;
 // }
 
-// proc uid(str: string) : GUID {
-//     //id := New(GUID);    // @Leak
-//     id : GUID;
+proc uid_hex(c: u8) : u32 {
+    if (c >= 'a') return cast(u32, c - 'a' + 0xA);
+    if (c >= 'A') return cast(u32, c - 'A' + 0xA);
+    if (c >= '0') return cast(u32, c - '0');
+    return 1;
+}
 
-//     hex :: (c : int) -> u32 {
-//         if c >= #char "a" return xx(c - #char "a" + 0xA);
-//         if c >= #char "A" return xx(c - #char "A" + 0xA);
-//         if c >= #char "0" return xx(c - #char "0");
-//         return 1;
-//     }
+proc uid(str: string) : GUID {
+    //id := New(GUID);    // @Leak
+    var id: GUID;
 
-//     // "00000000-0000-0000-C000-000000000046"
+    // "00000000-0000-0000-C000-000000000046"
 
-//     id.Data1 = (hex(str[0]) << 28) | (hex(str[1]) << 24) | (hex(str[2]) << 20) | (hex(str[3]) << 16) |
-//                (hex(str[4]) << 12) | (hex(str[5]) <<  8) | (hex(str[6]) <<  4) | (hex(str[7]) <<  0);
+    id.Data1 = (uid_hex(str[0]) << 28) | (uid_hex(str[1]) << 24) | (uid_hex(str[2]) << 20) | (uid_hex(str[3]) << 16) |
+               (uid_hex(str[4]) << 12) | (uid_hex(str[5]) <<  8) | (uid_hex(str[6]) <<  4) | (uid_hex(str[7]) <<  0);
 
-//     assert(str[8] == #char "-");
+    assert(str[8] == '-');
 
-//     id.Data2 = xx ((hex(str[9]) << 12) | (hex(str[10]) << 8) | (hex(str[11]) << 4) | (hex(str[12]) << 0));
+    id.Data2 = cast(u16, ((uid_hex(str[9]) << 12) | (uid_hex(str[10]) << 8) | (uid_hex(str[11]) << 4) | (uid_hex(str[12]) << 0)));
 
-//     assert(str[13] == #char "-");
+    assert(str[13] == '-');
 
-//     id.Data3 = xx ((hex(str[14]) << 12) | (hex(str[15]) << 8) | (hex(str[16]) << 4) | (hex(str[17]) << 0));
+    id.Data3 = cast(u16, ((uid_hex(str[14]) << 12) | (uid_hex(str[15]) << 8) | (uid_hex(str[16]) << 4) | (uid_hex(str[17]) << 0)));
 
-//     assert(str[18] == #char "-");
+    assert(str[18] == '-');
 
-//     id.Data4[0] = xx ((hex(str[19]) << 4) | (hex(str[20]) << 0));
-//     id.Data4[1] = xx ((hex(str[21]) << 4) | (hex(str[22]) << 0));
+    id.Data4[0] = cast(u8, ((uid_hex(str[19]) << 4) | (uid_hex(str[20]) << 0)));
+    id.Data4[1] = cast(u8, ((uid_hex(str[21]) << 4) | (uid_hex(str[22]) << 0)));
 
-//     assert(str[23] == #char "-");
+    assert(str[23] == '-');
 
-//     id.Data4[2] = xx ((hex(str[24]) << 4) | (hex(str[25]) << 0));
-//     id.Data4[3] = xx ((hex(str[26]) << 4) | (hex(str[27]) << 0));
-//     id.Data4[4] = xx ((hex(str[28]) << 4) | (hex(str[29]) << 0));
-//     id.Data4[5] = xx ((hex(str[30]) << 4) | (hex(str[31]) << 0));
-//     id.Data4[6] = xx ((hex(str[32]) << 4) | (hex(str[33]) << 0));
-//     id.Data4[7] = xx ((hex(str[34]) << 4) | (hex(str[35]) << 0));
+    id.Data4[2] = cast(u8, ((uid_hex(str[24]) << 4) | (uid_hex(str[25]) << 0)));
+    id.Data4[3] = cast(u8, ((uid_hex(str[26]) << 4) | (uid_hex(str[27]) << 0)));
+    id.Data4[4] = cast(u8, ((uid_hex(str[28]) << 4) | (uid_hex(str[29]) << 0)));
+    id.Data4[5] = cast(u8, ((uid_hex(str[30]) << 4) | (uid_hex(str[31]) << 0)));
+    id.Data4[6] = cast(u8, ((uid_hex(str[32]) << 4) | (uid_hex(str[33]) << 0)));
+    id.Data4[7] = cast(u8, ((uid_hex(str[34]) << 4) | (uid_hex(str[35]) << 0)));
 
-//     assert(str.count == 36);
+    assert(str.count == 36);
 
-//     return id;
-// }
+    return id;
+}
 
 
 // @@ This is the same as the uid() function above.

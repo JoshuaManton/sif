@@ -605,6 +605,8 @@ struct D3D11_TEXTURE2D_DESC {
 }
 struct ID3D11Texture2D {
     var vtbl: ^ID3D11Texture2DVtbl;
+    const uuid = "6f15aaf2-d208-4e89-9ab4-489535d34f9c";
+
 }
 struct ID3D11Texture2DVtbl {
     var QueryInterface : proc(This: ^ID3D11Texture2D, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1292,7 +1294,7 @@ struct ID3D11DeviceContextVtbl {
     var GSSetSamplers : proc(This: ^ID3D11DeviceContext, StartSlot: UINT, NumSamplers: UINT, ppSamplers: ^^ID3D11SamplerState);
     var OMSetRenderTargets : proc(This: ^ID3D11DeviceContext, NumViews: UINT, ppRenderTargetViews: ^^ID3D11RenderTargetView, pDepthStencilView: ^ID3D11DepthStencilView);
     var OMSetRenderTargetsAndUnorderedAccessViews : proc(This: ^ID3D11DeviceContext, NumRTVs: UINT, ppRenderTargetViews: ^^ID3D11RenderTargetView, pDepthStencilView: ^ID3D11DepthStencilView, UAVStartSlot: UINT, NumUAVs: UINT, ppUnorderedAccessViews: ^^ID3D11UnorderedAccessView, pUAVInitialCounts: ^UINT);
-    var OMSetBlendState : proc(This: ^ID3D11DeviceContext, pBlendState: ^ID3D11BlendState, BlendFactor: [4]FLOAT, SampleMask: UINT);
+    var OMSetBlendState : proc(This: ^ID3D11DeviceContext, pBlendState: ^ID3D11BlendState, BlendFactor: ^FLOAT, SampleMask: UINT);
     var OMSetDepthStencilState : proc(This: ^ID3D11DeviceContext, pDepthStencilState: ^ID3D11DepthStencilState, StencilRef: UINT);
     var SOSetTargets : proc(This: ^ID3D11DeviceContext, NumBuffers: UINT, ppSOTargets: ^^ID3D11Buffer, pOffsets: ^UINT);
     var DrawAuto : proc(This: ^ID3D11DeviceContext);
@@ -1307,9 +1309,9 @@ struct ID3D11DeviceContextVtbl {
     var CopyResource : proc(This: ^ID3D11DeviceContext, pDstResource: ^ID3D11Resource, pSrcResource: ^ID3D11Resource);
     var UpdateSubresource : proc(This: ^ID3D11DeviceContext, pDstResource: ^ID3D11Resource, DstSubresource: UINT, pDstBox: ^D3D11_BOX, pSrcData: rawptr, SrcRowPitch: UINT, SrcDepthPitch: UINT);
     var CopyStructureCount : proc(This: ^ID3D11DeviceContext, pDstBuffer: ^ID3D11Buffer, DstAlignedByteOffset: UINT, pSrcView: ^ID3D11UnorderedAccessView);
-    var ClearRenderTargetView : proc(This: ^ID3D11DeviceContext, pRenderTargetView: ^ID3D11RenderTargetView, ColorRGBA: [4]FLOAT);
-    var ClearUnorderedAccessViewUint : proc(This: ^ID3D11DeviceContext, pUnorderedAccessView: ^ID3D11UnorderedAccessView, Values: [4]UINT);
-    var ClearUnorderedAccessViewFloat : proc(This: ^ID3D11DeviceContext, pUnorderedAccessView: ^ID3D11UnorderedAccessView, Values: [4]FLOAT);
+    var ClearRenderTargetView : proc(This: ^ID3D11DeviceContext, pRenderTargetView: ^ID3D11RenderTargetView, ColorRGBA: ^FLOAT);
+    var ClearUnorderedAccessViewUint : proc(This: ^ID3D11DeviceContext, pUnorderedAccessView: ^ID3D11UnorderedAccessView, Values: ^UINT);
+    var ClearUnorderedAccessViewFloat : proc(This: ^ID3D11DeviceContext, pUnorderedAccessView: ^ID3D11UnorderedAccessView, Values: ^FLOAT);
     var ClearDepthStencilView : proc(This: ^ID3D11DeviceContext, pDepthStencilView: ^ID3D11DepthStencilView, ClearFlags: UINT, Depth: FLOAT, Stencil: UINT8);
     var GenerateMips : proc(This: ^ID3D11DeviceContext, pShaderResourceView: ^ID3D11ShaderResourceView);
     var SetResourceMinLOD : proc(This: ^ID3D11DeviceContext, pResource: ^ID3D11Resource, MinLOD: FLOAT);
@@ -1348,7 +1350,7 @@ struct ID3D11DeviceContextVtbl {
     var GSGetSamplers : proc(This: ^ID3D11DeviceContext, StartSlot: UINT, NumSamplers: UINT, ppSamplers: ^^ID3D11SamplerState);
     var OMGetRenderTargets : proc(This: ^ID3D11DeviceContext, NumViews: UINT, ppRenderTargetViews: ^^ID3D11RenderTargetView, ppDepthStencilView: ^^ID3D11DepthStencilView);
     var OMGetRenderTargetsAndUnorderedAccessViews : proc(This: ^ID3D11DeviceContext, NumRTVs: UINT, ppRenderTargetViews: ^^ID3D11RenderTargetView, ppDepthStencilView: ^^ID3D11DepthStencilView, UAVStartSlot: UINT, NumUAVs: UINT, ppUnorderedAccessViews: ^^ID3D11UnorderedAccessView);
-    var OMGetBlendState : proc(This: ^ID3D11DeviceContext, ppBlendState: ^^ID3D11BlendState, BlendFactor: [4]FLOAT, pSampleMask: ^UINT);
+    var OMGetBlendState : proc(This: ^ID3D11DeviceContext, ppBlendState: ^^ID3D11BlendState, BlendFactor: ^FLOAT, pSampleMask: ^UINT);
     var OMGetDepthStencilState : proc(This: ^ID3D11DeviceContext, ppDepthStencilState: ^^ID3D11DepthStencilState, pStencilRef: ^UINT);
     var SOGetTargets : proc(This: ^ID3D11DeviceContext, NumBuffers: UINT, ppSOTargets: ^^ID3D11Buffer);
     var RSGetState : proc(This: ^ID3D11DeviceContext, ppRasterizerState: ^^ID3D11RasterizerState);
