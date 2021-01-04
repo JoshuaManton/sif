@@ -10,6 +10,8 @@
 static char *token_string_map[TK_COUNT];
 static char *token_name_map[TK_COUNT];
 
+int total_lexed_lines;
+
 void init_lexer_globals() {
     token_string_map[TK_INVALID]                        = "INVALID";
     token_string_map[TK_IDENTIFIER]                     = "IDENTIFIER";
@@ -336,6 +338,7 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot, u64 *uint_va
     }
 
     bool was_hex = false;
+    bool had_scientific_notation = false;
     if (*text == '.') {
         text += 1;
         *out_has_a_dot = true;
@@ -349,6 +352,16 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot, u64 *uint_va
             text += 1;
         }
         was_hex = true;
+    }
+
+    if (*text == 'e' || *text == 'E') {
+        had_scientific_notation = true;
+        text += 1;
+        assert(*text == '-' || *text == '+');
+        text += 1;
+        while (is_digit(*text)) {
+            text += 1;
+        }
     }
 
     int length = text - start;
@@ -391,11 +404,18 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         return false;
     }
 
+    if (lexer->has_peeked_token) {
+        lexer->has_peeked_token = false;
+        *out_token = lexer->peeked_token;
+        return true;
+    }
+
     *out_token = {};
 
     while (is_whitespace(lexer->text[lexer->location.index])) {
         if (lexer->text[lexer->location.index] == '\n') {
             lexer->location.line += 1;
+            total_lexed_lines += 1;
             lexer->location.character = 0; // advance() directly below will make this 1
         }
         advance(lexer, 1);
@@ -466,6 +486,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int newlines = 0;
         char *string = scan_string('\'', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
         lexer->location.line += newlines;
+        total_lexed_lines += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_CHAR;
         out_token->text = string;
@@ -480,6 +501,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int newlines = 0;
         char *string = scan_string('`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
         lexer->location.line += newlines;
+        total_lexed_lines += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
         out_token->text = string;
@@ -494,6 +516,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int newlines = 0;
         char *string = scan_string('"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
         lexer->location.line += newlines;
+        total_lexed_lines += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
         out_token->text = string;
@@ -725,8 +748,11 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
 }
 
 bool peek_next_token(Lexer *lexer, Token *out_token) {
-    Lexer copy = *lexer;
-    bool ok = get_next_token(&copy, out_token);
+    bool ok = get_next_token(lexer, out_token);
+    if (ok) {
+        lexer->has_peeked_token = true;
+        lexer->peeked_token = *out_token;
+    }
     return ok;
 }
 

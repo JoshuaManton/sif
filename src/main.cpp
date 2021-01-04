@@ -52,7 +52,6 @@ MEDIUM
 
 BIG
 -control flow graph analysis
--type_info
 -#if
 -C varargs for bindings
 -default procedure parameters
@@ -82,6 +81,8 @@ void print_usage() {
 char *sif_core_lib_path;
 
 Allocator g_global_linear_allocator;
+
+extern int total_lexed_lines;
 
 void main(int argc, char **argv) {
     Timer timer = {};
@@ -195,8 +196,9 @@ void main(int argc, char **argv) {
 
     double codegen_start_time = query_timer(&timer);
 
-    String_Builder c_code = generate_c_main_file(global_scope);
-    write_entire_file("output.c", c_code.string());
+    Chunked_String_Builder c_code = generate_c_main_file(global_scope);
+    // printf("Final C code size: %dKB\n", c_code.buf.count / 1024);
+    write_entire_file("output.c", c_code.make_string());
 
     double c_compile_start_time = query_timer(&timer);
 
@@ -261,6 +263,9 @@ void main(int argc, char **argv) {
         printf("\n");
         printf("  Sif time: %fms\n", (c_compile_start_time - application_start_time));
         printf("Total time: %fms\n", (compilation_end_time - application_start_time));
+        printf("\n");
+        printf(" Total lines: %d\n", total_lexed_lines);
+        printf("Sif ines/sec: %f\n", ((float)total_lexed_lines) / ((c_compile_start_time - application_start_time) / 1000));
     }
 
     if (is_run) {

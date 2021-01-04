@@ -1,0 +1,337 @@
+struct DXGI_FRAME_STATISTICS {
+    var PresentCount: UINT;
+    var PresentRefreshCount: UINT;
+    var SyncRefreshCount: UINT;
+    var SyncQPCTime: LARGE_INTEGER;
+    var SyncGPUTime: LARGE_INTEGER;
+}
+struct DXGI_MAPPED_RECT {
+    var Pitch: INT;
+    var pBits: ^BYTE;
+}
+struct _LUID {
+    var LowPart: DWORD;
+    var HighPart: LONG;
+}
+struct DXGI_ADAPTER_DESC {
+    var Description: [128]WCHAR;
+    var VendorId: UINT;
+    var DeviceId: UINT;
+    var SubSysId: UINT;
+    var Revision: UINT;
+    var DedicatedVideoMemory: SIZE_T;
+    var DedicatedSystemMemory: SIZE_T;
+    var SharedSystemMemory: SIZE_T;
+    var AdapterLuid: LUID;
+}
+struct DXGI_OUTPUT_DESC {
+    var DeviceName: [32]WCHAR;
+    var DesktopCoordinates: RECT;
+    var AttachedToDesktop: BOOL;
+    var Rotation: DXGI_MODE_ROTATION;
+    var Monitor: HMONITOR;
+}
+struct DXGI_SHARED_RESOURCE {
+    var Handle: HANDLE;
+}
+struct DXGI_SURFACE_DESC {
+    var Width: UINT;
+    var Height: UINT;
+    var Format: DXGI_FORMAT;
+    var SampleDesc: DXGI_SAMPLE_DESC;
+}
+struct DXGI_SWAP_CHAIN_DESC {
+    var BufferDesc: DXGI_MODE_DESC;
+    var SampleDesc: DXGI_SAMPLE_DESC;
+    var BufferUsage: DXGI_USAGE;
+    var BufferCount: UINT;
+    var OutputWindow: HWND;
+    var Windowed: BOOL;
+    var SwapEffect: UINT;
+    var Flags: UINT;
+}
+struct IDXGIObject {
+    var vtbl: ^IDXGIObjectVtbl;
+}
+struct IDXGIObjectVtbl {
+    var QueryInterface : proc(This: ^IDXGIObject, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIObject) : ULONG;
+    var Release : proc(This: ^IDXGIObject) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIObject, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIObject, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIObject, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIObject, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+}
+struct IDXGIDeviceSubObject {
+    var vtbl: ^IDXGIDeviceSubObjectVtbl;
+}
+struct IDXGIDeviceSubObjectVtbl {
+    var QueryInterface : proc(This: ^IDXGIDeviceSubObject, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIDeviceSubObject) : ULONG;
+    var Release : proc(This: ^IDXGIDeviceSubObject) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIDeviceSubObject, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIDeviceSubObject, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIDeviceSubObject, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIDeviceSubObject, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDevice : proc(This: ^IDXGIDeviceSubObject, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
+}
+struct IDXGIResource {
+    var vtbl: ^IDXGIResourceVtbl;
+}
+struct IDXGIResourceVtbl {
+    var QueryInterface : proc(This: ^IDXGIResource, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIResource) : ULONG;
+    var Release : proc(This: ^IDXGIResource) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIResource, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIResource, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIResource, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIResource, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDevice : proc(This: ^IDXGIResource, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
+    var GetSharedHandle : proc(This: ^IDXGIResource, pSharedHandle: ^HANDLE) : HRESULT;
+    var GetUsage : proc(This: ^IDXGIResource, pUsage: ^DXGI_USAGE) : HRESULT;
+    var SetEvictionPriority : proc(This: ^IDXGIResource, EvictionPriority: UINT) : HRESULT;
+    var GetEvictionPriority : proc(This: ^IDXGIResource, pEvictionPriority: ^UINT) : HRESULT;
+}
+struct IDXGIKeyedMutex {
+    var vtbl: ^IDXGIKeyedMutexVtbl;
+}
+struct IDXGIKeyedMutexVtbl {
+    var QueryInterface : proc(This: ^IDXGIKeyedMutex, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIKeyedMutex) : ULONG;
+    var Release : proc(This: ^IDXGIKeyedMutex) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIKeyedMutex, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIKeyedMutex, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIKeyedMutex, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIKeyedMutex, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDevice : proc(This: ^IDXGIKeyedMutex, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
+    var AcquireSync : proc(This: ^IDXGIKeyedMutex, Key: UINT64, dwMilliseconds: DWORD) : HRESULT;
+    var ReleaseSync : proc(This: ^IDXGIKeyedMutex, Key: UINT64) : HRESULT;
+}
+struct IDXGISurface {
+    var vtbl: ^IDXGISurfaceVtbl;
+}
+struct IDXGISurfaceVtbl {
+    var QueryInterface : proc(This: ^IDXGISurface, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGISurface) : ULONG;
+    var Release : proc(This: ^IDXGISurface) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGISurface, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGISurface, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGISurface, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGISurface, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDevice : proc(This: ^IDXGISurface, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
+    var GetDesc : proc(This: ^IDXGISurface, pDesc: ^DXGI_SURFACE_DESC) : HRESULT;
+    var Map : proc(This: ^IDXGISurface, pLockedRect: ^DXGI_MAPPED_RECT, MapFlags: UINT) : HRESULT;
+    var Unmap : proc(This: ^IDXGISurface) : HRESULT;
+}
+struct IDXGISurface1 {
+    var vtbl: ^IDXGISurface1Vtbl;
+}
+struct IDXGISurface1Vtbl {
+    var QueryInterface : proc(This: ^IDXGISurface1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGISurface1) : ULONG;
+    var Release : proc(This: ^IDXGISurface1) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGISurface1, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGISurface1, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGISurface1, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGISurface1, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDevice : proc(This: ^IDXGISurface1, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
+    var GetDesc : proc(This: ^IDXGISurface1, pDesc: ^DXGI_SURFACE_DESC) : HRESULT;
+    var Map : proc(This: ^IDXGISurface1, pLockedRect: ^DXGI_MAPPED_RECT, MapFlags: UINT) : HRESULT;
+    var Unmap : proc(This: ^IDXGISurface1) : HRESULT;
+    var GetDC : proc(This: ^IDXGISurface1, Discard: BOOL, phdc: ^HDC) : HRESULT;
+    var ReleaseDC : proc(This: ^IDXGISurface1, pDirtyRect: ^RECT) : HRESULT;
+}
+struct IDXGIAdapter {
+    var vtbl: ^IDXGIAdapterVtbl;
+}
+struct IDXGIAdapterVtbl {
+    var QueryInterface : proc(This: ^IDXGIAdapter, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIAdapter) : ULONG;
+    var Release : proc(This: ^IDXGIAdapter) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIAdapter, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIAdapter, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIAdapter, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIAdapter, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var EnumOutputs : proc(This: ^IDXGIAdapter, Output: UINT, ppOutput: ^^IDXGIOutput) : HRESULT;
+    var GetDesc : proc(This: ^IDXGIAdapter, pDesc: ^DXGI_ADAPTER_DESC) : HRESULT;
+    var CheckInterfaceSupport : proc(This: ^IDXGIAdapter, InterfaceName: REFGUID, pUMDVersion: ^LARGE_INTEGER) : HRESULT;
+}
+struct IDXGIOutput {
+    var vtbl: ^IDXGIOutputVtbl;
+}
+struct IDXGIOutputVtbl {
+    var QueryInterface : proc(This: ^IDXGIOutput, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIOutput) : ULONG;
+    var Release : proc(This: ^IDXGIOutput) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIOutput, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIOutput, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIOutput, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIOutput, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDesc : proc(This: ^IDXGIOutput, pDesc: ^DXGI_OUTPUT_DESC) : HRESULT;
+    var GetDisplayModeList : proc(This: ^IDXGIOutput, EnumFormat: DXGI_FORMAT, Flags: UINT, pNumModes: ^UINT, pDesc: ^DXGI_MODE_DESC) : HRESULT;
+    var FindClosestMatchingMode : proc(This: ^IDXGIOutput, pModeToMatch: ^DXGI_MODE_DESC, pClosestMatch: ^DXGI_MODE_DESC, pConcernedDevice: ^IUnknown) : HRESULT;
+    var WaitForVBlank : proc(This: ^IDXGIOutput) : HRESULT;
+    var TakeOwnership : proc(This: ^IDXGIOutput, pDevice: ^IUnknown, Exclusive: BOOL) : HRESULT;
+    var ReleaseOwnership : proc(This: ^IDXGIOutput);
+    var GetGammaControlCapabilities : proc(This: ^IDXGIOutput, pGammaCaps: ^DXGI_GAMMA_CONTROL_CAPABILITIES) : HRESULT;
+    var SetGammaControl : proc(This: ^IDXGIOutput, pArray: ^DXGI_GAMMA_CONTROL) : HRESULT;
+    var GetGammaControl : proc(This: ^IDXGIOutput, pArray: ^DXGI_GAMMA_CONTROL) : HRESULT;
+    var SetDisplaySurface : proc(This: ^IDXGIOutput, pScanoutSurface: ^IDXGISurface) : HRESULT;
+    var GetDisplaySurfaceData : proc(This: ^IDXGIOutput, pDestination: ^IDXGISurface) : HRESULT;
+    var GetFrameStatistics : proc(This: ^IDXGIOutput, pStats: ^DXGI_FRAME_STATISTICS) : HRESULT;
+}
+struct IDXGISwapChain {
+    var vtbl: ^IDXGISwapChainVtbl;
+}
+struct IDXGISwapChainVtbl {
+    var QueryInterface : proc(This: ^IDXGISwapChain, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGISwapChain) : ULONG;
+    var Release : proc(This: ^IDXGISwapChain) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGISwapChain, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGISwapChain, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGISwapChain, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGISwapChain, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetDevice : proc(This: ^IDXGISwapChain, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
+    var Present : proc(This: ^IDXGISwapChain, SyncInterval: UINT, Flags: UINT) : HRESULT;
+    var GetBuffer : proc(This: ^IDXGISwapChain, Buffer: UINT, riid: REFIID, ppSurface: ^rawptr) : HRESULT;
+    var SetFullscreenState : proc(This: ^IDXGISwapChain, Fullscreen: BOOL, pTarget: ^IDXGIOutput) : HRESULT;
+    var GetFullscreenState : proc(This: ^IDXGISwapChain, pFullscreen: ^BOOL, ppTarget: ^^IDXGIOutput) : HRESULT;
+    var GetDesc : proc(This: ^IDXGISwapChain, pDesc: ^DXGI_SWAP_CHAIN_DESC) : HRESULT;
+    var ResizeBuffers : proc(This: ^IDXGISwapChain, BufferCount: UINT, Width: UINT, Height: UINT, NewFormat: DXGI_FORMAT, SwapChainFlags: UINT) : HRESULT;
+    var ResizeTarget : proc(This: ^IDXGISwapChain, pNewTargetParameters: ^DXGI_MODE_DESC) : HRESULT;
+    var GetContainingOutput : proc(This: ^IDXGISwapChain, ppOutput: ^^IDXGIOutput) : HRESULT;
+    var GetFrameStatistics : proc(This: ^IDXGISwapChain, pStats: ^DXGI_FRAME_STATISTICS) : HRESULT;
+    var GetLastPresentCount : proc(This: ^IDXGISwapChain, pLastPresentCount: ^UINT) : HRESULT;
+}
+struct IDXGIFactory {
+    var vtbl: ^IDXGIFactoryVtbl;
+}
+struct IDXGIFactoryVtbl {
+    var QueryInterface : proc(This: ^IDXGIFactory, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIFactory) : ULONG;
+    var Release : proc(This: ^IDXGIFactory) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIFactory, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIFactory, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIFactory, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIFactory, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var EnumAdapters : proc(This: ^IDXGIFactory, Adapter: UINT, ppAdapter: ^^IDXGIAdapter) : HRESULT;
+    var MakeWindowAssociation : proc(This: ^IDXGIFactory, WindowHandle: HWND, Flags: UINT) : HRESULT;
+    var GetWindowAssociation : proc(This: ^IDXGIFactory, pWindowHandle: ^HWND) : HRESULT;
+    var CreateSwapChain : proc(This: ^IDXGIFactory, pDevice: ^IUnknown, pDesc: ^DXGI_SWAP_CHAIN_DESC, ppSwapChain: ^^IDXGISwapChain) : HRESULT;
+    var CreateSoftwareAdapter : proc(This: ^IDXGIFactory, Module: HMODULE, ppAdapter: ^^IDXGIAdapter) : HRESULT;
+}
+struct IDXGIDevice {
+    var vtbl: ^IDXGIDeviceVtbl;
+}
+struct IDXGIDeviceVtbl {
+    var QueryInterface : proc(This: ^IDXGIDevice, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIDevice) : ULONG;
+    var Release : proc(This: ^IDXGIDevice) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIDevice, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIDevice, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIDevice, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIDevice, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetAdapter : proc(This: ^IDXGIDevice, pAdapter: ^^IDXGIAdapter) : HRESULT;
+    var CreateSurface : proc(This: ^IDXGIDevice, pDesc: ^DXGI_SURFACE_DESC, NumSurfaces: UINT, Usage: DXGI_USAGE, pSharedResource: ^DXGI_SHARED_RESOURCE, ppSurface: ^^IDXGISurface) : HRESULT;
+    var QueryResourceResidency : proc(This: ^IDXGIDevice, ppResources: ^^IUnknown, pResidencyStatus: ^UINT, NumResources: UINT) : HRESULT;
+    var SetGPUThreadPriority : proc(This: ^IDXGIDevice, Priority: INT) : HRESULT;
+    var GetGPUThreadPriority : proc(This: ^IDXGIDevice, pPriority: ^INT) : HRESULT;
+}
+struct DXGI_ADAPTER_DESC1 {
+    var Description: [128]WCHAR;
+    var VendorId: UINT;
+    var DeviceId: UINT;
+    var SubSysId: UINT;
+    var Revision: UINT;
+    var DedicatedVideoMemory: SIZE_T;
+    var DedicatedSystemMemory: SIZE_T;
+    var SharedSystemMemory: SIZE_T;
+    var AdapterLuid: LUID;
+    var Flags: UINT;
+}
+struct DXGI_DISPLAY_COLOR_SPACE {
+    var PrimaryCoordinates: [8][2]FLOAT;
+    var WhitePoints: [16][2]FLOAT;
+}
+struct IDXGIFactory1 {
+    var vtbl: ^IDXGIFactory1Vtbl;
+}
+struct IDXGIFactory1Vtbl {
+    var QueryInterface : proc(This: ^IDXGIFactory1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIFactory1) : ULONG;
+    var Release : proc(This: ^IDXGIFactory1) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIFactory1, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIFactory1, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIFactory1, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIFactory1, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var EnumAdapters : proc(This: ^IDXGIFactory1, Adapter: UINT, ppAdapter: ^^IDXGIAdapter) : HRESULT;
+    var MakeWindowAssociation : proc(This: ^IDXGIFactory1, WindowHandle: HWND, Flags: UINT) : HRESULT;
+    var GetWindowAssociation : proc(This: ^IDXGIFactory1, pWindowHandle: ^HWND) : HRESULT;
+    var CreateSwapChain : proc(This: ^IDXGIFactory1, pDevice: ^IUnknown, pDesc: ^DXGI_SWAP_CHAIN_DESC, ppSwapChain: ^^IDXGISwapChain) : HRESULT;
+    var CreateSoftwareAdapter : proc(This: ^IDXGIFactory1, Module: HMODULE, ppAdapter: ^^IDXGIAdapter) : HRESULT;
+    var EnumAdapters1 : proc(This: ^IDXGIFactory1, Adapter: UINT, ppAdapter: ^^IDXGIAdapter1) : HRESULT;
+    var IsCurrent : proc(This: ^IDXGIFactory1) : BOOL;
+}
+struct IDXGIAdapter1 {
+    var vtbl: ^IDXGIAdapter1Vtbl;
+}
+struct IDXGIAdapter1Vtbl {
+    var QueryInterface : proc(This: ^IDXGIAdapter1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIAdapter1) : ULONG;
+    var Release : proc(This: ^IDXGIAdapter1) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIAdapter1, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIAdapter1, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIAdapter1, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIAdapter1, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var EnumOutputs : proc(This: ^IDXGIAdapter1, Output: UINT, ppOutput: ^^IDXGIOutput) : HRESULT;
+    var GetDesc : proc(This: ^IDXGIAdapter1, pDesc: ^DXGI_ADAPTER_DESC) : HRESULT;
+    var CheckInterfaceSupport : proc(This: ^IDXGIAdapter1, InterfaceName: REFGUID, pUMDVersion: ^LARGE_INTEGER) : HRESULT;
+    var GetDesc1 : proc(This: ^IDXGIAdapter1, pDesc: ^DXGI_ADAPTER_DESC1) : HRESULT;
+}
+struct IDXGIDevice1 {
+    var vtbl: ^IDXGIDevice1Vtbl;
+}
+struct IDXGIDevice1Vtbl {
+    var QueryInterface : proc(This: ^IDXGIDevice1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
+    var AddRef : proc(This: ^IDXGIDevice1) : ULONG;
+    var Release : proc(This: ^IDXGIDevice1) : ULONG;
+    var SetPrivateData : proc(This: ^IDXGIDevice1, Name: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
+    var SetPrivateDataInterface : proc(This: ^IDXGIDevice1, Name: REFGUID, pUnknown: ^IUnknown) : HRESULT;
+    var GetPrivateData : proc(This: ^IDXGIDevice1, Name: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
+    var GetParent : proc(This: ^IDXGIDevice1, riid: REFIID, ppParent: ^rawptr) : HRESULT;
+    var GetAdapter : proc(This: ^IDXGIDevice1, pAdapter: ^^IDXGIAdapter) : HRESULT;
+    var CreateSurface : proc(This: ^IDXGIDevice1, pDesc: ^DXGI_SURFACE_DESC, NumSurfaces: UINT, Usage: DXGI_USAGE, pSharedResource: ^DXGI_SHARED_RESOURCE, ppSurface: ^^IDXGISurface) : HRESULT;
+    var QueryResourceResidency : proc(This: ^IDXGIDevice1, ppResources: ^^IUnknown, pResidencyStatus: ^UINT, NumResources: UINT) : HRESULT;
+    var SetGPUThreadPriority : proc(This: ^IDXGIDevice1, Priority: INT) : HRESULT;
+    var GetGPUThreadPriority : proc(This: ^IDXGIDevice1, pPriority: ^INT) : HRESULT;
+    var SetMaximumFrameLatency : proc(This: ^IDXGIDevice1, MaxLatency: UINT) : HRESULT;
+    var GetMaximumFrameLatency : proc(This: ^IDXGIDevice1, pMaxLatency: ^UINT) : HRESULT;
+}
+//DXGI_RESIDENCY
+const DXGI_RESIDENCY_FULLY_RESIDENT                               = 1;
+const DXGI_RESIDENCY_RESIDENT_IN_SHARED_MEMORY                    = 2;
+const DXGI_RESIDENCY_EVICTED_TO_DISK                              = 3;
+//DXGI_SWAP_EFFECT
+const DXGI_SWAP_EFFECT_DISCARD                                    = 0;
+const DXGI_SWAP_EFFECT_SEQUENTIAL                                 = 1;
+const DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL                            = 3;
+const DXGI_SWAP_EFFECT_FLIP_DISCARD                               = 4;
+//DXGI_SWAP_CHAIN_FLAG
+const DXGI_SWAP_CHAIN_FLAG_NONPREROTATED                          = 1;
+const DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH                      = 2;
+const DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE                         = 4;
+const DXGI_SWAP_CHAIN_FLAG_RESTRICTED_CONTENT                     = 8;
+const DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER        = 16;
+const DXGI_SWAP_CHAIN_FLAG_DISPLAY_ONLY                           = 32;
+const DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT          = 64;
+const DXGI_SWAP_CHAIN_FLAG_FOREGROUND_LAYER                       = 128;
+const DXGI_SWAP_CHAIN_FLAG_FULLSCREEN_VIDEO                       = 256;
+const DXGI_SWAP_CHAIN_FLAG_YUV_VIDEO                              = 512;
+const DXGI_SWAP_CHAIN_FLAG_HW_PROTECTED                           = 1024;
+const DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING                          = 2048;
+const DXGI_SWAP_CHAIN_FLAG_RESTRICTED_TO_ALL_HOLOGRAPHIC_DISPLAYS = 4096;
+//DXGI_ADAPTER_FLAG
+const DXGI_ADAPTER_FLAG_NONE                                      = 0;
+const DXGI_ADAPTER_FLAG_REMOTE                                    = 1;
+const DXGI_ADAPTER_FLAG_SOFTWARE                                  = 2;
+const DXGI_ADAPTER_FLAG_FORCE_DWORD                               = 0xffffffff;

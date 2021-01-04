@@ -2,6 +2,7 @@
 #include "core:windows.sif"
 #include "core:math.sif"
 #include "core:allocators.sif"
+#include "core:d3d11.sif"
 
 proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
     if (my_str.data == null) {

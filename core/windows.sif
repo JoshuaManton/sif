@@ -5,17 +5,16 @@
 // #assert(OS == .WINDOWS); // todo(josh)
 
 // Not defining these to avoid polluting the global namespace.
-//const VOID  = void
-//const CHAR  = i8;
-//const WCHAR = u16;
-//const SHORT = i16;
-//const LONG  = i32;
-//const INT   = i32;
-//const UINT  = u32;
-//const BYTE  = u8;
-//const WORD  = u16;
+const CHAR  = i8;
+const WCHAR = u16;
+const SHORT = i16;
+const LONG  = i32;
+const INT   = i32;
+const UINT  = u32;
+const BYTE  = u8;
+const WORD  = u16;
 const DWORD = u32;
-//const FLOAT = float;
+const FLOAT = float;
 
 enum BOOL i32 { FALSE = 0; TRUE = 1; }
 const SIZE_T = u64;

@@ -398,6 +398,104 @@ void String_Builder::destroy() {
 
 
 
+Chunked_String_Builder make_chunked_string_builder(Allocator allocator, int chunk_size) {
+    Chunked_String_Builder sb = {};
+    sb.max_chunk_size = chunk_size;
+    sb.chunks.allocator = allocator;
+    sb.allocator = allocator;
+    return sb;
+}
+
+Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_for_length(int length) {
+    Chunked_String_Builder_Chunk *current_chunk = nullptr;
+    assert(max_chunk_size > 0);
+    if (chunks.count == 0) {
+        current_chunk = chunks.append();
+        current_chunk->buffer = (char *)alloc(allocator, max_chunk_size);
+        current_chunk->buffer[0] = '\0';
+        current_chunk->buffer_size = max_chunk_size;
+    }
+    else {
+        current_chunk = &chunks[current_chunk_index];
+    }
+    if (length > (current_chunk->buffer_size - 1 - current_chunk->cursor)) { // not enough room let in this chunk
+        if (length >= max_chunk_size) { // this string is bigger than our max chunk size, copy the string as it's own chunk
+            current_chunk = chunks.append();
+            current_chunk->buffer = (char *)alloc(allocator, length+1);
+            current_chunk->buffer[0] = '\0';
+            current_chunk->buffer_size = length+1;
+            current_chunk_index += 1;
+            return current_chunk;
+        }
+        else {
+            current_chunk = chunks.append();
+            current_chunk->buffer = (char *)alloc(allocator, max_chunk_size);
+            current_chunk->buffer[0] = '\0';
+            current_chunk->buffer_size = max_chunk_size;
+            current_chunk_index += 1;
+            return current_chunk;
+        }
+    }
+    else {
+        return current_chunk;
+    }
+}
+
+
+void Chunked_String_Builder::print(const char *str) {
+    int length = strlen(str);
+    Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(length);
+    memcpy(&chunk->buffer[chunk->cursor], str, length);
+    chunk->cursor += length;
+    chunk->buffer[chunk->cursor] = '\0';
+}
+
+void Chunked_String_Builder::printf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int length_required = vsnprintf(nullptr, 0, fmt, args);
+    va_end(args);
+
+    Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(length_required);
+    va_start(args, fmt);
+    int result = vsnprintf(&chunk->buffer[chunk->cursor], chunk->buffer_size - chunk->cursor, fmt, args);
+    va_end(args);
+    assert(result == length_required);
+    chunk->cursor += length_required;
+    chunk->buffer[chunk->cursor] = '\0';
+}
+
+void Chunked_String_Builder::clear() {
+    For (idx, chunks) {
+        chunks[idx].cursor = 0;
+    }
+    current_chunk_index = 0;
+}
+
+char *Chunked_String_Builder::make_string() {
+    int required_length = 0;
+    For (idx, chunks) {
+        required_length += chunks[idx].buffer_size-1; // -1 because null term
+    }
+    required_length += 1; // null term
+    char *big_buffer = (char *)alloc(allocator, required_length);
+    int current_cursor = 0;
+    For (idx, chunks) {
+        memcpy(&big_buffer[current_cursor], chunks[idx].buffer, chunks[idx].cursor);
+        current_cursor += chunks[idx].cursor;
+    }
+    return big_buffer;
+}
+
+void Chunked_String_Builder::destroy() {
+    For (idx, chunks) {
+        free(allocator, chunks[idx].buffer);
+    }
+    chunks.destroy();
+}
+
+
+
 bool starts_with(const char *str, const char *start) {
     for (int i = 0; start[i] != '\0'; i++) {
         if (str[i] != start[i]) {

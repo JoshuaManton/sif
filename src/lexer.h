@@ -11,20 +11,6 @@ struct Location {
     int character = 0;
 };
 
-struct Lexer {
-    char *text = nullptr;
-    Location location = {};
-    bool errored = false;
-    bool allow_compound_literals = true;
-    Lexer(const char *filepath, char *text)
-    : text(text)
-    {
-        location.filepath = filepath;
-        location.line = 1;
-        location.character = 1;
-    }
-};
-
 enum Token_Kind {
     TK_INVALID,
     TK_IDENTIFIER,
@@ -135,6 +121,22 @@ struct Token {
     i64 int_value = {};
     u64 uint_value = {};
     f64 float_value = {};
+};
+
+struct Lexer {
+    char *text = nullptr;
+    Location location = {};
+    bool errored = false;
+    bool allow_compound_literals = true;
+    bool has_peeked_token = {};
+    Token peeked_token = {};
+    Lexer(const char *filepath, char *text)
+    : text(text)
+    {
+        location.filepath = filepath;
+        location.line = 1;
+        location.character = 1;
+    }
 };
 
 void init_lexer_globals();

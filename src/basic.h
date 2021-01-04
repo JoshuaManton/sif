@@ -165,7 +165,7 @@ void Array<T>::reserve(int capacity) {
     assert(allocator.alloc_proc != nullptr);
     void *new_data = alloc(allocator, sizeof(T) * capacity);
     if (data != nullptr) {
-        memcpy(new_data, data, sizeof(T) * count);
+        memmove(new_data, data, sizeof(T) * count);
         free(allocator, data);
     }
 
@@ -375,7 +375,7 @@ void run_array_tests() {
 
 
 struct String_Builder {
-    Array<char> buf;
+    Array<char> buf = {};
 
     void print(const char *str);
     void printf(const char *fmt, ...);
@@ -385,6 +385,28 @@ struct String_Builder {
 };
 
 String_Builder make_string_builder(Allocator allocator, int capacity = 16);
+
+
+
+struct Chunked_String_Builder_Chunk {
+    char *buffer;
+    int buffer_size; // note(josh): includes null term
+    int cursor;
+};
+struct Chunked_String_Builder {
+    Array<Chunked_String_Builder_Chunk> chunks = {};
+    int current_chunk_index = {};
+    int max_chunk_size = {};
+    Allocator allocator = {};
+    void print(const char *str);
+    void printf(const char *fmt, ...);
+    Chunked_String_Builder_Chunk *get_or_make_chunk_buffer_for_length(int length);
+    void clear();
+    char *make_string();
+    void destroy();
+};
+
+Chunked_String_Builder make_chunked_string_builder(Allocator allocator, int chunk_size);
 
 
 

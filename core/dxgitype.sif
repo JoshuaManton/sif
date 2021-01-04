@@ -1,0 +1,57 @@
+struct DXGI_RGB {
+    var Red: float;
+    var Green: float;
+    var Blue: float;
+}
+struct _D3DCOLORVALUE {
+    var r: float;
+    var g: float;
+    var b: float;
+    var a: float;
+}
+struct DXGI_GAMMA_CONTROL {
+    var Scale: DXGI_RGB;
+    var Offset: DXGI_RGB;
+    var GammaCurve: [1025]DXGI_RGB;
+}
+struct DXGI_GAMMA_CONTROL_CAPABILITIES {
+    var ScaleAndOffsetSupported: BOOL;
+    var MaxConvertedValue: float;
+    var MinConvertedValue: float;
+    var NumGammaControlPoints: UINT;
+    var ControlPointPositions: [1025]float;
+}
+struct DXGI_MODE_DESC {
+    var Width: UINT;
+    var Height: UINT;
+    var RefreshRate: DXGI_RATIONAL;
+    var Format: DXGI_FORMAT;
+    var ScanlineOrdering: UINT;
+    var Scaling: UINT;
+}
+struct DXGI_JPEG_DC_HUFFMAN_TABLE {
+    var CodeCounts: [12]BYTE;
+    var CodeValues: [12]BYTE;
+}
+struct DXGI_JPEG_AC_HUFFMAN_TABLE {
+    var CodeCounts: [16]BYTE;
+    var CodeValues: [162]BYTE;
+}
+struct DXGI_JPEG_QUANTIZATION_TABLE {
+    var Elements: [64]BYTE;
+}
+//DXGI_MODE_SCANLINE_ORDER
+const DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED       = 0;
+const DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE       = 1;
+const DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST = 2;
+const DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST = 3;
+//DXGI_MODE_SCALING
+const DXGI_MODE_SCALING_UNSPECIFIED              = 0;
+const DXGI_MODE_SCALING_CENTERED                 = 1;
+const DXGI_MODE_SCALING_STRETCHED                = 2;
+//DXGI_MODE_ROTATION
+const DXGI_MODE_ROTATION_UNSPECIFIED             = 0;
+const DXGI_MODE_ROTATION_IDENTITY                = 1;
+const DXGI_MODE_ROTATION_ROTATE90                = 2;
+const DXGI_MODE_ROTATION_ROTATE180               = 3;
+const DXGI_MODE_ROTATION_ROTATE270               = 4;

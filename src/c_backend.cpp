@@ -1,11 +1,11 @@
 #include "c_backend.h"
 
-void c_print_type(String_Builder *sb, Type *type, const char *var_name);
-void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name);
-char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type = nullptr);
-void print_indents(String_Builder *sb, int indent_level);
+void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name);
+void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name);
+char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type = nullptr);
+void print_indents(Chunked_String_Builder *sb, int indent_level);
 
-void c_print_type_prefix(String_Builder *sb, Type *type) {
+void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
     if (type == nullptr) {
         sb->printf("void ");
         return;
@@ -81,11 +81,11 @@ void c_print_type_prefix(String_Builder *sb, Type *type) {
     }
 }
 
-void c_print_line_directive(String_Builder *sb, Location location) {
+void c_print_line_directive(Chunked_String_Builder *sb, Location location) {
     // sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
 }
 
-void c_print_type_postfix(String_Builder *sb, Type *type) {
+void c_print_type_postfix(Chunked_String_Builder *sb, Type *type) {
     // todo(josh): handle procedure types
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
@@ -132,7 +132,7 @@ void c_print_type_postfix(String_Builder *sb, Type *type) {
     }
 }
 
-void c_print_type(String_Builder *sb, Type *type, const char *var_name) {
+void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name) {
     if (type == nullptr) {
         sb->printf("void %s", var_name);
         return;
@@ -146,7 +146,7 @@ void c_print_type(String_Builder *sb, Type *type, const char *var_name) {
     c_print_type_postfix(sb, type);
 }
 
-void c_print_type_plain_prefix(String_Builder *sb, Type *type) {
+void c_print_type_plain_prefix(Chunked_String_Builder *sb, Type *type) {
     if (type == nullptr) {
         sb->printf("void_");
         return;
@@ -221,7 +221,7 @@ void c_print_type_plain_prefix(String_Builder *sb, Type *type) {
     }
 }
 
-void c_print_type_plain_postfix(String_Builder *sb, Type *type) {
+void c_print_type_plain_postfix(Chunked_String_Builder *sb, Type *type) {
     // todo(josh): handle procedure types
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
@@ -266,7 +266,7 @@ void c_print_type_plain_postfix(String_Builder *sb, Type *type) {
     }
 }
 
-void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name) {
+void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name) {
     if (type == nullptr) {
         sb->printf("void_%s", var_name);
         return;
@@ -279,7 +279,7 @@ void c_print_type_plain(String_Builder *sb, Type *type, const char *var_name) {
     c_print_type_plain_postfix(sb, type);
 }
 
-void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
+void c_print_var(Chunked_String_Builder *sb, Ast_Var *var, int indent_level) {
     assert(!var->is_constant);
     char *rhs = nullptr;
     if (var->expr) {
@@ -292,9 +292,9 @@ void c_print_var(String_Builder *sb, Ast_Var *var, int indent_level) {
     }
 }
 
-void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
+void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *header) {
     assert(header->name != nullptr);
-    String_Builder header_name_sb = make_string_builder(g_global_linear_allocator, 128);
+    Chunked_String_Builder header_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
     header_name_sb.print(header->name);
     header_name_sb.print("(");
     For (idx, header->parameters) {
@@ -307,19 +307,19 @@ void c_print_procedure_header(String_Builder *sb, Ast_Proc_Header *header) {
         c_print_var(&header_name_sb, parameter, 0);
     }
     header_name_sb.print(")");
-    c_print_type(sb, header->type->return_type, header_name_sb.string());
+    c_print_type(sb, header->type->return_type, header_name_sb.make_string());
 }
 
 int total_num_temporaries_emitted = 0;
 
 char *c_temporary() {
     total_num_temporaries_emitted += 1;
-    String_Builder sb = make_string_builder(g_global_linear_allocator, 128); // todo(josh): this is very dumb. use an arena or something
+    Chunked_String_Builder sb = make_chunked_string_builder(g_global_linear_allocator, 128); // todo(josh): this is very dumb. use an arena or something
     sb.printf("__t%d", total_num_temporaries_emitted);
-    return sb.string();
+    return sb.make_string();
 }
 
-void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
+void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *root_expr, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
     For (idx, proc_type->parameter_types) {
         if (!is_type_varargs(proc_type->parameter_types[idx])) {
             char *param = c_print_expr(sb, parameters[idx], indent_level, proc_type->parameter_types[idx]);
@@ -374,7 +374,7 @@ void c_print_procedure_call_parameters(String_Builder *sb, Ast_Expr *root_expr, 
     }
 }
 
-char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
+char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     char *t = nullptr;
 
     c_print_line_directive(sb, expr->location);
@@ -383,8 +383,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
         assert(expr->operand.type != nullptr);
     }
 
-    String_Builder reference_prefix_sb = {};
-    reference_prefix_sb.buf.allocator = g_global_linear_allocator;
+    Chunked_String_Builder reference_prefix_sb = make_chunked_string_builder(g_global_linear_allocator, 64);
 
     if (expr->operand.reference_type != nullptr) {
         assert(is_type_reference(expr->operand.reference_type));
@@ -451,7 +450,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
             }
             else {
                 assert(!is_type_untyped(expr->operand.type));
-                String_Builder tsb = make_string_builder(g_global_linear_allocator, 32);
+                Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 32);
                 if (is_type_float(expr->operand.type)) {
                     tsb.printf("%f", expr->operand.float_value);
                 }
@@ -473,13 +472,13 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 else {
                     assert(false);
                 }
-                t = tsb.string();
+                t = tsb.make_string();
             }
         }
         else if (is_type_typeid(expr->operand.type) && (expr->operand.flags & OPERAND_CONSTANT)) {
-            String_Builder tsb = make_string_builder(g_global_linear_allocator, 32);
+            Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 32);
             tsb.printf("%d", expr->operand.type_value->id);
-            t = tsb.string();
+            t = tsb.make_string();
         }
         else {
             switch (expr->expr_kind) {
@@ -582,7 +581,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     Expr_Subscript *subscript = (Expr_Subscript *)expr;
                     char *lhs = c_print_expr(sb, subscript->lhs, indent_level);
                     char *index = c_print_expr(sb, subscript->index, indent_level);
-                    String_Builder subscript_sb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder subscript_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     if (is_type_slice(subscript->lhs->operand.type) || is_type_varargs(subscript->lhs->operand.type)) {
                         Type_Slice *slice_type = nullptr;
                         if (is_type_slice(subscript->lhs->operand.type)) {
@@ -609,7 +608,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     else {
                         assert(false);
                     }
-                    t = subscript_sb.string();
+                    t = subscript_sb.make_string();
                     break;
                 }
                 case EXPR_COMPOUND_LITERAL: {
@@ -661,16 +660,16 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                 case EXPR_DEREFERENCE: {
                     Expr_Dereference *dereference = (Expr_Dereference *)expr;
                     char *lhs = c_print_expr(sb, dereference->lhs, indent_level);
-                    String_Builder deref_sb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder deref_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     deref_sb.printf("(*%s)", lhs);
-                    t = deref_sb.string();
+                    t = deref_sb.make_string();
                     break;
                 }
                 case EXPR_SELECTOR: {
                     Expr_Selector *selector = (Expr_Selector *)expr;
                     char *lhs = c_print_expr(sb, selector->lhs, indent_level);
                     assert(lhs);
-                    String_Builder selector_sb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     bool is_accessing_slice_data_field = false;
                     if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
                         is_accessing_slice_data_field = true;
@@ -690,7 +689,7 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     if (is_accessing_slice_data_field) {
                         selector_sb.print(")");
                     }
-                    t = selector_sb.string();
+                    t = selector_sb.make_string();
                     break;
                 }
                 case EXPR_CAST: {
@@ -716,27 +715,27 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
                     break;
                 }
                 case EXPR_NUMBER_LITERAL: {
-                    String_Builder tsb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     if (is_type_float(expr->operand.type)) {
                         tsb.printf("%f", expr->operand.float_value);
                     }
                     else if (is_type_integer(expr->operand.type)) {
                         tsb.printf("%d", expr->operand.int_value);
                     }
-                    t = tsb.string();
+                    t = tsb.make_string();
                     break;
                 }
                 case EXPR_CHAR_LITERAL: {
                     assert(is_type_integer(expr->operand.type));
-                    String_Builder tsb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     tsb.printf("%d", expr->operand.int_value);
-                    t = tsb.string();
+                    t = tsb.make_string();
                     break;
                 }
                 case EXPR_STRING_LITERAL: {
-                    String_Builder tsb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     tsb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-                    t = tsb.string();
+                    t = tsb.make_string();
                     break;
                 }
                 case EXPR_POINTER_TYPE: {
@@ -789,36 +788,36 @@ char *c_print_expr(String_Builder *sb, Ast_Expr *expr, int indent_level, Type *t
     if (target_type) {
         if (is_type_reference(target_type)) {
             reference_prefix_sb.printf("&%s", t);
-            t = reference_prefix_sb.string();
+            t = reference_prefix_sb.make_string();
         }
     }
 
     if (expr->operand.reference_type != nullptr) {
         assert(is_type_reference(expr->operand.reference_type));
         reference_prefix_sb.printf("%s)", t);
-        t = reference_prefix_sb.string();
+        t = reference_prefix_sb.make_string();
     }
 
     if (target_type) {
         if (target_type == type_any && (expr->operand.type != type_any)) {
-            String_Builder any_sb = make_string_builder(g_global_linear_allocator, 128);
+            Chunked_String_Builder any_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
             any_sb.printf("MAKE_ANY(&%s, %d)", t, expr->operand.type->id);
-            t = any_sb.string();
+            t = any_sb.make_string();
         }
     }
 
     return t;
 }
 
-void print_indents(String_Builder *sb, int indent_level) {
+void print_indents(Chunked_String_Builder *sb, int indent_level) {
     for (int i = 0; i < indent_level; i++) {
         sb->print("    ");
     }
 }
 
-void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level);
+void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level);
 
-void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, bool print_semicolon) {
+void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_level, bool print_semicolon) {
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
@@ -971,7 +970,7 @@ void c_print_statement(String_Builder *sb, Ast_Node *node, int indent_level, boo
     }
 }
 
-void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level) {
+void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level) {
     For (idx, block->nodes) {
         Ast_Node *node = block->nodes[idx];
         c_print_statement(sb, node, indent_level, true);
@@ -981,7 +980,7 @@ void c_print_block(String_Builder *sb, Ast_Block *block, int indent_level) {
 extern Ast_Proc *g_main_proc;
 extern Array<Type *> all_types;
 
-void c_print_gen_type_info_struct(String_Builder *sb, char *ti_name, Type *type) {
+void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Type *type) {
     // todo(josh): really gotta get rid of constants in the fields list
     int variable_field_count = 0;
     For (idx, type->fields) {
@@ -1021,7 +1020,7 @@ void c_print_gen_type_info_struct(String_Builder *sb, char *ti_name, Type *type)
 #define TYPE_INFO_KIND_PROCEDURE 11
 #define TYPE_INFO_KIND_TYPEID    12
 
-void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
+void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     assert(proc->body != nullptr);
     assert(!proc->header->is_foreign);
     if (proc == g_main_proc) {
@@ -1032,9 +1031,9 @@ void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
         For (idx, all_types) {
             Type *type = all_types[idx];
             assert(type->id = idx+1);
-            String_Builder ti_name_sb = make_string_builder(g_global_linear_allocator, 8);
+            Chunked_String_Builder ti_name_sb = make_chunked_string_builder(g_global_linear_allocator, 8);
             ti_name_sb.printf("ti%d", type->id);
-            char *ti_name = ti_name_sb.string();
+            char *ti_name = ti_name_sb.make_string();
             type->type_info_generated_variable_name = ti_name;
 
             char *printable_name = type_to_string(type);
@@ -1232,8 +1231,8 @@ void c_print_procedure(String_Builder *sb, Ast_Proc *proc) {
     sb->print("}\n");
 }
 
-String_Builder generate_c_main_file(Ast_Block *global_scope) {
-    String_Builder sb = make_string_builder(g_global_linear_allocator, 512 * 1024);
+Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
+    Chunked_String_Builder sb = make_chunked_string_builder(g_global_linear_allocator, 1024 * 1024);
 
     sb.print("#include <stdint.h>\n");
     sb.print("#include <stdbool.h>\n");
@@ -1434,9 +1433,9 @@ String_Builder generate_c_main_file(Ast_Block *global_scope) {
                     c_print_type(&sb, array_type, "");
                     sb.printf(" {\n");
                     sb.printf("    ");
-                    String_Builder elements_name_sb = make_string_builder(g_global_linear_allocator, 128);
+                    Chunked_String_Builder elements_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     elements_name_sb.printf("elements[%d]", array_type->count);
-                    c_print_type(&sb, array_type->array_of, elements_name_sb.string());
+                    c_print_type(&sb, array_type->array_of, elements_name_sb.make_string());
                     sb.printf(";\n};\n");
                 }
                 break;

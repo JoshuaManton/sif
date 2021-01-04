@@ -275,7 +275,9 @@ proc new($T: typeid, allocator: Allocator) : ^T {
 }
 
 proc delete(ptr: ^$T, allocator: Allocator) {
-    sif_free(ptr, allocator);
+    if (ptr != null) {
+        sif_free(ptr, allocator);
+    }
 }
 
 proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
@@ -286,9 +288,23 @@ proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
 }
 
 proc delete_slice(slice: []$T, allocator: Allocator) {
-    sif_free(slice.data, allocator);
+    if (slice.data != null) {
+        sif_free(slice.data, allocator);
+    }
 }
 
 proc copy_slice(dst: []$T, src: []T) {
     memcpy(&dst[0], &src[0], cast(u64, min(dst.count, src.count) * sizeof(T)));
+}
+
+proc clone_string(str: string, allocator: Allocator) : string {
+    var new_str = new_slice(byte, str.count, allocator);
+    copy_slice(new_str, transmute([]byte, str));
+    return transmute(string, new_str);
+}
+
+proc delete_string(str: string, allocator: Allocator) {
+    if (str.data != null) {
+        sif_free(str.data, allocator);
+    }
 }
