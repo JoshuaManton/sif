@@ -18,7 +18,6 @@
 TODO:
 
 SMALL
--const eval bug? 1 << 2 + 1 prints 1
 -cstring type
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N

@@ -1394,7 +1394,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             result_operand.type = most_concrete;
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value >> rhs.int_value;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value << rhs.int_value;
                 else {
                     report_error(location, "Operator >> is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1406,7 +1406,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             result_operand.type = most_concrete;
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value << rhs.int_value;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value >> rhs.int_value;
                 else {
                     report_error(location, "Operator >> is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;

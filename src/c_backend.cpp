@@ -1233,7 +1233,7 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     sb->print(" {\n");
     if (proc == g_main_proc) {
         print_indents(sb, 1);
-        sb->print("    __init_sif_runtime();\n");
+        sb->print("__init_sif_runtime();\n");
     }
     c_print_block(sb, proc->body, 1);
     sb->print("}\n");
