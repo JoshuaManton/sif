@@ -4213,6 +4213,69 @@ proc uid(str: string) : GUID {
     return id;
 }
 
+proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
+    if (my_str.data == null) {
+        return null;
+    }
+
+    var query_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), null, 0);
+    if (query_num_chars <= 0) {
+        return null;
+    }
+
+    var name = "";
+    var name_u16s = cast(^u16, sif_alloc(cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT, allocator)); // 2 extra bytes for zero termination WCHAR.
+    var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), name_u16s, query_num_chars);
+
+    if (result_num_chars > 0) {
+        assert(result_num_chars <= query_num_chars);
+        var name_slice = slice_ptr(name_u16s, cast(i64, result_num_chars));
+        // todo(josh): this looks sketch
+        name_slice[cast(i64, result_num_chars)] = 0;
+        out_success^ = true;
+        out_result_length_in_bytes^ = result_num_chars * 2;
+        return name_u16s;
+    }
+
+    return name_u16s;
+}
+
+proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) : string {
+    out_success^ = false;
+
+    // length of -1 means it's zero-terminated.
+    // WARNING: length >= 0 has not been tested and is probably wrong.
+    // See note in bstr_to_utf8.
+    var query_result = WideCharToMultiByte(CP_ACP, 0,
+                                        data, -1,
+                                        null, 0,
+                                        null, null);
+
+    if (query_result <= 0) {
+        return "";
+    }
+
+    var name_bytes = cast(^u8, sif_alloc(cast(i64, query_result), DEFAULT_ALIGNMENT, allocator));
+    var result = WideCharToMultiByte(CP_ACP, 0,
+                                          data, -1,
+                                          name_bytes, query_result,
+                                          null, null);
+
+    if (result > 0) {
+        assert(result <= query_result);
+
+        var name: string;
+        name.data  = name_bytes;
+        name.count = cast(i64, result)-1;  // Do not include the terminating zero.
+        assert(name[name.count] == 0);
+
+        out_success^ = true;
+        return name;
+    }
+
+    return "";
+}
+
 
 // @@ This is the same as the uid() function above.
 // string_to_guid :: uid;
