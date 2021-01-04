@@ -30,51 +30,7 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
     return name_u16s;
 }
 
-var window_should_close: bool;
-
 proc main() : i32 {
-    var dynamic_arena: Dynamic_Arena;
-    init_dynamic_arena(&dynamic_arena, 16, default_allocator());
-    var da_allocator = dynamic_arena_to_allocator(&dynamic_arena);
-    var ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-    ptr = new(int, da_allocator);
-
     var window = create_window("My Cool Window", 1920, 1080);
 
     while (!window.should_close) {

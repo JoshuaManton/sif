@@ -118,7 +118,7 @@ proc dynamic_arena_alloc(allocator: rawptr, size: int, align: int) : rawptr {
 }
 
 proc dynamic_arena_free(allocator: rawptr, ptr: rawptr) {
-    // do nothing
+    // note(josh): freeing from arenas does nothing.
 }
 
 proc dynamic_arena_reset(dynamic_arena: ^Dynamic_Arena) {
