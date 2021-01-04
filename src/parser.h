@@ -118,11 +118,13 @@ struct Ast_Block : public Ast_Node {
     Array<Ast_Node *> nodes = {};
     Array<Declaration *> declarations = {};
     u64 flags = {};
+    Hashtable<char *, Declaration *> declarations_lookup = {};
     Ast_Block(Location location)
     : Ast_Node(AST_BLOCK, location)
     {
         nodes.allocator = g_global_linear_allocator;
         declarations.allocator = g_global_linear_allocator;
+        declarations_lookup = make_hashtable<char *, Declaration *>(g_global_linear_allocator, 16);
     }
 };
 

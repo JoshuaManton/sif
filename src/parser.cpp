@@ -39,15 +39,15 @@ void pop_ast_block(Ast_Block *old_block) {
 
 bool register_declaration(Declaration *new_declaration) {
     assert(new_declaration->parent_block != nullptr);
-    For (decl_idx, new_declaration->parent_block->declarations) {
-        Declaration *decl = new_declaration->parent_block->declarations[decl_idx];
-        if (decl->name == new_declaration->name) {
-            report_error(new_declaration->location, "Name collision with '%s'.", new_declaration->name);
-            report_info(decl->location, "Here is the other declaration.");
-            return false;
-        }
+    Declaration **existing_declaration = new_declaration->parent_block->declarations_lookup.get(new_declaration->name);
+    if (existing_declaration) {
+        Declaration *declaration = *existing_declaration;
+        report_error(new_declaration->location, "Name collision with '%s'.", new_declaration->name);
+        report_info(declaration->location, "Here is the other declaration.");
+        return false;
     }
     new_declaration->parent_block->declarations.append(new_declaration);
+    new_declaration->parent_block->declarations_lookup.insert(new_declaration->name, new_declaration);
     g_all_declarations.append(new_declaration);
     return true;
 }

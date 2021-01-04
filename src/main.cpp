@@ -69,7 +69,7 @@ BIG
 
 void print_usage() {
     printf("Usage:\n");
-    printf("  sif <build|run> <file> [optional flags]\n\n");
+    printf("  sif <build|run|check> <file> [optional flags]\n\n");
 
     printf("Optional flags:\n");
     printf("  -show-timings           Print a log of times for different compilation stages.\n");
@@ -108,12 +108,16 @@ void main(int argc, char **argv) {
 
     bool is_run   = false;
     bool is_build = false;
+    bool is_check = false;
 
     if (strcmp(argv[1], "run") == 0) {
         is_run = true;
     }
     else if (strcmp(argv[1], "build") == 0) {
         is_build = true;
+    }
+    else if (strcmp(argv[1], "check") == 0) {
+        is_check = true;
     }
     else {
         printf("Unknown compiler flag: %s\n", argv[1]);
@@ -204,51 +208,53 @@ void main(int argc, char **argv) {
 
     double c_compile_start_time = query_timer(&g_global_timer);
 
-    // todo(josh): microsoft craziness
-    // Find_Result fr = find_visual_studio_and_windows_sdk();
-    // char *windows_sdk_root = wide_to_cstring(fr.windows_sdk_root);
-    // char *exe_path = wide_to_cstring(fr.vs_exe_path);
-    // char *lib_path = wide_to_cstring(fr.vs_library_path);
-    // char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path);
-    // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
-    // printf("win sdk root   %s\n", windows_sdk_root);
-    // printf("exe_path:      %s\n", exe_path);
-    // printf("lib_path:      %s\n", lib_path);
-    // printf("um_lib_path:   %s\n", um_lib_path);
-    // printf("ucrt_lib_path: %s\n", ucrt_lib_path);
+    if (!is_check) {
+        // todo(josh): microsoft craziness
+        // Find_Result fr = find_visual_studio_and_windows_sdk();
+        // char *windows_sdk_root = wide_to_cstring(fr.windows_sdk_root);
+        // char *exe_path = wide_to_cstring(fr.vs_exe_path);
+        // char *lib_path = wide_to_cstring(fr.vs_library_path);
+        // char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path);
+        // char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path);
+        // printf("win sdk root   %s\n", windows_sdk_root);
+        // printf("exe_path:      %s\n", exe_path);
+        // printf("lib_path:      %s\n", lib_path);
+        // printf("um_lib_path:   %s\n", um_lib_path);
+        // printf("ucrt_lib_path: %s\n", ucrt_lib_path);
 
-    String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
-    command_sb.printf("cmd.exe /c \"cl.exe ");
-    if (build_debug) {
-        command_sb.print("/Zi /Fd ");
-    }
-    command_sb.print("output.c /nologo /wd4028 ");
-    For (idx, g_all_foreign_import_directives) {
-        command_sb.printf("%s ", g_all_foreign_import_directives[idx]->path);
-    }
-    command_sb.printf("/link /OUT:%s ", output_exe_name);
-    // todo(josh): microsoft craziness
-    // command_sb.printf("/libpath:\"%s\" ", lib_path);
-    // command_sb.printf("/libpath:\"%s\" ", ucrt_lib_path);
-    // command_sb.printf("/libpath:\"%s\" ", um_lib_path);
-    // command_sb.printf("-nodefaultlib ");
-    if (build_debug) {
-        command_sb.print("/DEBUG ");
-    }
-    command_sb.printf("\"", output_exe_name);
+        String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
+        command_sb.printf("cmd.exe /c \"cl.exe ");
+        if (build_debug) {
+            command_sb.print("/Zi /Fd ");
+        }
+        command_sb.print("output.c /nologo /wd4028 ");
+        For (idx, g_all_foreign_import_directives) {
+            command_sb.printf("%s ", g_all_foreign_import_directives[idx]->path);
+        }
+        command_sb.printf("/link /OUT:%s ", output_exe_name);
+        // todo(josh): microsoft craziness
+        // command_sb.printf("/libpath:\"%s\" ", lib_path);
+        // command_sb.printf("/libpath:\"%s\" ", ucrt_lib_path);
+        // command_sb.printf("/libpath:\"%s\" ", um_lib_path);
+        // command_sb.printf("-nodefaultlib ");
+        if (build_debug) {
+            command_sb.print("/DEBUG ");
+        }
+        command_sb.printf("\"", output_exe_name);
 
-    if (log_cl_command) {
-        printf("%s\n", command_sb.string());
-    }
+        if (log_cl_command) {
+            printf("%s\n", command_sb.string());
+        }
 
-    if (system(command_sb.string()) != 0) {
-        printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
-        return;
-    }
+        if (system(command_sb.string()) != 0) {
+            printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
+            return;
+        }
 
-    if (!keep_temp_files) {
-        delete_file("output.c");
-        delete_file("output.obj");
+        if (!keep_temp_files) {
+            delete_file("output.c");
+            delete_file("output.obj");
+        }
     }
 
     double compilation_end_time = query_timer(&g_global_timer);
@@ -286,8 +292,5 @@ void main(int argc, char **argv) {
         String_Builder run_command_sb = make_string_builder(g_global_linear_allocator, 64);
         run_command_sb.printf("cmd.exe /c \"%s\"", output_exe_name);
         system(run_command_sb.string());
-    }
-    else {
-        assert(is_build);
     }
 }

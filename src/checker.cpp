@@ -2460,14 +2460,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
             Ast_Block *block = ident->parent_block;
             while (block != nullptr) {
-                For (decl_idx, block->declarations) {
-                    Declaration *decl = block->declarations[decl_idx];
-                    if (decl->name == ident->name) {
-                        ident->resolved_declaration = decl;
-                        break;
-                    }
-                }
-                if (ident->resolved_declaration) {
+                Declaration **existing_declaration = block->declarations_lookup.get(ident->name);
+                if (existing_declaration) {
+                    ident->resolved_declaration = *existing_declaration;
                     break;
                 }
                 block = block->parent_block;
