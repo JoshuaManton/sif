@@ -532,6 +532,9 @@ bool typecheck_global_scope(Ast_Block *block) {
 
     For (idx, block->declarations) {
         Declaration *decl = block->declarations[idx];
+        if (decl->is_polymorphic) {
+            continue;
+        }
         For (note_idx, decl->notes) {
             char *note = decl->notes[note_idx];
             if (strcmp(note, "sif_runtime") == 0) {
@@ -919,14 +922,8 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
 
 Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     assert(!is_type_untyped(pointer_to));
-    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_pointer_types` array
-        Type *other_type = all_types[idx];
-        if (other_type->kind == TYPE_POINTER) {
-            Type_Pointer *other_type_pointer = (Type_Pointer *)other_type;
-            if (other_type_pointer->pointer_to == pointer_to) {
-                return other_type_pointer;
-            }
-        }
+    if (pointer_to->pointer_to_this_type) {
+        return pointer_to->pointer_to_this_type;
     }
     Type_Pointer *new_type = SIF_NEW_CLONE(Type_Pointer(pointer_to));
     new_type->flags = TF_POINTER;
@@ -934,19 +931,14 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     new_type->align = POINTER_SIZE;
     all_types.append(new_type);
     new_type->id = all_types.count;
+    pointer_to->pointer_to_this_type = new_type;
     return new_type;
 }
 
 Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
     assert(!is_type_untyped(reference_to));
-    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_reference_types` array
-        Type *other_type = all_types[idx];
-        if (other_type->kind == TYPE_REFERENCE) {
-            Type_Reference *other_type_reference = (Type_Reference *)other_type;
-            if (other_type_reference->reference_to == reference_to) {
-                return other_type_reference;
-            }
-        }
+    if (reference_to->reference_to_this_type) {
+        return reference_to->reference_to_this_type;
     }
     Type_Reference *new_type = SIF_NEW_CLONE(Type_Reference(reference_to));
     new_type->flags = TF_REFERENCE;
@@ -954,6 +946,7 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
     new_type->align = POINTER_SIZE;
     all_types.append(new_type);
     new_type->id = all_types.count;
+    reference_to->reference_to_this_type = new_type;
     return new_type;
 }
 
@@ -984,14 +977,8 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
 
 Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     assert(!is_type_untyped(slice_of));
-    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_slice_types` array
-        Type *other_type = all_types[idx];
-        if (other_type->kind == TYPE_SLICE) {
-            Type_Slice *other_type_slice = (Type_Slice *)other_type;
-            if (other_type_slice->slice_of == slice_of) {
-                return other_type_slice;
-            }
-        }
+    if (slice_of->slice_of_this_type) {
+        return slice_of->slice_of_this_type;
     }
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(slice_of);
     Type_Slice *new_type = SIF_NEW_CLONE(Type_Slice(slice_of, pointer_to_element_type));
@@ -1002,19 +989,14 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     add_variable_type_field(new_type, "count", type_int, 8);
     all_types.append(new_type);
     new_type->id = all_types.count;
+    slice_of->slice_of_this_type = new_type;
     return new_type;
 }
 
 Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     assert(!is_type_untyped(varargs_of));
-    For (idx, all_types) { // todo(josh): @Speed maybe have an `all_varargs_types` array
-        Type *other_type = all_types[idx];
-        if (other_type->kind == TYPE_VARARGS) {
-            Type_Varargs *other_type_varargs = (Type_Varargs *)other_type;
-            if (other_type_varargs->varargs_of == varargs_of) {
-                return other_type_varargs;
-            }
-        }
+    if (varargs_of->varargs_of_this_type) {
+        return varargs_of->varargs_of_this_type;
     }
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(varargs_of);
     Type_Slice *slice_type = get_or_create_type_slice_of(varargs_of);
@@ -1026,6 +1008,7 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     add_variable_type_field(new_type, "count", type_int, 8);
     all_types.append(new_type);
     new_type->id = all_types.count;
+    varargs_of->varargs_of_this_type = new_type;
     return new_type;
 }
 

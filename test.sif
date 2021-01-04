@@ -1,17 +1,6 @@
 #include "core:basic.sif"
 
-proc foo(a: int, args: ..any) {
-    for (var i = 0; i < args.count; i += 1) {
-        // print("%\n", args[i]);
-    }
-}
-
 proc main() : i32 {
-    var a = 1;
-    var b = 2;
-    var c = 1;
-    print_int(1 << 2 + 1); // 5 or 8
-    foo(1, 1, 2);
-    foo(1);
+    print("wow\n");
     return 0;
 }

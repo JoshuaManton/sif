@@ -244,28 +244,6 @@ proc printa(args: ..any) {
 
 
 
-proc slice_ptr(ptr: ^$T, count: int) : []T {
-    var slice: []T;
-    slice.data = ptr;
-    slice.count = count;
-    return slice;
-}
-
-proc string_ptr(ptr: ^u8, count: int) : string {
-    var str: string;
-    str.data = ptr;
-    str.count = count;
-    return str;
-}
-
-proc ptr_offset(ptr: ^$T, offset_in_bytes: int) : ^T {
-    var ptr_int = transmute(u64, ptr);
-    ptr_int += cast(u64, offset_in_bytes);
-    return transmute(^T, ptr_int);
-}
-
-
-
 const DEFAULT_ALIGNMENT = sizeof(rawptr)*2;
 
 proc new($T: typeid, allocator: Allocator) : ^T {

@@ -48,6 +48,11 @@ enum Check_State {
     CS_CHECKED,
 };
 
+struct Type_Pointer;
+struct Type_Slice;
+struct Type_Varargs;
+struct Type_Reference;
+
 struct Struct_Field {
     const char *name = {};
     Operand operand = {};
@@ -64,6 +69,10 @@ struct Type {
     int num_variable_fields = {};
     int num_constant_fields = {};
     char *type_info_generated_variable_name = {};
+    Type_Pointer *pointer_to_this_type = {};
+    Type_Slice *slice_of_this_type = {};
+    Type_Varargs *varargs_of_this_type = {};
+    Type_Reference *reference_to_this_type = {};
     Type(Type_Kind kind)
     : kind(kind)
     {

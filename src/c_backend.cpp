@@ -683,7 +683,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         is_accessing_slice_data_field = true;
                         Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
                         selector_sb.print("*((");
-                        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), ""); // todo(josh): @Speed we should be able to cache a pointer-to-pointer-to-element-type
+                        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
                         selector_sb.print(")&");
                     }
                     selector_sb.print(lhs);
