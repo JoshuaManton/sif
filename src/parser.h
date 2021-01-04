@@ -405,12 +405,15 @@ enum Expr_Kind {
     EXPR_COUNT,
 };
 
+
+struct Procedure_Call_Parameter {
+    Array<Ast_Expr *> exprs = {}; // this is an array because varargs
+};
 struct Ast_Expr : public Ast_Node {
     Expr_Kind expr_kind = EXPR_INVALID;
     Operand operand = {};
     Ast_Proc *desugared_procedure_to_call = {};
-    Array<Ast_Expr *> desugared_procedure_parameters = {};
-    Array<Ast_Expr *> vararg_parameters = {}; // kind weird that this is on here
+    Array<Procedure_Call_Parameter> processed_procedure_call_parameters = {};
     Ast_Expr(Expr_Kind kind, Location location)
     : Ast_Node(AST_EXPR, location)
     , expr_kind(kind)
@@ -523,15 +526,12 @@ struct Expr_Dereference : public Ast_Expr {
 struct Expr_Procedure_Call : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Array<Ast_Expr *> parameters = {};
-    Array<Ast_Expr *> parameters_to_emit = {};
     Type_Procedure *target_procedure_type = {};
     Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters, Location location)
     : Ast_Expr(EXPR_PROCEDURE_CALL, location)
     , lhs(lhs)
     , parameters(parameters)
-    {
-        parameters_to_emit.allocator = default_allocator();
-    }
+    {}
 };
 
 struct Expr_Selector : public Ast_Expr {

@@ -4223,7 +4223,6 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
         return null;
     }
 
-    var name = "";
     var name_u16s = cast(^u16, sif_alloc(cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT, allocator)); // 2 extra bytes for zero termination WCHAR.
     var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), name_u16s, query_num_chars);
 
@@ -4243,9 +4242,6 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
 proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) : string {
     out_success^ = false;
 
-    // length of -1 means it's zero-terminated.
-    // WARNING: length >= 0 has not been tested and is probably wrong.
-    // See note in bstr_to_utf8.
     var query_result = WideCharToMultiByte(CP_ACP, 0,
                                         data, -1,
                                         null, 0,
@@ -4277,70 +4273,6 @@ proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) 
 }
 
 
-// @@ This is the same as the uid() function above.
-// string_to_guid :: uid;
-// string_to_guid :: (s: string) -> GUID {
-//     assert(s.count == 36);
-
-//     nybble :: (x: u8) -> u8 {
-//         if (x >= #char "0") && (x <= #char "9") {
-//             return x - #char "0";
-//         }
-
-//         if (x >= #char "a") && (x <= #char "f") {
-//             return x - #char "a" + 10;
-//         }
-
-//         assert(false);
-//         return 0;
-//     }
-
-//     byte :: (s: string, n: i64) -> u8 {
-//         a := inline nybble(s[n]);
-//         b := inline nybble(s[n+1]);
-//         assert(a <= 15);
-//         assert(b <= 15);
-//         value := (a << 4) + b;
-//         return value;
-//     }
-
-//     g: GUID;
-//     b0 : u32 = byte(s, 0);
-//     b1 : u32 = byte(s, 2);
-//     b2 : u32 = byte(s, 4);
-//     b3 : u32 = byte(s, 6);
-//     assert(s[8] == #char "-");
-
-//     g.Data1 = (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
-
-//     b4 : u16 = byte(s, 9);
-//     b5 : u16 = byte(s, 11);
-//     assert(s[13] == #char "-");
-
-//     g.Data2 = (b4 << 8) | b5;
-
-//     b6 : u16 = byte(s, 14);
-//     b7 : u16 = byte(s, 16);
-//     assert(s[18] == #char "-");
-
-//     g.Data3 = (b6 << 8) | b7;
-
-
-//     g.Data4[0] = byte(s, 19);
-//     g.Data4[1] = byte(s, 21);
-//     assert(s[23] == #char "-");
-
-//     g.Data4[2] = byte(s, 24);
-//     g.Data4[3] = byte(s, 26);
-//     g.Data4[4] = byte(s, 28);
-//     g.Data4[5] = byte(s, 30);
-//     g.Data4[6] = byte(s, 32);
-//     g.Data4[7] = byte(s, 34);
-
-//     return g;
-// }
-
-
 const FILE_MAP_ALL_ACCESS = 0xf001f;
 const FILE_MAP_READ  = 4;
 const FILE_MAP_WRITE = 2;
@@ -4351,7 +4283,7 @@ const ERROR_FILE_NOT_FOUND = 2;
 const REG_NONE = 0;
 const REG_SZ   = 1;
 
-const MAX_PATH = 260;  // (Windows value). Wow, that seems low!
+const MAX_PATH = 260;
 
 // #foreign_import ntdll    "Ntdll";
 // #foreign_import kernel32 "kernel32";

@@ -319,18 +319,22 @@ char *c_temporary() {
     return sb.make_string();
 }
 
-void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *root_expr, Type_Procedure *proc_type, Array<Ast_Expr *> parameters, int indent_level, Array<char *> *out_temporaries) {
-    For (idx, proc_type->parameter_types) {
-        if (!is_type_varargs(proc_type->parameter_types[idx])) {
-            char *param = c_print_expr(sb, parameters[idx], indent_level, proc_type->parameter_types[idx]);
+void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *root_expr, Type_Procedure *proc_type, Array<Procedure_Call_Parameter> parameters, int indent_level, Array<char *> *out_temporaries) {
+    assert(parameters.count == proc_type->parameter_types.count);
+    For (idx, parameters) {
+        Procedure_Call_Parameter call_parameter = parameters[idx];
+        Type *target_type = proc_type->parameter_types[idx];
+        if (!is_type_varargs(target_type)) {
+            assert(call_parameter.exprs.count == 1);
+            char *param = c_print_expr(sb, call_parameter.exprs[0], indent_level, target_type);
             out_temporaries->append(param);
         }
         else {
-            Type_Varargs *varargs = (Type_Varargs *)proc_type->parameter_types[idx];
+            Type_Varargs *varargs = (Type_Varargs *)target_type;
             assert(idx == proc_type->parameter_types.count-1);
-            int varargs_count = root_expr->vararg_parameters.count;
-            if (varargs_count == 1 && (unparen_expr(root_expr->vararg_parameters[0])->expr_kind == EXPR_SPREAD)) {
-                Expr_Spread *spread = (Expr_Spread *)unparen_expr(root_expr->vararg_parameters[0]);
+            int varargs_count = call_parameter.exprs.count;
+            if (varargs_count == 1 && (unparen_expr(call_parameter.exprs[0])->expr_kind == EXPR_SPREAD)) {
+                Expr_Spread *spread = (Expr_Spread *)unparen_expr(call_parameter.exprs[0]);
                 char *spread_name = nullptr;
                 if (is_type_array(spread->rhs->operand.type)) {
                     Type_Array *array_type = (Type_Array *)spread->rhs->operand.type;
@@ -352,8 +356,8 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
                 print_indents(sb, indent_level);
                 c_print_type(sb, varargs->varargs_of, t);
                 sb->printf("[%d];\n", max(1, varargs_count));
-                For (idx, root_expr->vararg_parameters) {
-                    Ast_Expr *param = root_expr->vararg_parameters[idx];
+                For (idx, call_parameter.exprs) {
+                    Ast_Expr *param = call_parameter.exprs[idx];
                     char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
                     c_print_line_directive(sb, param->location);
                     print_indents(sb, indent_level);
@@ -401,7 +405,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
         assert(expr->desugared_procedure_to_call->header->name != nullptr);
         Array<char *> params;
         params.allocator = g_global_linear_allocator;
-        c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->desugared_procedure_parameters, indent_level, &params);
+        c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->processed_procedure_call_parameters, indent_level, &params);
         print_indents(sb, indent_level);
         if (expr->desugared_procedure_to_call->header->type->return_type) {
             t = c_temporary();
@@ -441,7 +445,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     sb->printf("%d", expr->operand.type_value->id);
                 }
                 else if (is_type_pointer(expr->operand.type)) {
-                    sb->printf("((void *)%d)", expr->operand.int_value);
+                    sb->printf("((");
+                    c_print_type(sb, expr->operand.type, "");
+                    sb->printf(")%d)", expr->operand.int_value);
                 }
                 else {
                     assert(false);
@@ -467,7 +473,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     tsb.printf("%d", expr->operand.type_value->id);
                 }
                 else if (is_type_pointer(expr->operand.type)) {
-                    tsb.printf("((void *)%d)", expr->operand.int_value);
+                    tsb.printf("((");
+                    c_print_type(&tsb, expr->operand.type, "");
+                    tsb.printf(")%d)", expr->operand.int_value);
                 }
                 else {
                     assert(false);
@@ -560,7 +568,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     char *procedure_name = c_print_expr(sb, call->lhs, indent_level);
                     Array<char *> params;
                     params.allocator = g_global_linear_allocator;
-                    c_print_procedure_call_parameters(sb, call, call->target_procedure_type, call->parameters_to_emit, indent_level, &params);
+                    c_print_procedure_call_parameters(sb, call, call->target_procedure_type, call->processed_procedure_call_parameters, indent_level, &params);
                     if (call->target_procedure_type->return_type) {
                         t = c_temporary();
                         print_indents(sb, indent_level);
@@ -1225,7 +1233,7 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     sb->print(" {\n");
     if (proc == g_main_proc) {
         print_indents(sb, 1);
-        sb->print("__init_sif_runtime();\n");
+        sb->print("    __init_sif_runtime();\n");
     }
     c_print_block(sb, proc->body, 1);
     sb->print("}\n");

@@ -1871,55 +1871,93 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
     assert(is_type_procedure(target_procedure_type));
     assert(!is_type_polymorphic(target_procedure_type));
 
+    bool proc_has_varargs = false;
+    if (target_procedure_type->parameter_types.count > 0 && is_type_varargs(target_procedure_type->parameter_types[target_procedure_type->parameter_types.count-1])) {
+        proc_has_varargs = true;
+    }
+
+    if (!proc_has_varargs) {
+        if (params_to_emit.count < target_procedure_type->parameter_types.count) {
+            report_error(expr->location, "Not enough parameters in procedure call. Expected %d, got %d.", target_procedure_type->parameter_types.count, params_to_emit.count);
+            return false;
+        }
+
+        if (params_to_emit.count > target_procedure_type->parameter_types.count) {
+            report_error(expr->location, "Too many parameters in procedure call. Expected %d, got %d.", target_procedure_type->parameter_types.count, params_to_emit.count);
+            return false;
+        }
+    }
+    else {
+        if (params_to_emit.count < (target_procedure_type->parameter_types.count-1)) {
+            report_error(expr->location, "Not enough parameters in procedure call. Expected at least %d, got %d.", target_procedure_type->parameter_types.count-1, params_to_emit.count);
+            return false;
+        }
+    }
+
     // typecheck parameters now that we have concrete types for the procedure parameters
-    Array<Ast_Expr *> vararg_parameters;
-    vararg_parameters.allocator = g_global_linear_allocator;
-    int param_index = 0;
-    int has_started_assigning_to_varargs = false;
-    for (int idx = 0; idx < target_procedure_type->parameter_types.count && param_index < params_to_emit.count; idx += 1) {
-        Type *target_type = target_procedure_type->parameter_types[idx];
-        Ast_Expr *parameter = params_to_emit[param_index];
-        bool parameter_is_spread = unparen_expr(parameter)->expr_kind == EXPR_SPREAD;
-        if (parameter_is_spread) {
-            if (has_started_assigning_to_varargs) {
-                report_error(parameter->location, "Cannot mix normal varargs with a spread operation.");
-                return false;
-            }
-        }
+    Array<Procedure_Call_Parameter> processed_procedure_call_parameters = {};
+    processed_procedure_call_parameters.allocator = g_global_linear_allocator;
+    int type_idx = 0;
+    int param_idx = 0;
+    for (; param_idx < params_to_emit.count; param_idx += 1) {
+        Type *target_type = target_procedure_type->parameter_types[type_idx];
         if (is_type_varargs(target_type)) {
-            Type_Varargs *varargs_type = (Type_Varargs *)target_type;
-            if (!parameter_is_spread) {
-                target_type = varargs_type->varargs_of;
-                idx -= 1; // sketch
-            }
-            vararg_parameters.append(parameter);
-            has_started_assigning_to_varargs = true;
+            assert(type_idx < target_procedure_type->parameter_types.count);
+            break;
         }
+        Ast_Expr *parameter = params_to_emit[param_idx];
         Operand *parameter_operand = typecheck_expr(parameter, target_type);
         if (!parameter_operand) {
             return false;
         }
-        param_index += 1;
+        Procedure_Call_Parameter call_parameter = {};
+        call_parameter.exprs.allocator = g_global_linear_allocator;
+        call_parameter.exprs.append(parameter);
+        processed_procedure_call_parameters.append(call_parameter);
+        type_idx += 1;
     }
 
-    expr->vararg_parameters = vararg_parameters;
-
-    if (param_index < params_to_emit.count) {
-        report_error(expr->location, "Too many parameters for procedure call.");
-        return false;
+    if (proc_has_varargs) {
+        assert(type_idx < target_procedure_type->parameter_types.count);
+        assert(is_type_varargs(target_procedure_type->parameter_types[type_idx]));
+        Type_Varargs *vararg_type = (Type_Varargs *)target_procedure_type->parameter_types[type_idx];
+        Procedure_Call_Parameter vararg_parameter = {};
+        vararg_parameter.exprs.allocator = g_global_linear_allocator;
+        for (; param_idx < params_to_emit.count; param_idx += 1) {
+            Ast_Expr *parameter = params_to_emit[param_idx];
+            Type *target_type = vararg_type->varargs_of;
+            bool parameter_is_spread = unparen_expr(parameter)->expr_kind == EXPR_SPREAD;
+            if (parameter_is_spread) {
+                if (vararg_parameter.exprs.count > 0) {
+                    report_error(parameter->location, "Cannot mix normal varargs with a spread operation.");
+                    return false;
+                }
+                target_type = vararg_type;
+            }
+            Operand *parameter_operand = typecheck_expr(parameter, target_type);
+            if (!parameter_operand) {
+                return false;
+            }
+            vararg_parameter.exprs.append(parameter);
+        }
+        processed_procedure_call_parameters.append(vararg_parameter);
+        type_idx += 1;
     }
+
+    assert(type_idx == target_procedure_type->parameter_types.count);
+    assert(param_idx == params_to_emit.count);
+    assert(processed_procedure_call_parameters.count == target_procedure_type->parameter_types.count);
 
     if (procedure_operand.referenced_declaration != nullptr) {
         if (procedure_operand.referenced_declaration->kind == DECL_PROC) { // check that it's not a function pointer
             Ast_Proc *referenced_procedure = ((Proc_Declaration *)procedure_operand.referenced_declaration)->header->procedure;
             expr->desugared_procedure_to_call = referenced_procedure;
-            expr->desugared_procedure_parameters = params_to_emit;
         }
     }
+    expr->processed_procedure_call_parameters = processed_procedure_call_parameters;
 
     if (expr->expr_kind == EXPR_PROCEDURE_CALL) {
         Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-        call->parameters_to_emit = params_to_emit;
         call->target_procedure_type = target_procedure_type;
     }
 

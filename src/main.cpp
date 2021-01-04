@@ -18,6 +18,8 @@
 TODO:
 
 SMALL
+-const eval bug? 1 << 2 + 1 prints 1
+-cstring type
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
 -unknown directives don't stop compilation
@@ -25,8 +27,6 @@ SMALL
 -intern identifiers and remove strcmps
 -add allocators to demo
 -underscores in numbers
--crash when you don't pass enough parameters?
--cstring type
 -prevent identifiers from being C keywords in the backend, like `signed`
 
 MEDIUM
