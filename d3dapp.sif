@@ -1,0 +1,196 @@
+proc init_graphics_driver(window: ^Window) {
+    // dx_texture_format_mapping[TF_R8_UINT]            = DXGI_FORMAT_R8_UNORM;
+    // dx_texture_format_mapping[TF_R16_FLOAT]          = DXGI_FORMAT_R16_FLOAT;
+    // dx_texture_format_mapping[TF_R32_INT]            = DXGI_FORMAT_R32_SINT;
+    // dx_texture_format_mapping[TF_R32_FLOAT]          = DXGI_FORMAT_R32_FLOAT;
+    // dx_texture_format_mapping[TF_R16G16_FLOAT]       = DXGI_FORMAT_R16G16_FLOAT;
+    // dx_texture_format_mapping[TF_R16G16B16A16_FLOAT] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    // dx_texture_format_mapping[TF_R32G32B32A32_FLOAT] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    // dx_texture_format_mapping[TF_R8G8B8A8_UINT]      = DXGI_FORMAT_R8G8B8A8_UNORM;
+    // dx_texture_format_mapping[TF_R8G8B8A8_UINT_SRGB] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    // dx_texture_format_mapping[TF_DEPTH_STENCIL]      = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+    // // make sure all texture formats have a mapping
+    // for (int i = 0; i < ARRAYSIZE(dx_texture_format_mapping); i++) {
+    //     if (dx_texture_format_mapping[i] == 0) {
+    //         if ((Texture_Format)i != TF_INVALID && (Texture_Format)i != TF_COUNT) {
+    //             printf("Missing dx texture format mapping for %d\n", i);
+    //             ASSERT(false);
+    //         }
+    //     }
+    // }
+
+    // Create swap chain
+    var swap_chain_desc: DXGI_SWAP_CHAIN_DESC;
+    swap_chain_desc.BufferCount                        = 2;
+    swap_chain_desc.SwapEffect                         = DXGI_SWAP_EFFECT_FLIP_DISCARD; // todo(josh): use DXGI_SWAP_EFFECT_DISCARD (or something else) on non-Windows 10
+    swap_chain_desc.BufferDesc.Width                   = cast(u32, window.width);
+    swap_chain_desc.BufferDesc.Height                  = cast(u32, window.height);
+    swap_chain_desc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swap_chain_desc.BufferDesc.RefreshRate.Numerator   = 60; // todo(josh): query monitor refresh rate.
+    swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
+    swap_chain_desc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swap_chain_desc.OutputWindow                       = window.handle;
+    swap_chain_desc.SampleDesc.Count                   = 1;
+    swap_chain_desc.SampleDesc.Quality                 = 0;
+    swap_chain_desc.Windowed                           = BOOL.TRUE;
+
+    // directx.swap_chain_width  = window->width;
+    // directx.swap_chain_height = window->height;
+
+    var swap_chain_handle: ^IDXGISwapChain;
+    var device: ^ID3D11Device;
+    var device_context: ^ID3D11DeviceContext;
+
+
+    var requested_feature_level: D3D_FEATURE_LEVEL = D3D_FEATURE_LEVEL_11_0;
+    var actual_feature_level: D3D_FEATURE_LEVEL;
+    var result = D3D11CreateDeviceAndSwapChain(
+        null,
+        D3D_DRIVER_TYPE_HARDWARE,
+        null,
+        D3D11_CREATE_DEVICE_DEBUG,
+        &requested_feature_level,
+        1,
+        D3D11_SDK_VERSION, // jake pls
+        &swap_chain_desc,
+        &swap_chain_handle,
+        &device,
+        &actual_feature_level,
+        &device_context);
+
+    // todo(josh): if the hardware device fails, try making a WARP device
+    assert(result == S_OK);
+    print("Wow, made a swap chain.");
+    return;
+
+    // Texture_Description depth_texture_desc = {};
+    // depth_texture_desc.type = TT_2D;
+    // depth_texture_desc.format = TF_DEPTH_STENCIL;
+    // depth_texture_desc.wrap_mode = TWM_POINT_CLAMP;
+    // depth_texture_desc.width = window->width;
+    // depth_texture_desc.height = window->height;
+    // depth_texture_desc.render_target = true;
+    // directx.swap_chain_depth_buffer = create_texture(depth_texture_desc);
+
+    // // Make no cull rasterizer
+    // D3D11_RASTERIZER_DESC no_cull_rasterizer_desc = {};
+    // no_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+    // no_cull_rasterizer_desc.CullMode = D3D11_CULL_NONE;
+    // no_cull_rasterizer_desc.DepthClipEnable = false;
+    // no_cull_rasterizer_desc.MultisampleEnable = true; // todo(josh): can I just have multisample enabled on all rasterizers?
+    // result = directx.device->CreateRasterizerState(&no_cull_rasterizer_desc, &directx.no_cull_rasterizer);
+    // ASSERT(result == S_OK);
+
+    // // Make backface cull rasterizer
+    // D3D11_RASTERIZER_DESC backface_cull_rasterizer_desc = {};
+    // backface_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+    // backface_cull_rasterizer_desc.CullMode = D3D11_CULL_BACK;
+    // backface_cull_rasterizer_desc.DepthClipEnable = true;
+    // backface_cull_rasterizer_desc.MultisampleEnable = true; // todo(josh): can I just have multisample enabled on all rasterizers?
+    // result = directx.device->CreateRasterizerState(&backface_cull_rasterizer_desc, &directx.backface_cull_rasterizer);
+    // ASSERT(result == S_OK);
+
+    // // Make frontface cull rasterizer
+    // D3D11_RASTERIZER_DESC frontface_cull_rasterizer_desc = {};
+    // frontface_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+    // frontface_cull_rasterizer_desc.CullMode = D3D11_CULL_FRONT;
+    // frontface_cull_rasterizer_desc.DepthClipEnable = true;
+    // frontface_cull_rasterizer_desc.MultisampleEnable = true; // todo(josh): can I just have multisample enabled on all rasterizers?
+    // result = directx.device->CreateRasterizerState(&frontface_cull_rasterizer_desc, &directx.frontface_cull_rasterizer);
+    // ASSERT(result == S_OK);
+
+    // // Depth test state
+    // D3D11_DEPTH_STENCIL_DESC depth_test_stencil_desc = {};
+    // depth_test_stencil_desc.DepthEnable                  = true;
+    // depth_test_stencil_desc.DepthWriteMask               = D3D11_DEPTH_WRITE_MASK_ALL;
+    // depth_test_stencil_desc.DepthFunc                    = D3D11_COMPARISON_LESS_EQUAL;
+    // depth_test_stencil_desc.StencilEnable                = true;
+    // depth_test_stencil_desc.StencilReadMask              = 0xff;
+    // depth_test_stencil_desc.StencilWriteMask             = 0xff;
+    // depth_test_stencil_desc.FrontFace.StencilFunc        = D3D11_COMPARISON_ALWAYS;
+    // depth_test_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+    // depth_test_stencil_desc.FrontFace.StencilPassOp      = D3D11_STENCIL_OP_KEEP;
+    // depth_test_stencil_desc.FrontFace.StencilFailOp      = D3D11_STENCIL_OP_KEEP;
+    // depth_test_stencil_desc.BackFace.StencilFunc         = D3D11_COMPARISON_ALWAYS;
+    // depth_test_stencil_desc.BackFace.StencilDepthFailOp  = D3D11_STENCIL_OP_KEEP;
+    // depth_test_stencil_desc.BackFace.StencilPassOp       = D3D11_STENCIL_OP_KEEP;
+    // depth_test_stencil_desc.BackFace.StencilFailOp       = D3D11_STENCIL_OP_KEEP;
+    // result = directx.device->CreateDepthStencilState(&depth_test_stencil_desc, &directx.depth_test_state);
+    // ASSERT(result == S_OK);
+
+    // // No depth test state
+    // // todo(josh): should we disable stencil here?
+    // D3D11_DEPTH_STENCIL_DESC no_depth_test_stencil_desc = depth_test_stencil_desc;
+    // no_depth_test_stencil_desc.DepthEnable = false;
+    // no_depth_test_stencil_desc.DepthFunc   = D3D11_COMPARISON_ALWAYS;
+    // result = directx.device->CreateDepthStencilState(&no_depth_test_stencil_desc, &directx.no_depth_test_state);
+    // ASSERT(result == S_OK);
+
+    // // linear wrap sampler
+    // D3D11_SAMPLER_DESC linear_wrap_sampler_desc = {};
+    // linear_wrap_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    // linear_wrap_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    // linear_wrap_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    // linear_wrap_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    // linear_wrap_sampler_desc.MinLOD = -FLT_MAX;
+    // linear_wrap_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx.device->CreateSamplerState(&linear_wrap_sampler_desc, &directx.linear_wrap_sampler);
+    // ASSERT(result == S_OK);
+
+    // // linear clamp sampler
+    // D3D11_SAMPLER_DESC linear_clamp_sampler_desc = {};
+    // linear_clamp_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    // linear_clamp_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // linear_clamp_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // linear_clamp_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // linear_clamp_sampler_desc.MinLOD = -FLT_MAX;
+    // linear_clamp_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx.device->CreateSamplerState(&linear_clamp_sampler_desc, &directx.linear_clamp_sampler);
+    // ASSERT(result == S_OK);
+
+    // // point wrap sampler
+    // D3D11_SAMPLER_DESC point_wrap_sampler_desc = {};
+    // point_wrap_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    // point_wrap_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    // point_wrap_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    // point_wrap_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    // point_wrap_sampler_desc.MinLOD = -FLT_MAX;
+    // point_wrap_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx.device->CreateSamplerState(&point_wrap_sampler_desc, &directx.point_wrap_sampler);
+    // ASSERT(result == S_OK);
+
+    // // point clamp sampler
+    // D3D11_SAMPLER_DESC point_clamp_sampler_desc = {};
+    // point_clamp_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    // point_clamp_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // point_clamp_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // point_clamp_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    // point_clamp_sampler_desc.MinLOD = -FLT_MAX;
+    // point_clamp_sampler_desc.MaxLOD = FLT_MAX;
+    // result = directx.device->CreateSamplerState(&point_clamp_sampler_desc, &directx.point_clamp_sampler);
+    // ASSERT(result == S_OK);
+
+    // // alpha blend state
+    // D3D11_BLEND_DESC alpha_blend_desc = {};
+    // alpha_blend_desc.RenderTarget[0].BlendEnable    = true;
+    // alpha_blend_desc.RenderTarget[0].SrcBlend       = D3D11_BLEND_SRC_ALPHA;
+    // alpha_blend_desc.RenderTarget[0].DestBlend      = D3D11_BLEND_INV_SRC_ALPHA;
+    // alpha_blend_desc.RenderTarget[0].BlendOp        = D3D11_BLEND_OP_ADD;
+    // alpha_blend_desc.RenderTarget[0].SrcBlendAlpha  = D3D11_BLEND_SRC_ALPHA;
+    // alpha_blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+    // alpha_blend_desc.RenderTarget[0].BlendOpAlpha   = D3D11_BLEND_OP_ADD;
+    // alpha_blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    // result = directx.device->CreateBlendState(&alpha_blend_desc, &directx.alpha_blend_state);
+    // ASSERT(result == S_OK);
+
+    // // no alpha blend state
+    // D3D11_BLEND_DESC no_blend_desc = {};
+    // no_blend_desc.RenderTarget[0].BlendEnable    = false;
+    // no_blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    // result = directx.device->CreateBlendState(&no_blend_desc, &directx.no_alpha_blend_state);
+    // ASSERT(result == S_OK);
+
+    // // init_dear_imgui(window, directx.device, directx.device_context);
+    // init_dear_imgui();
+}
