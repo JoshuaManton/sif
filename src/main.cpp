@@ -264,8 +264,8 @@ void main(int argc, char **argv) {
         printf("  Sif time: %fms\n", (c_compile_start_time - application_start_time));
         printf("Total time: %fms\n", (compilation_end_time - application_start_time));
         printf("\n");
-        printf(" Total lines: %d\n", total_lexed_lines);
-        printf("Sif ines/sec: %f\n", ((float)total_lexed_lines) / ((c_compile_start_time - application_start_time) / 1000));
+        printf("  Total lines: %d\n", total_lexed_lines);
+        printf("Sif lines/sec: %f\n", ((float)total_lexed_lines) / ((c_compile_start_time - application_start_time) / 1000));
     }
 
     if (is_run) {
