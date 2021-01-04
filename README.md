@@ -16,14 +16,14 @@ proc main() : i32 {
 
 - The basic stuff: variables, procedures, structs, ints, floats, bool, pointers, arrays, etc
 - Length-delimited strings, not null-terminated
+- Order-independent declarations
 - Operator overloading
 - Procedural and structural polymorphism
-- Order-independent declarations
+- Runtime type information
 - `any` type (see demo below)
 
 ## Features Planned
 
-- Runtime type information
 - Tagged unions
 - defer statement
 - `using` statement for namespace inclusion
@@ -71,6 +71,7 @@ proc main() : i32 {
     operator_overloading();
     procedural_polymorphism();
     structural_polymorphism();
+    runtime_type_information();
     any_type();
     function_pointers();
     dynamic_arrays();
@@ -277,6 +278,76 @@ proc references() {
 
 
 
+proc runtime_type_information() {
+    print("\n\n---- runtime_type_information ----\n");
+
+    // Every type in your program gets it's own Type_Info struct that holds
+    // information about that type, depending on the kind of type it is. If
+    // it's a struct it has information about all the fields, if it is an
+    // array it has the count and type that it is an array of, etc.
+    // you can view all of the Type_Info structs in core/runtime.sif.
+
+
+
+    // Using get_type_info() you can get information about a type.
+    // The thing returned from get_type_info() is a ^Type_Info, which contains
+    // a field `kind` indicating what _kind_ of type it is, such as INTEGER,
+    // FLOAT, STRUCT, PROCEDURE, etc. Type_Info just contains the data relevant
+    // to all types, such as size and alignment. To get more detailed information
+    // about a type, check the `kind` field and cast the ^Type_Info to the appropriate
+    // derived type:
+    // ^Type_Info_Integer if `kind` is INTEGER
+    // ^Type_Info_Struct if `kind` is STRUCT
+    // ^Type_Info_Procedure if `kind` is PROCEDURE
+    // etc.
+    // Again, you can view all of the Type_Info structs in core/runtime.sif.
+
+    // Type_Info_Integer just has a bool indicating whether it's signed or unsigned
+    var int_type_info: ^Type_Info = get_type_info(int);
+    assert(int_type_info.kind == Type_Info_Kind.INTEGER);
+    var int_type_info_kind = cast(^Type_Info_Integer, int_type_info);
+    assert(int_type_info_kind.is_signed == true);
+
+    var uint_type_info: ^Type_Info = get_type_info(uint);
+    assert(uint_type_info.kind == Type_Info_Kind.INTEGER);
+    var uint_type_info_kind = cast(^Type_Info_Integer, uint_type_info);
+    assert(uint_type_info_kind.is_signed == false);
+
+
+
+    // Type_Info_Struct is a lot more interesting. It contains a list of all the fields,
+    // and their types, and their byte offsets
+    var my_cool_struct_ti = get_type_info(My_Cool_Struct);
+    assert(my_cool_struct_ti.kind == Type_Info_Kind.STRUCT);
+    var my_cool_struct_ti_kind = cast(^Type_Info_Struct, my_cool_struct_ti);
+    print("My_Cool_Struct\n");
+    for (var i = 0; i < my_cool_struct_ti_kind.fields.count; i += 1) {
+        var field = my_cool_struct_ti_kind.fields[i];
+        print("  field: %, type: %, offset: %\n",
+            field.name, field.type.printable_name, field.offset);
+    }
+
+
+
+    // using runtime type information, the print() function can print whole
+    // structs intelligently. you can view the implementation of print()
+    // in core/basic.sif
+    print("%\n", int_type_info_kind^);
+    // prints: Type_Info_Integer{base = Type_Info{printable_name = "i64",
+    //         kind = Type_Info_Kind.INTEGER, id = i64, size = 8, align = 8},
+    //         is_signed = true}
+}
+struct My_Cool_Struct {
+    var foo: int;
+    var bar: string;
+    var nested: Nested_Struct;
+}
+struct Nested_Struct {
+    var more_things: [4]Vector3;
+}
+
+
+
 struct Vector3 {
     var x: float;
     var y: float;
@@ -427,6 +498,9 @@ proc print_things(args: ..any) {
         else if (arg.type == float) {
             print("%\n", cast(^float, arg.data)^);
         }
+        else {
+            print("<unknown type>\n");
+        }
     }
 }
 
@@ -458,13 +532,12 @@ struct Dynamic_Array!($T: typeid) {
 
 proc append(dyn: ^Dynamic_Array!($T), value: T) {
     if (dyn.count == dyn.array.count) {
-        var old_data = dyn.array.data;
+        var old_data = dyn.array;
         var new_cap = 8 + dyn.array.count * 2;
-        dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
-        dyn.array.count = new_cap;
-        if (old_data != null) {
-            memcpy(dyn.array.data, old_data, cast(u64, dyn.count * sizeof(T)));
-            free(old_data);
+        dyn.array = new_slice(T, new_cap, default_allocator());
+        if (old_data.data != null) {
+            copy_slice(dyn.array, old_data);
+            delete_slice(old_data, default_allocator());
         }
     }
     assert(dyn.count < dyn.array.count);
@@ -500,10 +573,10 @@ proc dynamic_arrays() {
     assert(dyn[1].y == 4);
     assert(dyn[1].z == 9);
     for (var i = 0; i < dyn.count; i += 1) {
-        print("%\n", i);
-        print("%\n", dyn[i].x);
-        print("%\n", dyn[i].y);
-        print("%\n", dyn[i].z);
+        print("index %\n", i);
+        print("  %\n", dyn[i].x);
+        print("  %\n", dyn[i].y);
+        print("  %\n", dyn[i].z);
     }
     destroy_dynamic_array(dyn);
 }
