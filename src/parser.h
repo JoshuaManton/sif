@@ -106,7 +106,7 @@ struct Ast_Node {
     , parent_block(current_block)
     , location(location)
     {
-        polymorphs.allocator = default_allocator();
+        polymorphs.allocator = g_global_linear_allocator;
     }
 };
 
@@ -121,8 +121,8 @@ struct Ast_Block : public Ast_Node {
     Ast_Block(Location location)
     : Ast_Node(AST_BLOCK, location)
     {
-        nodes.allocator = default_allocator();
-        declarations.allocator = default_allocator();
+        nodes.allocator = g_global_linear_allocator;
+        declarations.allocator = g_global_linear_allocator;
     }
 };
 
@@ -152,7 +152,7 @@ struct Ast_Proc_Header : public Ast_Node {
     , is_polymorphic(polymorphic_parameter_indices.count > 0)
     , polymorphic_parameter_indices(polymorphic_parameter_indices)
     {
-        parameters.allocator = default_allocator();
+        parameters.allocator = g_global_linear_allocator;
     }
 };
 
@@ -256,9 +256,9 @@ struct Ast_Struct : public Ast_Node {
     : Ast_Node(AST_STRUCT, location)
     , is_union(is_union)
     {
-        fields.allocator = default_allocator();
-        operator_overloads.allocator = default_allocator();
-        polymorphic_parameters.allocator = default_allocator();
+        fields.allocator = g_global_linear_allocator;
+        operator_overloads.allocator = g_global_linear_allocator;
+        polymorphic_parameters.allocator = g_global_linear_allocator;
     }
 };
 

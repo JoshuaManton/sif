@@ -252,20 +252,28 @@ void main(int argc, char **argv) {
     double compilation_end_time = query_timer(&timer);
 
     if (show_timings) {
+        float setup_time   = parsing_start_time   - application_start_time;
+        float parse_time   = checking_start_time  - parsing_start_time;
+        float check_time   = codegen_start_time   - checking_start_time;
+        float codegen_time = c_compile_start_time - codegen_start_time;
+        float cl_time      = compilation_end_time - c_compile_start_time;
+        float sif_time     = c_compile_start_time - application_start_time;
+        float total_time   = compilation_end_time - application_start_time;
+
         printf("-----------------------------\n");
         printf("|    sif compile timings    |\n");
         printf("-----------------------------\n");
-        printf("  Setup time: %fms\n", (parsing_start_time   - application_start_time));
-        printf("  Parse time: %fms\n", (checking_start_time  - parsing_start_time));
-        printf("  Check time: %fms\n", (codegen_start_time   - checking_start_time));
-        printf("Codegen time: %fms\n", (c_compile_start_time - codegen_start_time));
-        printf(" cl.exe time: %fms\n", (compilation_end_time - c_compile_start_time));
+        printf("  Setup time: %.3fms (%.2f%%)\n", setup_time,   (setup_time   / total_time * 100));
+        printf("  Parse time: %.3fms (%.2f%%)\n", parse_time,   (parse_time   / total_time * 100));
+        printf("  Check time: %.3fms (%.2f%%)\n", check_time,   (check_time   / total_time * 100));
+        printf("Codegen time: %.3fms (%.2f%%)\n", codegen_time, (codegen_time / total_time * 100));
+        printf(" cl.exe time: %.3fms (%.2f%%)\n", cl_time,      (cl_time      / total_time * 100));
         printf("\n");
-        printf("  Sif time: %fms\n", (c_compile_start_time - application_start_time));
-        printf("Total time: %fms\n", (compilation_end_time - application_start_time));
+        printf("  Sif time: %fms\n", sif_time);
+        printf("Total time: %fms\n", total_time);
         printf("\n");
         printf("  Total lines: %d\n", total_lexed_lines);
-        printf("Sif lines/sec: %f\n", ((float)total_lexed_lines) / ((c_compile_start_time - application_start_time) / 1000));
+        printf("Sif lines/sec: %.0f\n", ((float)total_lexed_lines) / (sif_time / 1000));
     }
 
     if (is_run) {

@@ -407,6 +407,7 @@ Chunked_String_Builder make_chunked_string_builder(Allocator allocator, int chun
 }
 
 Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_for_length(int length) {
+    // todo(josh): should we double the chunk size when allocating new chunks?
     Chunked_String_Builder_Chunk *current_chunk = nullptr;
     assert(max_chunk_size > 0);
     if (chunks.count == 0) {

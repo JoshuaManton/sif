@@ -67,7 +67,7 @@ struct Type {
     Type(Type_Kind kind)
     : kind(kind)
     {
-        fields.allocator = default_allocator();
+        fields.allocator = g_global_linear_allocator;
     }
 };
 
@@ -93,7 +93,7 @@ struct Type_Struct : public Type {
     , name(structure->name)
     , ast_struct(structure)
     {
-        polymorphic_parameter_values.allocator = default_allocator();
+        polymorphic_parameter_values.allocator = g_global_linear_allocator;
     }
 };
 
