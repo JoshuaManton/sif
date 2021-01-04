@@ -269,24 +269,24 @@ proc ptr_offset(ptr: ^$T, offset_in_bytes: int) : ^T {
 const DEFAULT_ALIGNMENT = sizeof(rawptr)*2;
 
 proc new($T: typeid, allocator: Allocator) : ^T {
-    var ptr = cast(^T, sif_alloc(allocator, sizeof(T), DEFAULT_ALIGNMENT));
+    var ptr = cast(^T, sif_alloc(sizeof(T), DEFAULT_ALIGNMENT, allocator));
     zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T)));
     return ptr;
 }
 
 proc delete(ptr: ^$T, allocator: Allocator) {
-    sif_free(allocator, ptr);
+    sif_free(ptr, allocator);
 }
 
 proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
-    var ptr = cast(^T, sif_alloc(allocator, sizeof(T) * count, DEFAULT_ALIGNMENT));
+    var ptr = cast(^T, sif_alloc(sizeof(T) * count, DEFAULT_ALIGNMENT, allocator));
     var slice = slice_ptr(ptr, count);
     zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T) * count));
     return slice;
 }
 
 proc delete_slice(slice: []$T, allocator: Allocator) {
-    sif_free(allocator, slice.data);
+    sif_free(slice.data, allocator);
 }
 
 proc copy_slice(dst: []$T, src: []T) {

@@ -1,4 +1,5 @@
-
+#include "core:basic.sif"
+#include "core:dynamic_array.sif"
 
 proc buffer_allocate(buffer: []byte, offset: ^int, size: int, alignment: int, panic_on_oom: bool) : rawptr {
     // Don't allow allocations of zero size. This would likely return a
@@ -48,7 +49,7 @@ proc arena_free(allocator: rawptr, ptr: rawptr) {
     // note(josh): freeing from arenas does nothing.
 }
 
-proc arena_clear(arena: ^Arena_Allocator) {
+proc arena_reset(arena: ^Arena_Allocator) {
     arena.cur_offset = 0;
 }
 
@@ -58,4 +59,90 @@ proc arena_to_allocator(arena: ^Arena_Allocator) : Allocator {
     a.alloc_proc = arena_alloc;
     a.free_proc = arena_free;
     return a;
+}
+
+
+
+struct Dynamic_Arena {
+    var arenas: Dynamic_Array!(Arena_Allocator);
+    var chunk_size: int;
+    var growth_rate: float;
+    var current_arena_index: int;
+    var backing_allocator: Allocator;
+    var leaked_allocations: Dynamic_Array!(rawptr); // if an allocation is bigger than the chunk size, we fall back to the backing allocator and save it here to be freed in destroy_dynamic_arena()
+}
+
+proc init_dynamic_arena(dynamic_arena: ^Dynamic_Arena, chunk_size: int, backing_allocator: Allocator) {
+    dynamic_arena.backing_allocator = backing_allocator;
+    dynamic_arena.arenas.allocator = dynamic_arena.backing_allocator;
+    dynamic_arena.leaked_allocations.allocator = dynamic_arena.backing_allocator;
+    dynamic_arena.chunk_size = chunk_size;
+    dynamic_arena.growth_rate = 2;
+
+    var arena: Arena_Allocator;
+    init_arena(&arena, new_slice(byte, chunk_size, dynamic_arena.backing_allocator), false);
+    append(&dynamic_arena.arenas, arena);
+}
+
+proc dynamic_arena_alloc(allocator: rawptr, size: int, align: int) : rawptr {
+    var dyn = cast(^Dynamic_Arena, allocator);
+    assert(dyn != null);
+    var current_arena = &dyn.arenas[dyn.current_arena_index];
+    var ptr = arena_alloc(current_arena, size, align);
+
+    if (ptr == null) {
+        // we've reached the end of the arena
+        if (dyn.current_arena_index+1 >= dyn.arenas.count) {
+            // make a new arena
+            current_arena = append_empty(&dyn.arenas);
+            dyn.chunk_size = cast(int, cast(float, dyn.chunk_size) * dyn.growth_rate);
+            init_arena(current_arena, new_slice(byte, dyn.chunk_size, dyn.backing_allocator), false);
+        }
+        else {
+            // use the next one in the list
+            current_arena = &dyn.arenas[dyn.current_arena_index+1];
+        }
+        dyn.current_arena_index += 1;
+
+        // retry the allocation
+        ptr = arena_alloc(current_arena, size, align);
+        if (ptr == null) {
+            // if it STILL failed then that means that the allocation is too big for our chunk size. fallback to the backing allocator
+            ptr = sif_alloc(size, align, dyn.backing_allocator);
+            assert(ptr != null);
+            append(&dyn.leaked_allocations, ptr);
+        }
+    }
+    assert(ptr != null);
+    return ptr;
+}
+
+proc dynamic_arena_free(allocator: rawptr, ptr: rawptr) {
+    // do nothing
+}
+
+proc dynamic_arena_reset(dynamic_arena: ^Dynamic_Arena) {
+    for (var idx = 0; idx < dynamic_arena.arenas.count; idx += 1) {
+        arena_reset(&dynamic_arena.arenas[idx]);
+    }
+    dynamic_arena.current_arena_index = 0;
+}
+
+proc dynamic_arena_to_allocator(dynamic_arena: ^Dynamic_Arena) : Allocator {
+    var a: Allocator;
+    a.data = dynamic_arena;
+    a.alloc_proc = dynamic_arena_alloc;
+    a.free_proc = dynamic_arena_free;
+    return a;
+}
+
+proc destroy_dynamic_arena(dynamic_arena: Dynamic_Arena) {
+    for (var idx = 0; idx < dynamic_arena.arenas.count; idx += 1) {
+        delete_slice(dynamic_arena.arenas[idx].memory, dynamic_arena.backing_allocator);
+    }
+    destroy_dynamic_array(dynamic_arena.arenas);
+    for (var idx = 0; idx < dynamic_arena.leaked_allocations.count; idx += 1) {
+        sif_free(dynamic_arena.leaked_allocations[idx], dynamic_arena.backing_allocator);
+    }
+    destroy_dynamic_array(dynamic_arena.leaked_allocations);
 }

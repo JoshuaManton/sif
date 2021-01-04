@@ -1,6 +1,7 @@
 #include "core:basic.sif"
 #include "core:windows.sif"
 #include "core:math.sif"
+#include "core:allocators.sif"
 
 proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
     if (my_str.data == null) {
@@ -13,7 +14,7 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
     }
 
     var name = "";
-    var name_u16s = cast(^u16, sif_alloc(allocator, cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT)); // 2 extra bytes for zero termination WCHAR.
+    var name_u16s = cast(^u16, sif_alloc(cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT, allocator)); // 2 extra bytes for zero termination WCHAR.
     var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), name_u16s, query_num_chars);
 
     if (result_num_chars > 0) {
@@ -31,39 +32,48 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
 
 var window_should_close: bool;
 
-struct Foozle {
-    var wow: int;
-    var holy: string;
-    var arrayyy: [4]^Foozle;
-    var uuu: union {
-        var i: int;
-        var f: f32;
-    };
-}
-
-enum Thingy {
-    FOO;
-    BAR;
-}
-
 proc main() : i32 {
-    var foo: Foozle;
-    var foo_ref: >Foozle = foo;
-    var arr: [2]int;
-    arr[0] = 5;
-    arr[1] = 6;
-    var slice = slice_ptr(&arr[0], 2);
-    printa(Thingy.FOO, &foo, cast(^Foozle, null), foo_ref, ([4]int){1, 2, 3, 4}, slice, Vector3{1, 4, 9}, create_window);
-
-    var foozle_ti = get_type_info(Foozle);
-    assert(foozle_ti.kind == Type_Info_Kind.STRUCT);
-    var struct_ti = cast(^Type_Info_Struct, foozle_ti);
-    for (var i = 0; i < struct_ti.fields.count; i += 1) {
-        var field = struct_ti.fields[i];
-        print("field: %: %\n", field.name, field.type.printable_name);
-    }
-
-    return 0;
+    var dynamic_arena: Dynamic_Arena;
+    init_dynamic_arena(&dynamic_arena, 16, default_allocator());
+    var da_allocator = dynamic_arena_to_allocator(&dynamic_arena);
+    var ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
+    ptr = new(int, da_allocator);
 
     var window = create_window("My Cool Window", 1920, 1080);
 

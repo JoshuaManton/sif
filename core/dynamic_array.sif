@@ -1,25 +1,36 @@
+#include "core:basic.sif"
+
 struct Dynamic_Array!($T: typeid) {
     var array: []T;
     var count: int;
+    var allocator: Allocator;
     operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
         return dyn.array[index];
     }
 }
 
-proc append(dyn: ^Dynamic_Array!($T), value: T) {
+proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
+    assert(dyn.allocator.alloc_proc != null);
     if (dyn.count == dyn.array.count) {
         var old_data = dyn.array.data;
         var new_cap = 8 + dyn.array.count * 2;
-        dyn.array.data = cast(^T, alloc(new_cap * sizeof(T)));
+        dyn.array.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
         dyn.array.count = new_cap;
         if (old_data != null) {
-            memcpy(dyn.array.data, old_data, cast(u32, dyn.count * sizeof(T)));
-            free(old_data);
+            memcpy(dyn.array.data, old_data, cast(u64, dyn.count * sizeof(T)));
+            sif_free(old_data, dyn.allocator);
         }
     }
     assert(dyn.count < dyn.array.count);
     dyn.array[dyn.count] = value;
+    var ptr = &dyn.array[dyn.count];
     dyn.count += 1;
+    return ptr;
+}
+
+proc append_empty(dyn: ^Dynamic_Array!($T)) : ^T {
+    var t: T;
+    return append(dyn, t);
 }
 
 proc pop(dyn: ^Dynamic_Array!($T)) : T {
@@ -53,6 +64,6 @@ proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
 
 proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
     if (dyn.array.data != null) {
-        free(dyn.array.data);
+        sif_free(dyn.array.data, dyn.allocator);
     }
 }
