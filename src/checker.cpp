@@ -39,9 +39,10 @@ Type *type_any;
 
 Array<Declaration *> ordered_declarations;
 
+Ast_Proc *g_main_proc;
+
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
-char *type_to_string(Type *type);
 bool complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type, bool do_report_error = true);
@@ -298,6 +299,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             enum_type->size = enum_base_type->size;
             enum_type->align = enum_base_type->align;
             enum_type->base_type = enum_base_type;
+            all_types.append(enum_type); enum_type->id = all_types.count;
             enum_decl->ast_enum->type = enum_type;
 
             assert(!g_silence_errors);
@@ -447,6 +449,12 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
             assert(proc_decl->header->type != nullptr);
             decl_operand = proc_decl->header->operand;
+
+            if (strcmp(proc_decl->name, "main") == 0) {
+                assert(g_main_proc == nullptr);
+                assert(proc_decl->header->procedure != nullptr); // todo(josh): @ErrorMessage
+                g_main_proc = proc_decl->header->procedure;
+            }
             break;
         }
         case DECL_CONSTANT_VALUE: {
@@ -528,6 +536,9 @@ bool typecheck_global_scope(Ast_Block *block) {
             char *note = decl->notes[note_idx];
             if (strcmp(note, "sif_runtime") == 0) {
                 assert(check_declaration(decl, decl->location));
+                if (decl->kind == DECL_STRUCT) {
+                    assert(complete_type(((Struct_Declaration *)decl)->structure->type));
+                }
                 break;
             }
         }
@@ -557,6 +568,21 @@ bool typecheck_global_scope(Ast_Block *block) {
         if (!complete_type(type)) {
             return false;
         }
+    }
+
+    // check the entrypoint
+    if (g_main_proc == nullptr) {
+        report_error({}, "main() must be defined.");
+        return false;
+    }
+    if (g_main_proc->header->type->return_type != type_i32) {
+        // todo(josh): we can handle this implicitly in the backend
+        report_error(g_main_proc->location, "main() must return i32.");
+        return false;
+    }
+    if (g_main_proc->header->type->parameter_types.count != 0) {
+        report_error(g_main_proc->location, "main() cannot have parameters.");
+        return false;
     }
     return true;
 }
@@ -729,7 +755,7 @@ bool complete_type(Type *type) {
         return true;
     }
     if (type->check_state == CS_CHECKING) {
-        report_error({}, "Circular dependency."); // todo(josh): better error message
+        report_error({}, "Circular dependency."); // todo(josh): better @ErrorMessage
         return false;
     }
     assert(type->check_state == CS_NOT_CHECKED);
@@ -1044,6 +1070,10 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
 bool can_cast(Ast_Expr *expr, Type *type) {
     assert(expr != nullptr);
     assert(type != nullptr);
+    if (expr->operand.type == type) {
+        // casting to the same type
+        return true;
+    }
     if (is_type_number(expr->operand.type)) {
         if (is_type_enum(type)) {
             return true;
@@ -1983,7 +2013,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     Operand result_operand(expr->location);
     switch (expr->expr_kind) {
         case EXPR_UNARY: {
-            // todo(josh): error messages
+            // todo(josh): @ErrorMessage
             Expr_Unary *unary = (Expr_Unary *)expr;
             Operand *rhs_operand = typecheck_expr(unary->rhs, expected_type);
             if (rhs_operand == nullptr) {

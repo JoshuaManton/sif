@@ -503,7 +503,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     }
     else if (lexer->text[lexer->location.index] == '@') {
         advance(lexer, 1);
-        assert(is_letter_or_underscore(lexer->text[lexer->location.index])); // todo(josh): error message
+        assert(is_letter_or_underscore(lexer->text[lexer->location.index])); // todo(josh): @ErrorMessage
         int length;
         char *note = scan_identifier(&lexer->text[lexer->location.index], &length);
         advance(lexer, length);

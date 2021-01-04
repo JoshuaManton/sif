@@ -42,7 +42,40 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
 
 var window_should_close: bool;
 
+struct Foozle {
+    var wow: int;
+    var holy: string;
+    var arrayyy: [4]^Foozle;
+    var uuu: union {
+        var i: int;
+        var f: f32;
+    };
+}
+
+enum Thingy {
+    FOO;
+    BAR;
+}
+
 proc main() : i32 {
+    var foo: Foozle;
+    var foo_ref: >Foozle = foo;
+    var arr: [2]int;
+    arr[0] = 5;
+    arr[1] = 6;
+    var slice = slice_ptr(&arr[0], 2);
+    printa(Thingy.FOO, &foo, cast(^Foozle, null), foo_ref, ([4]int){1, 2, 3, 4}, slice, Vector3{1, 4, 9}, create_window);
+
+    var foozle_ti = get_type_info(Foozle);
+    assert(foozle_ti.kind == Type_Info_Kind.STRUCT);
+    var struct_ti = cast(^Type_Info_Struct, foozle_ti);
+    for (var i = 0; i < struct_ti.fields.count; i += 1) {
+        var field = struct_ti.fields[i];
+        print("field: %: %\n", field.name, field.type.printable_name);
+    }
+
+    return 0;
+
     var window = create_window("My Cool Window", 1920, 1080);
 
     while (!window.should_close) {

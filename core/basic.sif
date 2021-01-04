@@ -5,7 +5,8 @@
 #foreign_import "Ntdll.lib"
 
 proc print_char  (c: u8)                                                 #foreign;
-proc print_int   (i: int)                                                #foreign;
+proc print_int   (i: i64)                                                #foreign;
+proc print_uint  (i: u64)                                                #foreign;
 proc print_float (f: float)                                              #foreign;
 proc print_bool  (b: bool)                                               #foreign;
 proc print_string(str: string)                                           #foreign;
@@ -28,13 +29,6 @@ proc align_backward(p: int, align: int) : int {
     return align_forward(p - align + 1, align);
 }
 
-proc zero_memory(memory: []byte) {
-    // todo(josh): we can do smarter things here but this is fine for now
-    for (var i = 0; i < memory.count; i += 1) {
-        memory[i] = 0;
-    }
-}
-
 
 
 proc min(a: $T, b: T) : T { if (a < b) { return a; } return b; }
@@ -43,47 +37,171 @@ proc max(a: $T, b: T) : T { if (a > b) { return a; } return b; }
 
 
 proc print_arg(arg: any) {
-    if (arg.type == i8) {
-        print_int(cast(int, cast(^i8, arg.data)^));
-    }
-    else if (arg.type == i16) {
-        print_int(cast(int, cast(^i16, arg.data)^));
-    }
-    else if (arg.type == i32) {
-        print_int(cast(int, cast(^i32, arg.data)^));
-    }
-    else if (arg.type == i64) {
-        print_int(cast(int, cast(^i64, arg.data)^));
+    if (transmute(u64, arg.type) == 0) {
+        print_string("<null>");
+        return;
     }
 
-    else if (arg.type == u8) {
-        print_int(cast(int, cast(^u8, arg.data)^));
+    var ti = get_type_info(arg.type);
+    if (ti.kind == Type_Info_Kind.INTEGER) {
+        var dti = cast(^Type_Info_Integer, ti);
+        if (dti.is_signed) {
+            if (ti.size == 1) {
+                print_int(cast(int, cast(^i8, arg.data)^));
+            }
+            else if (ti.size == 2) {
+                print_int(cast(int, cast(^i16, arg.data)^));
+            }
+            else if (ti.size == 4) {
+                print_int(cast(int, cast(^i32, arg.data)^));
+            }
+            else {
+                assert(ti.size == 8);
+                print_int(cast(int, cast(^i64, arg.data)^));
+            }
+        }
+        else {
+            // todo(josh): make a print_uint() procedure so we don't have to cast to int here
+            if (ti.size == 1) {
+                print_uint(cast(uint, cast(^u8, arg.data)^));
+            }
+            else if (ti.size == 2) {
+                print_uint(cast(uint, cast(^u16, arg.data)^));
+            }
+            else if (ti.size == 4) {
+                print_uint(cast(uint, cast(^u32, arg.data)^));
+            }
+            else {
+                assert(ti.size == 8);
+                print_uint(cast(uint, cast(^u64, arg.data)^));
+            }
+        }
     }
-    else if (arg.type == u16) {
-        print_int(cast(int, cast(^u16, arg.data)^));
+    else if (ti.kind == Type_Info_Kind.FLOAT) {
+        if (ti.size == 4) {
+            print_float(cast(f32, cast(^f32, arg.data)^));
+        }
+        else {
+            assert(ti.size == 8);
+            // todo(josh): make a print_double() procedure so we don't have to cast to f32 here
+            print_float(cast(f32, cast(^f64, arg.data)^));
+        }
     }
-    else if (arg.type == u32) {
-        print_int(cast(int, cast(^u32, arg.data)^));
-    }
-    else if (arg.type == u64) {
-        print_int(cast(int, cast(^u64, arg.data)^));
-    }
-
-    else if (arg.type == f32) {
-        print_float(cast(f32, cast(^f32, arg.data)^));
-    }
-    else if (arg.type == f64) {
-        print_float(cast(f32, cast(^f64, arg.data)^));
-    }
-
-    else if (arg.type == string) {
-        print_string(cast(^string, arg.data)^);
-    }
-
-    else if (arg.type == bool) {
+    else if (ti.kind == Type_Info_Kind.BOOL) {
         print_bool(cast(^bool, arg.data)^);
     }
-
+    else if (ti.kind == Type_Info_Kind.STRING) {
+        print_string(cast(^string, arg.data)^);
+    }
+    else if (ti.kind == Type_Info_Kind.ENUM) {
+        var dti = cast(^Type_Info_Enum, ti);
+        var printed_field = false;
+        var enum_value = cast(^int, arg.data)^;
+        print("%.", dti.base.printable_name);
+        for (var i = 0; i < dti.fields.count; i += 1) {
+            var field = dti.fields[i];
+            if (field.value == enum_value) {
+                printed_field = true;
+                print_string(field.name);
+                break;
+            }
+        }
+        if (!printed_field) {
+            print("<unknown enum value %>", enum_value);
+        }
+    }
+    else if (ti.kind == Type_Info_Kind.POINTER) {
+        var ptr_value = transmute(^u64, arg.data)^;
+        print("0x%", ptr_value);
+    }
+    else if (ti.kind == Type_Info_Kind.REFERENCE) {
+        var ptr_value = transmute(^u64, arg.data)^;
+        print("0x%", ptr_value);
+    }
+    else if (ti.kind == Type_Info_Kind.ARRAY) {
+        var dti = cast(^Type_Info_Array, ti);
+        print("[");
+        for (var i = 0; i < dti.count; i += 1) {
+            if (i != 0) {
+                print(", ");
+            }
+            var elem = ptr_offset(cast(^u8, arg.data), dti.array_of.size * i);
+            var a: any;
+            a.data = elem;
+            a.type = dti.array_of.id;
+            print("%", a);
+        }
+        print("]");
+    }
+    else if (ti.kind == Type_Info_Kind.SLICE) {
+        var dti = cast(^Type_Info_Slice, ti);
+        var slice = transmute(^Raw_Slice, arg.data)^;
+        print("[");
+        for (var i = 0; i < slice.count; i += 1) {
+            if (i != 0) {
+                print_string(", ");
+            }
+            var elem = ptr_offset(cast(^u8, slice.data), dti.slice_of.size * i);
+            var a: any;
+            a.data = elem;
+            a.type = dti.slice_of.id;
+            print("%", a);
+        }
+        print("]");
+    }
+    else if (ti.kind == Type_Info_Kind.STRUCT) {
+        var dti = cast(^Type_Info_Struct, ti);
+        print_string(dti.base.printable_name);
+        print_string("{");
+        for (var i = 0; i < dti.fields.count; i += 1) {
+            var field = dti.fields[i];
+            if (i != 0) {
+                print_string(", ");
+            }
+            print_string(field.name);
+            print_string(" = ");
+            var elem = ptr_offset(cast(^u8, arg.data), field.offset);
+            if (field.type.id == string) {
+                print_string("\"");
+            }
+            print("%", any{elem, field.type.id});
+            if (field.type.id == string) {
+                print_string("\"");
+            }
+        }
+        print_string("}");
+    }
+    else if (ti.kind == Type_Info_Kind.UNION) {
+        var dti = cast(^Type_Info_Union, ti);
+        print_string("union{");
+        for (var i = 0; i < dti.fields.count; i += 1) {
+            if (i != 0) {
+                print_string(", ");
+            }
+            var field = dti.fields[i];
+            print_string(field.type.printable_name);
+        }
+        print_string("}");
+    }
+    else if (ti.kind == Type_Info_Kind.PROCEDURE) {
+        var dti = cast(^Type_Info_Procedure, ti);
+        print_string("proc(");
+        for (var i = 0; i < dti.parameter_types.count; i += 1) {
+            var param_type = dti.parameter_types[i];
+            if (i != 0) {
+                print_string(", ");
+            }
+            print("%", param_type.id);
+        }
+        print_string(")");
+        if (dti.return_type != null) {
+            print(" : %", dti.return_type.id);
+        }
+    }
+    else if (ti.kind == Type_Info_Kind.TYPEID) {
+        var ti = get_type_info(cast(^typeid, arg.data)^);
+        print_string(ti.printable_name);
+    }
     else {
         print("<unhandled type>");
     }
@@ -138,6 +256,12 @@ proc string_ptr(ptr: ^u8, count: int) : string {
     str.data = ptr;
     str.count = count;
     return str;
+}
+
+proc ptr_offset(ptr: ^$T, offset_in_bytes: int) : ^T {
+    var ptr_int = transmute(u64, ptr);
+    ptr_int += cast(u64, offset_in_bytes);
+    return transmute(^T, ptr_int);
 }
 
 

@@ -116,7 +116,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
             break;
         }
         default: {
-            report_error(name_expr->location, "Bad variable name."); // todo(josh): @ErrorHandling
+            report_error(name_expr->location, "Bad variable name."); // todo(josh): @ErrorMessage
             return nullptr;
         }
     }
@@ -153,8 +153,6 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, did_parse_polymorphic_thing, root_token.location));
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, current_block));
-    var->declaration->notes = parse_notes(lexer);
-
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
         if (!register_declaration(var->declaration)) {
@@ -561,6 +559,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (eat_semicolon) {
                 EXPECT(lexer, TK_SEMICOLON, nullptr);
             }
+            var->declaration->notes = parse_notes(lexer);
             return var;
         }
 

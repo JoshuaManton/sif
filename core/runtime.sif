@@ -6,6 +6,31 @@ proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreig
 
 
 
+proc zero_memory(memory: []byte) {
+    // todo(josh): we can do smarter things here but this is fine for now
+    for (var i = 0; i < memory.count; i += 1) {
+        memory[i] = 0;
+    }
+}
+
+proc zero_pointer(ptr: rawptr, size_in_bytes: int) {
+    zero_memory(slice_ptr(cast(^byte, ptr), size_in_bytes));
+}
+
+
+
+struct Raw_Slice {
+    var data: rawptr;
+    var count: int;
+}
+
+struct Raw_String {
+    var data: rawptr;
+    var count: int;
+}
+
+
+
 struct Allocator {
     var data: rawptr;
     var alloc_proc: proc(allocator: rawptr, size: int, align: int) : rawptr;
@@ -53,23 +78,32 @@ proc string_eq(var a: string, var b: string) : bool {
 
 
 
-// type info doesn't exist yet. just messing around here
+var _global_type_table: []^Type_Info; @sif_runtime
+
+proc get_type_info(type: typeid) : ^Type_Info {
+    var idx = transmute(u64, type);
+    return _global_type_table[cast(int, idx)];
+} @sif_runtime
+
+// note(josh): backend depends on this ordering! :TypeInfoKindValues
 enum Type_Info_Kind {
-    INTEGER;
-    FLOAT;
-    BOOL;
-    STRING;
-    STRUCT;
-    UNION;
-    ENUM;
-    POINTER;
-    SLICE;
-    ARRAY;
-    REFERENCE;
-    PROCEDURE;
+    INTEGER   = 0;
+    FLOAT     = 1;
+    BOOL      = 2;
+    STRING    = 3;
+    STRUCT    = 4;
+    UNION     = 5;
+    ENUM      = 6;
+    POINTER   = 7;
+    SLICE     = 8;
+    ARRAY     = 9;
+    REFERENCE = 10;
+    PROCEDURE = 11;
+    TYPEID    = 12;
 } @sif_runtime
 
 struct Type_Info {
+    var printable_name: string;
     var kind: Type_Info_Kind;
     var id: typeid;
     var size: int;
@@ -145,4 +179,8 @@ struct Type_Info_Procedure {
     var base: Type_Info;
     var parameter_types: []^Type_Info;
     var return_type: ^Type_Info;
+} @sif_runtime
+
+struct Type_Info_Typeid {
+    var base: Type_Info;
 } @sif_runtime

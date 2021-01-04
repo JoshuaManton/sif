@@ -30,12 +30,11 @@ SMALL
 -prevent identifiers from being C keywords in the backend, like `signed`
 
 MEDIUM
--allow custom entrypoints
--enforce entrypoints returning i32, or do it implicitly in the backend
 -defer
 -runtime bounds checks
 -switch statements
 -emit #line directives in backend
+-do entrypoint returning i32 implicitly in backend
 -slicing
 -build to dll
 -read command line parameters
@@ -49,6 +48,7 @@ MEDIUM
 -tagged unions
 -use microsoft_craziness.h
 -enum arrays
+-allow custom entrypoints
 
 BIG
 -control flow graph analysis
