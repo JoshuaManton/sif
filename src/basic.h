@@ -377,8 +377,8 @@ void run_array_tests() {
 struct String_Builder {
     Array<char> buf = {};
 
-    void print(const char *str);
-    void printf(const char *fmt, ...);
+    char *print(const char *str);
+    char *printf(const char *fmt, ...);
     void clear();
     char *string();
     void destroy();
@@ -398,8 +398,10 @@ struct Chunked_String_Builder {
     int current_chunk_index = {};
     int max_chunk_size = {};
     Allocator allocator = {};
-    void print(const char *str);
-    void printf(const char *fmt, ...);
+    char *print(const char *str);
+    char *printf(const char *fmt, ...);
+    char *write_with_length(const char *str, int length);
+    void append_null();
     Chunked_String_Builder_Chunk *get_or_make_chunk_buffer_for_length(int length);
     void clear();
     char *make_string();

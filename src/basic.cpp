@@ -356,16 +356,18 @@ String_Builder make_string_builder(Allocator allocator, int capacity) {
     return sb;
 }
 
-void String_Builder::print(const char *str) {
+char *String_Builder::print(const char *str) {
     int length = strlen(str);
     buf.reserve(buf.count + length + 8);
-    memcpy(&buf.data[buf.count], str, length);
+    char *copy = &buf.data[buf.count];
+    memcpy(copy, str, length);
     buf.count += length;
     BOUNDS_CHECK(buf.count, 0, buf.capacity);
     buf.data[buf.count] = 0;
+    return copy;
 }
 
-void String_Builder::printf(const char *fmt, ...) {
+char *String_Builder::printf(const char *fmt, ...) {
     va_list args;
     buf.reserve(32); // ensure at least 32 bytes in the buffer
     int length_would_have_written = 0;
@@ -377,9 +379,11 @@ void String_Builder::printf(const char *fmt, ...) {
     } while (length_would_have_written >= (buf.capacity - buf.count));
 
     assert(length_would_have_written < buf.capacity - buf.count);
+    char *copy = &buf.data[buf.count];
     buf.data[buf.count+length_would_have_written+1] = '\0';
     buf.count += length_would_have_written;
     BOUNDS_CHECK(buf.count, 0, buf.capacity);
+    return copy;
 }
 
 void String_Builder::clear() {
@@ -443,27 +447,41 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
 }
 
 
-void Chunked_String_Builder::print(const char *str) {
+char *Chunked_String_Builder::print(const char *str) {
     int length = strlen(str);
-    Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(length);
-    memcpy(&chunk->buffer[chunk->cursor], str, length);
-    chunk->cursor += length;
-    chunk->buffer[chunk->cursor] = '\0';
+    return write_with_length(str, length);
 }
 
-void Chunked_String_Builder::printf(const char *fmt, ...) {
+char *Chunked_String_Builder::printf(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     int length_required = vsnprintf(nullptr, 0, fmt, args);
     va_end(args);
 
     Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(length_required);
+    char *copy = &chunk->buffer[chunk->cursor];
     va_start(args, fmt);
-    int result = vsnprintf(&chunk->buffer[chunk->cursor], chunk->buffer_size - chunk->cursor, fmt, args);
+    int result = vsnprintf(copy, chunk->buffer_size - chunk->cursor, fmt, args);
     va_end(args);
     assert(result == length_required);
     chunk->cursor += length_required;
     chunk->buffer[chunk->cursor] = '\0';
+    return copy;
+}
+
+char *Chunked_String_Builder::write_with_length(const char *str, int length) {
+    Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(length);
+    char *copy = &chunk->buffer[chunk->cursor];
+    memcpy(copy, str, length);
+    chunk->cursor += length;
+    chunk->buffer[chunk->cursor] = '\0';
+    return copy;
+}
+
+void Chunked_String_Builder::append_null() {
+    Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(1);
+    chunk->buffer[chunk->cursor] = '\0';
+    chunk->cursor += 1;
 }
 
 void Chunked_String_Builder::clear() {

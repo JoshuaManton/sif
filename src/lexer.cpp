@@ -12,7 +12,82 @@ static char *token_name_map[TK_COUNT];
 
 int total_lexed_lines;
 
+Chunked_String_Builder g_interned_string_buffer;
+Hashtable<u64, char *> g_interned_strings;
+
+char *g_interned_string_return;
+char *g_interned_string_var;
+char *g_interned_string_const;
+char *g_interned_string_proc;
+char *g_interned_string_operator;
+char *g_interned_string_struct;
+char *g_interned_string_union;
+char *g_interned_string_enum;
+char *g_interned_string_null;
+char *g_interned_string_true;
+char *g_interned_string_false;
+char *g_interned_string_sizeof;
+char *g_interned_string_typeof;
+char *g_interned_string_if;
+char *g_interned_string_else;
+char *g_interned_string_for;
+char *g_interned_string_while;
+char *g_interned_string_break;
+char *g_interned_string_continue;
+char *g_interned_string_cast;
+char *g_interned_string_transmute;
+
+char *intern_string(char *str, int length_override) {
+    u64 hash = 0xcbf29ce484222325;
+    int length = length_override;
+    if (length_override == -1) {
+        char *c = str;
+        for (; *c != '\0'; c++) {
+            hash = (hash * 0x100000001b3) ^ u64(*c);
+        }
+        length = c - str;
+    }
+    else {
+        for (int i = 0; i < length_override; i++) {
+            hash = (hash * 0x100000001b3) ^ u64(str[i]);
+        }
+    }
+    char **interned = g_interned_strings.get(hash);
+    if (interned) {
+        return *interned;
+    }
+    char *copy = g_interned_string_buffer.write_with_length(str, length);
+    g_interned_string_buffer.append_null();
+    g_interned_strings.insert(hash, copy);
+    return copy;
+}
+
 void init_lexer_globals() {
+    g_interned_string_buffer = make_chunked_string_builder(g_global_linear_allocator, 1 * 1024);
+    g_interned_strings = make_hashtable<u64, char *>(g_global_linear_allocator, 10 * 1024);
+
+    g_interned_string_return    = intern_string("return");
+    g_interned_string_var       = intern_string("var");
+    g_interned_string_const     = intern_string("const");
+    g_interned_string_proc      = intern_string("proc");
+    g_interned_string_operator  = intern_string("operator");
+    g_interned_string_struct    = intern_string("struct");
+    g_interned_string_union     = intern_string("union");
+    g_interned_string_enum      = intern_string("enum");
+    g_interned_string_null      = intern_string("null");
+    g_interned_string_true      = intern_string("true");
+    g_interned_string_false     = intern_string("false");
+    g_interned_string_sizeof    = intern_string("sizeof");
+    g_interned_string_typeof    = intern_string("typeof");
+    g_interned_string_if        = intern_string("if");
+    g_interned_string_else      = intern_string("else");
+    g_interned_string_for       = intern_string("for");
+    g_interned_string_while     = intern_string("while");
+    g_interned_string_break     = intern_string("break");
+    g_interned_string_continue  = intern_string("continue");
+    g_interned_string_cast      = intern_string("cast");
+    g_interned_string_transmute = intern_string("transmute");
+
     token_string_map[TK_INVALID]                        = "INVALID";
     token_string_map[TK_IDENTIFIER]                     = "IDENTIFIER";
     token_string_map[TK_NUMBER]                         = "NUMBER";
@@ -241,7 +316,7 @@ char *scan_identifier(char *text, int *out_length) {
     }
     int length = text - start;
     *out_length = length;
-    char *result = clone_string(start, length);
+    char *result = intern_string(start, length);
     return result;
 }
 
@@ -441,31 +516,31 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->kind = TK_IDENTIFIER;
         out_token->text = identifier;
 
-        #define CHECK_KEYWORD(keyword, token) if (strcmp(identifier, keyword) == 0) { \
+        #define CHECK_KEYWORD(keyword, token) if (identifier == keyword) { \
             out_token->kind = token; \
         }
 
-        CHECK_KEYWORD("return", TK_RETURN)
-        else CHECK_KEYWORD("var", TK_VAR)
-        else CHECK_KEYWORD("const", TK_CONST)
-        else CHECK_KEYWORD("proc", TK_PROC)
-        else CHECK_KEYWORD("operator", TK_OPERATOR)
-        else CHECK_KEYWORD("struct", TK_STRUCT)
-        else CHECK_KEYWORD("union", TK_UNION)
-        else CHECK_KEYWORD("enum", TK_ENUM)
-        else CHECK_KEYWORD("null", TK_NULL)
-        else CHECK_KEYWORD("true", TK_TRUE)
-        else CHECK_KEYWORD("false", TK_FALSE)
-        else CHECK_KEYWORD("sizeof", TK_SIZEOF)
-        else CHECK_KEYWORD("typeof", TK_TYPEOF)
-        else CHECK_KEYWORD("if", TK_IF)
-        else CHECK_KEYWORD("else", TK_ELSE)
-        else CHECK_KEYWORD("for", TK_FOR)
-        else CHECK_KEYWORD("while", TK_WHILE)
-        else CHECK_KEYWORD("break", TK_BREAK)
-        else CHECK_KEYWORD("continue", TK_CONTINUE)
-        else CHECK_KEYWORD("cast", TK_CAST)
-        else CHECK_KEYWORD("transmute", TK_TRANSMUTE)
+        CHECK_KEYWORD(g_interned_string_return, TK_RETURN)
+        else CHECK_KEYWORD(g_interned_string_var, TK_VAR)
+        else CHECK_KEYWORD(g_interned_string_const, TK_CONST)
+        else CHECK_KEYWORD(g_interned_string_proc, TK_PROC)
+        else CHECK_KEYWORD(g_interned_string_operator, TK_OPERATOR)
+        else CHECK_KEYWORD(g_interned_string_struct, TK_STRUCT)
+        else CHECK_KEYWORD(g_interned_string_union, TK_UNION)
+        else CHECK_KEYWORD(g_interned_string_enum, TK_ENUM)
+        else CHECK_KEYWORD(g_interned_string_null, TK_NULL)
+        else CHECK_KEYWORD(g_interned_string_true, TK_TRUE)
+        else CHECK_KEYWORD(g_interned_string_false, TK_FALSE)
+        else CHECK_KEYWORD(g_interned_string_sizeof, TK_SIZEOF)
+        else CHECK_KEYWORD(g_interned_string_typeof, TK_TYPEOF)
+        else CHECK_KEYWORD(g_interned_string_if, TK_IF)
+        else CHECK_KEYWORD(g_interned_string_else, TK_ELSE)
+        else CHECK_KEYWORD(g_interned_string_for, TK_FOR)
+        else CHECK_KEYWORD(g_interned_string_while, TK_WHILE)
+        else CHECK_KEYWORD(g_interned_string_break, TK_BREAK)
+        else CHECK_KEYWORD(g_interned_string_continue, TK_CONTINUE)
+        else CHECK_KEYWORD(g_interned_string_cast, TK_CAST)
+        else CHECK_KEYWORD(g_interned_string_transmute, TK_TRANSMUTE)
     }
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;

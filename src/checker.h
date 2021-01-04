@@ -195,6 +195,13 @@ extern Type *type_string;
 extern Type *type_rawptr;
 extern Type *type_any;
 
+extern char *g_interned_main_string;
+extern char *g_interned_sif_runtime_string;
+extern char *g_interned_string_string;
+extern char *g_interned_rawptr_string;
+extern char *g_interned_any_string;
+extern char *g_interned_typeid_string;
+
 void init_checker();
 void add_global_declarations(Ast_Block *block);
 bool typecheck_global_scope(Ast_Block *block);

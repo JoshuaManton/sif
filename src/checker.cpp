@@ -1,4 +1,5 @@
 #include "checker.h"
+#include "os_windows.h"
 
 #define POINTER_SIZE 8
 
@@ -43,6 +44,13 @@ Ast_Proc *g_main_proc;
 
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
+char *g_interned_main_string;
+char *g_interned_sif_runtime_string;
+char *g_interned_string_string;
+char *g_interned_rawptr_string;
+char *g_interned_any_string;
+char *g_interned_typeid_string;
+
 bool complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type, bool do_report_error = true);
@@ -79,26 +87,33 @@ void init_checker() {
     all_types.allocator = g_global_linear_allocator;
     ordered_declarations.allocator = g_global_linear_allocator;
 
-    type_i8  = SIF_NEW_CLONE(Type_Primitive("i8", 1, 1));  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8); type_i8->id = all_types.count;
-    type_i16 = SIF_NEW_CLONE(Type_Primitive("i16", 2, 2)); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16); type_i16->id = all_types.count;
-    type_i32 = SIF_NEW_CLONE(Type_Primitive("i32", 4, 4)); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32); type_i32->id = all_types.count;
-    type_i64 = SIF_NEW_CLONE(Type_Primitive("i64", 8, 8)); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64); type_i64->id = all_types.count;
+    g_interned_main_string        = intern_string("main");
+    g_interned_sif_runtime_string = intern_string("sif_runtime");
+    g_interned_string_string      = intern_string("string");
+    g_interned_rawptr_string      = intern_string("rawptr");
+    g_interned_any_string         = intern_string("any");
+    g_interned_typeid_string      = intern_string("typeid");
 
-    type_u8  = SIF_NEW_CLONE(Type_Primitive("u8", 1, 1));  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8); type_u8->id = all_types.count;
-    type_u16 = SIF_NEW_CLONE(Type_Primitive("u16", 2, 2)); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16); type_u16->id = all_types.count;
-    type_u32 = SIF_NEW_CLONE(Type_Primitive("u32", 4, 4)); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32); type_u32->id = all_types.count;
-    type_u64 = SIF_NEW_CLONE(Type_Primitive("u64", 8, 8)); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64); type_u64->id = all_types.count;
+    type_i8  = SIF_NEW_CLONE(Type_Primitive(intern_string("i8"), 1, 1));  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i8); type_i8->id = all_types.count;
+    type_i16 = SIF_NEW_CLONE(Type_Primitive(intern_string("i16"), 2, 2)); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i16); type_i16->id = all_types.count;
+    type_i32 = SIF_NEW_CLONE(Type_Primitive(intern_string("i32"), 4, 4)); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i32); type_i32->id = all_types.count;
+    type_i64 = SIF_NEW_CLONE(Type_Primitive(intern_string("i64"), 8, 8)); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED; all_types.append(type_i64); type_i64->id = all_types.count;
 
-    type_f32 = SIF_NEW_CLONE(Type_Primitive("f32", 4, 4)); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32); type_f32->id = all_types.count;
-    type_f64 = SIF_NEW_CLONE(Type_Primitive("f64", 8, 8)); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64); type_f64->id = all_types.count;
+    type_u8  = SIF_NEW_CLONE(Type_Primitive(intern_string("u8"), 1, 1));  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u8); type_u8->id = all_types.count;
+    type_u16 = SIF_NEW_CLONE(Type_Primitive(intern_string("u16"), 2, 2)); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u16); type_u16->id = all_types.count;
+    type_u32 = SIF_NEW_CLONE(Type_Primitive(intern_string("u32"), 4, 4)); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u32); type_u32->id = all_types.count;
+    type_u64 = SIF_NEW_CLONE(Type_Primitive(intern_string("u64"), 8, 8)); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED; all_types.append(type_u64); type_u64->id = all_types.count;
 
-    type_bool = SIF_NEW_CLONE(Type_Primitive("bool", 1, 1)); all_types.append(type_bool); type_bool->id = all_types.count;
+    type_f32 = SIF_NEW_CLONE(Type_Primitive(intern_string("f32"), 4, 4)); type_f32->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f32); type_f32->id = all_types.count;
+    type_f64 = SIF_NEW_CLONE(Type_Primitive(intern_string("f64"), 8, 8)); type_f64->flags = TF_NUMBER | TF_FLOAT | TF_SIGNED; all_types.append(type_f64); type_f64->id = all_types.count;
 
-    type_typeid = SIF_NEW_CLONE(Type_Primitive("typeid", 8, 8)); all_types.append(type_typeid); type_typeid->id = all_types.count;
-    type_string = SIF_NEW_CLONE(Type_Primitive("string", 16, 8)); all_types.append(type_string); type_string->id = all_types.count;
-    type_rawptr = SIF_NEW_CLONE(Type_Primitive("rawptr", 8, 8)); type_rawptr->flags = TF_POINTER; all_types.append(type_rawptr); type_rawptr->id = all_types.count;
+    type_bool = SIF_NEW_CLONE(Type_Primitive(intern_string("bool"), 1, 1)); all_types.append(type_bool); type_bool->id = all_types.count;
 
-    type_any = SIF_NEW_CLONE(Type_Primitive("any", 16, 8)); type_any->flags = TF_ANY; all_types.append(type_any); type_any->id = all_types.count;
+    type_typeid = SIF_NEW_CLONE(Type_Primitive(intern_string("typeid"), 8, 8)); all_types.append(type_typeid); type_typeid->id = all_types.count;
+    type_string = SIF_NEW_CLONE(Type_Primitive(intern_string("string"), 16, 8)); all_types.append(type_string); type_string->id = all_types.count;
+    type_rawptr = SIF_NEW_CLONE(Type_Primitive(intern_string("rawptr"), 8, 8)); type_rawptr->flags = TF_POINTER; all_types.append(type_rawptr); type_rawptr->id = all_types.count;
+
+    type_any = SIF_NEW_CLONE(Type_Primitive(intern_string("any"), 16, 8)); type_any->flags = TF_ANY; all_types.append(type_any); type_any->id = all_types.count;
 
     type_untyped_integer = SIF_NEW_CLONE(Type_Primitive("untyped integer", -1, -1)); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
     type_untyped_float   = SIF_NEW_CLONE(Type_Primitive("untyped float", -1, -1));   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
@@ -113,41 +128,41 @@ void init_checker() {
 
 
 
-    add_variable_type_field(type_string, "data", get_or_create_type_pointer_to(type_u8), 0);
-    add_variable_type_field(type_string, "count", type_int, 8);
+    add_variable_type_field(type_string, intern_string("data"), get_or_create_type_pointer_to(type_u8), 0);
+    add_variable_type_field(type_string, intern_string("count"), type_int, 8);
 
-    add_variable_type_field(type_any, "data", type_rawptr, 0);
-    add_variable_type_field(type_any, "type", type_typeid, 8);
+    add_variable_type_field(type_any, intern_string("data"), type_rawptr, 0);
+    add_variable_type_field(type_any, intern_string("type"), type_typeid, 8);
 }
 
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("i8",  type_i8, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("i16", type_i16, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("i32", type_i32, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("i64", type_i64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("u8",  type_u8, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("u16", type_u16, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("u32", type_u32, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("u64", type_u64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("f32", type_f32, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("f64", type_f64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("byte",  type_u8, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("int",   type_i64, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("uint",  type_u64, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("float", type_f32, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("bool", type_bool, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("typeid", type_typeid, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("string", type_string, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("rawptr", type_rawptr, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"), type_typeid, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("string"), type_string, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"), type_rawptr, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration("any", type_any, block)));
+    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block)));
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
@@ -450,7 +465,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             assert(proc_decl->header->type != nullptr);
             decl_operand = proc_decl->header->operand;
 
-            if (strcmp(proc_decl->name, "main") == 0) {
+            if (proc_decl->name == g_interned_main_string) {
                 assert(g_main_proc == nullptr);
                 assert(proc_decl->header->procedure != nullptr); // todo(josh): @ErrorMessage
                 g_main_proc = proc_decl->header->procedure;
@@ -537,7 +552,7 @@ bool typecheck_global_scope(Ast_Block *block) {
         }
         For (note_idx, decl->notes) {
             char *note = decl->notes[note_idx];
-            if (strcmp(note, "sif_runtime") == 0) {
+            if (note == g_interned_sif_runtime_string) {
                 assert(check_declaration(decl, decl->location));
                 if (decl->kind == DECL_STRUCT) {
                     assert(complete_type(((Struct_Declaration *)decl)->structure->type));
@@ -964,12 +979,12 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     }
     Type_Array *new_type = SIF_NEW_CLONE(Type_Array(array_of, count));
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
-    add_variable_type_field(new_type, "data", type_rawptr, 0);
+    add_variable_type_field(new_type, intern_string("data"), type_rawptr, 0);
     Operand operand = {};
     operand.type = type_int;
     operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
     operand.int_value = count;
-    add_constant_type_field(new_type, "count", operand);
+    add_constant_type_field(new_type, intern_string("count"), operand);
     all_types.append(new_type);
     new_type->id = all_types.count;
     return new_type;
@@ -985,8 +1000,8 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     new_type->flags = TF_SLICE;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
-    add_variable_type_field(new_type, "count", type_int, 8);
+    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0);
+    add_variable_type_field(new_type, intern_string("count"), type_int, 8);
     all_types.append(new_type);
     new_type->id = all_types.count;
     slice_of->slice_of_this_type = new_type;
@@ -1004,8 +1019,8 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, "data", pointer_to_element_type, 0);
-    add_variable_type_field(new_type, "count", type_int, 8);
+    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0);
+    add_variable_type_field(new_type, intern_string("count"), type_int, 8);
     all_types.append(new_type);
     new_type->id = all_types.count;
     varargs_of->varargs_of_this_type = new_type;
@@ -1416,7 +1431,7 @@ void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
     bool inserted_replacement = false;
     For (decl_idx, block->declarations) {
         Declaration *decl = block->declarations[decl_idx];
-        if (decl->kind == DECL_POLYMORPHIC && (strcmp(decl->name, declaration->name) == 0)) {
+        if (decl->kind == DECL_POLYMORPHIC && (decl->name == declaration->name)) {
             Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
             assert(poly_decl->declaration == nullptr);
             declaration->parent_block = block;
@@ -2026,6 +2041,10 @@ Ast_Expr *unparen_expr(Ast_Expr *expr) {
     return expr;
 }
 
+extern Timer g_global_timer;
+
+extern f64 expr_check_times[EXPR_COUNT];
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -2034,6 +2053,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     Operand result_operand(expr->location);
     switch (expr->expr_kind) {
         case EXPR_UNARY: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_UNARY] += total_time;
+            });
             // todo(josh): @ErrorMessage
             Expr_Unary *unary = (Expr_Unary *)expr;
             Operand *rhs_operand = typecheck_expr(unary->rhs, expected_type);
@@ -2083,6 +2108,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_BINARY: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_BINARY] += total_time;
+            });
             Expr_Binary *binary = (Expr_Binary *)expr;
             if (is_cmp_op(binary->op)) {
                 expected_type = nullptr;
@@ -2142,6 +2173,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_CAST: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_CAST] += total_time;
+            });
             Expr_Cast *expr_cast = (Expr_Cast *)expr;
             Operand *type_operand = typecheck_expr(expr_cast->type_expr);
             if (!type_operand) {
@@ -2176,6 +2213,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_TRANSMUTE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_TRANSMUTE] += total_time;
+            });
             Expr_Transmute *transmute = (Expr_Transmute *)expr;
             Operand *type_operand = typecheck_expr(transmute->type_expr);
             if (!type_operand) {
@@ -2213,6 +2256,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_ADDRESS_OF: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_ADDRESS_OF] += total_time;
+            });
             Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
             Operand *rhs_operand = typecheck_expr(address_of->rhs);
             if (!rhs_operand) {
@@ -2224,6 +2273,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SUBSCRIPT: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_SUBSCRIPT] += total_time;
+            });
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
             Operand *lhs_operand = typecheck_expr(subscript->lhs);
             if (!lhs_operand) {
@@ -2286,6 +2341,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SELECTOR: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_SELECTOR] += total_time;
+            });
             // todo(josh): use some sort of constants_block thing for constant fields
 
             Expr_Selector *selector = (Expr_Selector *)expr;
@@ -2322,7 +2383,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             bool found_field = false;
             For (idx, type_with_fields->fields) {
                 Struct_Field field = type_with_fields->fields[idx];
-                if (strcmp(field.name, selector->field_name) == 0) {
+                if (field.name == selector->field_name) {
                     if (!is_instance_of_type_rather_that_a_type_itself) {
                         if (!(field.operand.flags & OPERAND_CONSTANT)) {
                             // note(josh): there's no real reason why we _can't_ support this, it's just weird
@@ -2345,6 +2406,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_DEREFERENCE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_DEREFERENCE] += total_time;
+            });
             Expr_Dereference *dereference = (Expr_Dereference *)expr;
             Operand *lhs_operand = typecheck_expr(dereference->lhs);
             if (!lhs_operand) {
@@ -2357,6 +2424,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_PROCEDURE_CALL: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_PROCEDURE_CALL] += total_time;
+            });
             Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
             Operand *procedure_operand = typecheck_expr(call->lhs);
             if (!procedure_operand) {
@@ -2378,12 +2451,18 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_IDENTIFIER: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_IDENTIFIER] += total_time;
+            });
             Expr_Identifier *ident = (Expr_Identifier *)expr;
             Ast_Block *block = ident->parent_block;
             while (block != nullptr) {
                 For (decl_idx, block->declarations) {
                     Declaration *decl = block->declarations[decl_idx];
-                    if (strcmp(decl->name, ident->name) == 0) {
+                    if (decl->name == ident->name) {
                         ident->resolved_declaration = decl;
                         break;
                     }
@@ -2419,6 +2498,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_COMPOUND_LITERAL: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_COMPOUND_LITERAL] += total_time;
+            });
             Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
             Operand *type_operand = typecheck_expr(compound_literal->type_expr);
             if (!type_operand) {
@@ -2492,6 +2577,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_NUMBER_LITERAL: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_NUMBER_LITERAL] += total_time;
+            });
             Expr_Number_Literal *number = (Expr_Number_Literal *)expr;
             if (number->has_a_dot) {
                 result_operand.type = type_untyped_float;
@@ -2506,6 +2597,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_STRING_LITERAL: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_STRING_LITERAL] += total_time;
+            });
             Expr_String_Literal *string_literal = (Expr_String_Literal *)expr;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_string;
@@ -2516,6 +2613,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_CHAR_LITERAL: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_CHAR_LITERAL] += total_time;
+            });
             Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_u8;
@@ -2524,23 +2627,47 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_NULL: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_NULL] += total_time;
+            });
             result_operand.flags = OPERAND_RVALUE;
             result_operand.type = type_untyped_null;
             break;
         }
         case EXPR_TRUE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_TRUE] += total_time;
+            });
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_bool;
             result_operand.bool_value = true;
             break;
         }
         case EXPR_FALSE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_FALSE] += total_time;
+            });
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_bool;
             result_operand.bool_value = false;
             break;
         }
         case EXPR_SIZEOF: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_SIZEOF] += total_time;
+            });
             Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
             Operand *expr_operand = typecheck_expr(expr_sizeof->expr);
             if (!expr_operand) {
@@ -2563,6 +2690,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_TYPEOF: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_TYPEOF] += total_time;
+            });
             Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
             Operand *expr_operand = typecheck_expr(expr_typeof->expr);
             if (!expr_operand) {
@@ -2575,6 +2708,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_STRUCT_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_STRUCT_TYPE] += total_time;
+            });
             Expr_Struct_Type *anonymous_struct = (Expr_Struct_Type *)expr;
             assert(anonymous_struct->structure != nullptr);
             assert(anonymous_struct->structure->type != nullptr);
@@ -2584,6 +2723,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_POINTER_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_POINTER_TYPE] += total_time;
+            });
             Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
             assert(expr_pointer->pointer_to != nullptr);
             Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to, type_typeid);
@@ -2597,6 +2742,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_REFERENCE_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_REFERENCE_TYPE] += total_time;
+            });
             Expr_Reference_Type *expr_reference = (Expr_Reference_Type *)expr;
             assert(expr_reference->reference_to != nullptr);
             Operand *reference_to_operand = typecheck_expr(expr_reference->reference_to, type_typeid);
@@ -2610,6 +2761,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_ARRAY_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_ARRAY_TYPE] += total_time;
+            });
             Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
             assert(expr_array->array_of != nullptr);
             Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
@@ -2632,6 +2789,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SLICE_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_SLICE_TYPE] += total_time;
+            });
             Expr_Slice_Type *expr_slice = (Expr_Slice_Type *)expr;
             assert(expr_slice->slice_of != nullptr);
             Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of, type_typeid);
@@ -2645,6 +2808,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_PROCEDURE_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_PROCEDURE_TYPE] += total_time;
+            });
             Expr_Procedure_Type *proc_type_expr = (Expr_Procedure_Type *)expr;
             Operand *proc_operand = typecheck_procedure_header(proc_type_expr->header);
             if (!proc_operand) {
@@ -2658,6 +2827,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SPREAD: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_SPREAD] += total_time;
+            });
             Expr_Spread *spread = (Expr_Spread *)expr;
             assert(spread->rhs != nullptr);
             Operand *rhs_operand = typecheck_expr(spread->rhs);
@@ -2692,6 +2867,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_POLYMORPHIC_TYPE] += total_time;
+            });
             // foo: Some_Struct!(123, float);
             //      ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2718,6 +2899,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_POLYMORPHIC_VARIABLE: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_POLYMORPHIC_VARIABLE] += total_time;
+            });
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
             assert(poly->poly_decl != nullptr);
             if (poly->poly_decl->declaration) {
@@ -2731,6 +2918,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_PAREN: {
+            f64 start_time = query_timer(&g_global_timer);
+            defer({
+                f64 end_time = query_timer(&g_global_timer);
+                f64 total_time = end_time - start_time;
+                expr_check_times[EXPR_PAREN] += total_time;
+            });
             Expr_Paren *paren = (Expr_Paren *)expr;
             Operand *expr_operand = typecheck_expr(paren->nested, expected_type);
             if (!expr_operand) {

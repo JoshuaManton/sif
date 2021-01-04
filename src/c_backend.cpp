@@ -15,16 +15,16 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *type_primitive = (Type_Primitive *)type;
-            if (strcmp(type_primitive->name, "string") == 0) {
+            if (type_primitive->name == g_interned_string_string) {
                 sb->print("String ");
             }
-            else if (strcmp(type_primitive->name, "rawptr") == 0) {
+            else if (type_primitive->name == g_interned_rawptr_string) {
                 sb->print("void *");
             }
-            else if (strcmp(type_primitive->name, "any") == 0) {
+            else if (type_primitive->name == g_interned_any_string) {
                 sb->print("Any ");
             }
-            else if (strcmp(type_primitive->name, "typeid") == 0) {
+            else if (type_primitive->name == g_interned_typeid_string) {
                 sb->print("u64 ");
             }
             else {
@@ -156,16 +156,16 @@ void c_print_type_plain_prefix(Chunked_String_Builder *sb, Type *type) {
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *type_primitive = (Type_Primitive *)type;
-            if (strcmp(type_primitive->name, "string") == 0) {
+            if (type_primitive->name == g_interned_string_string) {
                 sb->print("String");
             }
-            else if (strcmp(type_primitive->name, "rawptr") == 0) {
+            else if (type_primitive->name == g_interned_rawptr_string) {
                 sb->print("voidpointer");
             }
-            else if (strcmp(type_primitive->name, "any") == 0) {
+            else if (type_primitive->name == g_interned_any_string) {
                 sb->print("Any");
             }
-            else if (strcmp(type_primitive->name, "typeid") == 0) {
+            else if (type_primitive->name == g_interned_typeid_string) {
                 sb->print("u64 ");
             }
             else {
@@ -387,7 +387,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
         assert(expr->operand.type != nullptr);
     }
 
-    Chunked_String_Builder reference_prefix_sb = make_chunked_string_builder(g_global_linear_allocator, 64);
+    Chunked_String_Builder reference_prefix_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
 
     if (expr->operand.reference_type != nullptr) {
         assert(is_type_reference(expr->operand.reference_type));
@@ -456,7 +456,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
             }
             else {
                 assert(!is_type_untyped(expr->operand.type));
-                Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 32);
+                Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
                 if (is_type_float(expr->operand.type)) {
                     tsb.printf("%f", expr->operand.float_value);
                 }
@@ -484,7 +484,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
             }
         }
         else if (is_type_typeid(expr->operand.type) && (expr->operand.flags & OPERAND_CONSTANT)) {
-            Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 32);
+            Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
             tsb.printf("%d", expr->operand.type_value->id);
             t = tsb.make_string();
         }
@@ -679,7 +679,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     assert(lhs);
                     Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     bool is_accessing_slice_data_field = false;
-                    if ((selector->type_with_field->kind == TYPE_SLICE) && (strcmp(selector->field_name, "data") == 0)) {
+                    if ((selector->type_with_field->kind == TYPE_SLICE) && (selector->field_name == "data")) {
                         is_accessing_slice_data_field = true;
                         Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
                         selector_sb.print("*((");
@@ -1039,7 +1039,7 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
         For (idx, all_types) {
             Type *type = all_types[idx];
             assert(type->id = idx+1);
-            Chunked_String_Builder ti_name_sb = make_chunked_string_builder(g_global_linear_allocator, 8);
+            Chunked_String_Builder ti_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
             ti_name_sb.printf("ti%d", type->id);
             char *ti_name = ti_name_sb.make_string();
             type->type_info_generated_variable_name = ti_name;

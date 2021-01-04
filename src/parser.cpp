@@ -41,7 +41,7 @@ bool register_declaration(Declaration *new_declaration) {
     assert(new_declaration->parent_block != nullptr);
     For (decl_idx, new_declaration->parent_block->declarations) {
         Declaration *decl = new_declaration->parent_block->declarations[decl_idx];
-        if (strcmp(decl->name, new_declaration->name) == 0) {
+        if (decl->name == new_declaration->name) {
             report_error(new_declaration->location, "Name collision with '%s'.", new_declaration->name);
             report_info(decl->location, "Here is the other declaration.");
             return false;
@@ -288,7 +288,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         }
 
         if (name_override != nullptr) {
-            proc_name = name_override;
+            proc_name = intern_string(name_override);
         }
 
         header = SIF_NEW_CLONE(Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, proc_location));
@@ -373,7 +373,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                 structure->name = name_token.text;
             }
             else {
-                structure->name = name_override;
+                structure->name = intern_string(name_override);
             }
         }
         else {
@@ -943,10 +943,10 @@ bool parse_file(const char *filename, Location include_location) {
         filename = include_sb.string();
     }
 
-    char *absolute_path = get_absolute_path(filename, g_global_linear_allocator);
+    char *absolute_path = intern_string(get_absolute_path(filename, g_global_linear_allocator));
 
     For (idx, g_all_included_files) {
-        if (strcmp(g_all_included_files[idx], absolute_path) == 0) {
+        if (g_all_included_files[idx] == absolute_path) {
             // we've already included this file, no need to do it again
             return true;
         }
@@ -1450,7 +1450,8 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_IDENTIFIER: {
             eat_next_token(lexer);
-            Expr_Identifier *ident = SIF_NEW_CLONE(Expr_Identifier(token.text, token.location));
+            char *ident_name = token.text;
+            Expr_Identifier *ident = SIF_NEW_CLONE(Expr_Identifier(ident_name, token.location));
             g_identifiers_to_resolve.append(ident);
             return ident;
         }

@@ -83,10 +83,13 @@ Allocator g_global_linear_allocator;
 
 extern int total_lexed_lines;
 
+Timer g_global_timer = {};
+
+f64 expr_check_times[EXPR_COUNT];
+
 void main(int argc, char **argv) {
-    Timer timer = {};
-    init_timer(&timer);
-    double application_start_time = query_timer(&timer);
+    init_timer(&g_global_timer);
+    double application_start_time = query_timer(&g_global_timer);
 
     if (argc < 3) {
         print_usage();
@@ -94,7 +97,7 @@ void main(int argc, char **argv) {
     }
 
     Dynamic_Arena dynamic_arena = {};
-    init_dynamic_arena(&dynamic_arena, 10 * 1024 * 1024, default_allocator());
+    init_dynamic_arena(&dynamic_arena, 25 * 1024 * 1024, default_allocator());
     g_global_linear_allocator = dynamic_arena_allocator(&dynamic_arena);
 
     char *sif_exe_path = get_current_exe_name(g_global_linear_allocator);
@@ -175,7 +178,7 @@ void main(int argc, char **argv) {
     init_parser();
     init_checker();
 
-    double parsing_start_time = query_timer(&timer);
+    double parsing_start_time = query_timer(&g_global_timer);
 
     Ast_Block *global_scope = begin_parsing(file_to_compile);
     if (!global_scope) {
@@ -185,7 +188,7 @@ void main(int argc, char **argv) {
 
     add_global_declarations(global_scope);
 
-    double checking_start_time = query_timer(&timer);
+    double checking_start_time = query_timer(&g_global_timer);
 
     bool check_success = typecheck_global_scope(global_scope);
     if (!check_success) {
@@ -193,13 +196,13 @@ void main(int argc, char **argv) {
         return;
     }
 
-    double codegen_start_time = query_timer(&timer);
+    double codegen_start_time = query_timer(&g_global_timer);
 
     Chunked_String_Builder c_code = generate_c_main_file(global_scope);
     // printf("Final C code size: %dKB\n", c_code.buf.count / 1024);
     write_entire_file("output.c", c_code.make_string());
 
-    double c_compile_start_time = query_timer(&timer);
+    double c_compile_start_time = query_timer(&g_global_timer);
 
     // todo(josh): microsoft craziness
     // Find_Result fr = find_visual_studio_and_windows_sdk();
@@ -248,7 +251,7 @@ void main(int argc, char **argv) {
         delete_file("output.obj");
     }
 
-    double compilation_end_time = query_timer(&timer);
+    double compilation_end_time = query_timer(&g_global_timer);
 
     if (show_timings) {
         float setup_time   = parsing_start_time   - application_start_time;
@@ -262,17 +265,21 @@ void main(int argc, char **argv) {
         printf("-----------------------------\n");
         printf("|    sif compile timings    |\n");
         printf("-----------------------------\n");
-        printf("  Setup time: %.3fms (%.2f%%)\n", setup_time,   (setup_time   / total_time * 100));
-        printf("  Parse time: %.3fms (%.2f%%)\n", parse_time,   (parse_time   / total_time * 100));
-        printf("  Check time: %.3fms (%.2f%%)\n", check_time,   (check_time   / total_time * 100));
-        printf("Codegen time: %.3fms (%.2f%%)\n", codegen_time, (codegen_time / total_time * 100));
-        printf(" cl.exe time: %.3fms (%.2f%%)\n", cl_time,      (cl_time      / total_time * 100));
+        printf("  Setup time: %.3fms (%.2f%% sif, %.2f%% total)\n", setup_time,   (setup_time   / sif_time * 100), (setup_time   / total_time * 100));
+        printf("  Parse time: %.3fms (%.2f%% sif, %.2f%% total)\n", parse_time,   (parse_time   / sif_time * 100), (parse_time   / total_time * 100));
+        printf("  Check time: %.3fms (%.2f%% sif, %.2f%% total)\n", check_time,   (check_time   / sif_time * 100), (check_time   / total_time * 100));
+        printf("Codegen time: %.3fms (%.2f%% sif, %.2f%% total)\n", codegen_time, (codegen_time / sif_time * 100), (codegen_time / total_time * 100));
+        printf(" cl.exe time: %.3fms (%.2f%% sif, %.2f%% total)\n", cl_time,      (cl_time      / sif_time * 100), (cl_time      / total_time * 100));
         printf("\n");
         printf("  Sif time: %fms\n", sif_time);
         printf("Total time: %fms\n", total_time);
         printf("\n");
         printf("  Total lines: %d\n", total_lexed_lines);
         printf("Sif lines/sec: %.0f\n", ((float)total_lexed_lines) / (sif_time / 1000));
+
+        for (int i = 0; i < EXPR_COUNT; i += 1) {
+            printf("%d: %f\n", i, expr_check_times[i]);
+        }
     }
 
     if (is_run) {
