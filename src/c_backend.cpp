@@ -1038,8 +1038,10 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
         double type_info_gen_time_start = query_timer(&g_global_timer);
 
         sb->print("void __init_sif_runtime() {\n");
-        sb->printf("    _global_type_table.data = malloc(%d * sizeof(union Union_All_Type_Infos));\n", all_types.count);
-        sb->printf("    _global_type_table.count = %d;\n", all_types.count);
+        sb->printf("    int type_info_table_size = %d * sizeof(union Union_All_Type_Infos);\n", all_types.count + 1);
+        sb->printf("    _global_type_table.data = malloc(type_info_table_size);\n");
+        sb->printf("    zero_pointer(_global_type_table.data, type_info_table_size);\n");
+        sb->printf("    _global_type_table.count = %d;\n", all_types.count + 1);
         sb->printf("#define GEN_TYPE_INFO_STRUCT_FIELD(_ti_name, _field_name, _field_name_len, _field_index, _field_type_index, _field_offset) ((struct Type_Info_Struct_Field *)_ti_name->fields.data)[_field_index] = (struct Type_Info_Struct_Field){MAKE_STRING(_field_name, _field_name_len), GET_TYPE_INFO_PTR(_field_type_index), _field_offset}\n");
         sb->printf("#define GET_TYPE_INFO_PTR(_index) ((struct Type_Info *)&((union Union_All_Type_Infos *)_global_type_table.data)[_index])\n");
         sb->printf("#define MAKE_TYPE_INFO(_varname, _printable_name, _type, _kind, _id, _size, _align) struct _type *_varname = ((struct _type *)GET_TYPE_INFO_PTR(_id)); zero_pointer(_varname, sizeof(*_varname)); _varname->base.printable_name = _printable_name; _varname->base.id = _id; _varname->base.size = _size; _varname->base.align = _align; _varname->base.kind = _kind;\n");

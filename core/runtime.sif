@@ -125,6 +125,8 @@ var _global_type_table: []Union_All_Type_Infos; @sif_runtime
 
 proc get_type_info(type: typeid) : ^Type_Info {
     var idx = transmute(u64, type);
+    assert(transmute(u64, type) > 0);
+    assert(transmute(u64, type) < cast(u64, _global_type_table.count));
     return cast(^Type_Info, &_global_type_table[cast(int, idx)]);
 } @sif_runtime
 

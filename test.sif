@@ -1,6 +1,5 @@
 #include "core:basic.sif"
 
 proc main() : i32 {
-    print("wow\n");
     return 0;
 }
