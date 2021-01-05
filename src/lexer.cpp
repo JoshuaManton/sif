@@ -36,6 +36,7 @@ char *g_interned_string_break;
 char *g_interned_string_continue;
 char *g_interned_string_cast;
 char *g_interned_string_transmute;
+char *g_interned_string_using;
 
 char *intern_string(char *str, int length_override) {
     u64 hash = 0xcbf29ce484222325;
@@ -87,6 +88,7 @@ void init_lexer_globals() {
     g_interned_string_continue  = intern_string("continue");
     g_interned_string_cast      = intern_string("cast");
     g_interned_string_transmute = intern_string("transmute");
+    g_interned_string_using     = intern_string("using");
 
     token_string_map[TK_INVALID]                        = "INVALID";
     token_string_map[TK_IDENTIFIER]                     = "IDENTIFIER";
@@ -115,6 +117,7 @@ void init_lexer_globals() {
     token_string_map[TK_CONTINUE]                       = "continue";
     token_string_map[TK_CAST]                           = "cast";
     token_string_map[TK_TRANSMUTE]                      = "transmute";
+    token_string_map[TK_USING]                          = "using";
 
     token_string_map[TK_NOTE]                           = "@note";
 
@@ -200,6 +203,7 @@ void init_lexer_globals() {
     token_name_map[TK_CONTINUE]                         = "TK_CONTINUE";
     token_name_map[TK_CAST]                             = "TK_CAST";
     token_name_map[TK_TRANSMUTE]                        = "TK_TRANSMUTE";
+    token_name_map[TK_USING]                            = "TK_USING";
 
     token_name_map[TK_NOTE]                             = "TK_NOTE";
 
@@ -541,6 +545,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD(g_interned_string_continue, TK_CONTINUE)
         else CHECK_KEYWORD(g_interned_string_cast, TK_CAST)
         else CHECK_KEYWORD(g_interned_string_transmute, TK_TRANSMUTE)
+        else CHECK_KEYWORD(g_interned_string_using, TK_USING)
     }
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;

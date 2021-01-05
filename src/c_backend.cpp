@@ -379,6 +379,33 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
     }
 }
 
+char *c_print_selector_lookup(Chunked_String_Builder *sb, Ast_Expr *lhs, const char *field_name, int indent_level) {
+    char *lhs_t = c_print_expr(sb, lhs, indent_level);
+    assert(lhs_t);
+    Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+    bool is_accessing_slice_data_field = false;
+    Type *lhs_type = lhs->operand.type;
+    if ((lhs_type->kind == TYPE_SLICE) && (field_name == "data")) {
+        is_accessing_slice_data_field = true;
+        Type_Slice *slice_type = (Type_Slice *)lhs_type;
+        selector_sb.print("*((");
+        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
+        selector_sb.print(")&");
+    }
+    selector_sb.print(lhs_t);
+    if (is_type_pointer(lhs_type)) {
+        selector_sb.print("->");
+    }
+    else {
+        selector_sb.print(".");
+    }
+    selector_sb.print(field_name);
+    if (is_accessing_slice_data_field) {
+        selector_sb.print(")");
+    }
+    return selector_sb.make_string();
+}
+
 char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     char *t = nullptr;
 
@@ -493,7 +520,14 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
             switch (expr->expr_kind) {
                 case EXPR_IDENTIFIER: {
                     Expr_Identifier *identifier = (Expr_Identifier *)expr;
-                    t = identifier->name;
+                    if (identifier->resolved_declaration->kind == DECL_USING) {
+                        Using_Declaration *using_decl = (Using_Declaration *)identifier->resolved_declaration;
+                        assert(using_decl->using_expr != nullptr);
+                        t = c_print_selector_lookup(sb, using_decl->using_expr, identifier->name, indent_level);
+                    }
+                    else {
+                        t = identifier->name;
+                    }
                     break;
                 }
                 case EXPR_UNARY: {
@@ -671,29 +705,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 }
                 case EXPR_SELECTOR: {
                     Expr_Selector *selector = (Expr_Selector *)expr;
-                    char *lhs = c_print_expr(sb, selector->lhs, indent_level);
-                    assert(lhs);
-                    Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-                    bool is_accessing_slice_data_field = false;
-                    if ((selector->type_with_field->kind == TYPE_SLICE) && (selector->field_name == "data")) {
-                        is_accessing_slice_data_field = true;
-                        Type_Slice *slice_type = (Type_Slice *)selector->type_with_field;
-                        selector_sb.print("*((");
-                        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
-                        selector_sb.print(")&");
-                    }
-                    selector_sb.print(lhs);
-                    if (is_type_pointer(selector->lhs->operand.type)) {
-                        selector_sb.print("->");
-                    }
-                    else {
-                        selector_sb.print(".");
-                    }
-                    selector_sb.print(selector->field_name);
-                    if (is_accessing_slice_data_field) {
-                        selector_sb.print(")");
-                    }
-                    t = selector_sb.make_string();
+                    t = c_print_selector_lookup(sb, selector->lhs, selector->lookup.field.name, indent_level);
                     break;
                 }
                 case EXPR_CAST: {
@@ -964,6 +976,10 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
         case AST_CONTINUE: {
             print_indents(sb, indent_level);
             sb->print("continue;\n");
+            break;
+        }
+
+        case AST_USING: {
             break;
         }
 

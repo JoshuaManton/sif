@@ -574,6 +574,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             return var;
         }
 
+        case TK_USING: {
+            Token using_token;
+            eat_next_token(lexer, &using_token);
+            Ast_Expr *expr = parse_expr(lexer);
+            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            return SIF_NEW_CLONE(Ast_Using(expr, using_token.location));
+        }
+
         case TK_PROC: {
             Ast_Proc *proc = parse_proc(lexer, name_override);
             if (!proc) {

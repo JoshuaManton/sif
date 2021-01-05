@@ -95,8 +95,16 @@ proc arrays() {
 
 
 proc slices() {
-    // todo(josh)
-    // print("\n\n---- slices ----\n");
+    print("\n\n---- slices ----\n");
+
+    var array: [4]int;
+    array[2] = 124;
+    print("%\n", array[2]);
+    var slice = slice_ptr(&array[0], array.count);
+    assert(slice[2] == 124);
+    slice[2] = 421;
+    print("%\n", slice[2]);
+    assert(array[2] == 421);
 }
 
 

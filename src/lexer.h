@@ -31,6 +31,7 @@ enum Token_Kind {
     TK_FALSE,
     TK_CAST,
     TK_TRANSMUTE,
+    TK_USING,
 
     TK_NOTE,
 

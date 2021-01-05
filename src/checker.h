@@ -53,11 +53,6 @@ struct Type_Slice;
 struct Type_Varargs;
 struct Type_Reference;
 
-struct Struct_Field {
-    const char *name = {};
-    Operand operand = {};
-    int offset = {}; // -1 if is_constant
-};
 struct Type {
     i64 id = {};
     Type_Kind kind = {};
@@ -68,6 +63,8 @@ struct Type {
     Array<Struct_Field> all_fields = {};
     Array<Struct_Field> constant_fields = {};
     Array<Struct_Field> variable_fields = {};
+    Ast_Block *constants_block = {};
+    Ast_Block *variables_block = {};
     char *printable_name = {};
     int printable_name_length = {}; // note(josh): doesn't include null term
     Type_Pointer *pointer_to_this_type = {};
@@ -110,9 +107,9 @@ struct Type_Struct : public Type {
 };
 
 struct Type_Enum : public Type {
-    char *name = nullptr;
+    const char *name = nullptr;
     Type *base_type = {};
-    Type_Enum(char *name)
+    Type_Enum(const char *name)
     : Type(TYPE_ENUM)
     , name(name)
     {

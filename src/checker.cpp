@@ -67,10 +67,13 @@ T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
         all_types.append(t_ptr);
         t_ptr->id = all_types.count;
     }
+
+    t_ptr->variables_block = SIF_NEW_CLONE(Ast_Block({}));
+    t_ptr->constants_block = SIF_NEW_CLONE(Ast_Block({}));
     return t_ptr;
 }
 
-void add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset) {
+void add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location) {
     assert(variable_type != nullptr);
     assert(!is_type_untyped(variable_type));
     Struct_Field field = {};
@@ -80,9 +83,10 @@ void add_variable_type_field(Type *type, const char *name, Type *variable_type, 
     field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
     type->all_fields.append(field);
     type->variable_fields.append(field);
+    assert(register_declaration(SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location))));
 }
 
-void add_constant_type_field(Type *type, const char *name, Operand operand) {
+void add_constant_type_field(Type *type, const char *name, Operand operand, Location location) {
     assert(operand.type != nullptr);
     Struct_Field field = {};
     field.name = name;
@@ -90,6 +94,7 @@ void add_constant_type_field(Type *type, const char *name, Operand operand) {
     field.operand = operand;
     type->all_fields.append(field);
     type->constant_fields.append(field);
+    assert(register_declaration(SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location))));
 }
 
 void init_checker() {
@@ -137,11 +142,11 @@ void init_checker() {
 
 
 
-    add_variable_type_field(type_string, intern_string("data"), get_or_create_type_pointer_to(type_u8), 0);
-    add_variable_type_field(type_string, intern_string("count"), type_int, 8);
+    add_variable_type_field(type_string, intern_string("data"), get_or_create_type_pointer_to(type_u8), 0, {});
+    add_variable_type_field(type_string, intern_string("count"), type_int, 8, {});
 
-    add_variable_type_field(type_any, intern_string("data"), type_rawptr, 0);
-    add_variable_type_field(type_any, intern_string("type"), type_typeid, 8);
+    add_variable_type_field(type_any, intern_string("data"), type_rawptr, 0, {});
+    add_variable_type_field(type_any, intern_string("type"), type_typeid, 8, {});
 }
 
 void add_global_declarations(Ast_Block *block) {
@@ -360,7 +365,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     field_operand.type = enum_type;
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
-                    add_constant_type_field(enum_type, field->name, field_operand);
+                    add_constant_type_field(enum_type, field->name, field_operand, field->location);
                     if (!register_declaration(SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->constants_block, field->location)))) {
                         return false;
                     }
@@ -481,6 +486,18 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         case DECL_CONSTANT_VALUE: {
             Constant_Declaration *constant = (Constant_Declaration *)decl;
             decl_operand = constant->operand;
+            break;
+        }
+        case DECL_STRUCT_MEMBER: {
+            Struct_Member_Declaration *struct_member_decl = (Struct_Member_Declaration *)decl;
+            decl_operand = struct_member_decl->operand;
+            break;
+        }
+        case DECL_USING: {
+            Using_Declaration *using_decl = (Using_Declaration *)decl;
+            if (!check_declaration(using_decl->declaration, using_decl->location, &decl_operand)) {
+                return false;
+            }
             break;
         }
         default: {
@@ -816,7 +833,7 @@ bool complete_type(Type *type) {
                         assert(var->expr != nullptr);
                         assert(var->constant_operand.type != nullptr);
                         assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                        add_constant_type_field(struct_type, var->name, var->constant_operand);
+                        add_constant_type_field(struct_type, var->name, var->constant_operand, var->location);
                     }
                 }
 
@@ -836,7 +853,7 @@ bool complete_type(Type *type) {
                                 break;
                             }
                         }
-                        add_variable_type_field(struct_type, var->name, var->type, size);
+                        add_variable_type_field(struct_type, var->name, var->type, size, var->location);
 
                         int size_delta = var->type->size;
                         if (next_alignment != -1) {
@@ -846,7 +863,7 @@ bool complete_type(Type *type) {
                         largest_alignment = max(largest_alignment, var->type->align);
                     }
                     else {
-                        add_variable_type_field(struct_type, var->name, var->type, 0);
+                        add_variable_type_field(struct_type, var->name, var->type, 0, var->location);
                         size = max(size, var->type->size);
                         largest_alignment = max(largest_alignment, var->type->align);
                     }
@@ -991,12 +1008,12 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     }
     Type_Array *new_type = NEW_TYPE(Type_Array(array_of, count));
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
-    add_variable_type_field(new_type, intern_string("data"), type_rawptr, 0);
+    add_variable_type_field(new_type, intern_string("data"), type_rawptr, 0, {});
     Operand operand = {};
     operand.type = type_int;
     operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
     operand.int_value = count;
-    add_constant_type_field(new_type, intern_string("count"), operand);
+    add_constant_type_field(new_type, intern_string("count"), operand, {});
     return new_type;
 }
 
@@ -1010,8 +1027,8 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     new_type->flags = TF_SLICE;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0);
-    add_variable_type_field(new_type, intern_string("count"), type_int, 8);
+    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0, {});
+    add_variable_type_field(new_type, intern_string("count"), type_int, 8, {});
     slice_of->slice_of_this_type = new_type;
     return new_type;
 }
@@ -1027,8 +1044,8 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0);
-    add_variable_type_field(new_type, intern_string("count"), type_int, 8);
+    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0, {});
+    add_variable_type_field(new_type, intern_string("count"), type_int, 8, {});
     varargs_of->varargs_of_this_type = new_type;
     return new_type;
 }
@@ -2045,6 +2062,58 @@ Ast_Expr *unparen_expr(Ast_Expr *expr) {
     return expr;
 }
 
+bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Lookup_Result *out_result, Location selector_location) {
+    Operand *lhs_operand = typecheck_expr(lhs);
+    if (!lhs_operand) {
+        return false;
+    }
+    if (!complete_type(lhs_operand->type)) {
+        return false;
+    }
+
+    assert(lhs_operand->type != nullptr);
+    Type *type_with_fields = lhs_operand->type;
+    Ast_Block *block_to_search = type_with_fields->variables_block;
+    if (is_type_pointer(lhs_operand->type)) {
+        Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
+        assert(pointer_type->pointer_to != nullptr);
+        type_with_fields = pointer_type->pointer_to;
+        block_to_search = pointer_type->pointer_to->variables_block;
+    }
+    else if (is_type_reference(lhs_operand->type)) {
+        Type_Reference *reference_type = (Type_Reference *)lhs_operand->type;
+        assert(reference_type->reference_to != nullptr);
+        type_with_fields = reference_type->reference_to;
+        block_to_search = reference_type->reference_to->variables_block;
+    }
+    else if (is_type_typeid(lhs_operand->type)) {
+        assert(lhs_operand->type_value);
+        type_with_fields = lhs_operand->type_value;
+        block_to_search = lhs_operand->type_value->constants_block;
+    }
+    assert(block_to_search != nullptr);
+    assert(type_with_fields != nullptr);
+    if (!complete_type(type_with_fields)) {
+        return false;
+    }
+    bool found_field = false;
+    For (idx, type_with_fields->all_fields) {
+        Struct_Field field = type_with_fields->all_fields[idx];
+        if (field.name == field_name) {
+            found_field = true;
+            (*out_result).field = field;
+            (*out_result).operand = field.operand;
+            (*out_result).operand.location = selector_location; // todo(josh): this should probably be the location of the rhs
+            break;
+        }
+    }
+    if (!found_field) {
+        report_error(lhs->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
+        return false;
+    }
+    return true;
+}
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -2308,50 +2377,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             // todo(josh): use some sort of constants_block thing for constant fields
 
             Expr_Selector *selector = (Expr_Selector *)expr;
-            Operand *lhs_operand = typecheck_expr(selector->lhs);
-            if (!lhs_operand) {
+            Selector_Expression_Lookup_Result lookup;
+            if (!do_selector_lookup(selector->lhs, selector->field_name, &lookup, selector->location)) {
                 return nullptr;
             }
-            if (!complete_type(lhs_operand->type)) {
-                return nullptr;
-            }
-
-            assert(lhs_operand->type != nullptr);
-            Type *type_with_fields = lhs_operand->type;
-            if (is_type_pointer(lhs_operand->type)) {
-                Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
-                assert(pointer_type->pointer_to != nullptr);
-                type_with_fields = pointer_type->pointer_to;
-            }
-            else if (is_type_reference(lhs_operand->type)) {
-                Type_Reference *reference_type = (Type_Reference *)lhs_operand->type;
-                assert(reference_type->reference_to != nullptr);
-                type_with_fields = reference_type->reference_to;
-            }
-            else if (is_type_typeid(lhs_operand->type)) {
-                assert(lhs_operand->type_value);
-                type_with_fields = lhs_operand->type_value;
-            }
-            assert(type_with_fields != nullptr);
-            if (!complete_type(type_with_fields)) {
-                return nullptr;
-            }
-            bool found_field = false;
-            For (idx, type_with_fields->all_fields) {
-                Struct_Field field = type_with_fields->all_fields[idx];
-                if (field.name == selector->field_name) {
-                    found_field = true;
-                    result_operand = field.operand;
-                    result_operand.location = selector->location;
-                    break;
-                }
-            }
-            if (!found_field) {
-                report_error(selector->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), selector->field_name);
-                return nullptr;
-            }
-
-            selector->type_with_field = type_with_fields;
+            selector->lookup = lookup;
+            result_operand = lookup.operand;
             break;
         }
         case EXPR_DEREFERENCE: {
@@ -2945,6 +2976,26 @@ bool typecheck_node(Ast_Node *node) {
             assert(rhs_operand->flags & OPERAND_RVALUE);
             if (!match_types(rhs_operand, expected_lhs_type)) {
                 return false;
+            }
+            break;
+        }
+
+        case AST_USING: {
+            Ast_Using *ast_using = (Ast_Using *)node;
+            Operand *using_operand = typecheck_expr(ast_using->expr);
+            if (!using_operand) {
+                return nullptr;
+            }
+            Ast_Block *block_to_broadcast_declarations_of = nullptr;
+            if (is_type_typeid(using_operand->type)) {
+                block_to_broadcast_declarations_of = using_operand->type_value->constants_block;
+            }
+            else {
+                block_to_broadcast_declarations_of = using_operand->type->variables_block;
+            }
+            assert(block_to_broadcast_declarations_of != nullptr);
+            For (idx, block_to_broadcast_declarations_of->declarations) {
+                assert(register_declaration(new Using_Declaration(ast_using->expr, block_to_broadcast_declarations_of->declarations[idx], ast_using->parent_block, ast_using->location)));
             }
             break;
         }

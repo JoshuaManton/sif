@@ -1,12 +1,13 @@
 #include "core:basic.sif"
 
 struct Foo {
-    const III = 123;
+    var bar: int;
 }
 
 proc main() : i32 {
-    var a: i32 = Foo.III;
-    var b: u8 = Foo.III;
-    var f: float = Foo.III;
+    var foo: Foo;
+    using foo;
+    bar = 123;
+    print("%\n", foo.bar);
     return 0;
 }

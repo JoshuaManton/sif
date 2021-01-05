@@ -11,6 +11,7 @@ enum Ast_Kind {
     AST_PROC_HEADER,
     AST_PROC,
     AST_VAR,
+    AST_USING,
     AST_STRUCT,
     AST_ENUM,
     AST_IF,
@@ -118,13 +119,13 @@ struct Ast_Block : public Ast_Node {
     Array<Ast_Node *> nodes = {};
     Array<Declaration *> declarations = {};
     u64 flags = {};
-    Hashtable<char *, Declaration *> declarations_lookup = {};
+    Hashtable<const char *, Declaration *> declarations_lookup = {};
     Ast_Block(Location location)
     : Ast_Node(AST_BLOCK, location)
     {
         nodes.allocator = g_global_linear_allocator;
         declarations.allocator = g_global_linear_allocator;
-        declarations_lookup = make_hashtable<char *, Declaration *>(g_global_linear_allocator, 16);
+        declarations_lookup = make_hashtable<const char *, Declaration *>(g_global_linear_allocator, 16);
     }
 };
 
@@ -241,6 +242,14 @@ struct Ast_Var : public Ast_Node {
     , expr(expr)
     , is_constant(is_constant)
     , is_polymorphic(is_polymorphic)
+    {}
+};
+
+struct Ast_Using : public Ast_Node {
+    Ast_Expr *expr = {};
+    Ast_Using(Ast_Expr *expr, Location location)
+    : Ast_Node(AST_USING, location)
+    , expr(expr)
     {}
 };
 
@@ -536,10 +545,24 @@ struct Expr_Procedure_Call : public Ast_Expr {
     {}
 };
 
+
+
+struct Struct_Field {
+    const char *name = {};
+    Operand operand = {};
+    int offset = {}; // -1 if is_constant
+};
+
+struct Selector_Expression_Lookup_Result {
+    Ast_Expr *lhs = {};
+    Struct_Field field = {};
+    Operand operand = {};
+};
+
 struct Expr_Selector : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     char *field_name = nullptr;
-    Type *type_with_field = nullptr;
+    Selector_Expression_Lookup_Result lookup = {};
     Expr_Selector(Ast_Expr *lhs, char *field_name, Location location)
     : Ast_Expr(EXPR_SELECTOR, location)
     , lhs(lhs)
@@ -550,8 +573,6 @@ struct Expr_Selector : public Ast_Expr {
 struct Expr_Compound_Literal : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Array<Ast_Expr *> exprs = {};
-
-    const char *generated_temporary_variable_name = {};
     Expr_Compound_Literal(Ast_Expr *type_expr, Array<Ast_Expr *> exprs, Location location)
     : Ast_Expr(EXPR_COMPOUND_LITERAL, location)
     , type_expr(type_expr)
@@ -693,8 +714,10 @@ enum Declaration_Kind {
     DECL_INVALID,
     DECL_TYPE,
     DECL_STRUCT,
+    DECL_USING,
     DECL_ENUM,
     DECL_VAR,
+    DECL_STRUCT_MEMBER,
     DECL_POLYMORPHIC,
     DECL_CONSTANT_VALUE,
     DECL_PROC,
@@ -710,13 +733,13 @@ enum Declaration_Check_State {
 struct Declaration {
     Ast_Block *parent_block = {}; // note(josh): temporarily null while doing polymorphism
     Declaration_Check_State check_state = {};
-    char *name = {};
+    const char *name = {};
     Declaration_Kind kind = {};
     Operand operand = {};
     Location location = {};
     bool is_polymorphic = {};
     Array<char *> notes = {};
-    Declaration(char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
+    Declaration(const char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)
     , parent_block(parent_block)
@@ -724,7 +747,7 @@ struct Declaration {
     {}
 };
 
-struct Type_Declaration : Declaration {
+struct Type_Declaration : public Declaration {
     Type *type = {};
     Type_Declaration(char *name, Type *type, Ast_Block *parent_block)
     : Declaration(name, DECL_TYPE, parent_block, {})
@@ -732,7 +755,7 @@ struct Type_Declaration : Declaration {
     {}
 };
 
-struct Struct_Declaration : Declaration {
+struct Struct_Declaration : public Declaration {
     Ast_Struct *structure = {};
     Struct_Declaration(Ast_Struct *structure, Ast_Block *parent_block)
     : Declaration(structure->name, DECL_STRUCT, parent_block, structure->location)
@@ -740,7 +763,17 @@ struct Struct_Declaration : Declaration {
     {}
 };
 
-struct Enum_Declaration : Declaration {
+struct Using_Declaration : public Declaration {
+    Ast_Expr *using_expr = {};
+    Declaration *declaration = {};
+    Using_Declaration(Ast_Expr *using_expr, Declaration *declaration, Ast_Block *parent_block, Location location)
+    : Declaration(declaration->name, DECL_USING, parent_block, location)
+    , using_expr(using_expr)
+    , declaration(declaration)
+    {}
+};
+
+struct Enum_Declaration : public Declaration {
     Ast_Enum *ast_enum = {};
     Enum_Declaration(Ast_Enum *ast_enum, Ast_Block *parent_block)
     : Declaration(ast_enum->name, DECL_ENUM, parent_block, ast_enum->location)
@@ -748,7 +781,7 @@ struct Enum_Declaration : Declaration {
     {}
 };
 
-struct Proc_Declaration : Declaration {
+struct Proc_Declaration : public Declaration {
     Ast_Proc_Header *header = {};
     Proc_Declaration(Ast_Proc_Header *header, Ast_Block *parent_block)
     : Declaration(header->name, DECL_PROC, parent_block, header->location)
@@ -756,7 +789,7 @@ struct Proc_Declaration : Declaration {
     {}
 };
 
-struct Var_Declaration : Declaration {
+struct Var_Declaration : public Declaration {
     Ast_Var *var = {};
     Var_Declaration(Ast_Var *var, Ast_Block *parent_block)
     : Declaration(var->name, DECL_VAR, parent_block, var->location)
@@ -764,7 +797,19 @@ struct Var_Declaration : Declaration {
     {}
 };
 
-struct Polymorphic_Declaration : Declaration {
+struct Struct_Member_Declaration : public Declaration {
+    const char *name = {};
+    Operand operand = {};
+    int offset = {};
+    Struct_Member_Declaration(const char *name, Operand operand, int offset, Ast_Block *parent_block, Location location)
+    : Declaration(name, DECL_STRUCT_MEMBER, parent_block, location)
+    , name(name)
+    , operand(operand)
+    , offset(offset)
+    {}
+};
+
+struct Polymorphic_Declaration : public Declaration {
     Declaration *declaration = {};
     Polymorphic_Declaration(char *name, Declaration *decl, Ast_Block *block, Location location)
     : Declaration(name, DECL_POLYMORPHIC, block, location)
@@ -772,7 +817,7 @@ struct Polymorphic_Declaration : Declaration {
     {}
 };
 
-struct Constant_Declaration : Declaration {
+struct Constant_Declaration : public Declaration {
     Operand operand = {};
     Constant_Declaration(char *name, Operand operand, Ast_Block *block, Location location)
     : Declaration(name, DECL_CONSTANT_VALUE, block, location)
