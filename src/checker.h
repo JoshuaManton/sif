@@ -65,9 +65,9 @@ struct Type {
     int align = {};
     u64 flags = {};
     Check_State check_state = {};
-    Array<Struct_Field> fields = {};
-    int num_variable_fields = {};
-    int num_constant_fields = {};
+    Array<Struct_Field> all_fields = {};
+    Array<Struct_Field> constant_fields = {};
+    Array<Struct_Field> variable_fields = {};
     char *printable_name = {};
     int printable_name_length = {}; // note(josh): doesn't include null term
     Type_Pointer *pointer_to_this_type = {};
@@ -77,7 +77,9 @@ struct Type {
     Type(Type_Kind kind)
     : kind(kind)
     {
-        fields.allocator = g_global_linear_allocator;
+        all_fields.allocator = g_global_linear_allocator;
+        constant_fields.allocator = g_global_linear_allocator;
+        variable_fields.allocator = g_global_linear_allocator;
     }
 };
 

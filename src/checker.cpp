@@ -78,8 +78,8 @@ void add_variable_type_field(Type *type, const char *name, Type *variable_type, 
     field.offset = offset;
     field.operand.type = variable_type;
     field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-    type->fields.append(field);
-    type->num_variable_fields += 1;
+    type->all_fields.append(field);
+    type->variable_fields.append(field);
 }
 
 void add_constant_type_field(Type *type, const char *name, Operand operand) {
@@ -89,8 +89,8 @@ void add_constant_type_field(Type *type, const char *name, Operand operand) {
     field.name = name;
     field.offset = -1;
     field.operand = operand;
-    type->fields.append(field);
-    type->num_constant_fields += 1;
+    type->all_fields.append(field);
+    type->constant_fields.append(field);
 }
 
 void init_checker() {
@@ -2318,7 +2318,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
 
-            bool is_instance_of_type_rather_that_a_type_itself = true;
             assert(lhs_operand->type != nullptr);
             Type *type_with_fields = lhs_operand->type;
             if (is_type_pointer(lhs_operand->type)) {
@@ -2334,23 +2333,15 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             else if (is_type_typeid(lhs_operand->type)) {
                 assert(lhs_operand->type_value);
                 type_with_fields = lhs_operand->type_value;
-                is_instance_of_type_rather_that_a_type_itself = false;
             }
             assert(type_with_fields != nullptr);
             if (!complete_type(type_with_fields)) {
                 return nullptr;
             }
             bool found_field = false;
-            For (idx, type_with_fields->fields) {
-                Struct_Field field = type_with_fields->fields[idx];
+            For (idx, type_with_fields->all_fields) {
+                Struct_Field field = type_with_fields->all_fields[idx];
                 if (field.name == selector->field_name) {
-                    if (!is_instance_of_type_rather_that_a_type_itself) {
-                        if (!(field.operand.flags & OPERAND_CONSTANT)) {
-                            // note(josh): there's no real reason why we _can't_ support this, it's just weird
-                            report_error(selector->location, "Cannot access instance fields from type.");
-                            return nullptr;
-                        }
-                    }
                     found_field = true;
                     result_operand = field.operand;
                     result_operand.location = selector->location;
@@ -2475,18 +2466,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             else {
                 if (compound_literal->exprs.count != 0) {
-                    if (compound_literal->exprs.count != target_type->num_variable_fields) {
-                        report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->fields.count, compound_literal->exprs.count);
+                    if (compound_literal->exprs.count != target_type->variable_fields.count) {
+                        report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
                         return nullptr;
                     }
-                    int variable_field_index = -1;
                     For (idx, compound_literal->exprs) {
-                        variable_field_index += 1;
-                        while (target_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
-                            variable_field_index += 1;
-                        }
-
-                        Type *element_type = target_type->fields[variable_field_index].operand.type;
+                        Type *element_type = target_type->variable_fields[idx].operand.type;
 
                         Ast_Expr *expr = compound_literal->exprs[idx];
                         Operand *expr_operand = typecheck_expr(expr);

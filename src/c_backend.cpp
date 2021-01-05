@@ -642,14 +642,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         }
                     }
                     else {
-                        int variable_field_index = -1;
                         For (idx, expr_names) {
-                            variable_field_index += 1;
-                            while (compound_literal_type->fields[variable_field_index].operand.flags & OPERAND_CONSTANT) {
-                                variable_field_index += 1;
-                            }
                             print_indents(sb, indent_level);
-                            Struct_Field target_field = compound_literal_type->fields[variable_field_index];
+                            Struct_Field target_field = compound_literal_type->variable_fields[idx];
                             assert(!(target_field.operand.flags & OPERAND_CONSTANT));
                             assert(target_field.operand.flags & OPERAND_LVALUE);
                             sb->printf("%s.%s = %s;\n", t, target_field.name, expr_names[idx]);
@@ -990,27 +985,11 @@ extern Ast_Proc *g_main_proc;
 extern Array<Type *> all_types;
 
 void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Type *type) {
-    // todo(josh): really gotta get rid of constants in the fields list
-    int variable_field_count = 0;
-    For (idx, type->fields) {
-        Struct_Field field = type->fields[idx];
-        if (field.offset == -1) {
-            continue;
-        }
-        variable_field_count += 1;
-    }
-
-    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Struct_Field));\n", ti_name, variable_field_count);
-    sb->printf("    %s->fields.count = %d;\n", ti_name, variable_field_count);
-    int var_idx = 0;
-    For (idx, type->fields) {
-        Struct_Field field = type->fields[idx];
-        if (field.offset == -1) {
-            continue;
-        }
-
-        sb->printf("    GTISF(%s, \"%s\", %d, %d, %d, %d);\n", ti_name, field.name, strlen(field.name), var_idx, field.operand.type->id, field.offset);
-        var_idx += 1;
+    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Struct_Field));\n", ti_name, type->variable_fields.count);
+    sb->printf("    %s->fields.count = %d;\n", ti_name, type->variable_fields.count);
+    For (idx, type->variable_fields) {
+        Struct_Field field = type->variable_fields[idx];
+        sb->printf("    GTISF(%s, \"%s\", %d, %d, %d, %d);\n", ti_name, field.name, strlen(field.name), idx, field.operand.type->id, field.offset);
     }
 }
 
@@ -1139,10 +1118,10 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                     Type_Enum *type_enum = (Type_Enum *)type;
                     sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Enum, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
                     sb->printf("    %s->base_type = GTIP(%d);\n", ti_name, type_enum->base_type->id);
-                    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Enum_Field));\n", ti_name, type_enum->fields.count);
-                    sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->fields.count);
-                    For (idx, type_enum->fields) {
-                        Struct_Field field = type_enum->fields[idx];
+                    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Enum_Field));\n", ti_name, type_enum->constant_fields.count);
+                    sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->constant_fields.count);
+                    For (idx, type_enum->constant_fields) {
+                        Struct_Field field = type_enum->constant_fields[idx];
                         assert(field.offset == -1);
                         assert(field.operand.flags & OPERAND_CONSTANT);
                         sb->printf("    GTIEF(%s, %d, \"%s\", %d, %d);\n", ti_name, idx, field.name, strlen(field.name), field.operand.int_value);
@@ -1355,8 +1334,8 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
             }
             case DECL_ENUM: {
                 Enum_Declaration *enum_decl = (Enum_Declaration *)decl;
-                For (idx, enum_decl->ast_enum->type->fields) {
-                    Struct_Field field = enum_decl->ast_enum->type->fields[idx];
+                For (idx, enum_decl->ast_enum->type->constant_fields) {
+                    Struct_Field field = enum_decl->ast_enum->type->constant_fields[idx];
                     assert(field.operand.flags & OPERAND_CONSTANT);
                     sb.printf("%s_%s = %d;\n", enum_decl->name, field.name, field.operand.int_value);
                 }
