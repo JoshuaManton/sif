@@ -27,6 +27,7 @@ SMALL
 -add allocators to demo
 -underscores in numbers
 -prevent identifiers from being C keywords in the backend, like `signed`
+-implicit enum selector
 
 MEDIUM
 -defer
@@ -53,6 +54,7 @@ BIG
 -control flow graph analysis
 -#if
 -C varargs for bindings
+-procedure overloading
 -default procedure parameters
 -#caller_location
 -#location()

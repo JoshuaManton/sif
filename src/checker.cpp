@@ -84,7 +84,6 @@ void add_variable_type_field(Type *type, const char *name, Type *variable_type, 
 
 void add_constant_type_field(Type *type, const char *name, Operand operand) {
     assert(operand.type != nullptr);
-    assert(!is_type_untyped(operand.type));
     Struct_Field field = {};
     field.name = name;
     field.offset = -1;
@@ -805,57 +804,56 @@ bool complete_type(Type *type) {
                 Ast_Struct *structure = struct_type->ast_struct;
                 int size = 0;
                 int largest_alignment = 1;
-                if (structure->fields.count == 0) {
-                    size = 1;
+                For (idx, structure->fields) {
+                    Ast_Var *var = structure->fields[idx];
+                    if (!check_declaration(var->declaration, var->location)) {
+                        return false;
+                    }
+                    if (!complete_type(var->type)) {
+                        return false;
+                    }
+                    if (var->is_constant) {
+                        assert(var->expr != nullptr);
+                        assert(var->constant_operand.type != nullptr);
+                        assert(var->constant_operand.flags & OPERAND_CONSTANT);
+                        add_constant_type_field(struct_type, var->name, var->constant_operand);
+                    }
                 }
-                else {
-                    For (idx, structure->fields) {
-                        Ast_Var *var = structure->fields[idx];
-                        if (!check_declaration(var->declaration, var->location)) {
-                            return false;
-                        }
-                        if (!complete_type(var->type)) {
-                            return false;
-                        }
-                        if (var->is_constant) {
-                            assert(var->expr != nullptr);
-                            assert(var->constant_operand.type != nullptr);
-                            assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                            add_constant_type_field(struct_type, var->name, var->constant_operand);
-                        }
-                    }
 
-                    For (idx, structure->fields) {
-                        Ast_Var *var = structure->fields[idx];
-                        if (var->is_constant) {
-                            continue;
-                        }
-                        assert(var->type->size > 0);
-                        if (!structure->is_union) {
-                            int next_alignment = -1;
-                            for (int i = idx; i < (structure->fields.count-1); i++) {
-                                Ast_Var *next_var = structure->fields[i+1];
-                                if (!var->is_constant) {
-                                    next_alignment = next_var->type->align;
-                                    assert(next_alignment > 0);
-                                    break;
-                                }
-                            }
-                            add_variable_type_field(struct_type, var->name, var->type, size);
-
-                            int size_delta = var->type->size;
-                            if (next_alignment != -1) {
-                                size_delta = align_forward(size+var->type->size, next_alignment) - size;
-                            }
-                            size += size_delta;
-                            largest_alignment = max(largest_alignment, var->type->align);
-                        }
-                        else {
-                            add_variable_type_field(struct_type, var->name, var->type, 0);
-                            size = max(size, var->type->size);
-                            largest_alignment = max(largest_alignment, var->type->align);
-                        }
+                For (idx, structure->fields) {
+                    Ast_Var *var = structure->fields[idx];
+                    if (var->is_constant) {
+                        continue;
                     }
+                    assert(var->type->size > 0);
+                    if (!structure->is_union) {
+                        int next_alignment = -1;
+                        for (int i = idx; i < (structure->fields.count-1); i++) {
+                            Ast_Var *next_var = structure->fields[i+1];
+                            if (!var->is_constant) {
+                                next_alignment = next_var->type->align;
+                                assert(next_alignment > 0);
+                                break;
+                            }
+                        }
+                        add_variable_type_field(struct_type, var->name, var->type, size);
+
+                        int size_delta = var->type->size;
+                        if (next_alignment != -1) {
+                            size_delta = align_forward(size+var->type->size, next_alignment) - size;
+                        }
+                        size += size_delta;
+                        largest_alignment = max(largest_alignment, var->type->align);
+                    }
+                    else {
+                        add_variable_type_field(struct_type, var->name, var->type, 0);
+                        size = max(size, var->type->size);
+                        largest_alignment = max(largest_alignment, var->type->align);
+                    }
+                }
+
+                if (size == 0) {
+                    size = 1;
                 }
 
                 assert(is_power_of_two(largest_alignment)); // todo(josh): is this actually a requirement?

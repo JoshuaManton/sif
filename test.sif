@@ -1,5 +1,12 @@
 #include "core:basic.sif"
 
+struct Foo {
+    const III = 123;
+}
+
 proc main() : i32 {
+    var a: i32 = Foo.III;
+    var b: u8 = Foo.III;
+    var f: float = Foo.III;
     return 0;
 }
