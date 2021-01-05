@@ -1,4 +1,5 @@
 #include "c_backend.h"
+#include "os_windows.h"
 
 void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name);
 void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name);
@@ -1008,7 +1009,7 @@ void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Typ
             continue;
         }
 
-        sb->printf("    ((struct Type_Info_Struct_Field *)%s->fields.data)[%d] = (struct Type_Info_Struct_Field){MAKE_STRING(\"%s\", %d), &ti%d->base, %d};\n", ti_name, var_idx, field.name, strlen(field.name), field.operand.type->id, field.offset);
+        sb->printf("    GEN_TYPE_INFO_STRUCT_FIELD(%s, \"%s\", %d, %d, %d, %d);\n", ti_name, field.name, strlen(field.name), var_idx, field.operand.type->id, field.offset);
         var_idx += 1;
     }
 }
@@ -1028,123 +1029,54 @@ void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Typ
 #define TYPE_INFO_KIND_PROCEDURE 11
 #define TYPE_INFO_KIND_TYPEID    12
 
+extern Timer g_global_timer;
+
 void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     assert(proc->body != nullptr);
     assert(!proc->header->is_foreign);
     if (proc == g_main_proc) {
+        double type_info_gen_time_start = query_timer(&g_global_timer);
+
         sb->print("void __init_sif_runtime() {\n");
-        sb->printf("#define MAKE_TYPE_INFO(_varname, _printable_name, _type, _kind, _id, _size, _align) struct _type *_varname = (struct _type *)malloc(sizeof(struct _type)); zero_pointer(_varname, sizeof(*_varname)); _varname->base.printable_name = _printable_name; _varname->base.id = _id; _varname->base.size = _size; _varname->base.align = _align; _varname->base.kind = _kind;\n");
-        sb->printf("    _global_type_table.data = malloc(%d * sizeof(struct Type_Info *));\n", all_types.count);
+        sb->printf("    _global_type_table.data = malloc(%d * sizeof(union Union_All_Type_Infos));\n", all_types.count);
         sb->printf("    _global_type_table.count = %d;\n", all_types.count);
+        sb->printf("#define GEN_TYPE_INFO_STRUCT_FIELD(_ti_name, _field_name, _field_name_len, _field_index, _field_type_index, _field_offset) ((struct Type_Info_Struct_Field *)_ti_name->fields.data)[_field_index] = (struct Type_Info_Struct_Field){MAKE_STRING(_field_name, _field_name_len), GET_TYPE_INFO_PTR(_field_type_index), _field_offset}\n");
+        sb->printf("#define GET_TYPE_INFO_PTR(_index) ((struct Type_Info *)&((union Union_All_Type_Infos *)_global_type_table.data)[_index])\n");
+        sb->printf("#define MAKE_TYPE_INFO(_varname, _printable_name, _type, _kind, _id, _size, _align) struct _type *_varname = ((struct _type *)GET_TYPE_INFO_PTR(_id)); zero_pointer(_varname, sizeof(*_varname)); _varname->base.printable_name = _printable_name; _varname->base.id = _id; _varname->base.size = _size; _varname->base.align = _align; _varname->base.kind = _kind;\n");
+        Chunked_String_Builder ti_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
         For (idx, all_types) {
             Type *type = all_types[idx];
             assert(type->id = idx+1);
-            Chunked_String_Builder ti_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+            ti_name_sb.clear();
             ti_name_sb.printf("ti%d", type->id);
             char *ti_name = ti_name_sb.make_string();
-            type->type_info_generated_variable_name = ti_name;
 
-            char *printable_name = type_to_string(type);
+            int printable_name_length;
+            char *printable_name = type_to_string(type, &printable_name_length);
 
             switch (type->kind) {
                 case TYPE_PRIMITIVE: {
                     if (is_type_integer(type)) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Integer, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_INTEGER, type->id, type->size, type->align);
-                    }
-                    else if (is_type_float(type)) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Float, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_FLOAT, type->id, type->size, type->align);
-                    }
-                    else if (type == type_bool) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Bool, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_BOOL, type->id, type->size, type->align);
-                    }
-                    else if (type == type_string) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_String, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
-                    }
-                    else if (type == type_rawptr) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Pointer, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
-                    }
-                    else if (type == type_typeid) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Typeid, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_TYPEID, type->id, type->size, type->align);
-                    }
-                    else if (type == type_any) {
-                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), "Type_Info_Struct", TYPE_INFO_KIND_STRUCT, type->id, type->size, type->align);
-                    }
-                    else {
-                        printf("Unhandled primitive type: %\n", type_to_string(type));
-                    }
-                    break;
-                }
-                case TYPE_ARRAY: {
-                    Type_Array *type_array = (Type_Array *)type;
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Array, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_ARRAY, type->id, type->size, type->align);
-                    break;
-                }
-                case TYPE_VARARGS:
-                case TYPE_SLICE: {
-                    Type *slice_of = nullptr;
-                    if (is_type_slice(type)) {
-                        Type_Slice *type_slice = (Type_Slice *)type;
-                        slice_of = type_slice->slice_of;
-                    }
-                    else {
-                        assert(is_type_varargs(type));
-                        Type_Varargs *varargs = (Type_Varargs *)type;
-                        slice_of = varargs->varargs_of;
-                    }
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Slice, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_SLICE, type->id, type->size, type->align);
-                    break;
-                }
-                case TYPE_REFERENCE: {
-                    Type_Reference *type_reference = (Type_Reference *)type;
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Reference, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_REFERENCE, type->id, type->size, type->align);
-                    break;
-                }
-                case TYPE_STRUCT: {
-                    Type_Struct *struct_type = (Type_Struct *)type;
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), (struct_type->is_union ? "Type_Info_Union" : "Type_Info_Struct"), (struct_type->is_union ? TYPE_INFO_KIND_UNION : TYPE_INFO_KIND_STRUCT), type->id, type->size, type->align);
-                    break;
-                }
-                case TYPE_POINTER: {
-                    Type_Pointer *pointer = (Type_Pointer *)type;
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Pointer, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
-                    break;
-                }
-                case TYPE_ENUM: {
-                    Type_Enum *type_enum = (Type_Enum *)type;
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Enum, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
-                    break;
-                }
-                case TYPE_PROCEDURE: {
-                    Type_Procedure *procedure = (Type_Procedure *)type;
-                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Procedure, %d, %d, %d, %d);\n", ti_name, printable_name, strlen(printable_name), TYPE_INFO_KIND_PROCEDURE, type->id, type->size, type->align);
-                    break;
-                }
-                default: {
-                    assert(false);
-                    break;
-                }
-            }
-        }
-        For (idx, all_types) {
-            Type *type = all_types[idx];
-            char *ti_name = type->type_info_generated_variable_name;
-            bool unhandled = false;
-            switch (type->kind) {
-                case TYPE_PRIMITIVE: {
-                    if (is_type_integer(type)) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Integer, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_INTEGER, type->id, type->size, type->align);
                         sb->printf("    %s->is_signed = %s;\n", ti_name, (type->flags & TF_SIGNED ? "true" : "false"));
                     }
                     else if (is_type_float(type)) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Float, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_FLOAT, type->id, type->size, type->align);
                     }
                     else if (type == type_bool) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Bool, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_BOOL, type->id, type->size, type->align);
                     }
                     else if (type == type_string) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_String, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
                     }
                     else if (type == type_rawptr) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Pointer, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
                     }
                     else if (type == type_typeid) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Typeid, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_TYPEID, type->id, type->size, type->align);
                     }
                     else if (type == type_any) {
+                        sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, "Type_Info_Struct", TYPE_INFO_KIND_STRUCT, type->id, type->size, type->align);
                         c_print_gen_type_info_struct(sb, ti_name, type);
                     }
                     else {
@@ -1154,7 +1086,8 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                 }
                 case TYPE_ARRAY: {
                     Type_Array *type_array = (Type_Array *)type;
-                    sb->printf("    %s->array_of = &ti%d->base;\n", ti_name, type_array->array_of->id);
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Array, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_ARRAY, type->id, type->size, type->align);
+                    sb->printf("    %s->array_of = GET_TYPE_INFO_PTR(%d);\n", ti_name, type_array->array_of->id);
                     sb->printf("    %s->count = %d;\n", ti_name, type_array->count);
                     break;
                 }
@@ -1170,27 +1103,32 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                         Type_Varargs *varargs = (Type_Varargs *)type;
                         slice_of = varargs->varargs_of;
                     }
-                    sb->printf("    %s->slice_of = &ti%d->base;\n", ti_name, slice_of->id);
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Slice, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_SLICE, type->id, type->size, type->align);
+                    sb->printf("    %s->slice_of = GET_TYPE_INFO_PTR(%d);\n", ti_name, slice_of->id);
                     break;
                 }
                 case TYPE_REFERENCE: {
                     Type_Reference *type_reference = (Type_Reference *)type;
-                    sb->printf("    %s->reference_to = &ti%d->base;\n", ti_name, type_reference->reference_to->id);
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Reference, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_REFERENCE, type->id, type->size, type->align);
+                    sb->printf("    %s->reference_to = GET_TYPE_INFO_PTR(%d);\n", ti_name, type_reference->reference_to->id);
                     break;
                 }
                 case TYPE_STRUCT: {
                     Type_Struct *struct_type = (Type_Struct *)type;
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? "Type_Info_Union" : "Type_Info_Struct"), (struct_type->is_union ? TYPE_INFO_KIND_UNION : TYPE_INFO_KIND_STRUCT), type->id, type->size, type->align);
                     c_print_gen_type_info_struct(sb, ti_name, type);
                     break;
                 }
                 case TYPE_POINTER: {
                     Type_Pointer *pointer = (Type_Pointer *)type;
-                    sb->printf("    %s->pointer_to = &ti%d->base;\n", ti_name, pointer->pointer_to->id);
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Pointer, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
+                    sb->printf("    %s->pointer_to = GET_TYPE_INFO_PTR(%d);\n", ti_name, pointer->pointer_to->id);
                     break;
                 }
                 case TYPE_ENUM: {
                     Type_Enum *type_enum = (Type_Enum *)type;
-                    sb->printf("    %s->base_type = &ti%d->base;\n", ti_name, type_enum->base_type->id);
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Enum, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
+                    sb->printf("    %s->base_type = GET_TYPE_INFO_PTR(%d);\n", ti_name, type_enum->base_type->id);
                     sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Enum_Field));\n", ti_name, type_enum->fields.count);
                     sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->fields.count);
                     For (idx, type_enum->fields) {
@@ -1203,17 +1141,17 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                 }
                 case TYPE_PROCEDURE: {
                     Type_Procedure *procedure = (Type_Procedure *)type;
+                    sb->printf("    MAKE_TYPE_INFO(%s, MAKE_STRING(\"%s\", %d), Type_Info_Procedure, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_PROCEDURE, type->id, type->size, type->align);
                     if (procedure->parameter_types.count) {
                         sb->printf("    %s->parameter_types.data = malloc(%d * sizeof(struct Type_Info *));\n", ti_name, procedure->parameter_types.count);
                         sb->printf("    %s->parameter_types.count = %d;\n", ti_name, procedure->parameter_types.count);
                         For (idx, procedure->parameter_types) {
                             Type *param_type = procedure->parameter_types[idx];
-                            sb->printf("    ((struct Type_Info **)%s->parameter_types.data)[%d] = &ti%d->base;\n", ti_name, idx, param_type->id);
+                            sb->printf("    ((struct Type_Info **)%s->parameter_types.data)[%d] = GET_TYPE_INFO_PTR(%d);\n", ti_name, idx, param_type->id);
                         }
                     }
-
                     if (procedure->return_type) {
-                        sb->printf("    %s->return_type = &ti%d->base;\n", ti_name, procedure->return_type->id);
+                        sb->printf("    %s->return_type = GET_TYPE_INFO_PTR(%d);\n", ti_name, procedure->return_type->id);
                     }
                     break;
                 }
@@ -1222,11 +1160,10 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                     break;
                 }
             }
-            if (!unhandled) {
-                sb->printf("    ((struct Type_Info **)_global_type_table.data)[%d] = &%s->base;\n", type->id, ti_name);
-            }
         }
         sb->print("}\n");
+        double type_info_gen_time_end = query_timer(&g_global_timer);
+        printf("type_info_gen_time: %f\n", type_info_gen_time_end - type_info_gen_time_start);
     }
 
     c_print_procedure_header(sb, proc->header);

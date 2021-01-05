@@ -102,11 +102,30 @@ proc string_eq(var a: string, var b: string) : bool {
 
 
 
-var _global_type_table: []^Type_Info; @sif_runtime
+union Union_All_Type_Infos {
+    var type_info:              Type_Info;
+    var type_info_integer:      Type_Info_Integer;
+    var type_info_float:        Type_Info_Float;
+    var type_info_bool:         Type_Info_Bool;
+    var type_info_string:       Type_Info_String;
+    var type_info_struct_field: Type_Info_Struct_Field;
+    var type_info_struct:       Type_Info_Struct;
+    var type_info_union:        Type_Info_Union;
+    var type_info_enum_field:   Type_Info_Enum_Field;
+    var type_info_enum:         Type_Info_Enum;
+    var type_info_pointer:      Type_Info_Pointer;
+    var type_info_slice:        Type_Info_Slice;
+    var type_info_array:        Type_Info_Array;
+    var type_info_reference:    Type_Info_Reference;
+    var type_info_procedure:    Type_Info_Procedure;
+    var type_info_typeid:       Type_Info_Typeid;
+} @sif_runtime
+
+var _global_type_table: []Union_All_Type_Infos; @sif_runtime
 
 proc get_type_info(type: typeid) : ^Type_Info {
     var idx = transmute(u64, type);
-    return _global_type_table[cast(int, idx)];
+    return cast(^Type_Info, &_global_type_table[cast(int, idx)]);
 } @sif_runtime
 
 // note(josh): backend depends on this ordering! :TypeInfoKindValues

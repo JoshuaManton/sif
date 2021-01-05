@@ -85,8 +85,6 @@ extern int total_lexed_lines;
 
 Timer g_global_timer = {};
 
-f64 expr_check_times[EXPR_COUNT];
-
 void main(int argc, char **argv) {
     init_timer(&g_global_timer);
     double application_start_time = query_timer(&g_global_timer);
@@ -282,10 +280,6 @@ void main(int argc, char **argv) {
         printf("\n");
         printf("  Total lines: %d\n", total_lexed_lines);
         printf("Sif lines/sec: %.0f\n", ((float)total_lexed_lines) / (sif_time / 1000));
-
-        for (int i = 0; i < EXPR_COUNT; i += 1) {
-            printf("%d: %f\n", i, expr_check_times[i]);
-        }
     }
 
     if (is_run) {

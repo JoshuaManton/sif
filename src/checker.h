@@ -68,7 +68,8 @@ struct Type {
     Array<Struct_Field> fields = {};
     int num_variable_fields = {};
     int num_constant_fields = {};
-    char *type_info_generated_variable_name = {};
+    char *printable_name = {};
+    int printable_name_length = {}; // note(josh): doesn't include null term
     Type_Pointer *pointer_to_this_type = {};
     Type_Slice *slice_of_this_type = {};
     Type_Varargs *varargs_of_this_type = {};
@@ -225,7 +226,7 @@ bool is_type_string     (Type *type);
 bool is_type_varargs    (Type *type);
 bool is_type_enum       (Type *type);
 
-char *type_to_string(Type *type);
+char *type_to_string(Type *type, int *out_length = nullptr);
 Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Reference *get_or_create_type_reference_to(Type *type);
 Type_Array *get_or_create_type_array_of(Type *type, int count);

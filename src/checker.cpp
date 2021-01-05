@@ -628,7 +628,13 @@ void sbprint_constant_operand(String_Builder *sb, Operand operand) {
     }
 }
 
-char *type_to_string(Type *type) {
+char *type_to_string(Type *type, int *out_length) {
+    if (type->printable_name) {
+        if (out_length) {
+            *out_length = type->printable_name_length;
+        }
+        return type->printable_name;
+    }
     String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
@@ -703,7 +709,12 @@ char *type_to_string(Type *type) {
             assert(false);
         }
     }
-    return sb.string();
+    type->printable_name = sb.string();
+    type->printable_name_length = sb.buf.count;
+    if (out_length) {
+        *out_length = type->printable_name_length;
+    }
+    return type->printable_name;
 }
 
 char *type_to_string_plain(Type *type) {
@@ -2041,10 +2052,6 @@ Ast_Expr *unparen_expr(Ast_Expr *expr) {
     return expr;
 }
 
-extern Timer g_global_timer;
-
-extern f64 expr_check_times[EXPR_COUNT];
-
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -2053,12 +2060,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     Operand result_operand(expr->location);
     switch (expr->expr_kind) {
         case EXPR_UNARY: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_UNARY] += total_time;
-            });
             // todo(josh): @ErrorMessage
             Expr_Unary *unary = (Expr_Unary *)expr;
             Operand *rhs_operand = typecheck_expr(unary->rhs, expected_type);
@@ -2108,12 +2109,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_BINARY: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_BINARY] += total_time;
-            });
             Expr_Binary *binary = (Expr_Binary *)expr;
             if (is_cmp_op(binary->op)) {
                 expected_type = nullptr;
@@ -2173,12 +2168,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_CAST: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_CAST] += total_time;
-            });
             Expr_Cast *expr_cast = (Expr_Cast *)expr;
             Operand *type_operand = typecheck_expr(expr_cast->type_expr);
             if (!type_operand) {
@@ -2213,12 +2202,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_TRANSMUTE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_TRANSMUTE] += total_time;
-            });
             Expr_Transmute *transmute = (Expr_Transmute *)expr;
             Operand *type_operand = typecheck_expr(transmute->type_expr);
             if (!type_operand) {
@@ -2256,12 +2239,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_ADDRESS_OF: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_ADDRESS_OF] += total_time;
-            });
             Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
             Operand *rhs_operand = typecheck_expr(address_of->rhs);
             if (!rhs_operand) {
@@ -2273,12 +2250,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SUBSCRIPT: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_SUBSCRIPT] += total_time;
-            });
             Expr_Subscript *subscript = (Expr_Subscript *)expr;
             Operand *lhs_operand = typecheck_expr(subscript->lhs);
             if (!lhs_operand) {
@@ -2341,12 +2312,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SELECTOR: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_SELECTOR] += total_time;
-            });
             // todo(josh): use some sort of constants_block thing for constant fields
 
             Expr_Selector *selector = (Expr_Selector *)expr;
@@ -2406,12 +2371,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_DEREFERENCE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_DEREFERENCE] += total_time;
-            });
             Expr_Dereference *dereference = (Expr_Dereference *)expr;
             Operand *lhs_operand = typecheck_expr(dereference->lhs);
             if (!lhs_operand) {
@@ -2424,12 +2383,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_PROCEDURE_CALL: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_PROCEDURE_CALL] += total_time;
-            });
             Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
             Operand *procedure_operand = typecheck_expr(call->lhs);
             if (!procedure_operand) {
@@ -2451,12 +2404,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_IDENTIFIER: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_IDENTIFIER] += total_time;
-            });
             Expr_Identifier *ident = (Expr_Identifier *)expr;
             Ast_Block *block = ident->parent_block;
             while (block != nullptr) {
@@ -2493,12 +2440,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_COMPOUND_LITERAL: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_COMPOUND_LITERAL] += total_time;
-            });
             Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
             Operand *type_operand = typecheck_expr(compound_literal->type_expr);
             if (!type_operand) {
@@ -2572,12 +2513,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_NUMBER_LITERAL: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_NUMBER_LITERAL] += total_time;
-            });
             Expr_Number_Literal *number = (Expr_Number_Literal *)expr;
             if (number->has_a_dot) {
                 result_operand.type = type_untyped_float;
@@ -2592,12 +2527,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_STRING_LITERAL: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_STRING_LITERAL] += total_time;
-            });
             Expr_String_Literal *string_literal = (Expr_String_Literal *)expr;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_string;
@@ -2608,12 +2537,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_CHAR_LITERAL: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_CHAR_LITERAL] += total_time;
-            });
             Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_u8;
@@ -2622,47 +2545,23 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_NULL: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_NULL] += total_time;
-            });
             result_operand.flags = OPERAND_RVALUE;
             result_operand.type = type_untyped_null;
             break;
         }
         case EXPR_TRUE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_TRUE] += total_time;
-            });
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_bool;
             result_operand.bool_value = true;
             break;
         }
         case EXPR_FALSE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_FALSE] += total_time;
-            });
             result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             result_operand.type = type_bool;
             result_operand.bool_value = false;
             break;
         }
         case EXPR_SIZEOF: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_SIZEOF] += total_time;
-            });
             Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
             Operand *expr_operand = typecheck_expr(expr_sizeof->expr);
             if (!expr_operand) {
@@ -2685,12 +2584,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_TYPEOF: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_TYPEOF] += total_time;
-            });
             Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
             Operand *expr_operand = typecheck_expr(expr_typeof->expr);
             if (!expr_operand) {
@@ -2703,12 +2596,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_STRUCT_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_STRUCT_TYPE] += total_time;
-            });
             Expr_Struct_Type *anonymous_struct = (Expr_Struct_Type *)expr;
             assert(anonymous_struct->structure != nullptr);
             assert(anonymous_struct->structure->type != nullptr);
@@ -2718,12 +2605,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_POINTER_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_POINTER_TYPE] += total_time;
-            });
             Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
             assert(expr_pointer->pointer_to != nullptr);
             Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to, type_typeid);
@@ -2737,12 +2618,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_REFERENCE_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_REFERENCE_TYPE] += total_time;
-            });
             Expr_Reference_Type *expr_reference = (Expr_Reference_Type *)expr;
             assert(expr_reference->reference_to != nullptr);
             Operand *reference_to_operand = typecheck_expr(expr_reference->reference_to, type_typeid);
@@ -2756,12 +2631,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_ARRAY_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_ARRAY_TYPE] += total_time;
-            });
             Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
             assert(expr_array->array_of != nullptr);
             Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
@@ -2784,12 +2653,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SLICE_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_SLICE_TYPE] += total_time;
-            });
             Expr_Slice_Type *expr_slice = (Expr_Slice_Type *)expr;
             assert(expr_slice->slice_of != nullptr);
             Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of, type_typeid);
@@ -2803,12 +2666,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_PROCEDURE_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_PROCEDURE_TYPE] += total_time;
-            });
             Expr_Procedure_Type *proc_type_expr = (Expr_Procedure_Type *)expr;
             Operand *proc_operand = typecheck_procedure_header(proc_type_expr->header);
             if (!proc_operand) {
@@ -2822,12 +2679,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SPREAD: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_SPREAD] += total_time;
-            });
             Expr_Spread *spread = (Expr_Spread *)expr;
             assert(spread->rhs != nullptr);
             Operand *rhs_operand = typecheck_expr(spread->rhs);
@@ -2862,12 +2713,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_POLYMORPHIC_TYPE] += total_time;
-            });
             // foo: Some_Struct!(123, float);
             //      ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2894,12 +2739,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_POLYMORPHIC_VARIABLE: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_POLYMORPHIC_VARIABLE] += total_time;
-            });
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
             assert(poly->poly_decl != nullptr);
             if (poly->poly_decl->declaration) {
@@ -2913,12 +2752,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_PAREN: {
-            f64 start_time = query_timer(&g_global_timer);
-            defer({
-                f64 end_time = query_timer(&g_global_timer);
-                f64 total_time = end_time - start_time;
-                expr_check_times[EXPR_PAREN] += total_time;
-            });
             Expr_Paren *paren = (Expr_Paren *)expr;
             Operand *expr_operand = typecheck_expr(paren->nested, expected_type);
             if (!expr_operand) {
