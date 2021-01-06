@@ -37,17 +37,17 @@ void pop_ast_block(Ast_Block *old_block) {
     current_block = old_block;
 }
 
-bool register_declaration(Declaration *new_declaration) {
+bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
     assert(new_declaration->parent_block != nullptr);
-    Declaration **existing_declaration = new_declaration->parent_block->declarations_lookup.get(new_declaration->name);
+    Declaration **existing_declaration = block->declarations_lookup.get(new_declaration->name);
     if (existing_declaration) {
         Declaration *declaration = *existing_declaration;
         report_error(new_declaration->location, "Name collision with '%s'.", new_declaration->name);
         report_info(declaration->location, "Here is the other declaration.");
         return false;
     }
-    new_declaration->parent_block->declarations.append(new_declaration);
-    new_declaration->parent_block->declarations_lookup.insert(new_declaration->name, new_declaration);
+    block->declarations.append(new_declaration);
+    block->declarations_lookup.insert(new_declaration->name, new_declaration);
     g_all_declarations.append(new_declaration);
     return true;
 }
@@ -155,7 +155,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, current_block));
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
-        if (!register_declaration(var->declaration)) {
+        if (!register_declaration(current_block, var->declaration)) {
             return nullptr;
         }
     }
@@ -325,7 +325,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
         header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, current_block));
         header->declaration->notes = parse_notes(lexer);
         header->declaration->is_polymorphic = header->is_polymorphic;
-        if (!register_declaration(header->declaration)) {
+        if (!register_declaration(current_block, header->declaration)) {
             return nullptr;
         }
     }
@@ -358,8 +358,8 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
     bool is_polymorphic = false;
     {
         structure->struct_block = SIF_NEW_CLONE(Ast_Block(token.location));
-        Ast_Block *old_block = push_ast_block(structure->struct_block);
-        defer(pop_ast_block(old_block));
+        Ast_Block *old_block1 = push_ast_block(structure->struct_block);
+        defer(pop_ast_block(old_block1));
 
         // name
         Token name_token;
@@ -424,6 +424,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                 case AST_VAR: {
                     Ast_Var *var = (Ast_Var *)node;
                     structure->fields.append(var);
+                    var->belongs_to_struct = structure;
                     break;
                 }
                 case AST_PROC: {
@@ -436,11 +437,11 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                     }
                     else {
                         assert(proc->header->name != nullptr);
-                        // note(josh): fallthrough
+                        break;
                     }
                 }
                 default: {
-                    report_error(node->location, "Only variable declarations and operator overloads are allowed in structs.");
+                    report_error(node->location, "Only variables, constants, and procedures are allowed in structs.");
                     return nullptr;
                 }
             }
@@ -450,7 +451,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
     structure->declaration = SIF_NEW_CLONE(Struct_Declaration(structure, current_block));
     structure->declaration->notes = parse_notes(lexer);
     structure->declaration->is_polymorphic = is_polymorphic;
-    if (!register_declaration(structure->declaration)) {
+    if (!register_declaration(current_block, structure->declaration)) {
         return nullptr;
     }
     return structure;
@@ -483,8 +484,8 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
     EXPECT(lexer, TK_LEFT_CURLY, nullptr);
     {
-        ast_enum->constants_block = SIF_NEW_CLONE(Ast_Block(lexer->location));
-        Ast_Block *old_block = push_ast_block(ast_enum->constants_block);
+        ast_enum->enum_block = SIF_NEW_CLONE(Ast_Block(lexer->location));
+        Ast_Block *old_block = push_ast_block(ast_enum->enum_block);
         defer(pop_ast_block(old_block));
 
         Token right_curly;
@@ -517,7 +518,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
     ast_enum->fields = enum_fields;
     ast_enum->declaration = SIF_NEW_CLONE(Enum_Declaration(ast_enum, current_block));
     ast_enum->declaration->notes = parse_notes(lexer);
-    if (!register_declaration(ast_enum->declaration)) {
+    if (!register_declaration(current_block, ast_enum->declaration)) {
         return nullptr;
     }
     return ast_enum;
@@ -577,8 +578,28 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         case TK_USING: {
             Token using_token;
             eat_next_token(lexer, &using_token);
-            Ast_Expr *expr = parse_expr(lexer);
-            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            Token maybe_var;
+            if (!peek_next_token(lexer, &maybe_var)) {
+                assert(false && "unexpected EOF");
+                return nullptr;
+            }
+
+            Ast_Var *var = nullptr;
+            Ast_Expr *expr = nullptr;
+            if (maybe_var.kind == TK_VAR) {
+                var = parse_var(lexer, false);
+                var->is_using = true;
+            }
+            else {
+                expr = parse_expr(lexer);
+            }
+            if (eat_semicolon) {
+                EXPECT(lexer, TK_SEMICOLON, nullptr);
+            }
+
+            if (var) {
+                return var;
+            }
             return SIF_NEW_CLONE(Ast_Using(expr, using_token.location));
         }
 
@@ -1529,7 +1550,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
             did_parse_polymorphic_thing = true;
             Polymorphic_Declaration *poly_decl = SIF_NEW_CLONE(Polymorphic_Declaration(ident->name, nullptr, current_block, token.location));
-            if (!register_declaration(poly_decl)) {
+            if (!register_declaration(current_block, poly_decl)) {
                 return nullptr;
             }
             return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, poly_decl, token.location));

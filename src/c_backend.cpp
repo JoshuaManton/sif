@@ -379,31 +379,33 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
     }
 }
 
-char *c_print_selector_lookup(Chunked_String_Builder *sb, Ast_Expr *lhs, const char *field_name, int indent_level) {
-    char *lhs_t = c_print_expr(sb, lhs, indent_level);
-    assert(lhs_t);
-    Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-    bool is_accessing_slice_data_field = false;
-    Type *lhs_type = lhs->operand.type;
-    if ((lhs_type->kind == TYPE_SLICE) && (field_name == "data")) {
-        is_accessing_slice_data_field = true;
-        Type_Slice *slice_type = (Type_Slice *)lhs_type;
-        selector_sb.print("*((");
-        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
-        selector_sb.print(")&");
+void c_print_hidden_using_selectors(Chunked_String_Builder *sb, Declaration *decl, int indent_level) {
+    Declaration *from_using = decl;
+    while (from_using->kind == DECL_USING) {
+        Using_Declaration *using_decl = (Using_Declaration *)from_using;
+        Type *lhs_type = nullptr;
+        if (using_decl->from_using) {
+            assert(using_decl->from_using_expr == nullptr);
+            assert(using_decl->from_using->kind == DECL_VAR);
+            Var_Declaration *var_decl = (Var_Declaration *)using_decl->from_using;
+            sb->printf("%s", using_decl->from_using->name);
+            lhs_type = var_decl->var->type;
+        }
+        else {
+            assert(using_decl->from_using == nullptr);
+            char *expr_t = c_print_expr(sb, using_decl->from_using_expr, indent_level);
+            sb->print(expr_t);
+            lhs_type = using_decl->from_using_expr->operand.type;
+        }
+        assert(lhs_type != nullptr);
+        if (is_type_pointer(lhs_type)) {
+            sb->print("->");
+        }
+        else {
+            sb->print(".");
+        }
+        from_using = using_decl->declaration;
     }
-    selector_sb.print(lhs_t);
-    if (is_type_pointer(lhs_type)) {
-        selector_sb.print("->");
-    }
-    else {
-        selector_sb.print(".");
-    }
-    selector_sb.print(field_name);
-    if (is_accessing_slice_data_field) {
-        selector_sb.print(")");
-    }
-    return selector_sb.make_string();
 }
 
 char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
@@ -520,14 +522,10 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
             switch (expr->expr_kind) {
                 case EXPR_IDENTIFIER: {
                     Expr_Identifier *identifier = (Expr_Identifier *)expr;
-                    if (identifier->resolved_declaration->kind == DECL_USING) {
-                        Using_Declaration *using_decl = (Using_Declaration *)identifier->resolved_declaration;
-                        assert(using_decl->using_expr != nullptr);
-                        t = c_print_selector_lookup(sb, using_decl->using_expr, identifier->name, indent_level);
-                    }
-                    else {
-                        t = identifier->name;
-                    }
+                    Chunked_String_Builder ident_sb = make_chunked_string_builder(g_global_linear_allocator, 32);
+                    c_print_hidden_using_selectors(&ident_sb, identifier->resolved_declaration, indent_level);
+                    ident_sb.print(identifier->name);
+                    t = ident_sb.make_string();
                     break;
                 }
                 case EXPR_UNARY: {
@@ -705,7 +703,31 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 }
                 case EXPR_SELECTOR: {
                     Expr_Selector *selector = (Expr_Selector *)expr;
-                    t = c_print_selector_lookup(sb, selector->lhs, selector->lookup.field.name, indent_level);
+                    char *lhs = c_print_expr(sb, selector->lhs, indent_level);
+                    assert(lhs);
+                    Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+                    bool is_accessing_slice_data_field = false;
+                    if ((selector->lookup.type_with_field->kind == TYPE_SLICE) && (selector->field_name == "data")) {
+                        is_accessing_slice_data_field = true;
+                        Type_Slice *slice_type = (Type_Slice *)selector->lookup.type_with_field;
+                        selector_sb.print("*((");
+                        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
+                        selector_sb.print(")&");
+                    }
+                    selector_sb.print(lhs);
+                    if (is_type_pointer(selector->lhs->operand.type)) {
+                        selector_sb.print("->");
+                    }
+                    else {
+                        selector_sb.print(".");
+                    }
+                    Declaration *right_most_decl = selector->lookup.declaration;
+                    c_print_hidden_using_selectors(&selector_sb, right_most_decl, indent_level);
+                    selector_sb.printf("%s", right_most_decl->name);
+                    if (is_accessing_slice_data_field) {
+                        selector_sb.print(")");
+                    }
+                    t = selector_sb.make_string();
                     break;
                 }
                 case EXPR_CAST: {
@@ -833,22 +855,32 @@ void print_indents(Chunked_String_Builder *sb, int indent_level) {
 
 void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level);
 
+void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_level, bool print_semicolon) {
+    if (!var->is_constant) {
+        c_print_var(sb, var, indent_level);
+        if (var->expr == nullptr) {
+            sb->printf(" = {0}");
+        }
+        if (print_semicolon) {
+            sb->print(";\n");
+        }
+    }
+    else {
+        sb->printf("// constant declaration omitted: %s\n", var->name);
+    }
+}
+
 void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_level, bool print_semicolon) {
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
-            if (!var->is_constant) {
-                c_print_var(sb, var, indent_level);
-                if (var->expr == nullptr) {
-                    sb->printf(" = {0}");
-                }
-                if (print_semicolon) {
-                    sb->print(";\n");
-                }
-            }
-            else {
-                sb->printf("// constant declaration omitted: %s\n", var->name);
-            }
+            c_print_var_statement(sb, var, indent_level, print_semicolon);
+            break;
+        }
+
+        case AST_USING: {
+            Ast_Using *ast_using = (Ast_Using *)node;
+            assert(ast_using->expr);
             break;
         }
 
@@ -979,10 +1011,6 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
             break;
         }
 
-        case AST_USING: {
-            break;
-        }
-
         default: {
             assert(false);
             break;
@@ -1001,6 +1029,7 @@ extern Ast_Proc *g_main_proc;
 extern Array<Type *> all_types;
 
 void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Type *type) {
+    return;
     sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Struct_Field));\n", ti_name, type->variable_fields.count);
     sb->printf("    %s->fields.count = %d;\n", ti_name, type->variable_fields.count);
     For (idx, type->variable_fields) {

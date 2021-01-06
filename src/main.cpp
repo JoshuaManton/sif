@@ -29,6 +29,8 @@ SMALL
 -prevent identifiers from being C keywords in the backend, like `signed`
 -implicit enum selector
 -how should rawptr behave with ^$T? rawptr isn't a pointer _to_ anything, it's just a pointer. hmmmm.
+-Expr_Change (var v2 = v1.{y=4};)
+-fully support procs in structs
 
 MEDIUM
 -defer

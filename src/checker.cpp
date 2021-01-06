@@ -73,7 +73,7 @@ T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
     return t_ptr;
 }
 
-void add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location) {
+Struct_Member_Declaration *add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location) {
     assert(variable_type != nullptr);
     assert(!is_type_untyped(variable_type));
     Struct_Field field = {};
@@ -83,10 +83,12 @@ void add_variable_type_field(Type *type, const char *name, Type *variable_type, 
     field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
     type->all_fields.append(field);
     type->variable_fields.append(field);
-    assert(register_declaration(SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location))));
+    Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location));
+    assert(register_declaration(type->variables_block, decl));
+    return decl;
 }
 
-void add_constant_type_field(Type *type, const char *name, Operand operand, Location location) {
+Struct_Member_Declaration *add_constant_type_field(Type *type, const char *name, Operand operand, Location location) {
     assert(operand.type != nullptr);
     Struct_Field field = {};
     field.name = name;
@@ -94,7 +96,9 @@ void add_constant_type_field(Type *type, const char *name, Operand operand, Loca
     field.operand = operand;
     type->all_fields.append(field);
     type->constant_fields.append(field);
-    assert(register_declaration(SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location))));
+    Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location));
+    assert(register_declaration(type->constants_block, decl));
+    return decl;
 }
 
 void init_checker() {
@@ -152,31 +156,31 @@ void init_checker() {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"), type_typeid, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("string"), type_string, block)));
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"), type_rawptr, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"), type_typeid, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"), type_string, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"), type_rawptr, block)));
 
-    register_declaration(SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block)));
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
@@ -257,6 +261,16 @@ Type *try_concretize_type_without_context(Type *type) {
     }
     assert(false);
     return nullptr;
+}
+
+void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Block *block_with_declarations, Declaration *from_using, Ast_Expr *from_using_expr, Ast_Node *node_to_link_back_to) {
+    For (idx, block_with_declarations->declarations) {
+        Declaration *decl_to_broadcast = block_with_declarations->declarations[idx];
+        Using_Declaration *new_declaration = SIF_NEW_CLONE(Using_Declaration(node_to_link_back_to, decl_to_broadcast, block_to_broadcast_into, node_to_link_back_to->location));
+        new_declaration->from_using = from_using;
+        new_declaration->from_using_expr = from_using_expr;
+        assert(register_declaration(block_to_broadcast_into, new_declaration));
+    }
 }
 
 bool check_declaration(Declaration *decl, Location usage_location, Operand *out_operand = nullptr) {
@@ -366,7 +380,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
                     add_constant_type_field(enum_type, field->name, field_operand, field->location);
-                    if (!register_declaration(SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->constants_block, field->location)))) {
+                    if (!register_declaration(enum_decl->ast_enum->enum_block, SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->enum_block, field->location)))) {
                         return false;
                     }
                     field->resolved = true;
@@ -465,6 +479,16 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 if (is_type_typeid(decl_operand.type)) {
                     assert(decl_operand.type_value != nullptr);
                 }
+            }
+
+            if (var->is_using) {
+                if (is_type_pointer(var->type)) {
+                    Type_Pointer *pointer_type = (Type_Pointer *)var->type;
+                    if (!complete_type(pointer_type->pointer_to)) {
+                        return false;
+                    }
+                }
+                broadcast_declarations_for_using(var->parent_block, var->type->variables_block, var->declaration, nullptr, var);
             }
             break;
         }
@@ -816,11 +840,10 @@ bool complete_type(Type *type) {
     if (is_type_incomplete(type)) {
         switch (type->kind) {
             case TYPE_STRUCT: {
+                // complete_struct
                 Type_Struct *struct_type = (Type_Struct *)type;
                 assert(struct_type->ast_struct != nullptr);
                 Ast_Struct *structure = struct_type->ast_struct;
-                int size = 0;
-                int largest_alignment = 1;
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
                     if (!check_declaration(var->declaration, var->location)) {
@@ -829,43 +852,43 @@ bool complete_type(Type *type) {
                     if (!complete_type(var->type)) {
                         return false;
                     }
-                    if (var->is_constant) {
-                        assert(var->expr != nullptr);
-                        assert(var->constant_operand.type != nullptr);
-                        assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                        add_constant_type_field(struct_type, var->name, var->constant_operand, var->location);
-                    }
                 }
 
-                For (idx, structure->fields) {
-                    Ast_Var *var = structure->fields[idx];
-                    if (var->is_constant) {
-                        continue;
-                    }
-                    assert(var->type->size > 0);
-                    if (!structure->is_union) {
-                        int next_alignment = -1;
-                        for (int i = idx; i < (structure->fields.count-1); i++) {
-                            Ast_Var *next_var = structure->fields[i+1];
-                            if (!var->is_constant) {
-                                next_alignment = next_var->type->align;
-                                assert(next_alignment > 0);
-                                break;
+                int size = 0;
+                int largest_alignment = 1;
+                For (idx, structure->body->declarations) {
+                    Declaration *decl = structure->body->declarations[idx];
+                    switch (decl->kind) {
+                        case DECL_USING: {
+                            Using_Declaration *using_decl = (Using_Declaration *)decl;
+                            assert(register_declaration(structure->type->variables_block, using_decl));
+                            break;
+                        }
+                        case DECL_VAR: {
+                            Var_Declaration *decl_var = (Var_Declaration *)decl;
+                            Ast_Var *var = decl_var->var;
+                            if (var->is_constant) {
+                                assert(var->expr != nullptr);
+                                assert(var->constant_operand.type != nullptr);
+                                assert(var->constant_operand.flags & OPERAND_CONSTANT);
+                                var->struct_member = add_constant_type_field(struct_type, var->name, var->constant_operand, var->location);
                             }
+                            else {
+                                assert(var->type->size > 0);
+                                if (!structure->is_union) {
+                                    size = align_forward(size, var->type->align);
+                                    var->struct_member = add_variable_type_field(struct_type, var->name, var->type, size, var->location);
+                                    size += var->type->size;
+                                }
+                                else {
+                                    var->struct_member = add_variable_type_field(struct_type, var->name, var->type, 0, var->location);
+                                    size = max(size, var->type->size);
+                                }
+                                largest_alignment = max(largest_alignment, var->type->align);
+                                assert(var->struct_member != nullptr);
+                            }
+                            break;
                         }
-                        add_variable_type_field(struct_type, var->name, var->type, size, var->location);
-
-                        int size_delta = var->type->size;
-                        if (next_alignment != -1) {
-                            size_delta = align_forward(size+var->type->size, next_alignment) - size;
-                        }
-                        size += size_delta;
-                        largest_alignment = max(largest_alignment, var->type->align);
-                    }
-                    else {
-                        add_variable_type_field(struct_type, var->name, var->type, 0, var->location);
-                        size = max(size, var->type->size);
-                        largest_alignment = max(largest_alignment, var->type->align);
                     }
                 }
 
@@ -873,7 +896,7 @@ bool complete_type(Type *type) {
                     size = 1;
                 }
 
-                assert(is_power_of_two(largest_alignment)); // todo(josh): is this actually a requirement?
+                assert(is_power_of_two(largest_alignment));
                 assert(size > 0);
                 struct_type->size = (int)align_forward((uintptr_t)size, (uintptr_t)largest_alignment);
                 struct_type->align = largest_alignment;
@@ -977,6 +1000,8 @@ Type_Pointer *get_or_create_type_pointer_to(Type *pointer_to) {
     new_type->flags = TF_POINTER;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
+    new_type->variables_block = pointer_to->variables_block;
+    new_type->constants_block = pointer_to->constants_block;
     pointer_to->pointer_to_this_type = new_type;
     return new_type;
 }
@@ -2062,6 +2087,46 @@ Ast_Expr *unparen_expr(Ast_Expr *expr) {
     return expr;
 }
 
+Declaration *try_resolve_identifier(char *name, Ast_Block *start_block, Operand *out_result_operand, Location usage_location, bool climb_up_blocks) {
+    Declaration *resolved_declaration = nullptr;
+    while (start_block != nullptr) {
+        Declaration **existing_declaration = start_block->declarations_lookup.get(name);
+        if (existing_declaration) {
+            resolved_declaration = *existing_declaration;
+            break;
+        }
+        if (climb_up_blocks) {
+            start_block = start_block->parent_block;
+        }
+        else {
+            break;
+        }
+    }
+    if (!resolved_declaration) {
+        return nullptr;
+    }
+    assert(resolved_declaration != nullptr);
+    if (resolved_declaration->is_polymorphic) {
+        out_result_operand->type = type_polymorphic;
+        out_result_operand->referenced_declaration = resolved_declaration;
+        switch (resolved_declaration->kind) {
+            case DECL_STRUCT: {
+                break;
+            }
+            case DECL_PROC: {
+                break;
+            }
+        }
+    }
+    else {
+        if (!check_declaration(resolved_declaration, usage_location, out_result_operand)) {
+            return nullptr;
+        }
+    }
+    out_result_operand->location = usage_location;
+    return resolved_declaration;
+}
+
 bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Lookup_Result *out_result, Location selector_location) {
     Operand *lhs_operand = typecheck_expr(lhs);
     if (!lhs_operand) {
@@ -2074,43 +2139,49 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
     assert(lhs_operand->type != nullptr);
     Type *type_with_fields = lhs_operand->type;
     Ast_Block *block_to_search = type_with_fields->variables_block;
+    Ast_Block *fallback_block_to_search = type_with_fields->constants_block;
     if (is_type_pointer(lhs_operand->type)) {
         Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
         assert(pointer_type->pointer_to != nullptr);
         type_with_fields = pointer_type->pointer_to;
         block_to_search = pointer_type->pointer_to->variables_block;
+        fallback_block_to_search = pointer_type->pointer_to->constants_block;
     }
     else if (is_type_reference(lhs_operand->type)) {
         Type_Reference *reference_type = (Type_Reference *)lhs_operand->type;
         assert(reference_type->reference_to != nullptr);
         type_with_fields = reference_type->reference_to;
         block_to_search = reference_type->reference_to->variables_block;
+        fallback_block_to_search = reference_type->reference_to->constants_block;
     }
     else if (is_type_typeid(lhs_operand->type)) {
         assert(lhs_operand->type_value);
         type_with_fields = lhs_operand->type_value;
         block_to_search = lhs_operand->type_value->constants_block;
+        fallback_block_to_search = nullptr;
     }
     assert(block_to_search != nullptr);
     assert(type_with_fields != nullptr);
     if (!complete_type(type_with_fields)) {
         return false;
     }
-    bool found_field = false;
-    For (idx, type_with_fields->all_fields) {
-        Struct_Field field = type_with_fields->all_fields[idx];
-        if (field.name == field_name) {
-            found_field = true;
-            (*out_result).field = field;
-            (*out_result).operand = field.operand;
-            (*out_result).operand.location = selector_location; // todo(josh): this should probably be the location of the rhs
-            break;
+    out_result->type_with_field = type_with_fields;
+    Declaration *resolved_declaration = try_resolve_identifier(field_name, block_to_search, &out_result->operand, selector_location, false);
+    if (!resolved_declaration) {
+        if (fallback_block_to_search) {
+            resolved_declaration = try_resolve_identifier(field_name, fallback_block_to_search, &out_result->operand, selector_location, false);
+            if (!resolved_declaration) {
+                report_error(lhs->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
+                return false;
+            }
+        }
+        else {
+            report_error(lhs->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
+            return false;
         }
     }
-    if (!found_field) {
-        report_error(lhs->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
-        return false;
-    }
+    assert(resolved_declaration);
+    out_result->declaration = resolved_declaration;
     return true;
 }
 
@@ -2374,8 +2445,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             break;
         }
         case EXPR_SELECTOR: {
-            // todo(josh): use some sort of constants_block thing for constant fields
-
             Expr_Selector *selector = (Expr_Selector *)expr;
             Selector_Expression_Lookup_Result lookup;
             if (!do_selector_lookup(selector->lhs, selector->field_name, &lookup, selector->location)) {
@@ -2421,37 +2490,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         case EXPR_IDENTIFIER: {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
             Ast_Block *block = ident->parent_block;
-            while (block != nullptr) {
-                Declaration **existing_declaration = block->declarations_lookup.get(ident->name);
-                if (existing_declaration) {
-                    ident->resolved_declaration = *existing_declaration;
-                    break;
-                }
-                block = block->parent_block;
-            }
+            ident->resolved_declaration = try_resolve_identifier(ident->name, block, &result_operand, ident->location, true);
             if (!ident->resolved_declaration) {
                 report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
                 return nullptr;
             }
-            assert(ident->resolved_declaration != nullptr);
-            if (ident->resolved_declaration->is_polymorphic) {
-                result_operand.type = type_polymorphic;
-                result_operand.referenced_declaration = ident->resolved_declaration;
-                switch (ident->resolved_declaration->kind) {
-                    case DECL_STRUCT: {
-                        break;
-                    }
-                    case DECL_PROC: {
-                        break;
-                    }
-                }
-            }
-            else {
-                if (!check_declaration(ident->resolved_declaration, ident->location, &result_operand)) {
-                    return nullptr;
-                }
-            }
-            result_operand.location = ident->location;
             break;
         }
         case EXPR_COMPOUND_LITERAL: {
@@ -2982,11 +3025,14 @@ bool typecheck_node(Ast_Node *node) {
 
         case AST_USING: {
             Ast_Using *ast_using = (Ast_Using *)node;
+            // todo(josh): instead of broadcasting each declaration, we could just make a single Using_Declaration that points at the block it's using.
+            //             this would mean identifier resolving would have to be recursive. hmmmm
+            Ast_Block *block_to_broadcast_declarations_of = nullptr;
+            assert(ast_using->expr);
             Operand *using_operand = typecheck_expr(ast_using->expr);
             if (!using_operand) {
                 return nullptr;
             }
-            Ast_Block *block_to_broadcast_declarations_of = nullptr;
             if (is_type_typeid(using_operand->type)) {
                 block_to_broadcast_declarations_of = using_operand->type_value->constants_block;
             }
@@ -2994,9 +3040,7 @@ bool typecheck_node(Ast_Node *node) {
                 block_to_broadcast_declarations_of = using_operand->type->variables_block;
             }
             assert(block_to_broadcast_declarations_of != nullptr);
-            For (idx, block_to_broadcast_declarations_of->declarations) {
-                assert(register_declaration(new Using_Declaration(ast_using->expr, block_to_broadcast_declarations_of->declarations[idx], ast_using->parent_block, ast_using->location)));
-            }
+            broadcast_declarations_for_using(ast_using->parent_block, block_to_broadcast_declarations_of, nullptr, ast_using->expr, ast_using->expr);
             break;
         }
 

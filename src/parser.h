@@ -42,6 +42,7 @@ struct Ast_Statement_Expr;
 struct Declaration;
 struct Type_Declaration;
 struct Struct_Declaration;
+struct Struct_Member_Declaration;
 struct Enum_Declaration;
 struct Proc_Declaration;
 struct Var_Declaration;
@@ -234,6 +235,9 @@ struct Ast_Var : public Ast_Node {
     Operand constant_operand = {};
     bool is_polymorphic_value = {};
     bool is_polymorphic = {};
+    bool is_using = {};
+    Ast_Struct *belongs_to_struct = {}; // note(josh): may be null
+    Struct_Member_Declaration *struct_member = {}; // note(josh): only set if belongs_to_struct is set
     Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
@@ -256,9 +260,9 @@ struct Ast_Using : public Ast_Node {
 struct Ast_Struct : public Ast_Node {
     bool is_union = {};
     char *name = nullptr;
-    Type *type = nullptr; // todo(josh): this can probably be a Type_Struct *?
-    Array<Ast_Var *> fields = {};
+    Type_Struct *type = nullptr;
     Ast_Block *body = {};
+    Array<Ast_Var *> fields = {}; // todo(josh): delete this and just use the variables/constants block
     Ast_Block *struct_block = {};
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
@@ -311,7 +315,7 @@ struct Enum_Field {
 };
 struct Ast_Enum : public Ast_Node {
     char *name = {};
-    Ast_Block *constants_block = {};
+    Ast_Block *enum_block = {};
     Array<Enum_Field> fields = {};
     Type_Enum *type = nullptr;
     Enum_Declaration *declaration = {};
@@ -555,8 +559,9 @@ struct Struct_Field {
 
 struct Selector_Expression_Lookup_Result {
     Ast_Expr *lhs = {};
-    Struct_Field field = {};
+    Declaration *declaration = {};
     Operand operand = {};
+    Type *type_with_field = {};
 };
 
 struct Expr_Selector : public Ast_Expr {
@@ -739,6 +744,8 @@ struct Declaration {
     Location location = {};
     bool is_polymorphic = {};
     Array<char *> notes = {};
+    Declaration *from_using = {};
+    Ast_Expr *from_using_expr = {};
     Declaration(const char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)
@@ -764,11 +771,11 @@ struct Struct_Declaration : public Declaration {
 };
 
 struct Using_Declaration : public Declaration {
-    Ast_Expr *using_expr = {};
+    Ast_Node *importer = {};
     Declaration *declaration = {};
-    Using_Declaration(Ast_Expr *using_expr, Declaration *declaration, Ast_Block *parent_block, Location location)
+    Using_Declaration(Ast_Node *importer, Declaration *declaration, Ast_Block *parent_block, Location location)
     : Declaration(declaration->name, DECL_USING, parent_block, location)
-    , using_expr(using_expr)
+    , importer(importer)
     , declaration(declaration)
     {}
 };
@@ -834,7 +841,7 @@ extern Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
 void init_parser();
 Ast_Block *push_ast_block(Ast_Block *block);
 void pop_ast_block(Ast_Block *old_block);
-bool register_declaration(Declaration *new_declaration);
+bool register_declaration(Ast_Block *block, Declaration *new_declaration);
 bool parse_file(const char *filename, Location include_location);
 Ast_Block *begin_parsing(const char *filename);
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true, char *name_override = nullptr);

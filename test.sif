@@ -1,13 +1,23 @@
 #include "core:basic.sif"
 
 struct Foo {
-    var bar: int;
+    using var bar: Bar;
+}
+
+struct Bar {
+    using var baz: Baz;
+}
+
+struct Baz {
+    var qux: int;
 }
 
 proc main() : i32 {
-    var foo: Foo;
-    using foo;
-    bar = 123;
-    print("%\n", foo.bar);
+    using Baz;
+    print("%\n", AAA);
+    var arr: [4][4]Foo;
+    arr[2][2].qux = 321;
+    using arr[2][2];
+    print("%\n", qux);
     return 0;
 }
