@@ -21,6 +21,7 @@ SMALL
 -cstring type
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
+-expected types for compound literals
 -unknown directives don't stop compilation
 -block comments
 -add allocators to demo
@@ -53,7 +54,7 @@ MEDIUM
 -locally scoped structs and procs
 -tagged unions
 -use microsoft_craziness.h
--enum arrays
+-enum arrays @EnumArrays
 -allow custom entrypoints
 -foreach loops
 

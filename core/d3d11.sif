@@ -633,7 +633,7 @@ struct D3D11_TEXTURE3D_DESC {
     var MiscFlags: UINT;
 }
 struct ID3D11Texture3D {
-   var  vtbl: ^ID3D11Texture3DVtbl;
+   using var vtbl: ^ID3D11Texture3DVtbl;
 }
 struct ID3D11Texture3DVtbl {
     var QueryInterface : proc(This: ^ID3D11Texture3D, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -649,7 +649,7 @@ struct ID3D11Texture3DVtbl {
     var GetDesc : proc(This: ^ID3D11Texture3D, pDesc: ^D3D11_TEXTURE3D_DESC);
 }
 struct ID3D11View {
-   var  vtbl: ^ID3D11ViewVtbl;
+   using var vtbl: ^ID3D11ViewVtbl;
 }
 struct ID3D11ViewVtbl {
     var QueryInterface : proc(This: ^ID3D11View, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -720,7 +720,7 @@ struct D3D11_TEX2DMS_ARRAY_SRV {
 struct D3D11_SHADER_RESOURCE_VIEW_DESC {
     var Format: DXGI_FORMAT;
     var ViewDimension: D3D11_SRV_DIMENSION;
-    var _2: union {
+    using var _2: union {
         var Buffer: D3D11_BUFFER_SRV;
         var Texture1D: D3D11_TEX1D_SRV;
         var Texture1DArray: D3D11_TEX1D_ARRAY_SRV;

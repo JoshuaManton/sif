@@ -3051,6 +3051,7 @@ bool typecheck_node(Ast_Node *node) {
                 case TK_MINUS_ASSIGN:       binary_operation = TK_MINUS;       break;
                 case TK_MULTIPLY_ASSIGN:    binary_operation = TK_MULTIPLY;    break;
                 case TK_DIVIDE_ASSIGN:      binary_operation = TK_DIVIDE;      break;
+                case TK_MOD_ASSIGN:         binary_operation = TK_MOD;         break;
                 case TK_LEFT_SHIFT_ASSIGN:  binary_operation = TK_LEFT_SHIFT;  break;
                 case TK_RIGHT_SHIFT_ASSIGN: binary_operation = TK_RIGHT_SHIFT; break;
                 case TK_BIT_AND_ASSIGN:     binary_operation = TK_AMPERSAND;   break;

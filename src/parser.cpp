@@ -554,7 +554,6 @@ const char *relative_to_absolute_path(const char *relative_path, const char *rel
     const char *dir_of_relative_to = path_directory(relative_to, g_global_linear_allocator);
     String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     sb.printf("%s\\%s", dir_of_relative_to, relative_path);
-    printf("relative_to_absolute_path: %s\n", sb.string());
     return sb.string();
 }
 
@@ -924,6 +923,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 case TK_MULTIPLY_ASSIGN: // fallthrough
                 case TK_DIVIDE_ASSIGN:   // fallthrough
                 case TK_MOD_ASSIGN:      // fallthrough
+                case TK_BIT_OR_ASSIGN:   // fallthrough
                 case TK_ASSIGN: { // todo(josh): <<=, &&=, etc
                     Token op;
                     assert(get_next_token(lexer, &op));
