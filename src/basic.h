@@ -74,7 +74,7 @@ struct Allocator {
     void (*free_proc)(void *allocator, void *ptr);
 };
 
-void *alloc(Allocator allocator, int size, int alignment = DEFAULT_ALIGNMENT);
+void *alloc(Allocator allocator, int size, int alignment = DEFAULT_ALIGNMENT, bool zero = true);
 void free(Allocator allocator, void *ptr);
 #define NEW(allocator, type) ((type *)alloc(allocator, sizeof(type), alignof(type)))
 #define MAKE(allocator, type, count) ((type *)alloc(allocator, sizeof(type) * count, alignof(type)))
@@ -163,7 +163,7 @@ void Array<T>::reserve(int capacity) {
     }
 
     assert(allocator.alloc_proc != nullptr);
-    void *new_data = alloc(allocator, sizeof(T) * capacity);
+    void *new_data = alloc(allocator, sizeof(T) * capacity, DEFAULT_ALIGNMENT, false);
     if (data != nullptr) {
         memmove(new_data, data, sizeof(T) * count);
         free(allocator, data);

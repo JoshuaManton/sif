@@ -5,7 +5,7 @@
 extern char *sif_core_lib_path;
 extern Allocator g_global_linear_allocator;
 
-#define SIF_NEW(type) ((type *)alloc(g_global_linear_allocator, sizeof(type)))
+#define SIF_NEW(type) ((type *)alloc(g_global_linear_allocator, sizeof(type), true))
 
 template<typename T>
 T *SIF_NEW_CLONE(T t) {

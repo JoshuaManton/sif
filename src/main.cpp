@@ -65,7 +65,6 @@ BIG
 -iterative solver for polymorphism
 -implicit polymorphism
 -namespaced imports i.e. `#include Foo "foo.sif"`
--using
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
@@ -79,6 +78,7 @@ void print_usage() {
     printf("Optional flags:\n");
     printf("  -show-timings           Print a log of times for different compilation stages.\n");
     printf("  -keep-temp-files        Don't delete intermediate files used for compilation.\n");
+    printf("  -no-type-info           Don't generate runtime type information.\n");
     printf("  -o <output>.exe         Override the default output .exe name.\n");
 }
 
@@ -89,6 +89,7 @@ Allocator g_global_linear_allocator;
 extern int total_lexed_lines;
 
 Timer g_global_timer = {};
+bool g_no_type_info = {};
 
 void main(int argc, char **argv) {
     init_timer(&g_global_timer);
@@ -151,6 +152,9 @@ void main(int argc, char **argv) {
         }
         else if (strcmp(arg, "-debug") == 0) {
             build_debug = true;
+        }
+        else if (strcmp(arg, "-no-type-info") == 0) {
+            g_no_type_info = true;
         }
         else if (strcmp(arg, "-log-cl-command") == 0) {
             log_cl_command = true;
