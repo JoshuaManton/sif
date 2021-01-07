@@ -14,6 +14,7 @@ proc main() : i32 {
     order_independence();
     varargs();
     references();
+    function_pointers();
 
     // cool stuff starts here
     operator_overloading();
@@ -22,7 +23,6 @@ proc main() : i32 {
     runtime_type_information();
     using_statement();
     any_type();
-    function_pointers();
     dynamic_arrays();
     return 0;
 }
@@ -329,13 +329,14 @@ proc using_statement() {
     print("%\n", BAR);
     print("%\n", BAZ);
 
-    // Tou can use 'using' inside structs as well, to get a form of subtyping:
+    // You can use 'using' inside structs as well, to get a form of subtyping
+    // that is more flexible than conventional inheritance.
     var my_struct: My_Struct_With_Using;
     my_struct.some_field = 321;
     print("%\n", my_struct.some_field);
     assert(my_struct.some_field == my_struct.other.some_field);
 
-    // Tou can 'using' as many fields as you'd like, provided that the names
+    // You can 'using' as many fields as you'd like, provided that the names
     // do not collide.
 }
 struct My_Struct_With_Using {

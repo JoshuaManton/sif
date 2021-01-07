@@ -12,21 +12,21 @@ proc main() : i32 {
 }
 ```
 
-## Features
+## Features (see demo below for examples)
 
 - The basic stuff: variables, procedures, structs, ints, floats, bool, pointers, arrays, etc
 - Length-delimited strings, not null-terminated
 - Order-independent declarations
 - Operator overloading
 - Procedural and structural polymorphism
+- `using` statement
 - Runtime type information
-- `any` type (see demo below)
+- `any` type
 
 ## Features Planned
 
 - Tagged unions
 - defer statement
-- `using` statement for namespace inclusion
 - Runtime bounds checks
 - Other small things you'd expect like static #if, switch statements, etc
 - Currently the code-generator outputs C code, in the future I'd like to either try to use LLVM or write a custom x64 backend
@@ -68,12 +68,15 @@ proc main() : i32 {
     order_independence();
     varargs();
     references();
+    function_pointers();
+
+    // cool stuff starts here
     operator_overloading();
     procedural_polymorphism();
     structural_polymorphism();
     runtime_type_information();
+    using_statement();
     any_type();
-    function_pointers();
     dynamic_arrays();
     return 0;
 }
@@ -149,8 +152,16 @@ proc arrays() {
 
 
 proc slices() {
-    // todo(josh)
-    // print("\n\n---- slices ----\n");
+    print("\n\n---- slices ----\n");
+
+    var array: [4]int;
+    array[2] = 124;
+    print("%\n", array[2]);
+    var slice = slice_ptr(&array[0], array.count);
+    assert(slice[2] == 124);
+    slice[2] = 421;
+    print("%\n", slice[2]);
+    assert(array[2] == 421);
 }
 
 
@@ -344,6 +355,49 @@ struct My_Cool_Struct {
 }
 struct Nested_Struct {
     var more_things: [4]Vector3;
+}
+
+
+
+enum My_Enum_For_Using {
+    FOO;
+    BAR;
+    BAZ;
+}
+proc using_statement() {
+    print("\n\n---- using_statement ----\n");
+
+    // 'using' pulls a namespace's declarations into the namespace
+    // of the using.
+
+    // For example if we wanted to print the elements from My_Enum_For_Using
+    // you would have to do it like this:
+    print("%\n", My_Enum_For_Using.FOO);
+    print("%\n", My_Enum_For_Using.BAR);
+    print("%\n", My_Enum_For_Using.BAZ);
+
+    // But if you didn't want to do all that typing all the time, you could
+    // 'using' that enum:
+    using My_Enum_For_Using;
+    print("%\n", FOO);
+    print("%\n", BAR);
+    print("%\n", BAZ);
+
+    // You can use 'using' inside structs as well, to get a form of subtyping
+    // that is more flexible than conventional inheritance.
+    var my_struct: My_Struct_With_Using;
+    my_struct.some_field = 321;
+    print("%\n", my_struct.some_field);
+    assert(my_struct.some_field == my_struct.other.some_field);
+
+    // You can 'using' as many fields as you'd like, provided that the names
+    // do not collide.
+}
+struct My_Struct_With_Using {
+    using var other: My_Other_Struct;
+}
+struct My_Other_Struct {
+    var some_field_in_my_other_struct: int;
 }
 
 
