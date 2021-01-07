@@ -1583,13 +1583,12 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
                 report_error(parameter_location, "Expected an instance of '%s', got '%s'.", referenced_struct->name, struct_type->is_polymorph_of->name);
                 return false;
             }
+            assert(struct_type->polymorphic_parameter_values.count == poly_type->parameters.count);
             For (idx, poly_type->parameters) {
                 Ast_Expr *poly_expr = poly_type->parameters[idx];
-                assert(poly_expr->expr_kind == EXPR_POLYMORPHIC_VARIABLE);
-                Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)poly_expr;
-                Operand param_operand = struct_type->polymorphic_parameter_values[idx];
-                assert(param_operand.type != nullptr);
-                out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, param_operand, nullptr, param_operand.location)));
+                bool ok = try_create_polymorph_value_declaration(poly_expr, struct_type->polymorphic_parameter_values[idx], out_polymorphic_declarations);
+                assert(ok);
+                return ok;
             }
             break;
         }
@@ -1805,7 +1804,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     }
 
     for (int i = polymorphic_constants->count-1; i >= 0; i--) {
-        polymorph_vars->ordered_remove(i);
+        polymorph_vars->ordered_remove((*polymorphic_constants)[i]);
     }
 
     Node_Polymorph new_poly_node = {};
@@ -1914,7 +1913,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
             return false;
         }
         for (int i = parameter_indices_to_remove.count-1; i >= 0; i--) {
-            params_to_emit.ordered_remove(i);
+            params_to_emit.ordered_remove(parameter_indices_to_remove[i]);
         }
 
         assert(!is_type_polymorphic(procedure_polymorph->header->declaration->operand.type));
