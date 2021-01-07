@@ -1000,7 +1000,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
                 // note(josh): extra value copy for defer
                 t = c_temporary();
                 print_indents(sb, indent_level);
-                c_print_type(sb, ast_return->expr->operand.type, t);
+                c_print_type(sb, ast_return->matching_procedure->type->return_type, t);
                 sb->printf(" = %s;\n", expr_name);
             }
             assert(ast_return->matching_procedure->procedure != nullptr);
