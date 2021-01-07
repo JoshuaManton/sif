@@ -528,6 +528,10 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     c_print_type(sb, unary->operand.type, t);
                     sb->print(" = ");
                     switch (unary->op) {
+                        case TK_PLUS: {
+                            sb->print("+");
+                            break;
+                        }
                         case TK_MINUS: {
                             sb->print("-");
                             break;
@@ -567,6 +571,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         case TK_MINUS:                    { sb->print(" - ");  break; }
                         case TK_MULTIPLY:                 { sb->print(" * ");  break; }
                         case TK_DIVIDE:                   { sb->print(" / ");  break; }
+                        case TK_MOD:                      { sb->print(" % ");  break; }
                         case TK_LESS_THAN:                { sb->print(" < ");  break; }
                         case TK_LESS_THAN_OR_EQUAL:       { sb->print(" <= "); break; }
                         case TK_GREATER_THAN:             { sb->print(" > ");  break; }
@@ -905,6 +910,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
                 case TK_MINUS_ASSIGN:       sb->print(" -= "); break;
                 case TK_MULTIPLY_ASSIGN:    sb->print(" *= "); break;
                 case TK_DIVIDE_ASSIGN:      sb->print(" /= "); break;
+                case TK_MOD_ASSIGN:         sb->print(" %= "); break;
                 case TK_LEFT_SHIFT_ASSIGN:  sb->print(" <<= "); break;
                 case TK_RIGHT_SHIFT_ASSIGN: sb->print(" >>= "); break;
                 case TK_BIT_AND_ASSIGN:     sb->print(" &= "); break;
@@ -1426,13 +1432,6 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
                 }
                 sb.print("};\n");
                 sb.printf("STATIC_ASSERT(sizeof(%s %s) == %d, %s);\n", (structure->is_union ? "union" : "struct"), structure->declaration->name, structure->type->size, structure->declaration->name);
-                For (idx, structure->operator_overloads) {
-                    c_print_procedure(&sb, structure->operator_overloads[idx]);
-                }
-                For (idx, structure->procedures) {
-                    Ast_Proc *procedure = structure->procedures[idx];
-                    c_print_procedure(&sb, procedure);
-                }
                 break;
             }
             case DECL_ENUM: {

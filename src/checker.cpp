@@ -552,22 +552,20 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         For (idx, struct_decl->structure->operator_overloads) {
             // todo(josh): this should just go through the normal check_declaration() path. having it copy pasted here is dumb
             // but operator overloads don't currently have a declaration since they don't have names. hmm.
-            Ast_Proc *proc = struct_decl->structure->operator_overloads[idx];
-            assert(!proc->header->is_foreign);
-            assert(proc->body != nullptr);
-            assert(proc->header->name == nullptr);
-            assert(proc->header->declaration == nullptr);
-            if (!typecheck_procedure_header(proc->header)) {
+            Ast_Proc *procedure = struct_decl->structure->operator_overloads[idx];
+            assert(!procedure->header->is_foreign);
+            assert(procedure->body != nullptr);
+            assert(procedure->header->name == nullptr);
+            assert(procedure->header->declaration == nullptr);
+            if (!typecheck_procedure_header(procedure->header)) {
                 return false;
             }
-            assert(proc->header->name != nullptr);
-            assert(proc->header->declaration != nullptr);
-            if (!check_declaration(proc->header->declaration, usage_location)) {
+            assert(procedure->header->name != nullptr);
+            assert(procedure->header->declaration != nullptr);
+            if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
-            // if (!typecheck_block(proc->body)) {
-            //     return false;
-            // }
+            ordered_declarations.append(procedure->header->declaration);
         }
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
@@ -577,6 +575,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!register_declaration(struct_decl->structure->type->constants_block, procedure->header->declaration)) {
                 return false;
             }
+            ordered_declarations.append(procedure->header->declaration);
         }
     }
     else {
@@ -1188,6 +1187,12 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
             else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
             break;
         }
+        case TK_MOD: {
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            // todo(josh): fmod?
+            // else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
+            break;
+        }
         case TK_AMPERSAND: { // note(josh): BIT_AND
                  if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
             break;
@@ -1346,13 +1351,27 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             }
             break;
         }
+        case TK_MOD: {
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value   = lhs.int_value   % rhs.int_value;
+                // todo(josh): fmod?
+                // else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value % rhs.float_value;
+                else {
+                    report_error(location, "Operator %% is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
         case TK_AMPERSAND: { // note(josh): BIT_AND
             result_operand.type = most_concrete;
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
                      if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value & rhs.int_value;
                 else {
-                    report_error(location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    report_error(location, "Operator & is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
                 }
             }
@@ -1364,7 +1383,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 result_operand.flags |= OPERAND_CONSTANT;
                      if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value | rhs.int_value;
                 else {
-                    report_error(location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    report_error(location, "Operator | is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
                 }
             }
@@ -2211,6 +2230,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             switch (unary->op) {
+                case TK_PLUS: {
+                    if (!is_type_number(rhs_operand->type)) {
+                        report_error(rhs_operand->location, "Unary plus requires a numeric type.");
+                        return nullptr;
+                    }
+                }
                 case TK_MINUS: {
                     if (!is_type_number(rhs_operand->type)) {
                         report_error(rhs_operand->location, "Unary minus requires a numeric type.");

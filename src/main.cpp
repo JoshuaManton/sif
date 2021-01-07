@@ -37,6 +37,8 @@ SMALL
 
 MEDIUM
 -runtime bounds checks
+-@PointerArithmetic
+-@UnaryOperatorOverloading
 -switch statements
 -emit #line directives in backend
 -do entrypoint returning i32 implicitly in backend

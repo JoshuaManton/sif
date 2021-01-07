@@ -62,6 +62,8 @@ void init_lexer_globals() {
     token_string_map[TK_MULTIPLY_ASSIGN]                = "*=";
     token_string_map[TK_DIVIDE]                         = "/";
     token_string_map[TK_DIVIDE_ASSIGN]                  = "/=";
+    token_string_map[TK_MOD]                            = "%";
+    token_string_map[TK_MOD_ASSIGN]                     = "%=";
     token_string_map[TK_LEFT_SHIFT]                     = "<<";
     token_string_map[TK_LEFT_SHIFT_ASSIGN]              = "<<=";
     token_string_map[TK_RIGHT_SHIFT]                    = ">>";
@@ -149,6 +151,8 @@ void init_lexer_globals() {
     token_name_map[TK_MULTIPLY_ASSIGN]                  = "TK_MULTIPLY_ASSIGN";
     token_name_map[TK_DIVIDE]                           = "TK_DIVIDE";
     token_name_map[TK_DIVIDE_ASSIGN]                    = "TK_DIVIDE_ASSIGN";
+    token_name_map[TK_MOD]                              = "TK_MOD";
+    token_name_map[TK_MOD_ASSIGN]                       = "TK_MOD_ASSIGN";
     token_name_map[TK_LEFT_SHIFT]                       = "TK_LEFT_SHIFT";
     token_name_map[TK_LEFT_SHIFT_ASSIGN]                = "TK_LEFT_SHIFT_ASSIGN";
     token_name_map[TK_RIGHT_SHIFT]                      = "TK_RIGHT_SHIFT";
@@ -585,6 +589,16 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
                 advance(lexer, 1);
             }
             return get_next_token(lexer, out_token);
+        }
+    }
+    else if (lexer->text[lexer->location.index] == '%') {
+        advance(lexer, 1);
+        out_token->kind = TK_MOD;
+        out_token->text = "%";
+        if (lexer->text[lexer->location.index] == '=') {
+            advance(lexer, 1);
+            out_token->kind = TK_MOD_ASSIGN;
+            out_token->text = "%=";
         }
     }
     else if (lexer->text[lexer->location.index] == '=') {

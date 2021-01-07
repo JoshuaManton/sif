@@ -216,6 +216,10 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
                     eat_next_token(lexer);
                     break;
                 }
+                case TK_MOD: {
+                    eat_next_token(lexer);
+                    break;
+                }
                 case TK_LEFT_SQUARE: {
                     eat_next_token(lexer);
                     EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
@@ -904,6 +908,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 case TK_MINUS_ASSIGN:    // fallthrough
                 case TK_MULTIPLY_ASSIGN: // fallthrough
                 case TK_DIVIDE_ASSIGN:   // fallthrough
+                case TK_MOD_ASSIGN:      // fallthrough
                 case TK_ASSIGN: { // todo(josh): <<=, &&=, etc
                     Token op;
                     assert(get_next_token(lexer, &op));
@@ -1126,6 +1131,7 @@ bool is_mul_op(Token_Kind kind) {
     switch (kind) {
         case TK_MULTIPLY:
         case TK_DIVIDE:
+        case TK_MOD:
         case TK_AMPERSAND: // bitwise AND
         case TK_LEFT_SHIFT:
         case TK_RIGHT_SHIFT: {
@@ -1400,18 +1406,24 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 eat_next_token(lexer);
                 Array<Ast_Expr *> exprs = {};
                 exprs.allocator = g_global_linear_allocator;
-                bool first = true;
                 Token token;
                 while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
-                    if (!first) {
-                        EXPECT(lexer, TK_COMMA, nullptr);
-                    }
                     Ast_Expr *expr = parse_expr(lexer);
                     if (!expr) {
                         return nullptr;
                     }
                     exprs.append(expr);
-                    first = false;
+
+                    Token maybe_comma;
+                    if (!peek_next_token(lexer, &maybe_comma)) {
+                        assert(false && "unexpected EOF");
+                        return nullptr;
+                    }
+                    if (maybe_comma.kind == TK_RIGHT_CURLY) {
+                    }
+                    else {
+                        EXPECT(lexer, TK_COMMA, nullptr);
+                    }
                 }
                 EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
                 assert(base_expr != nullptr);
