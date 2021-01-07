@@ -19,7 +19,7 @@ proc main() : i32 {
 - Order-independent declarations
 - Operator overloading
 - Procedural and structural polymorphism
-- `using` statement
+- `using` statement for compositional subtyping
 - Runtime type information
 - `any` type
 

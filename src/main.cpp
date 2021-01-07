@@ -31,6 +31,7 @@ SMALL
 -how should rawptr behave with ^$T? rawptr isn't a pointer _to_ anything, it's just a pointer. hmmmm.
 -Expr_Change (var v2 = v1.{y=4};)
 -fully support procs in structs
+-allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 
 MEDIUM
 -defer
