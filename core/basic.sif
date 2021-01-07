@@ -1,8 +1,8 @@
-#foreign_import "msvcrt.lib"
-#foreign_import "ucrt.lib"
-#foreign_import "libcmt.lib"
-#foreign_import "vcruntime.lib"
-#foreign_import "Ntdll.lib"
+#foreign_system_import "msvcrt.lib"
+#foreign_system_import "ucrt.lib"
+#foreign_system_import "libcmt.lib"
+#foreign_system_import "vcruntime.lib"
+#foreign_system_import "Ntdll.lib"
 
 proc print_char  (c: u8)                                   #foreign;
 proc print_int   (i: i64)                                  #foreign;

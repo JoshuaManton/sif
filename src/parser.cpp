@@ -550,6 +550,14 @@ Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
 
 extern char *sif_core_lib_path;
 
+const char *relative_to_absolute_path(const char *relative_path, const char *relative_to) {
+    const char *dir_of_relative_to = path_directory(relative_to, g_global_linear_allocator);
+    String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
+    sb.printf("%s\\%s", dir_of_relative_to, relative_path);
+    printf("relative_to_absolute_path: %s\n", sb.string());
+    return sb.string();
+}
+
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_override) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
@@ -686,8 +694,15 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_DIRECTIVE_FOREIGN_IMPORT: {
             eat_next_token(lexer);
-            // Token import_name_token;
-            // EXPECT(lexer, TK_IDENTIFIER, &import_name_token);
+            Token path_token;
+            EXPECT(lexer, TK_STRING, &path_token);
+            const char *absolute = relative_to_absolute_path(path_token.text, root_token.location.filepath);
+            Ast_Directive_Foreign_Import *foreign_import = SIF_NEW_CLONE(Ast_Directive_Foreign_Import(nullptr, absolute, root_token.location));
+            return foreign_import;
+        }
+
+        case TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT: {
+            eat_next_token(lexer);
             Token path_token;
             EXPECT(lexer, TK_STRING, &path_token);
             Ast_Directive_Foreign_Import *foreign_import = SIF_NEW_CLONE(Ast_Directive_Foreign_Import(nullptr, path_token.text, root_token.location));
@@ -993,8 +1008,8 @@ bool parse_file(const char *requested_filename, Location include_location) {
     }
     else {
         if (include_location.filepath) { // the root file doesn't _have_ an include location
-            char *dir_of_file_with_include = path_directory(include_location.filepath, g_global_linear_allocator);
-            include_sb.printf("%s\\%s", dir_of_file_with_include, requested_filename);
+            const char *absolute = relative_to_absolute_path(requested_filename, include_location.filepath);
+            include_sb.printf("%s", absolute);
         }
         else {
             include_sb.print(requested_filename);

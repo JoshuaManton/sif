@@ -1,5 +1,5 @@
-#foreign_import "d3d11.lib";
-#foreign_import "d3dcompiler.lib";
+#foreign_system_import "d3d11.lib";
+#foreign_system_import "d3dcompiler.lib";
 
 proc D3D11CreateDevice(
                       pAdapter           : ^IDXGIAdapter,

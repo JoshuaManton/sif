@@ -222,9 +222,9 @@ struct Ast_Directive_C_Code : public Ast_Node {
 };
 
 struct Ast_Directive_Foreign_Import : public Ast_Node {
-    char *name = {};
-    char *path = {};
-    Ast_Directive_Foreign_Import(char *name, char *path, Location location)
+    const char *name = {};
+    const char *path = {};
+    Ast_Directive_Foreign_Import(const char *name, const char *path, Location location)
     : Ast_Node(AST_DIRECTIVE_FOREIGN_IMPORT, location)
     , name(name)
     , path(path)
