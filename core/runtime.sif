@@ -43,6 +43,15 @@ proc string_ptr(ptr: ^u8, count: int) : string {
 
 
 
+proc to_slice(arr: ^[$N]$E) : []E {
+    var slice: []E;
+    slice.data = &arr^[0];
+    slice.count = N;
+    return slice;
+}
+
+
+
 struct Raw_Slice {
     var data: rawptr;
     var count: int;
