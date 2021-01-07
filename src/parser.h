@@ -745,7 +745,6 @@ struct Declaration {
     bool is_polymorphic = {};
     Array<char *> notes = {};
     Declaration *from_using = {};
-    Ast_Expr *from_using_expr = {};
     Declaration(const char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)
@@ -771,7 +770,7 @@ struct Struct_Declaration : public Declaration {
 };
 
 struct Using_Declaration : public Declaration {
-    Ast_Node *importer = {};
+    Ast_Node *importer = {}; // todo(josh): we don't currently use this for anything, but that surprises me a little bit. investigate.
     Declaration *declaration = {};
     Using_Declaration(Ast_Node *importer, Declaration *declaration, Ast_Block *parent_block, Location location)
     : Declaration(declaration->name, DECL_USING, parent_block, location)

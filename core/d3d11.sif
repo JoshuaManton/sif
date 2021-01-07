@@ -423,7 +423,7 @@ struct D3D11_BOX {
     var back: UINT;
 }
 struct ID3D11DeviceChild {
-    var vtbl: ^ID3D11DeviceChildVtbl;
+    using var vtbl: ^ID3D11DeviceChildVtbl;
 }
 struct ID3D11DeviceChildVtbl {
     var QueryInterface : proc(This: ^ID3D11DeviceChild, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -451,7 +451,7 @@ struct D3D11_DEPTH_STENCIL_DESC {
     var BackFace: D3D11_DEPTH_STENCILOP_DESC;
 }
 struct ID3D11DepthStencilState {
-    var vtbl: ^ID3D11DepthStencilStateVtbl;
+    using var vtbl: ^ID3D11DepthStencilStateVtbl;
 }
 struct ID3D11DepthStencilStateVtbl {
     var QueryInterface : proc(This: ^ID3D11DepthStencilState, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -479,7 +479,7 @@ struct D3D11_BLEND_DESC {
     var RenderTarget: [8]D3D11_RENDER_TARGET_BLEND_DESC;
 }
 struct ID3D11BlendState {
-    var vtbl: ^ID3D11BlendStateVtbl;
+    using var vtbl: ^ID3D11BlendStateVtbl;
 }
 struct ID3D11BlendStateVtbl {
     var QueryInterface : proc(This: ^ID3D11BlendState, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -504,7 +504,7 @@ struct D3D11_RASTERIZER_DESC {
     var AntialiasedLineEnable: BOOL;
 }
 struct ID3D11RasterizerState {
-    var vtbl: ^ID3D11RasterizerStateVtbl;
+    using var vtbl: ^ID3D11RasterizerStateVtbl;
 }
 struct ID3D11RasterizerStateVtbl {
     var QueryInterface : proc(This: ^ID3D11RasterizerState, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -527,7 +527,7 @@ struct D3D11_MAPPED_SUBRESOURCE {
     var DepthPitch: UINT;
 }
 struct ID3D11Resource {
-    var vtbl: ^ID3D11ResourceVtbl;
+    using var vtbl: ^ID3D11ResourceVtbl;
 }
 struct ID3D11ResourceVtbl {
     var QueryInterface : proc(This: ^ID3D11Resource, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -550,7 +550,7 @@ struct D3D11_BUFFER_DESC {
     var StructureByteStride: UINT;
 }
 struct ID3D11Buffer {
-    var vtbl: ^ID3D11BufferVtbl;
+    using var vtbl: ^ID3D11BufferVtbl;
 }
 struct ID3D11BufferVtbl {
     var QueryInterface : proc(This: ^ID3D11Buffer, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -576,7 +576,7 @@ struct D3D11_TEXTURE1D_DESC {
     var MiscFlags: UINT;
 }
 struct ID3D11Texture1D {
-    var vtbl: ^ID3D11Texture1DVtbl;
+    using var vtbl: ^ID3D11Texture1DVtbl;
 }
 struct ID3D11Texture1DVtbl {
     var QueryInterface : proc(This: ^ID3D11Texture1D, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -604,7 +604,7 @@ struct D3D11_TEXTURE2D_DESC {
     var MiscFlags: UINT;
 }
 struct ID3D11Texture2D {
-    var vtbl: ^ID3D11Texture2DVtbl;
+    using var vtbl: ^ID3D11Texture2DVtbl;
     const uuid = "6f15aaf2-d208-4e89-9ab4-489535d34f9c";
 
 }
@@ -735,7 +735,7 @@ struct D3D11_SHADER_RESOURCE_VIEW_DESC {
     };
 }
 struct ID3D11ShaderResourceView {
-    var vtbl: ^ID3D11ShaderResourceViewVtbl;
+    using var vtbl: ^ID3D11ShaderResourceViewVtbl;
 }
 struct ID3D11ShaderResourceViewVtbl {
     var QueryInterface : proc(This: ^ID3D11ShaderResourceView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -801,7 +801,7 @@ struct D3D11_RENDER_TARGET_VIEW_DESC {
     };
 }
 struct ID3D11RenderTargetView {
-    var vtbl: ^ID3D11RenderTargetViewVtbl;
+    using var vtbl: ^ID3D11RenderTargetViewVtbl;
 }
 struct ID3D11RenderTargetViewVtbl {
     var QueryInterface : proc(This: ^ID3D11RenderTargetView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -851,7 +851,7 @@ struct D3D11_DEPTH_STENCIL_VIEW_DESC {
     };
 }
 struct ID3D11DepthStencilView {
-    var vtbl: ^ID3D11DepthStencilViewVtbl;
+    using var vtbl: ^ID3D11DepthStencilViewVtbl;
 }
 struct ID3D11DepthStencilViewVtbl {
     var QueryInterface : proc(This: ^ID3D11DepthStencilView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -903,7 +903,7 @@ struct D3D11_UNORDERED_ACCESS_VIEW_DESC {
     };
 }
 struct ID3D11UnorderedAccessView {
-    var vtbl: ^ID3D11UnorderedAccessViewVtbl;
+    using var vtbl: ^ID3D11UnorderedAccessViewVtbl;
 }
 struct ID3D11UnorderedAccessViewVtbl {
     var QueryInterface : proc(This: ^ID3D11UnorderedAccessView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -917,7 +917,7 @@ struct ID3D11UnorderedAccessViewVtbl {
     var GetDesc : proc(This: ^ID3D11UnorderedAccessView, pDesc: ^D3D11_UNORDERED_ACCESS_VIEW_DESC);
 }
 struct ID3D11VertexShader {
-    var vtbl: ^ID3D11VertexShaderVtbl;
+    using var vtbl: ^ID3D11VertexShaderVtbl;
 }
 struct ID3D11VertexShaderVtbl {
     var QueryInterface : proc(This: ^ID3D11VertexShader, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -929,7 +929,7 @@ struct ID3D11VertexShaderVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11VertexShader, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11HullShader {
-    var vtbl: ^ID3D11HullShaderVtbl;
+    using var vtbl: ^ID3D11HullShaderVtbl;
 }
 struct ID3D11HullShaderVtbl {
     var QueryInterface : proc(This: ^ID3D11HullShader, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -941,7 +941,7 @@ struct ID3D11HullShaderVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11HullShader, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11DomainShader {
-    var vtbl: ^ID3D11DomainShaderVtbl;
+    using var vtbl: ^ID3D11DomainShaderVtbl;
 }
 struct ID3D11DomainShaderVtbl {
     var QueryInterface : proc(This: ^ID3D11DomainShader, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -953,7 +953,7 @@ struct ID3D11DomainShaderVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11DomainShader, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11GeometryShader {
-    var vtbl: ^ID3D11GeometryShaderVtbl;
+    using var vtbl: ^ID3D11GeometryShaderVtbl;
 }
 struct ID3D11GeometryShaderVtbl {
     var QueryInterface : proc(This: ^ID3D11GeometryShader, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -965,7 +965,7 @@ struct ID3D11GeometryShaderVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11GeometryShader, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11PixelShader {
-    var vtbl: ^ID3D11PixelShaderVtbl;
+    using var vtbl: ^ID3D11PixelShaderVtbl;
 }
 struct ID3D11PixelShaderVtbl {
     var QueryInterface : proc(This: ^ID3D11PixelShader, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -977,7 +977,7 @@ struct ID3D11PixelShaderVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11PixelShader, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11ComputeShader {
-    var vtbl: ^ID3D11ComputeShaderVtbl;
+    using var vtbl: ^ID3D11ComputeShaderVtbl;
 }
 struct ID3D11ComputeShaderVtbl {
     var QueryInterface : proc(This: ^ID3D11ComputeShader, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -989,7 +989,7 @@ struct ID3D11ComputeShaderVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11ComputeShader, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11InputLayout {
-    var vtbl: ^ID3D11InputLayoutVtbl;
+    using var vtbl: ^ID3D11InputLayoutVtbl;
 }
 struct ID3D11InputLayoutVtbl {
     var QueryInterface : proc(This: ^ID3D11InputLayout, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1013,7 +1013,7 @@ struct D3D11_SAMPLER_DESC {
     var MaxLOD: FLOAT;
 }
 struct ID3D11SamplerState {
-    var vtbl: ^ID3D11SamplerStateVtbl;
+    using var vtbl: ^ID3D11SamplerStateVtbl;
 }
 struct ID3D11SamplerStateVtbl {
     var QueryInterface : proc(This: ^ID3D11SamplerState, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1026,7 +1026,7 @@ struct ID3D11SamplerStateVtbl {
     var GetDesc : proc(This: ^ID3D11SamplerState, pDesc: ^D3D11_SAMPLER_DESC);
 }
 struct ID3D11Asynchronous {
-    var vtbl: ^ID3D11AsynchronousVtbl;
+    using var vtbl: ^ID3D11AsynchronousVtbl;
 }
 struct ID3D11AsynchronousVtbl {
     var QueryInterface : proc(This: ^ID3D11Asynchronous, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1043,7 +1043,7 @@ struct D3D11_QUERY_DESC {
     var MiscFlags: UINT;
 }
 struct ID3D11Query {
-    var vtbl: ^ID3D11QueryVtbl;
+    using var vtbl: ^ID3D11QueryVtbl;
 }
 struct ID3D11QueryVtbl {
     var QueryInterface : proc(This: ^ID3D11Query, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1057,7 +1057,7 @@ struct ID3D11QueryVtbl {
     var GetDesc : proc(This: ^ID3D11Query, pDesc: ^D3D11_QUERY_DESC);
 }
 struct ID3D11Predicate {
-    var vtbl: ^ID3D11PredicateVtbl;
+    using var vtbl: ^ID3D11PredicateVtbl;
 }
 struct ID3D11PredicateVtbl {
     var QueryInterface : proc(This: ^ID3D11Predicate, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1101,7 +1101,7 @@ struct D3D11_COUNTER_INFO {
     var NumDetectableParallelUnits: UINT8;
 }
 struct ID3D11Counter {
-    var vtbl: ^ID3D11CounterVtbl;
+    using var vtbl: ^ID3D11CounterVtbl;
 }
 struct ID3D11CounterVtbl {
     var QueryInterface : proc(This: ^ID3D11Counter, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1125,7 +1125,7 @@ struct D3D11_CLASS_INSTANCE_DESC {
     var Created: BOOL;
 }
 struct ID3D11ClassInstance {
-    var vtbl: ^ID3D11ClassInstanceVtbl;
+    using var vtbl: ^ID3D11ClassInstanceVtbl;
 }
 struct ID3D11ClassInstanceVtbl {
     var QueryInterface : proc(This: ^ID3D11ClassInstance, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1141,7 +1141,7 @@ struct ID3D11ClassInstanceVtbl {
     var GetTypeName : proc(This: ^ID3D11ClassInstance, pTypeName: LPSTR, pBufferLength: ^SIZE_T);
 }
 struct ID3D11ClassLinkage {
-    var vtbl: ^ID3D11ClassLinkageVtbl;
+    using var vtbl: ^ID3D11ClassLinkageVtbl;
 }
 struct ID3D11ClassLinkageVtbl {
     var QueryInterface : proc(This: ^ID3D11ClassLinkage, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1155,7 +1155,7 @@ struct ID3D11ClassLinkageVtbl {
     var CreateClassInstance : proc(This: ^ID3D11ClassLinkage, pClassTypeName: LPCSTR, ConstantBufferOffset: UINT, ConstantVectorOffset: UINT, TextureOffset: UINT, SamplerOffset: UINT, ppInstance: ^^ID3D11ClassInstance) : HRESULT;
 }
 struct ID3D11CommandList {
-    var vtbl: ^ID3D11CommandListVtbl;
+    using var vtbl: ^ID3D11CommandListVtbl;
 }
 struct ID3D11CommandListVtbl {
     var QueryInterface : proc(This: ^ID3D11CommandList, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1256,7 +1256,7 @@ struct D3D11_FEATURE_DATA_D3D11_OPTIONS5 {
     var SharedResourceTier: UINT;
 }
 struct ID3D11DeviceContext {
-    var vtbl: ^ID3D11DeviceContextVtbl;
+    using var vtbl: ^ID3D11DeviceContextVtbl;
 }
 struct ID3D11DeviceContextVtbl {
     var QueryInterface : proc(This: ^ID3D11DeviceContext, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1435,7 +1435,7 @@ struct D3D11_VIDEO_DECODER_EXTENSION {
     var ppResourceList: ^^ID3D11Resource;
 }
 struct ID3D11VideoDecoder {
-    var vtbl: ^ID3D11VideoDecoderVtbl;
+    using var vtbl: ^ID3D11VideoDecoderVtbl;
 }
 struct ID3D11VideoDecoderVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoDecoder, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1495,7 +1495,7 @@ struct D3D11_VIDEO_PROCESSOR_CONTENT_DESC {
     var Usage: UINT;
 }
 struct ID3D11VideoProcessorEnumerator {
-    var vtbl: ^ID3D11VideoProcessorEnumeratorVtbl;
+    using var vtbl: ^ID3D11VideoProcessorEnumeratorVtbl;
 }
 struct ID3D11VideoProcessorEnumeratorVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoProcessorEnumerator, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1552,7 +1552,7 @@ struct D3D11_VIDEO_PROCESSOR_STREAM {
     var ppFutureSurfacesRight: ^^ID3D11VideoProcessorInputView;
 }
 struct ID3D11VideoProcessor {
-    var vtbl: ^ID3D11VideoProcessorVtbl;
+    using var vtbl: ^ID3D11VideoProcessorVtbl;
 }
 struct ID3D11VideoProcessorVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoProcessor, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1569,7 +1569,7 @@ struct D3D11_OMAC {
     var Omac: [16]BYTE;
 }
 struct ID3D11AuthenticatedChannel {
-    var vtbl: ^ID3D11AuthenticatedChannelVtbl;
+    using var vtbl: ^ID3D11AuthenticatedChannelVtbl;
 }
 struct ID3D11AuthenticatedChannelVtbl {
     var QueryInterface : proc(This: ^ID3D11AuthenticatedChannel, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1721,7 +1721,7 @@ struct D3D11_AUTHENTICATED_CONFIGURE_ACCESSIBLE_ENCRYPTION_INPUT {
     var EncryptionGuid: GUID;
 }
 struct ID3D11CryptoSession {
-    var vtbl: ^ID3D11CryptoSessionVtbl;
+    using var vtbl: ^ID3D11CryptoSessionVtbl;
 }
 struct ID3D11CryptoSessionVtbl {
     var QueryInterface : proc(This: ^ID3D11CryptoSession, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1748,7 +1748,7 @@ struct D3D11_VIDEO_DECODER_OUTPUT_VIEW_DESC {
     };
 }
 struct ID3D11VideoDecoderOutputView {
-    var vtbl: ^ID3D11VideoDecoderOutputViewVtbl;
+    using var vtbl: ^ID3D11VideoDecoderOutputViewVtbl;
 }
 struct ID3D11VideoDecoderOutputViewVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoDecoderOutputView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1773,7 +1773,7 @@ struct D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC {
     };
 }
 struct ID3D11VideoProcessorInputView {
-    var vtbl: ^ID3D11VideoProcessorInputViewVtbl;
+    using var vtbl: ^ID3D11VideoProcessorInputViewVtbl;
 }
 struct ID3D11VideoProcessorInputViewVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoProcessorInputView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1802,7 +1802,7 @@ struct D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC {
     };
 }
 struct ID3D11VideoProcessorOutputView {
-    var vtbl: ^ID3D11VideoProcessorOutputViewVtbl;
+    using var vtbl: ^ID3D11VideoProcessorOutputViewVtbl;
 }
 struct ID3D11VideoProcessorOutputViewVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoProcessorOutputView, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1816,7 +1816,7 @@ struct ID3D11VideoProcessorOutputViewVtbl {
     var GetDesc : proc(This: ^ID3D11VideoProcessorOutputView, pDesc: ^D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC);
 }
 struct ID3D11VideoContext {
-    var vtbl: ^ID3D11VideoContextVtbl;
+    using var vtbl: ^ID3D11VideoContextVtbl;
 }
 struct ID3D11VideoContextVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoContext, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1886,7 +1886,7 @@ struct ID3D11VideoContextVtbl {
     var VideoProcessorGetStreamRotation : proc(This: ^ID3D11VideoContext, pVideoProcessor: ^ID3D11VideoProcessor, StreamIndex: UINT, pEnable: ^BOOL, pRotation: ^UINT);
 }
 struct ID3D11VideoDevice {
-    var vtbl: ^ID3D11VideoDeviceVtbl;
+    using var vtbl: ^ID3D11VideoDeviceVtbl;
 }
 struct ID3D11VideoDeviceVtbl {
     var QueryInterface : proc(This: ^ID3D11VideoDevice, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -1911,7 +1911,7 @@ struct ID3D11VideoDeviceVtbl {
     var SetPrivateDataInterface : proc(This: ^ID3D11VideoDevice, guid: REFGUID, pData: ^IUnknown) : HRESULT;
 }
 struct ID3D11Device {
-    var vtbl: ^ID3D11DeviceVtbl;
+    using var vtbl: ^ID3D11DeviceVtbl;
 }
 struct ID3D11DeviceVtbl {
     var QueryInterface : proc(This: ^ID3D11Device, riid: REFIID, ppvObject: ^rawptr) : HRESULT;

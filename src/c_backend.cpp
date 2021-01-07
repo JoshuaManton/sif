@@ -384,19 +384,11 @@ void c_print_hidden_using_selectors(Chunked_String_Builder *sb, Declaration *dec
     while (from_using->kind == DECL_USING) {
         Using_Declaration *using_decl = (Using_Declaration *)from_using;
         Type *lhs_type = nullptr;
-        if (using_decl->from_using) {
-            assert(using_decl->from_using_expr == nullptr);
-            assert(using_decl->from_using->kind == DECL_VAR);
-            Var_Declaration *var_decl = (Var_Declaration *)using_decl->from_using;
-            sb->printf("%s", using_decl->from_using->name);
-            lhs_type = var_decl->var->type;
-        }
-        else {
-            assert(using_decl->from_using == nullptr);
-            char *expr_t = c_print_expr(sb, using_decl->from_using_expr, indent_level);
-            sb->print(expr_t);
-            lhs_type = using_decl->from_using_expr->operand.type;
-        }
+        assert(using_decl->from_using);
+        assert(using_decl->from_using->kind == DECL_VAR);
+        Var_Declaration *var_decl = (Var_Declaration *)using_decl->from_using;
+        sb->printf("%s", using_decl->from_using->name);
+        lhs_type = var_decl->var->type;
         assert(lhs_type != nullptr);
         if (is_type_pointer(lhs_type)) {
             sb->print("->");

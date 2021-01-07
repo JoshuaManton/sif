@@ -3,7 +3,7 @@ struct _D3D_SHADER_MACRO {
     var Definition: LPCSTR;
 }
 struct ID3D10Blob {
-    var vtbl: ^ID3D10BlobVtbl;
+    using var vtbl: ^ID3D10BlobVtbl;
 }
 struct ID3D10BlobVtbl {
     var QueryInterface : proc(This: ^ID3D10Blob, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -13,7 +13,7 @@ struct ID3D10BlobVtbl {
     var GetBufferSize : proc(This: ^ID3D10Blob) : SIZE_T;
 }
 struct ID3DDestructionNotifier {
-    var vtbl: ^ID3DDestructionNotifierVtbl;
+    using var vtbl: ^ID3DDestructionNotifierVtbl;
 }
 struct ID3DDestructionNotifierVtbl {
     var QueryInterface : proc(This: ^ID3DDestructionNotifier, riid: REFIID, ppvObject: ^rawptr) : HRESULT;

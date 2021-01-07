@@ -51,7 +51,7 @@ struct DXGI_SWAP_CHAIN_DESC {
     var Flags: UINT;
 }
 struct IDXGIObject {
-    var vtbl: ^IDXGIObjectVtbl;
+    using var vtbl: ^IDXGIObjectVtbl;
 }
 struct IDXGIObjectVtbl {
     var QueryInterface : proc(This: ^IDXGIObject, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -63,7 +63,7 @@ struct IDXGIObjectVtbl {
     var GetParent : proc(This: ^IDXGIObject, riid: REFIID, ppParent: ^rawptr) : HRESULT;
 }
 struct IDXGIDeviceSubObject {
-    var vtbl: ^IDXGIDeviceSubObjectVtbl;
+    using var vtbl: ^IDXGIDeviceSubObjectVtbl;
 }
 struct IDXGIDeviceSubObjectVtbl {
     var QueryInterface : proc(This: ^IDXGIDeviceSubObject, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -76,7 +76,7 @@ struct IDXGIDeviceSubObjectVtbl {
     var GetDevice : proc(This: ^IDXGIDeviceSubObject, riid: REFIID, ppDevice: ^rawptr) : HRESULT;
 }
 struct IDXGIResource {
-    var vtbl: ^IDXGIResourceVtbl;
+    using var vtbl: ^IDXGIResourceVtbl;
 }
 struct IDXGIResourceVtbl {
     var QueryInterface : proc(This: ^IDXGIResource, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -93,7 +93,7 @@ struct IDXGIResourceVtbl {
     var GetEvictionPriority : proc(This: ^IDXGIResource, pEvictionPriority: ^UINT) : HRESULT;
 }
 struct IDXGIKeyedMutex {
-    var vtbl: ^IDXGIKeyedMutexVtbl;
+    using var vtbl: ^IDXGIKeyedMutexVtbl;
 }
 struct IDXGIKeyedMutexVtbl {
     var QueryInterface : proc(This: ^IDXGIKeyedMutex, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -108,7 +108,7 @@ struct IDXGIKeyedMutexVtbl {
     var ReleaseSync : proc(This: ^IDXGIKeyedMutex, Key: UINT64) : HRESULT;
 }
 struct IDXGISurface {
-    var vtbl: ^IDXGISurfaceVtbl;
+    using var vtbl: ^IDXGISurfaceVtbl;
 }
 struct IDXGISurfaceVtbl {
     var QueryInterface : proc(This: ^IDXGISurface, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -124,7 +124,7 @@ struct IDXGISurfaceVtbl {
     var Unmap : proc(This: ^IDXGISurface) : HRESULT;
 }
 struct IDXGISurface1 {
-    var vtbl: ^IDXGISurface1Vtbl;
+    using var vtbl: ^IDXGISurface1Vtbl;
 }
 struct IDXGISurface1Vtbl {
     var QueryInterface : proc(This: ^IDXGISurface1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -142,7 +142,7 @@ struct IDXGISurface1Vtbl {
     var ReleaseDC : proc(This: ^IDXGISurface1, pDirtyRect: ^RECT) : HRESULT;
 }
 struct IDXGIAdapter {
-    var vtbl: ^IDXGIAdapterVtbl;
+    using var vtbl: ^IDXGIAdapterVtbl;
 }
 struct IDXGIAdapterVtbl {
     var QueryInterface : proc(This: ^IDXGIAdapter, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -157,7 +157,7 @@ struct IDXGIAdapterVtbl {
     var CheckInterfaceSupport : proc(This: ^IDXGIAdapter, InterfaceName: REFGUID, pUMDVersion: ^LARGE_INTEGER) : HRESULT;
 }
 struct IDXGIOutput {
-    var vtbl: ^IDXGIOutputVtbl;
+    using var vtbl: ^IDXGIOutputVtbl;
 }
 struct IDXGIOutputVtbl {
     var QueryInterface : proc(This: ^IDXGIOutput, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -181,7 +181,7 @@ struct IDXGIOutputVtbl {
     var GetFrameStatistics : proc(This: ^IDXGIOutput, pStats: ^DXGI_FRAME_STATISTICS) : HRESULT;
 }
 struct IDXGISwapChain {
-    var vtbl: ^IDXGISwapChainVtbl;
+    using var vtbl: ^IDXGISwapChainVtbl;
 }
 struct IDXGISwapChainVtbl {
     var QueryInterface : proc(This: ^IDXGISwapChain, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -204,7 +204,7 @@ struct IDXGISwapChainVtbl {
     var GetLastPresentCount : proc(This: ^IDXGISwapChain, pLastPresentCount: ^UINT) : HRESULT;
 }
 struct IDXGIFactory {
-    var vtbl: ^IDXGIFactoryVtbl;
+    using var vtbl: ^IDXGIFactoryVtbl;
 }
 struct IDXGIFactoryVtbl {
     var QueryInterface : proc(This: ^IDXGIFactory, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -221,7 +221,7 @@ struct IDXGIFactoryVtbl {
     var CreateSoftwareAdapter : proc(This: ^IDXGIFactory, Module: HMODULE, ppAdapter: ^^IDXGIAdapter) : HRESULT;
 }
 struct IDXGIDevice {
-    var vtbl: ^IDXGIDeviceVtbl;
+    using var vtbl: ^IDXGIDeviceVtbl;
 }
 struct IDXGIDeviceVtbl {
     var QueryInterface : proc(This: ^IDXGIDevice, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -254,7 +254,7 @@ struct DXGI_DISPLAY_COLOR_SPACE {
     var WhitePoints: [16][2]FLOAT;
 }
 struct IDXGIFactory1 {
-    var vtbl: ^IDXGIFactory1Vtbl;
+    using var vtbl: ^IDXGIFactory1Vtbl;
 }
 struct IDXGIFactory1Vtbl {
     var QueryInterface : proc(This: ^IDXGIFactory1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -273,7 +273,7 @@ struct IDXGIFactory1Vtbl {
     var IsCurrent : proc(This: ^IDXGIFactory1) : BOOL;
 }
 struct IDXGIAdapter1 {
-    var vtbl: ^IDXGIAdapter1Vtbl;
+    using var vtbl: ^IDXGIAdapter1Vtbl;
 }
 struct IDXGIAdapter1Vtbl {
     var QueryInterface : proc(This: ^IDXGIAdapter1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;
@@ -289,7 +289,7 @@ struct IDXGIAdapter1Vtbl {
     var GetDesc1 : proc(This: ^IDXGIAdapter1, pDesc: ^DXGI_ADAPTER_DESC1) : HRESULT;
 }
 struct IDXGIDevice1 {
-    var vtbl: ^IDXGIDevice1Vtbl;
+    using var vtbl: ^IDXGIDevice1Vtbl;
 }
 struct IDXGIDevice1Vtbl {
     var QueryInterface : proc(This: ^IDXGIDevice1, riid: REFIID, ppvObject: ^rawptr) : HRESULT;

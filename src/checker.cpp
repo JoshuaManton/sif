@@ -263,12 +263,11 @@ Type *try_concretize_type_without_context(Type *type) {
     return nullptr;
 }
 
-void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Block *block_with_declarations, Declaration *from_using, Ast_Expr *from_using_expr, Ast_Node *node_to_link_back_to) {
+void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Block *block_with_declarations, Declaration *from_using, Ast_Node *node_to_link_back_to) {
     For (idx, block_with_declarations->declarations) {
         Declaration *decl_to_broadcast = block_with_declarations->declarations[idx];
         Using_Declaration *new_declaration = SIF_NEW_CLONE(Using_Declaration(node_to_link_back_to, decl_to_broadcast, block_to_broadcast_into, node_to_link_back_to->location));
         new_declaration->from_using = from_using;
-        new_declaration->from_using_expr = from_using_expr;
         assert(register_declaration(block_to_broadcast_into, new_declaration));
     }
 }
@@ -482,13 +481,20 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
 
             if (var->is_using) {
+                if (var->is_constant) {
+                    report_error(var->location, "Cannot apply 'using' to a constant.");
+                    return false;
+                }
+                // todo(josh): what about references here?
+                //             should calling complete_type() with a reference complete the thing
+                //             it's a reference to? probably. hmmmm
                 if (is_type_pointer(var->type)) {
                     Type_Pointer *pointer_type = (Type_Pointer *)var->type;
                     if (!complete_type(pointer_type->pointer_to)) {
                         return false;
                     }
                 }
-                broadcast_declarations_for_using(var->parent_block, var->type->variables_block, var->declaration, nullptr, var);
+                broadcast_declarations_for_using(var->parent_block, var->type->variables_block, var->declaration, var);
             }
             break;
         }
@@ -861,7 +867,12 @@ bool complete_type(Type *type) {
                     switch (decl->kind) {
                         case DECL_USING: {
                             Using_Declaration *using_decl = (Using_Declaration *)decl;
-                            assert(register_declaration(structure->type->variables_block, using_decl));
+                            if (using_decl->operand.flags & OPERAND_CONSTANT) {
+                                assert(register_declaration(structure->type->constants_block, using_decl));
+                            }
+                            else {
+                                assert(register_declaration(structure->type->variables_block, using_decl));
+                            }
                             break;
                         }
                         case DECL_VAR: {
@@ -3025,22 +3036,34 @@ bool typecheck_node(Ast_Node *node) {
 
         case AST_USING: {
             Ast_Using *ast_using = (Ast_Using *)node;
+            if (unparen_expr(ast_using->expr)->expr_kind != EXPR_IDENTIFIER) {
+                report_error(ast_using->location, "'using' can only be applied to identifiers.");
+                return nullptr;
+            }
             // todo(josh): instead of broadcasting each declaration, we could just make a single Using_Declaration that points at the block it's using.
             //             this would mean identifier resolving would have to be recursive. hmmmm
             Ast_Block *block_to_broadcast_declarations_of = nullptr;
-            assert(ast_using->expr);
             Operand *using_operand = typecheck_expr(ast_using->expr);
             if (!using_operand) {
                 return nullptr;
             }
+            assert(using_operand->referenced_declaration != nullptr);
+
+            Type *type_to_broadcast = nullptr;
             if (is_type_typeid(using_operand->type)) {
+                type_to_broadcast = using_operand->type_value;
                 block_to_broadcast_declarations_of = using_operand->type_value->constants_block;
             }
             else {
+                type_to_broadcast = using_operand->type;
                 block_to_broadcast_declarations_of = using_operand->type->variables_block;
             }
+            assert(type_to_broadcast != nullptr);
+            if (!complete_type(type_to_broadcast)) {
+                return false;
+            }
             assert(block_to_broadcast_declarations_of != nullptr);
-            broadcast_declarations_for_using(ast_using->parent_block, block_to_broadcast_declarations_of, nullptr, ast_using->expr, ast_using->expr);
+            broadcast_declarations_for_using(ast_using->parent_block, block_to_broadcast_declarations_of, using_operand->referenced_declaration, ast_using->expr);
             break;
         }
 

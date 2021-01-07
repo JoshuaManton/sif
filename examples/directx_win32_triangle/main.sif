@@ -26,7 +26,7 @@ proc main() : i32 {
     };
 
     var vertex_format: ^ID3D11InputLayout;
-    var result = directx_device.vtbl.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.vtbl.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.vtbl.GetBufferSize(vertex_shader_blob), &vertex_format);
+    var result = directx_device.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), &vertex_format);
     assert(result == S_OK);
 
     var vertices = ([3]Vertex) {
@@ -40,13 +40,13 @@ proc main() : i32 {
         update_window(&window);
 
         bind_shaders(vertex_shader, pixel_shader);
-        directx_device_context.vtbl.IASetInputLayout(directx_device_context, vertex_format);
+        directx_device_context.IASetInputLayout(directx_device_context, vertex_format);
 
-        directx_device_context.vtbl.OMSetDepthStencilState(directx_device_context, depth_test_state, 0);
-        directx_device_context.vtbl.RSSetState(directx_device_context, no_cull_rasterizer);
-        directx_device_context.vtbl.PSSetSamplers(directx_device_context, 0, 1, &linear_wrap_sampler);
+        directx_device_context.OMSetDepthStencilState(directx_device_context, depth_test_state, 0);
+        directx_device_context.RSSetState(directx_device_context, no_cull_rasterizer);
+        directx_device_context.PSSetSamplers(directx_device_context, 0, 1, &linear_wrap_sampler);
         var blend_factor = ([4]FLOAT){1, 1, 1, 1};
-        directx_device_context.vtbl.OMSetBlendState(directx_device_context, alpha_blend_state, &blend_factor[0], 0xffffffff);
+        directx_device_context.OMSetBlendState(directx_device_context, alpha_blend_state, &blend_factor[0], 0xffffffff);
 
         var viewport: D3D11_VIEWPORT;
         viewport.TopLeftX = 0;
@@ -55,22 +55,22 @@ proc main() : i32 {
         viewport.Height = cast(f32, window.height);
         viewport.MinDepth = 0;
         viewport.MaxDepth = 1;
-        directx_device_context.vtbl.RSSetViewports(directx_device_context, 1, &viewport);
+        directx_device_context.RSSetViewports(directx_device_context, 1, &viewport);
 
-        directx_device_context.vtbl.IASetPrimitiveTopology(directx_device_context, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        directx_device_context.IASetPrimitiveTopology(directx_device_context, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        directx_device_context.vtbl.OMSetRenderTargets(directx_device_context, 1, &swap_chain_rtv, null);
+        directx_device_context.OMSetRenderTargets(directx_device_context, 1, &swap_chain_rtv, null);
 
         var clear_color = ([4]float){1, 0.5, 0.2, 1};
-        directx_device_context.vtbl.ClearRenderTargetView(directx_device_context, swap_chain_rtv, &clear_color[0]);
+        directx_device_context.ClearRenderTargetView(directx_device_context, swap_chain_rtv, &clear_color[0]);
 
         var stride: u32 = sizeof(Vertex);
         var offset: u32 = 0;
         bind_vertex_buffers(&vb, 1, 0, &stride, &offset);
 
-        directx_device_context.vtbl.Draw(directx_device_context, 3, 0);
+        directx_device_context.Draw(directx_device_context, 3, 0);
 
-        swap_chain_handle.vtbl.Present(swap_chain_handle, 1, 0);
+        swap_chain_handle.Present(swap_chain_handle, 1, 0);
     }
 }
 
@@ -123,17 +123,17 @@ proc init_directx(window: ^Window) {
     render_target_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
     var backing_texture: ^ID3D11Texture2D;
-    result = swap_chain_handle.vtbl.GetBuffer(swap_chain_handle, 0, &uid(ID3D11Texture2D.uuid), cast(^rawptr, &backing_texture));
+    result = swap_chain_handle.GetBuffer(swap_chain_handle, 0, &uid(ID3D11Texture2D.uuid), cast(^rawptr, &backing_texture));
     assert(result == S_OK);
-    result = directx_device.vtbl.CreateRenderTargetView(directx_device, cast(^ID3D11Resource, backing_texture), &render_target_view_desc, &swap_chain_rtv);
+    result = directx_device.CreateRenderTargetView(directx_device, cast(^ID3D11Resource, backing_texture), &render_target_view_desc, &swap_chain_rtv);
     assert(result == S_OK);
-    backing_texture.vtbl.Release(backing_texture);
+    backing_texture.Release(backing_texture);
 
     // create rasterizer
     var no_cull_rasterizer_desc: D3D11_RASTERIZER_DESC;
     no_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
     no_cull_rasterizer_desc.CullMode = D3D11_CULL_NONE;
-    result = directx_device.vtbl.CreateRasterizerState(directx_device, &no_cull_rasterizer_desc, &no_cull_rasterizer);
+    result = directx_device.CreateRasterizerState(directx_device, &no_cull_rasterizer_desc, &no_cull_rasterizer);
     assert(result == S_OK);
 
     // create depth stencil state
@@ -152,7 +152,7 @@ proc init_directx(window: ^Window) {
     depth_test_stencil_desc.BackFace.StencilDepthFailOp  = D3D11_STENCIL_OP_KEEP;
     depth_test_stencil_desc.BackFace.StencilPassOp       = D3D11_STENCIL_OP_KEEP;
     depth_test_stencil_desc.BackFace.StencilFailOp       = D3D11_STENCIL_OP_KEEP;
-    result = directx_device.vtbl.CreateDepthStencilState(directx_device, &depth_test_stencil_desc, &depth_test_state);
+    result = directx_device.CreateDepthStencilState(directx_device, &depth_test_stencil_desc, &depth_test_state);
     assert(result == S_OK);
 
     // create linear wrap sampler
@@ -163,7 +163,7 @@ proc init_directx(window: ^Window) {
     linear_wrap_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
     linear_wrap_sampler_desc.MinLOD = -F32_MAX;
     linear_wrap_sampler_desc.MaxLOD = F32_MAX;
-    result = directx_device.vtbl.CreateSamplerState(directx_device, &linear_wrap_sampler_desc, &linear_wrap_sampler);
+    result = directx_device.CreateSamplerState(directx_device, &linear_wrap_sampler_desc, &linear_wrap_sampler);
     assert(result == S_OK);
 
 
@@ -177,7 +177,7 @@ proc init_directx(window: ^Window) {
     alpha_blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
     alpha_blend_desc.RenderTarget[0].BlendOpAlpha   = D3D11_BLEND_OP_ADD;
     alpha_blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-    result = directx_device.vtbl.CreateBlendState(directx_device, &alpha_blend_desc, &alpha_blend_state);
+    result = directx_device.CreateBlendState(directx_device, &alpha_blend_desc, &alpha_blend_state);
     assert(result == S_OK);
 }
 
@@ -197,12 +197,12 @@ proc create_vertex_buffer(data: rawptr, len: int) : ^ID3D11Buffer {
         ptr_buffer = &buffer_data;
     }
     var buffer: ^ID3D11Buffer;
-    var result = directx_device.vtbl.CreateBuffer(directx_device, &buffer_desc, ptr_buffer, &buffer);
+    var result = directx_device.CreateBuffer(directx_device, &buffer_desc, ptr_buffer, &buffer);
     assert(result == S_OK);
     return buffer;
 }
 proc bind_vertex_buffers(buffers: ^^ID3D11Buffer, num_buffers: int, start_slot: u32, strides: ^u32, offsets: ^u32) {
-    directx_device_context.vtbl.IASetVertexBuffers(directx_device_context, start_slot, cast(u32, num_buffers), buffers, strides, offsets);
+    directx_device_context.IASetVertexBuffers(directx_device_context, start_slot, cast(u32, num_buffers), buffers, strides, offsets);
 }
 
 
@@ -219,16 +219,16 @@ proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) :
     var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
     var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), &entry[0], &compiler[0], D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
     if (errors != null) {
-        var str = cast(^u8, errors.vtbl.GetBufferPointer(errors));
+        var str = cast(^u8, errors.GetBufferPointer(errors));
         print(string_ptr(str, cast(i64, strlen(str))));
         assert(false);
     }
     sif_free(filename_wide, default_allocator());
     assert(result == S_OK);
     var vertex_shader_handle: ^ID3D11VertexShader;
-    result = directx_device.vtbl.CreateVertexShader(directx_device, vertex_shader_blob.vtbl.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.vtbl.GetBufferSize(vertex_shader_blob), null, &vertex_shader_handle);
+    result = directx_device.CreateVertexShader(directx_device, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), null, &vertex_shader_handle);
     assert(result == S_OK);
-    if (errors != null) errors.vtbl.Release(errors);
+    if (errors != null) errors.Release(errors);
     out_blob^ = vertex_shader_blob;
     return vertex_shader_handle;
 }
@@ -243,22 +243,22 @@ proc compile_pixel_shader_from_file(filename: string) : ^ID3D11PixelShader {
     var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
     var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), &entry[0], &compiler[0], D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
     if (errors != null) {
-        var str = cast(^u8, errors.vtbl.GetBufferPointer(errors));
+        var str = cast(^u8, errors.GetBufferPointer(errors));
         print(string_ptr(str, cast(i64, strlen(str))));
         assert(false);
     }
     assert(result == S_OK);
     var pixel_shader: ^ID3D11PixelShader;
-    result = directx_device.vtbl.CreatePixelShader(directx_device, pixel_shader_blob.vtbl.GetBufferPointer(pixel_shader_blob), pixel_shader_blob.vtbl.GetBufferSize(pixel_shader_blob), null, &pixel_shader);
+    result = directx_device.CreatePixelShader(directx_device, pixel_shader_blob.GetBufferPointer(pixel_shader_blob), pixel_shader_blob.GetBufferSize(pixel_shader_blob), null, &pixel_shader);
     assert(result == S_OK);
-    if (errors != null) errors.vtbl.Release(errors);
-    pixel_shader_blob.vtbl.Release(pixel_shader_blob);
+    if (errors != null) errors.Release(errors);
+    pixel_shader_blob.Release(pixel_shader_blob);
     return pixel_shader;
 }
 
 proc bind_shaders(vertex: ^ID3D11VertexShader, pixel: ^ID3D11PixelShader) {
-    directx_device_context.vtbl.VSSetShader(directx_device_context, vertex, null, 0);
-    directx_device_context.vtbl.PSSetShader(directx_device_context, pixel, null, 0);
+    directx_device_context.VSSetShader(directx_device_context, vertex, null, 0);
+    directx_device_context.PSSetShader(directx_device_context, pixel, null, 0);
 }
 
 
