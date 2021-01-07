@@ -998,6 +998,14 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
         }
 
         case AST_CONTINUE: {
+            Ast_Continue *ast_continue = (Ast_Continue *)node;
+            assert(ast_continue->matching_loop);
+            if (ast_continue->matching_loop->ast_kind == AST_FOR_LOOP) {
+                Ast_For_Loop *for_loop = (Ast_For_Loop *)ast_continue->matching_loop;
+                if (for_loop->post) {
+                    c_print_statement(sb, for_loop->post, indent_level, true);
+                }
+            }
             print_indents(sb, indent_level);
             sb->print("continue;\n");
             break;
