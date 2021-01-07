@@ -2083,7 +2083,9 @@ Ast_Expr *unparen_expr(Ast_Expr *expr) {
     return expr;
 }
 
-Declaration *try_resolve_identifier(char *name, Ast_Block *start_block, Operand *out_result_operand, Location usage_location, bool climb_up_blocks) {
+// return value is false if there was a compile error, true otherwise.
+// this means that this procedure can return true even if it doesn't resolve the declaration, so be sure to check out_resolved_declaration for null
+bool try_resolve_identifier(char *name, Ast_Block *start_block, Operand *out_result_operand, Location usage_location, bool climb_up_blocks, Declaration **out_resolved_declaration) {
     Declaration *resolved_declaration = nullptr;
     while (start_block != nullptr) {
         Declaration **existing_declaration = start_block->declarations_lookup.get(name);
@@ -2099,28 +2101,21 @@ Declaration *try_resolve_identifier(char *name, Ast_Block *start_block, Operand 
         }
     }
     if (!resolved_declaration) {
-        return nullptr;
+        return true;
     }
     assert(resolved_declaration != nullptr);
     if (resolved_declaration->is_polymorphic) {
         out_result_operand->type = type_polymorphic;
         out_result_operand->referenced_declaration = resolved_declaration;
-        switch (resolved_declaration->kind) {
-            case DECL_STRUCT: {
-                break;
-            }
-            case DECL_PROC: {
-                break;
-            }
-        }
     }
     else {
         if (!check_declaration(resolved_declaration, usage_location, out_result_operand)) {
-            return nullptr;
+            return false;
         }
     }
     out_result_operand->location = usage_location;
-    return resolved_declaration;
+    *out_resolved_declaration = resolved_declaration;
+    return true;
 }
 
 bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Lookup_Result *out_result, Location selector_location) {
@@ -2162,10 +2157,15 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
         return false;
     }
     out_result->type_with_field = type_with_fields;
-    Declaration *resolved_declaration = try_resolve_identifier(field_name, block_to_search, &out_result->operand, selector_location, false);
+    Declaration *resolved_declaration = nullptr;
+    if (!try_resolve_identifier(field_name, block_to_search, &out_result->operand, selector_location, false, &resolved_declaration)) {
+        return false;
+    }
     if (!resolved_declaration) {
         if (fallback_block_to_search) {
-            resolved_declaration = try_resolve_identifier(field_name, fallback_block_to_search, &out_result->operand, selector_location, false);
+            if (!try_resolve_identifier(field_name, fallback_block_to_search, &out_result->operand, selector_location, false, &resolved_declaration)) {
+                return false;
+            }
             if (!resolved_declaration) {
                 report_error(lhs->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
                 return false;
@@ -2374,7 +2374,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!rhs_operand) {
                 return nullptr;
             }
-            assert(rhs_operand->flags & OPERAND_LVALUE);
+            if (!(rhs_operand->flags & OPERAND_LVALUE)) {
+                report_error(address_of->location, "Cannot take the address of a non-lvalue.");
+                return nullptr;
+            }
             result_operand.type = get_or_create_type_pointer_to(rhs_operand->type);
             result_operand.flags = OPERAND_RVALUE;
             break;
@@ -2487,7 +2490,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         case EXPR_IDENTIFIER: {
             Expr_Identifier *ident = (Expr_Identifier *)expr;
             Ast_Block *block = ident->parent_block;
-            ident->resolved_declaration = try_resolve_identifier(ident->name, block, &result_operand, ident->location, true);
+            if (!try_resolve_identifier(ident->name, block, &result_operand, ident->location, true, &ident->resolved_declaration)) {
+                return nullptr;
+            }
             if (!ident->resolved_declaration) {
                 report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
                 return nullptr;
