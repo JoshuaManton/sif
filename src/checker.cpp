@@ -295,14 +295,14 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             Type_Declaration *type_decl = (Type_Declaration *)decl;
             decl_operand.type = type_typeid;
             decl_operand.type_value = type_decl->type;
-            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
         }
         case DECL_STRUCT: {
             Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
             decl_operand.type = type_typeid;
             decl_operand.type_value = struct_decl->structure->type;
-            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
         }
         case DECL_POLYMORPHIC: {
@@ -398,7 +398,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             g_silence_errors = false;
             decl_operand.type = type_typeid;
             decl_operand.type_value = enum_decl->ast_enum->type;
-            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
         }
         case DECL_VAR: {
@@ -2654,7 +2654,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(expr_operand->type != nullptr);
             result_operand.type = type_typeid;
             result_operand.type_value = expr_operand->type;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
         }
         case EXPR_STRUCT_TYPE: {
@@ -2663,7 +2663,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             assert(anonymous_struct->structure->type != nullptr);
             result_operand.type = type_typeid;
             result_operand.type_value = anonymous_struct->structure->type;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
         }
         case EXPR_POINTER_TYPE: {
@@ -2674,7 +2674,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             assert((pointer_to_operand->flags & OPERAND_CONSTANT) && (pointer_to_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             result_operand.type = type_typeid;
             result_operand.type_value = get_or_create_type_pointer_to(pointer_to_operand->type_value);
             break;
@@ -2687,7 +2687,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             assert((reference_to_operand->flags & OPERAND_CONSTANT) && (reference_to_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             result_operand.type = type_typeid;
             result_operand.type_value = get_or_create_type_reference_to(reference_to_operand->type_value);
             break;
@@ -2709,7 +2709,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 report_error(expr_array->count_expr->location, "Array size must be greater than 0.");
                 return nullptr;
             }
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             result_operand.type = type_typeid;
             result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
             break;
@@ -2722,7 +2722,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 return nullptr;
             }
             assert((slice_of_operand->flags & OPERAND_CONSTANT) && (slice_of_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             result_operand.type = type_typeid;
             result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
             break;
@@ -2735,7 +2735,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             assert(is_type_procedure(proc_operand->type));
             Type_Procedure *proc_type = (Type_Procedure *)proc_operand->type;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             result_operand.type = type_typeid;
             result_operand.type_value = proc_operand->type;
             break;
@@ -2749,7 +2749,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             if (is_type_typeid(rhs_operand->type)) {
                 assert((rhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_TYPE));
-                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
                 result_operand.type = type_typeid;
                 result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value);
             }
