@@ -22,6 +22,7 @@ proc main() : i32 {
     structural_polymorphism();
     runtime_type_information();
     using_statement();
+    defer_statement();
     any_type();
     dynamic_arrays();
     return 0;
@@ -348,6 +349,53 @@ struct My_Struct_With_Using {
 }
 struct My_Other_Struct {
     var some_field: int;
+}
+
+
+
+proc defer_statement() {
+    print("\n\n---- defer_statement ----\n");
+
+    // 'defer' executes a statement at the end of the current block
+    {
+        var a = 123;
+        {
+            defer a = 321;
+            assert(a == 123);
+        }
+        assert(a == 321);
+    }
+
+    // a good use-case for defer is memory management, keeping the
+    // freeing of resources nearby the acquision site
+    {
+        var some_allocated_memory = new_slice(int, 16, default_allocator());
+        defer delete_slice(some_allocated_memory, default_allocator());
+
+        // ... do a bunch of work with some_allocated_memory
+    }
+
+    // if there are multiple defers, they are executed in reverse order
+    {
+        defer print("Will print third\n");
+        defer print("Will print second\n");
+        defer print("Will print first\n");
+    }
+
+    // in addition to automatically running at the end of blocks, normal
+    // control flow statements like 'break', 'continue', and 'return' also
+    // invoke defers
+    {
+        var a = 123;
+        for (var i = 0; i < 10; i += 1) {
+            if (i == 7) {
+                defer a = 321;
+                break;
+            }
+            assert(a == 123);
+        }
+        assert(a == 321);
+    }
 }
 
 

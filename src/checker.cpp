@@ -44,13 +44,6 @@ Ast_Proc *g_main_proc;
 
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
-char *g_interned_main_string;
-char *g_interned_sif_runtime_string;
-char *g_interned_string_string;
-char *g_interned_rawptr_string;
-char *g_interned_any_string;
-char *g_interned_typeid_string;
-
 bool complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand *operand, Type *expected_type, bool do_report_error = true);
@@ -105,13 +98,6 @@ void init_checker() {
     all_types.allocator = g_global_linear_allocator;
     ordered_declarations.allocator = g_global_linear_allocator;
 
-    g_interned_main_string        = intern_string("main");
-    g_interned_sif_runtime_string = intern_string("sif_runtime");
-    g_interned_string_string      = intern_string("string");
-    g_interned_rawptr_string      = intern_string("rawptr");
-    g_interned_any_string         = intern_string("any");
-    g_interned_typeid_string      = intern_string("typeid");
-
     type_i8  = NEW_TYPE(Type_Primitive(intern_string("i8"), 1, 1));  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED;
     type_i16 = NEW_TYPE(Type_Primitive(intern_string("i16"), 2, 2)); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED;
     type_i32 = NEW_TYPE(Type_Primitive(intern_string("i32"), 4, 4)); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED;
@@ -146,10 +132,10 @@ void init_checker() {
 
 
 
-    add_variable_type_field(type_string, intern_string("data"), get_or_create_type_pointer_to(type_u8), 0, {});
-    add_variable_type_field(type_string, intern_string("count"), type_int, 8, {});
+    add_variable_type_field(type_string, intern_string(g_interned_data_string), get_or_create_type_pointer_to(type_u8), 0, {});
+    add_variable_type_field(type_string, intern_string(g_interned_count_string), type_int, 8, {});
 
-    add_variable_type_field(type_any, intern_string("data"), type_rawptr, 0, {});
+    add_variable_type_field(type_any, intern_string(g_interned_data_string), type_rawptr, 0, {});
     add_variable_type_field(type_any, intern_string("type"), type_typeid, 8, {});
 }
 
@@ -1044,12 +1030,12 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     }
     Type_Array *new_type = NEW_TYPE(Type_Array(array_of, count));
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
-    add_variable_type_field(new_type, intern_string("data"), type_rawptr, 0, {});
+    add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {});
     Operand operand = {};
     operand.type = type_int;
     operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
     operand.int_value = count;
-    add_constant_type_field(new_type, intern_string("count"), operand, {});
+    add_constant_type_field(new_type, intern_string(g_interned_count_string), operand, {});
     return new_type;
 }
 
@@ -1063,8 +1049,8 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     new_type->flags = TF_SLICE;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0, {});
-    add_variable_type_field(new_type, intern_string("count"), type_int, 8, {});
+    add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {});
+    add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {});
     slice_of->slice_of_this_type = new_type;
     return new_type;
 }
@@ -1080,8 +1066,8 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, intern_string("data"), pointer_to_element_type, 0, {});
-    add_variable_type_field(new_type, intern_string("count"), type_int, 8, {});
+    add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {});
+    add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {});
     varargs_of->varargs_of_this_type = new_type;
     return new_type;
 }
@@ -2248,6 +2234,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
 
             result_operand.flags = rhs_operand->flags;
+            result_operand.flags &= ~OPERAND_LVALUE;
             result_operand.type = rhs_operand->type;
             break;
         }
@@ -2387,7 +2374,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             if (!rhs_operand) {
                 return nullptr;
             }
-            assert(rhs_operand->flags & OPERAND_LVALUE | OPERAND_RVALUE);
+            assert(rhs_operand->flags & OPERAND_LVALUE);
             result_operand.type = get_or_create_type_pointer_to(rhs_operand->type);
             result_operand.flags = OPERAND_RVALUE;
             break;

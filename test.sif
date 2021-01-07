@@ -1,7 +1,11 @@
-#include "core:basic.sif"
-#include "core:math.sif"
-#include "core:dynamic_array.sif"
+// #include "core:basic.sif"
+// #include "core:math.sif"
+// #include "core:dynamic_array.sif"
 
 proc main() : i32 {
+    var a = 123;
+    var b = a;
+    var c: >int = a;
+    var d: >int = c;
     return 0;
 }

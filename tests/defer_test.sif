@@ -47,14 +47,20 @@ proc defer_test() {
     assert(a == 378);
 
     assert(defer_some_global == 0);
-    proc_test();
+    var val = proc_test();
     assert(defer_some_global == 531);
+
+    // todo(josh): @LValueCorrectness this assert should pass but it doesn't currently
+    // because the code generator doesn't handle lvalues properly sometimes
+    // assert(val == 123);
 }
 
 var defer_some_global: int;
 
-proc proc_test() {
+proc proc_test() : int {
     defer_some_global = 123;
     defer defer_some_global = 531;
-    return;
+    var a = 123;
+    defer a = 321;
+    return a;
 }

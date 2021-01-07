@@ -1,7 +1,6 @@
 #pragma once
 
 #include "basic.h"
-#include "common.h"
 
 struct Location {
     const char *filepath = nullptr;
@@ -142,7 +141,6 @@ struct Lexer {
 };
 
 void init_lexer_globals();
-char *intern_string(char *str, int length_override = -1);
 
 bool get_next_token(Lexer *lexer, Token *out_token);
 void eat_next_token(Lexer *lexer, Token *out_token = nullptr);

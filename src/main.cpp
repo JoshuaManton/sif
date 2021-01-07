@@ -36,7 +36,7 @@ SMALL
 -'if' pre-statements: if var foo = bar(); (foo != null) { }
 
 MEDIUM
--defer
+-@LValueCorrectness make the backend subexpression elimination work properly with lvalues
 -runtime bounds checks
 -switch statements
 -emit #line directives in backend
@@ -188,6 +188,7 @@ void main(int argc, char **argv) {
     }
 
     init_lexer_globals();
+    init_interned_strings();
     init_parser();
     init_checker();
 
