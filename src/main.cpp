@@ -36,7 +36,6 @@ SMALL
 -'if' pre-statements: if var foo = bar(); (foo != null) { }
 
 MEDIUM
--@LValueCorrectness make the backend subexpression elimination work properly with lvalues
 -runtime bounds checks
 -switch statements
 -emit #line directives in backend

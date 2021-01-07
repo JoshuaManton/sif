@@ -994,17 +994,22 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
 
         case AST_RETURN: {
             Ast_Return *ast_return = (Ast_Return *)node;
-            char *expr_name = nullptr;
+            char *t = nullptr;
             if (ast_return->expr) {
-                expr_name = c_print_expr(sb, ast_return->expr, indent_level, ast_return->matching_procedure->type->return_type);
+                char *expr_name = c_print_expr(sb, ast_return->expr, indent_level, ast_return->matching_procedure->type->return_type);
+                // note(josh): extra value copy for defer
+                t = c_temporary();
+                print_indents(sb, indent_level);
+                c_print_type(sb, ast_return->expr->operand.type, t);
+                sb->printf(" = %s;\n", expr_name);
             }
             assert(ast_return->matching_procedure->procedure != nullptr);
             assert(ast_return->matching_procedure->procedure->body != nullptr);
             c_print_defers_from_block_to_block(sb, indent_level, block, ast_return->matching_procedure->procedure->body);
             print_indents(sb, indent_level);
             sb->print("return");
-            if (expr_name) {
-                sb->printf(" %s", expr_name);
+            if (t) {
+                sb->printf(" %s", t);
             }
             sb->print(";\n");
             break;

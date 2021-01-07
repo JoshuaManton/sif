@@ -186,7 +186,8 @@ proc create_swap_chain_render_target_view() {
     render_target_view_desc.Format = SWAP_CHAIN_FORMAT;
     render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
     var backing_texture: ^ID3D11Texture2D;
-    var result = swap_chain_handle.GetBuffer(swap_chain_handle, 0, &uid(ID3D11Texture2D.uuid), cast(^rawptr, &backing_texture));
+    var texture_2d_uid = uid(ID3D11Texture2D.uuid);
+    var result = swap_chain_handle.GetBuffer(swap_chain_handle, 0, &texture_2d_uid, cast(^rawptr, &backing_texture));
     assert(result == S_OK);
     result = directx_device.CreateRenderTargetView(directx_device, cast(^ID3D11Resource, backing_texture), &render_target_view_desc, &swap_chain_rtv);
     assert(result == S_OK);

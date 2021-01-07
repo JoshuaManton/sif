@@ -4178,10 +4178,7 @@ proc uid_hex(c: u8) : u32 {
 }
 
 proc uid(str: string) : GUID {
-    //id := New(GUID);    // @Leak
     var id: GUID;
-
-    // "00000000-0000-0000-C000-000000000046"
 
     id.Data1 = (uid_hex(str[0]) << 28) | (uid_hex(str[1]) << 24) | (uid_hex(str[2]) << 20) | (uid_hex(str[3]) << 16) |
                (uid_hex(str[4]) << 12) | (uid_hex(str[5]) <<  8) | (uid_hex(str[6]) <<  4) | (uid_hex(str[7]) <<  0);
