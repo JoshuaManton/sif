@@ -75,7 +75,7 @@ proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
     // increment first so there will be no entity id '0'. this allows us to use '0' to mean 'null' for entity IDs
     g_last_entity_id += 1;
 
-    var ptr = new(T, default_allocator());
+    var ptr = new(T, default_allocator()); // you shouldn't allocate entities individially in a real game of course but for this example it's fine
     ptr.id = g_last_entity_id;
     ptr.kind = T;
     ptr.scale = Vector3{1, 1, 1};
@@ -89,11 +89,13 @@ proc main() : i32 {
 
     // make a player
     var player = make_entity(&entities, Player);
+    player.position = Vector3{5, 0, 5}; // we are able to access position through Player because of the 'using' in the Player struct
     player.name = "John";
     player.health = 10;
 
     // make a chest
     var chest = make_entity(&entities, Chest);
+    chest.position = Vector3{6, 0, 5}; // right next to the player
 
     // make some items
     var sword = make_entity(&entities, Weapon);

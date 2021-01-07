@@ -32,6 +32,7 @@ SMALL
 -Expr_Change (var v2 = v1.{y=4};)
 -fully support procs in structs
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
+-declare distinct types
 
 MEDIUM
 -defer
