@@ -8,6 +8,20 @@ const F64_MAX        = 0x7FEFFFFFFFFFFFFF;
 const F64_INFINITY   = 0x7FF0000000000000;
 const F64_NAN        = 0x7FF7FFFFFFFFFFFF;
 
+const TAU         = 6.28318530717958647692528676655900576;
+const PI          = 3.14159265358979323846264338327950288;
+const E           = 2.71828182845904523536;
+const RAD_PER_DEG = (TAU/360.0);
+const DEG_PER_RAD = (360.0/TAU);
+
+proc to_radians    (degrees: f32) : f32 { return degrees * RAD_PER_DEG; }
+proc to_radians_f64(degrees: f64) : f64 { return degrees * RAD_PER_DEG; }
+proc to_degrees    (radians: f32) : f32 { return radians * DEG_PER_RAD; }
+proc to_degrees_f64(radians: f64) : f64 { return radians * DEG_PER_RAD; }
+
+proc clamp(v: float, a: float, b: float) : float { return max(min(v, b), a); }
+proc lerp(a: float, b: float, t: float) : float { return a + ((b - a) * t); }
+
 
 
 struct Vector2 {
@@ -28,6 +42,25 @@ struct Vector2 {
 
     operator *(a: Vector2, f: float) : Vector2 {
         return Vector2{a.x * f, a.y * f};
+    }
+    operator /(a: Vector2, f: float) : Vector2 {
+        return Vector2{a.x / f, a.y / f};
+    }
+
+    proc dot(a: Vector2, b: Vector2) : float {
+        return (a.x*b.x) + (a.y*b.y);
+    }
+    proc length(v: Vector2) : float {
+        return cast(float, sqrt(cast(f64, dot(v, v))));
+    }
+    proc sqr_length(v: Vector2) : float {
+        return dot(v, v);
+    }
+    proc normalize(v: Vector2) : Vector2 {
+        return v / length(v);
+    }
+    proc cross(a: Vector2, b: Vector2) : float {
+        return a.x*b.y - b.x*a.y;
     }
 }
 
@@ -50,6 +83,39 @@ struct Vector3 {
 
     operator *(a: Vector3, f: float) : Vector3 {
         return Vector3{a.x * f, a.y * f, a.z * f};
+    }
+    operator /(a: Vector3, f: float) : Vector3 {
+        return Vector3{a.x / f, a.y / f, a.z / f};
+    }
+
+    proc dot(a: Vector3, b: Vector3) : float {
+        return (a.x*b.x) + (a.y*b.y) + (a.z*b.z);
+    }
+    proc length(v: Vector3) : float {
+        return cast(float, sqrt(cast(f64, dot(v, v))));
+    }
+    proc sqr_length(v: Vector3) : float {
+        return dot(v, v);
+    }
+    proc normalize(v: Vector3) : Vector3 {
+        return v / length(v);
+    }
+    proc cross(a: Vector3, b: Vector3) : Vector3 {
+        var result: Vector3;
+        result.x = a.y*b.z - b.y*a.z;
+        result.y = a.z*b.x - b.z*a.x;
+        result.z = a.x*b.y - b.x*a.y;
+        return result;
+    }
+
+    proc arbitrary_perpendicular(a: Vector3) : Vector3 {
+        assert(length(a) == 1);
+        var b = Vector3{1, 0, 0};
+        if (fabsf(dot(a, b)) == 1) {
+            b = Vector3{0, 1, 0};
+        }
+        var d = cross(a, b);
+        return d;
     }
 }
 

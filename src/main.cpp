@@ -29,11 +29,11 @@ SMALL
 -implicit enum selector
 -how should rawptr behave with ^$T? rawptr isn't a pointer _to_ anything, it's just a pointer. hmmmm.
 -Expr_Change (var v2 = v1.{y=4};)
--fully support procs in structs
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -declare distinct types
 -cast(Type)value syntax in addition to the current cast(Type, value) maybe?
 -'if' pre-statements: if var foo = bar(); (foo != null) { }
+-add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 
 MEDIUM
 -runtime bounds checks

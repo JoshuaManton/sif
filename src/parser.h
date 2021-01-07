@@ -140,6 +140,7 @@ struct Ast_Proc_Header : public Ast_Node {
     Ast_Expr *return_type_expr = {};
     Type_Procedure *type = nullptr;
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
+    Ast_Struct *lives_in_struct = {}; // null if proc doesn't live in a struct
     bool is_foreign = {};
     Operand operand = {};
     Token_Kind operator_to_overload = {};
@@ -280,6 +281,7 @@ struct Ast_Struct : public Ast_Node {
     Ast_Block *struct_block = {};
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
+    Array<Ast_Proc *> procedures = {}; // todo(josh): maybe combine this with the operator_overloads above?
     Array<Ast_Var *> polymorphic_parameters = {};
     Ast_Struct(bool is_union, Location location)
     : Ast_Node(AST_STRUCT, location)
@@ -288,6 +290,7 @@ struct Ast_Struct : public Ast_Node {
         fields.allocator = g_global_linear_allocator;
         operator_overloads.allocator = g_global_linear_allocator;
         polymorphic_parameters.allocator = g_global_linear_allocator;
+        procedures.allocator = g_global_linear_allocator;
     }
 };
 
@@ -753,6 +756,7 @@ struct Declaration {
     Ast_Block *parent_block = {}; // note(josh): temporarily null while doing polymorphism
     Declaration_Check_State check_state = {};
     const char *name = {};
+    const char *link_name = {};
     Declaration_Kind kind = {};
     Operand operand = {};
     Location location = {};

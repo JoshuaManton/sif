@@ -287,16 +287,16 @@ void c_print_var(Chunked_String_Builder *sb, Ast_Var *var, int indent_level) {
         rhs = c_print_expr(sb, var->expr, indent_level, var->type);
     }
     print_indents(sb, indent_level);
-    c_print_type(sb, var->type, var->name);
+    c_print_type(sb, var->type, var->declaration->name);
     if (rhs) {
         sb->printf(" = %s", rhs);
     }
 }
 
 void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *header) {
-    assert(header->name != nullptr);
+    assert(header->declaration->name != nullptr);
     Chunked_String_Builder header_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-    header_name_sb.print(header->name);
+    header_name_sb.print(header->declaration->link_name);
     header_name_sb.print("(");
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
@@ -424,7 +424,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
 
     if (expr->desugared_procedure_to_call != nullptr) {
         assert(expr->desugared_procedure_to_call != nullptr);
-        assert(expr->desugared_procedure_to_call->header->name != nullptr);
+        assert(expr->desugared_procedure_to_call->header->declaration->link_name != nullptr);
         Array<char *> params;
         params.allocator = g_global_linear_allocator;
         c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->processed_procedure_call_parameters, indent_level, &params);
@@ -434,7 +434,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
             c_print_type(sb, expr->desugared_procedure_to_call->header->type->return_type, t);
             sb->print(" = ");
         }
-        sb->printf("%s(", expr->desugared_procedure_to_call->header->name);
+        sb->printf("%s(", expr->desugared_procedure_to_call->header->declaration->link_name);
         For (idx, params) {
             if (idx != 0) {
                 sb->print(", ");
@@ -516,7 +516,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     Expr_Identifier *identifier = (Expr_Identifier *)expr;
                     Chunked_String_Builder ident_sb = make_chunked_string_builder(g_global_linear_allocator, 32);
                     c_print_hidden_using_selectors(&ident_sb, identifier->resolved_declaration, indent_level);
-                    ident_sb.print(identifier->name);
+                    ident_sb.print(identifier->resolved_declaration->link_name);
                     t = ident_sb.make_string();
                     break;
                 }
@@ -1272,6 +1272,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("#include <stdio.h>\n");
     sb.print("#include <stdlib.h>\n");
     sb.print("#include <string.h>\n");
+    sb.print("#include <math.h>\n");
 
     sb.print("typedef int8_t i8;\n");
     sb.print("typedef int16_t i16;\n");
@@ -1408,7 +1409,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_STRUCT: {
                 Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
                 Ast_Struct *structure = struct_decl->structure;
-                sb.printf("%s %s {\n", (structure->is_union ? "union" : "struct"), structure->name);
+                sb.printf("%s %s {\n", (structure->is_union ? "union" : "struct"), structure->declaration->name);
                 bool did_print_at_least_one_member = false;
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
@@ -1424,9 +1425,13 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
                     sb.print("    bool __dummy;\n");
                 }
                 sb.print("};\n");
-                sb.printf("STATIC_ASSERT(sizeof(%s %s) == %d, %s);\n", (structure->is_union ? "union" : "struct"), structure->name, structure->type->size, structure->name);
+                sb.printf("STATIC_ASSERT(sizeof(%s %s) == %d, %s);\n", (structure->is_union ? "union" : "struct"), structure->declaration->name, structure->type->size, structure->declaration->name);
                 For (idx, structure->operator_overloads) {
                     c_print_procedure(&sb, structure->operator_overloads[idx]);
+                }
+                For (idx, structure->procedures) {
+                    Ast_Proc *procedure = structure->procedures[idx];
+                    c_print_procedure(&sb, procedure);
                 }
                 break;
             }

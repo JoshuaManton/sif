@@ -275,6 +275,9 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
     assert(decl->check_state == DCS_UNCHECKED);
     decl->check_state = DCS_CHECKING;
 
+    decl->link_name = decl->name;
+    assert(decl->link_name);
+
     Operand decl_operand;
     switch (decl->kind) {
         case DECL_TYPE: {
@@ -559,7 +562,19 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
             assert(proc->header->name != nullptr);
             assert(proc->header->declaration != nullptr);
-            if (!typecheck_block(proc->body)) {
+            if (!check_declaration(proc->header->declaration, usage_location)) {
+                return false;
+            }
+            // if (!typecheck_block(proc->body)) {
+            //     return false;
+            // }
+        }
+        For (idx, struct_decl->structure->procedures) {
+            Ast_Proc *procedure = struct_decl->structure->procedures[idx];
+            if (!check_declaration(procedure->header->declaration, usage_location)) {
+                return false;
+            }
+            if (!register_declaration(struct_decl->structure->type->constants_block, procedure->header->declaration)) {
                 return false;
             }
         }
@@ -748,7 +763,7 @@ char *type_to_string(Type *type, int *out_length) {
             assert(false);
         }
     }
-    type->printable_name = sb.string();
+    type->printable_name = intern_string(sb.string());
     type->printable_name_length = sb.buf.count;
     if (out_length) {
         *out_length = type->printable_name_length;
@@ -2656,6 +2671,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             result_operand.type = type_typeid;
             result_operand.type_value = anonymous_struct->structure->type;
             result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+            if (!complete_type(anonymous_struct->structure->type)) {
+                return nullptr;
+            }
             break;
         }
         case EXPR_POINTER_TYPE: {
@@ -2883,20 +2901,31 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         return_type = return_type_operand->type_value;
     }
     header->type = get_or_create_type_procedure(parameter_types, return_type);
-    if (header->operator_to_overload != TK_INVALID) {
-        assert(header->name == nullptr);
-        assert(header->struct_to_operator_overload != nullptr);
-        String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
-        op_overload_name_sb.printf("__operator_overload_%s_%s_", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
-        assert(header->parameters.count == 2);
-        op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
-        header->name = op_overload_name_sb.string();
-        assert(header->declaration == nullptr);
-        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block));
+    if (header->lives_in_struct) {
+        if (header->operator_to_overload != TK_INVALID) {
+            assert(header->name == nullptr);
+            assert(header->struct_to_operator_overload != nullptr);
+            String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
+            op_overload_name_sb.printf("__operator_overload_%s_%s_", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
+            assert(header->parameters.count == 2);
+            op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
+            header->name = intern_string(op_overload_name_sb.string());
+            assert(header->declaration == nullptr);
+            header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block));
+        }
+        else {
+            assert(header->name != nullptr);
+            assert(header->operator_to_overload == TK_INVALID);
+            String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
+            link_name_sb.printf("__%s_%s", header->lives_in_struct->name, header->name);
+            header->declaration->link_name = intern_string(link_name_sb.string());
+        }
     }
     else {
-        assert(header->operator_to_overload == TK_INVALID);
+        // todo(josh): allow operators to be defined outside of structs
+        assert(!header->operator_to_overload);
     }
+
     Operand operand = {};
     operand.referenced_declaration = header->declaration;
     operand.type = header->type;

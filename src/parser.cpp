@@ -429,6 +429,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                 }
                 case AST_PROC: {
                     Ast_Proc *proc = (Ast_Proc *)node;
+                    proc->header->lives_in_struct = structure;
                     if (proc->header->operator_to_overload != TK_INVALID) {
                         assert(proc->header->name == nullptr);
                         proc->header->struct_to_operator_overload = structure;
@@ -437,6 +438,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                     }
                     else {
                         assert(proc->header->name != nullptr);
+                        structure->procedures.append(proc);
                         break;
                     }
                 }

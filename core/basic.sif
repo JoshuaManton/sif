@@ -4,14 +4,16 @@
 #foreign_import "vcruntime.lib"
 #foreign_import "Ntdll.lib"
 
-proc print_char  (c: u8)                                                 #foreign;
-proc print_int   (i: i64)                                                #foreign;
-proc print_uint  (i: u64)                                                #foreign;
-proc print_float (f: float)                                              #foreign;
-proc print_bool  (b: bool)                                               #foreign;
-proc print_string(str: string)                                           #foreign;
-proc strlen      (cstr: ^u8)                                    : u64    #foreign;
-proc sin         (x: f64)                                       : f64    #foreign;
+proc print_char  (c: u8)                                   #foreign;
+proc print_int   (i: i64)                                  #foreign;
+proc print_uint  (i: u64)                                  #foreign;
+proc print_float (f: float)                                #foreign;
+proc print_bool  (b: bool)                                 #foreign;
+proc print_string(str: string)                             #foreign;
+proc strlen      (cstr: ^u8)                 : u64         #foreign;
+proc sin         (x: f64)                    : f64         #foreign;
+proc sqrt        (x: f64)                    : f64         #foreign;
+proc fabsf       (a: float)                  : float       #foreign;
 
 
 
