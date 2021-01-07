@@ -386,9 +386,13 @@ proc using_statement() {
     // You can use 'using' inside structs as well, to get a form of subtyping
     // that is more flexible than conventional inheritance.
     var my_struct: My_Struct_With_Using;
-    my_struct.some_field = 321;
+    my_struct.some_field = 321; // no need to write 'my_struct.other.some_field'
     print("%\n", my_struct.some_field);
     assert(my_struct.some_field == my_struct.other.some_field);
+
+    using my_struct;
+    print("%\n", some_field); // no need to write 'my_struct.other.some_field'
+    assert(some_field == my_struct.other.some_field);
 
     // You can 'using' as many fields as you'd like, provided that the names
     // do not collide.
@@ -397,7 +401,7 @@ struct My_Struct_With_Using {
     using var other: My_Other_Struct;
 }
 struct My_Other_Struct {
-    var some_field_in_my_other_struct: int;
+    var some_field: int;
 }
 
 

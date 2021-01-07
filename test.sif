@@ -1,11 +1,11 @@
 #include "core:basic.sif"
 
 struct Foo {
-    using var bar: Bar;
+    var bar: Bar;
 }
 
 struct Bar {
-    using var baz: Baz;
+    var baz: Baz;
 }
 
 struct Baz {
@@ -18,7 +18,7 @@ enum My_Enum {
 
 proc main() : i32 {
     var foo: Foo;
-    foo.qux = 321;
+    foo.bar.baz.qux = 321;
     print("%\n", foo);
     return 0;
 }
