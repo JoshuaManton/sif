@@ -862,7 +862,23 @@ void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_
     }
 }
 
-void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_level, bool print_semicolon) {
+void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *node, int indent_level, bool print_semicolon);
+
+void c_print_defers_from_block_to_block(Chunked_String_Builder *sb, int indent_level, Ast_Block *from, Ast_Block *to) {
+    Ast_Block *current = from;
+    while (true) {
+        for (int idx = current->c_gen_defer_stack.count-1; idx >= 0; idx -= 1) {
+            Ast_Defer *ast_defer = (Ast_Defer *)current->c_gen_defer_stack[idx];
+            c_print_statement(sb, current, ast_defer->node_to_defer, indent_level, true);
+        }
+        if (current == to) {
+            break;
+        }
+        current = current->parent_block;
+    }
+}
+
+void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *node, int indent_level, bool print_semicolon) {
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
@@ -946,7 +962,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
             Ast_For_Loop *for_loop = (Ast_For_Loop *)node;
             print_indents(sb, indent_level);
             sb->print("{\n");
-            c_print_statement(sb, for_loop->pre, indent_level+1, true);
+            c_print_statement(sb, block, for_loop->pre, indent_level+1, true);
             print_indents(sb, indent_level+1);
             sb->print("while (true) {\n");
             char *cond_name = c_print_expr(sb, for_loop->condition, indent_level+2);
@@ -954,7 +970,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
             print_indents(sb, indent_level+2);
             sb->printf("if (!%s) { break; }\n", cond_name);
             c_print_block(sb, for_loop->body, indent_level + 2);
-            c_print_statement(sb, for_loop->post, indent_level+2, true);
+            c_print_statement(sb, block, for_loop->post, indent_level+2, true);
             print_indents(sb, indent_level+1);
             sb->print("}\n");
             print_indents(sb, indent_level);
@@ -982,6 +998,9 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
             if (ast_return->expr) {
                 expr_name = c_print_expr(sb, ast_return->expr, indent_level, ast_return->matching_procedure->type->return_type);
             }
+            assert(ast_return->matching_procedure->procedure != nullptr);
+            assert(ast_return->matching_procedure->procedure->body != nullptr);
+            c_print_defers_from_block_to_block(sb, indent_level, block, ast_return->matching_procedure->procedure->body);
             print_indents(sb, indent_level);
             sb->print("return");
             if (expr_name) {
@@ -992,6 +1011,19 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
         }
 
         case AST_BREAK: {
+            Ast_Break *ast_break = (Ast_Break *)node;
+            Ast_Block *loop_block = nullptr;
+            if (ast_break->matching_loop->ast_kind == AST_FOR_LOOP) {
+                Ast_For_Loop *for_loop = (Ast_For_Loop *)ast_break->matching_loop;
+                loop_block = for_loop->body;
+            }
+            else {
+                assert(ast_break->matching_loop->ast_kind == AST_WHILE_LOOP);
+                Ast_While_Loop *while_loop = (Ast_While_Loop *)ast_break->matching_loop;
+                loop_block = while_loop->body;
+            }
+            assert(loop_block != nullptr);
+            c_print_defers_from_block_to_block(sb, indent_level, block, loop_block);
             print_indents(sb, indent_level);
             sb->print("break;\n");
             break;
@@ -1000,14 +1032,29 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
         case AST_CONTINUE: {
             Ast_Continue *ast_continue = (Ast_Continue *)node;
             assert(ast_continue->matching_loop);
+            Ast_Block *loop_block = nullptr;
             if (ast_continue->matching_loop->ast_kind == AST_FOR_LOOP) {
                 Ast_For_Loop *for_loop = (Ast_For_Loop *)ast_continue->matching_loop;
                 if (for_loop->post) {
-                    c_print_statement(sb, for_loop->post, indent_level, true);
+                    c_print_statement(sb, block, for_loop->post, indent_level, true);
                 }
+                loop_block = for_loop->body;
             }
+            else {
+                assert(ast_continue->matching_loop->ast_kind == AST_WHILE_LOOP);
+                Ast_While_Loop *while_loop = (Ast_While_Loop *)ast_continue->matching_loop;
+                loop_block = while_loop->body;
+            }
+            assert(loop_block != nullptr);
+            c_print_defers_from_block_to_block(sb, indent_level, block, loop_block);
             print_indents(sb, indent_level);
             sb->print("continue;\n");
+            break;
+        }
+
+        case AST_DEFER: {
+            Ast_Defer *ast_defer = (Ast_Defer *)node;
+            block->c_gen_defer_stack.append(ast_defer);
             break;
         }
 
@@ -1021,8 +1068,9 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Node *node, int indent_le
 void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level) {
     For (idx, block->nodes) {
         Ast_Node *node = block->nodes[idx];
-        c_print_statement(sb, node, indent_level, true);
+        c_print_statement(sb, block, node, indent_level, true);
     }
+    c_print_defers_from_block_to_block(sb, indent_level, block, block);
 }
 
 extern Ast_Proc *g_main_proc;

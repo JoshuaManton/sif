@@ -23,7 +23,6 @@ SMALL
 -opt=N
 -unknown directives don't stop compilation
 -block comments
--intern identifiers and remove strcmps
 -add allocators to demo
 -underscores in numbers
 -prevent identifiers from being C keywords in the backend, like `signed`
@@ -33,6 +32,8 @@ SMALL
 -fully support procs in structs
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -declare distinct types
+-cast(Type)value syntax in addition to the current cast(Type, value) maybe?
+-'if' pre-statements: if var foo = bar(); (foo != null) { }
 
 MEDIUM
 -defer
@@ -47,13 +48,13 @@ MEDIUM
 -make C output a bit prettier, whatever that means
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
--put struct constants in a different block than struct instance members
 -polymorphic structs should register their parameters as local constants
 -locally scoped structs and procs
 -tagged unions
 -use microsoft_craziness.h
 -enum arrays
 -allow custom entrypoints
+-foreach loops
 
 BIG
 -control flow graph analysis
@@ -69,7 +70,6 @@ BIG
 -namespaced imports i.e. `#include Foo "foo.sif"`
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
--foreach loops
 -figure out if I should allow shadowing (maybe with a keyword?)
 */
 

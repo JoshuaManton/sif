@@ -84,7 +84,7 @@ proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
 }
 
 proc main() : i32 {
-    var entities: Dynamic_Array!(^Entity);
+    var entities: Dynamic_Array!(^Entity); // a dynamic array of pointers is not a good way to store entities, but again, fine for this example
     entities.allocator = default_allocator();
 
     // make a player

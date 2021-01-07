@@ -603,6 +603,20 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             return SIF_NEW_CLONE(Ast_Using(expr, using_token.location));
         }
 
+        case TK_DEFER: {
+            Token defer_token;
+            eat_next_token(lexer, &defer_token);
+            Ast_Node *stmt = parse_single_statement(lexer);
+            if (!stmt) {
+                return nullptr;
+            }
+            if (!g_currently_parsing_proc) {
+                report_error(defer_token.location, "defer statements must be inside a procedure.");
+                return nullptr;
+            }
+            return SIF_NEW_CLONE(Ast_Defer(stmt, defer_token.location));
+        }
+
         case TK_PROC: {
             Ast_Proc *proc = parse_proc(lexer, name_override);
             if (!proc) {
@@ -964,14 +978,23 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
     return current_block;
 }
 
-bool parse_file(const char *filename, Location include_location) {
+bool parse_file(const char *requested_filename, Location include_location) {
     String_Builder include_sb = make_string_builder(g_global_linear_allocator, 128);
-    if (starts_with(filename, "core:")) {
-        filename = filename + 5;
-        include_sb.printf("%s/%s", sif_core_lib_path, filename);
-        filename = include_sb.string();
+    if (starts_with(requested_filename, "core:")) {
+        requested_filename = requested_filename + 5;
+        include_sb.printf("%s/%s", sif_core_lib_path, requested_filename);
+    }
+    else {
+        if (include_location.filepath) { // the root file doesn't _have_ an include location
+            char *dir_of_file_with_include = path_directory(include_location.filepath, g_global_linear_allocator);
+            include_sb.printf("%s\\%s", dir_of_file_with_include, requested_filename);
+        }
+        else {
+            include_sb.print(requested_filename);
+        }
     }
 
+    const char *filename = include_sb.string();
     char *absolute_path = intern_string(get_absolute_path(filename, g_global_linear_allocator));
 
     For (idx, g_all_included_files) {

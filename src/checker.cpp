@@ -3033,18 +3033,26 @@ bool typecheck_node(Ast_Node *node) {
             break;
         }
 
+        case AST_DEFER: {
+            Ast_Defer *ast_defer = (Ast_Defer *)node;
+            if (!typecheck_node(ast_defer->node_to_defer)) {
+                return false;
+            }
+            break;
+        }
+
         case AST_USING: {
             Ast_Using *ast_using = (Ast_Using *)node;
             if (unparen_expr(ast_using->expr)->expr_kind != EXPR_IDENTIFIER) {
                 report_error(ast_using->location, "'using' can only be applied to identifiers.");
-                return nullptr;
+                return false;
             }
             // todo(josh): instead of broadcasting each declaration, we could just make a single Using_Declaration that points at the block it's using.
             //             this would mean identifier resolving would have to be recursive. hmmmm
             Ast_Block *block_to_broadcast_declarations_of = nullptr;
             Operand *using_operand = typecheck_expr(ast_using->expr);
             if (!using_operand) {
-                return nullptr;
+                return false;
             }
             assert(using_operand->referenced_declaration != nullptr);
 
@@ -3156,22 +3164,22 @@ bool typecheck_node(Ast_Node *node) {
             if (ast_return->matching_procedure->type->return_type != nullptr) {
                 if (ast_return->expr == nullptr) {
                     report_error(ast_return->location, "Return statement missing expression. Expected expression with type '%s'.", type_to_string(ast_return->matching_procedure->type->return_type));
-                    return nullptr;
+                    return false;
                 }
                 Operand *return_operand = typecheck_expr(ast_return->expr);
                 if (!return_operand) {
-                    return nullptr;
+                    return false;
                 }
                 if (!match_types(return_operand, ast_return->matching_procedure->type->return_type, false)) {
                     report_error(ast_return->expr->location, "Return expression didn't match procedure return type. Expected '%s', got '%s'.", type_to_string(ast_return->matching_procedure->type->return_type), type_to_string(return_operand->type));
-                    return nullptr;
+                    return false;
                 }
             }
             else {
                 if (ast_return->expr) {
                     assert(ast_return->matching_procedure->name != nullptr); // todo(josh): handle operator overloads since they don't have names
                     report_error(ast_return->expr->location, "Procedure '%s' doesn't have a return value.", ast_return->matching_procedure->name);
-                    return nullptr;
+                    return false;
                 }
             }
             break;

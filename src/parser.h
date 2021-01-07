@@ -12,6 +12,7 @@ enum Ast_Kind {
     AST_PROC,
     AST_VAR,
     AST_USING,
+    AST_DEFER,
     AST_STRUCT,
     AST_ENUM,
     AST_IF,
@@ -38,6 +39,7 @@ struct Ast_Proc;
 struct Ast_Block;
 struct Ast_Struct;
 struct Ast_Statement_Expr;
+struct Ast_Defer;
 
 struct Declaration;
 struct Type_Declaration;
@@ -121,12 +123,14 @@ struct Ast_Block : public Ast_Node {
     Array<Declaration *> declarations = {};
     u64 flags = {};
     Hashtable<const char *, Declaration *> declarations_lookup = {};
+    Array<Ast_Defer *> c_gen_defer_stack = {};
     Ast_Block(Location location)
     : Ast_Node(AST_BLOCK, location)
     {
         nodes.allocator = g_global_linear_allocator;
         declarations.allocator = g_global_linear_allocator;
         declarations_lookup = make_hashtable<const char *, Declaration *>(g_global_linear_allocator, 16);
+        c_gen_defer_stack.allocator = g_global_linear_allocator;
     }
 };
 
@@ -145,6 +149,7 @@ struct Ast_Proc_Header : public Ast_Node {
     Ast_Proc *procedure = {};
     Proc_Declaration *declaration = {};
     Ast_Node *current_parsing_loop = {};
+    Array<Ast_Defer *> defers = {};
     Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Location location)
     : Ast_Node(AST_PROC_HEADER, location)
     , name(name)
@@ -157,6 +162,7 @@ struct Ast_Proc_Header : public Ast_Node {
     , polymorphic_parameter_indices(polymorphic_parameter_indices)
     {
         parameters.allocator = g_global_linear_allocator;
+        defers.allocator = g_global_linear_allocator;
     }
 };
 
@@ -254,6 +260,14 @@ struct Ast_Using : public Ast_Node {
     Ast_Using(Ast_Expr *expr, Location location)
     : Ast_Node(AST_USING, location)
     , expr(expr)
+    {}
+};
+
+struct Ast_Defer : public Ast_Node {
+    Ast_Node *node_to_defer = {};
+    Ast_Defer(Ast_Node *node_to_defer, Location location)
+    : Ast_Node(AST_DEFER, location)
+    , node_to_defer(node_to_defer)
     {}
 };
 

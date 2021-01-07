@@ -1,0 +1,60 @@
+proc defer_test() {
+    var a = 123;
+
+    //
+    {
+        defer assert(a == 321);
+        defer a = 321;
+        defer assert(a == 123);
+        assert(a == 123);
+    }
+    assert(a == 321);
+
+    //
+    for (var i = 0; i < 10; i += 1) {
+        if (i > 5) {
+            defer a = 149;
+            break;
+        }
+    }
+    assert(a == 149);
+
+    //
+    for (var i = 0; i < 10; i += 1) {
+        if (i > 15) {
+            defer a = 941;
+            break;
+        }
+    }
+    assert(a == 149);
+
+    //
+    for (var i = 0; i < 10; i += 1) {
+        if (i > 5) {
+            defer a = 378;
+            continue;
+        }
+    }
+    assert(a == 378);
+
+    //
+    for (var i = 0; i < 10; i += 1) {
+        if (i > 15) {
+            defer a = 941;
+            continue;
+        }
+    }
+    assert(a == 378);
+
+    assert(defer_some_global == 0);
+    proc_test();
+    assert(defer_some_global == 531);
+}
+
+var defer_some_global: int;
+
+proc proc_test() {
+    defer_some_global = 123;
+    defer defer_some_global = 531;
+    return;
+}

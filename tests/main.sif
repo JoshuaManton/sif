@@ -1,0 +1,9 @@
+proc main() : i32 {
+    print("---- defer\n"); defer_test();
+
+    print("Done tests.");
+    return 0;
+}
+
+#include "defer_test.sif"
+#include "core:basic.sif"
