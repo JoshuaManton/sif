@@ -1,20 +1,18 @@
 proc malloc      (size: int)                                    : rawptr #foreign; @sif_runtime
 proc free        (ptr: rawptr)                                           #foreign; @sif_runtime
 proc assert      (condition: bool)                                       #foreign; @sif_runtime
+proc memset      (ptr: rawptr, val: i32, size_in_bytes: u64)    : rawptr #foreign; @sif_runtime
 proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
 proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
 
 
 
-proc zero_memory(memory: []byte) {
-    // todo(josh): we can do smarter things here but this is fine for now
-    for (var i = 0; i < memory.count; i += 1) {
-        memory[i] = 0;
-    }
+proc zero_pointer(ptr: rawptr, size_in_bytes: int) {
+    memset(ptr, 0, cast(u64, size_in_bytes));
 } @sif_runtime
 
-proc zero_pointer(ptr: rawptr, size_in_bytes: int) {
-    zero_memory(slice_ptr(cast(^byte, ptr), size_in_bytes));
+proc zero_memory(memory: []byte) {
+    zero_pointer(memory.data, memory.count);
 } @sif_runtime
 
 
