@@ -1,8 +1,15 @@
 #include "core:basic.sif"
 
 struct Foo {
-    const CONSTANT = 123;
-    var a: int;
+    using var bar: Bar;
+}
+
+struct Bar {
+    using var baz: Baz;
+}
+
+struct Baz {
+    var qux: int;
 }
 
 enum My_Enum {
@@ -10,7 +17,8 @@ enum My_Enum {
 }
 
 proc main() : i32 {
-    using var foo: Foo;
-    using My_Enum;
+    var foo: Foo;
+    foo.qux = 321;
+    print("%\n", foo);
     return 0;
 }

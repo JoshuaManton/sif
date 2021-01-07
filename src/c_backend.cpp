@@ -1021,7 +1021,6 @@ extern Ast_Proc *g_main_proc;
 extern Array<Type *> all_types;
 
 void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Type *type) {
-    return;
     sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Struct_Field));\n", ti_name, type->variable_fields.count);
     sb->printf("    %s->fields.count = %d;\n", ti_name, type->variable_fields.count);
     For (idx, type->variable_fields) {
