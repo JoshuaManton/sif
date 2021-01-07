@@ -1,0 +1,147 @@
+#include "core:basic.sif"
+#include "core:math.sif"
+#include "core:dynamic_array.sif"
+
+const EntityID = int;
+struct Entity {
+    var id: EntityID;
+    var position: Vector3;
+    var scale: Vector3;
+    var kind: typeid;
+}
+
+struct Player {
+    using var base: Entity;
+    var name: string;
+    var health: int;
+    var inventory: [4]EntityID;
+}
+
+struct Chest {
+    using var base: Entity;
+    var contents: [8]EntityID;
+}
+
+struct Weapon {
+    using var base: Entity;
+    var name: string;
+    var damage: int;
+}
+
+struct Helmet {
+    using var base: Entity;
+    var defense: int;
+}
+
+proc player_loot_chest(player: ^Player, chest: ^Chest) {
+    for (var chest_idx = 0; chest_idx < chest.contents.count; chest_idx += 1) {
+        var item = chest.contents[chest_idx];
+        if (item == 0) {
+            // skip empty chest slots
+            continue;
+        }
+        // find an empty slot in the players inventory
+        var found_inventory_slot = -1;
+        for (var inv_idx = 0; inv_idx < player.inventory.count; inv_idx += 1) {
+            if (player.inventory[inv_idx] == 0) {
+                found_inventory_slot = inv_idx;
+                break;
+            }
+        }
+        if (found_inventory_slot != -1) {
+            // transfer to players inventory
+            player.inventory[found_inventory_slot] = chest.contents[chest_idx];
+            chest.contents[chest_idx] = 0;
+        }
+    }
+}
+
+proc put_items_in_chest(chest: ^Chest, items: []^Entity) : int {
+    var item_index = 0;
+    for (var chest_idx = 0; chest_idx < chest.contents.count && item_index < items.count; chest_idx += 1) {
+        if (chest.contents[chest_idx] != 0) {
+            // skip slots with stuff in them already
+            continue;
+        }
+        chest.contents[chest_idx] = items[item_index].id;
+        item_index += 1;
+    }
+    // return the number of items we were able to successfully put in the chest
+    return item_index;
+}
+
+var g_last_entity_id: EntityID;
+proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
+    // increment first so there will be no entity id '0'. this allows us to use '0' to mean 'null' for entity IDs
+    g_last_entity_id += 1;
+
+    var ptr = new(T, default_allocator());
+    ptr.id = g_last_entity_id;
+    ptr.kind = T;
+    ptr.scale = Vector3{1, 1, 1};
+    append(entities, &ptr.base);
+    return ptr;
+}
+
+proc main() : i32 {
+    var entities: Dynamic_Array!(^Entity);
+    entities.allocator = default_allocator();
+
+    // make a player
+    var player = make_entity(&entities, Player);
+    player.name = "John";
+    player.health = 10;
+
+    // make a chest
+    var chest = make_entity(&entities, Chest);
+
+    // make some items
+    var sword = make_entity(&entities, Weapon);
+    sword.name = "Sword";
+    sword.damage = 3;
+    var bow = make_entity(&entities, Weapon);
+    bow.name = "Bow";
+    bow.damage = 2;
+    var helmet = make_entity(&entities, Helmet);
+    helmet.defense = 1;
+
+    // print all the entities
+    print("All entities:\n");
+    for (var i = 0; i < entities.count; i += 1) {
+        var entity = entities[i];
+        if (entity.kind == Player) {
+            printa(cast(^Player, entity)^);
+        }
+        else if (entity.kind == Chest) {
+            printa(cast(^Chest, entity)^);
+        }
+        else if (entity.kind == Weapon) {
+            printa(cast(^Weapon, entity)^);
+        }
+        else if (entity.kind == Helmet) {
+            printa(cast(^Helmet, entity)^);
+        }
+    }
+
+    // put the items in the chest
+    var array_of_items = ([3]^Entity){
+        &sword.base,
+        &bow.base,
+        &helmet.base
+    };
+    put_items_in_chest(chest, to_slice(&array_of_items));
+
+    // print the chest to see the items added to it
+    print("\nChest with contents:\n");
+    printa(chest^);
+
+    // loot the chest
+    player_loot_chest(player, chest);
+
+    // print the player and the chest
+    print("\nAfter player looted chest:\n");
+    printa(chest^);
+    printa(player^);
+
+    return 0;
+}

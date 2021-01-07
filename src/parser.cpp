@@ -116,7 +116,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
             break;
         }
         default: {
-            report_error(name_expr->location, "Bad variable name."); // todo(josh): @ErrorMessage
+            report_error(name_expr->location, "Expected a variable name."); // todo(josh): @ErrorMessage
             return nullptr;
         }
     }

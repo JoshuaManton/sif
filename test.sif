@@ -2,44 +2,6 @@
 #include "core:math.sif"
 #include "core:dynamic_array.sif"
 
-struct Entity {
-    var id: int;
-    var position: Vector3;
-    var scale: Vector3;
-}
-
-struct Player {
-    using var base: Entity;
-    var health: int;
-}
-
-struct Weapon {
-    using var base: Entity;
-    var damage: int;
-}
-
-var last_entity_id: int;
-proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
-    last_entity_id += 1;
-    var ptr = new(T, default_allocator());
-    ptr.id = last_entity_id;
-    append(entities, &ptr.base);
-    return ptr;
-}
-
 proc main() : i32 {
-    var entities: Dynamic_Array!(^Entity);
-    entities.allocator = default_allocator();
-
-    var guy = make_entity(&entities, Player);
-    guy.health = 10;
-
-    var sword = make_entity(&entities, Weapon);
-    sword.damage = 1;
-
-    for (var i = 0; i < entities.count; i += 1) {
-        printa(entities[i]^);
-    }
-
     return 0;
 }
