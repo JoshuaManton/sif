@@ -1376,6 +1376,40 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
     return parse_postfix_expr(lexer);
 }
 
+Expr_Compound_Literal *parse_compound_literal(Lexer *lexer, Ast_Expr *type_expr) {
+    assert(lexer->allow_compound_literals);
+    Token left_curly_token;
+    EXPECT(lexer, TK_LEFT_CURLY, &left_curly_token);
+    Location start_location = left_curly_token.location;
+    if (type_expr != nullptr) {
+        start_location = type_expr->location;
+    }
+    Array<Ast_Expr *> exprs = {};
+    exprs.allocator = g_global_linear_allocator;
+    Token token;
+    while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
+        Ast_Expr *expr = parse_expr(lexer);
+        if (!expr) {
+            return nullptr;
+        }
+        exprs.append(expr);
+
+        Token maybe_comma;
+        if (!peek_next_token(lexer, &maybe_comma)) {
+            assert(false && "unexpected EOF");
+            return nullptr;
+        }
+        if (maybe_comma.kind == TK_RIGHT_CURLY) {
+        }
+        else {
+            EXPECT(lexer, TK_COMMA, nullptr);
+        }
+    }
+    EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
+    Expr_Compound_Literal *compound_literal = SIF_NEW_CLONE(Expr_Compound_Literal(type_expr, exprs, start_location));
+    return compound_literal;
+}
+
 Ast_Expr *parse_postfix_expr(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
@@ -1416,33 +1450,12 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
             }
             case TK_LEFT_CURLY: {
                 if (!lexer->allow_compound_literals) {
-                    return base_expr; // todo(josh): this feels a bit sketchy, maybe it's fine
+                    return base_expr;
                 }
-                eat_next_token(lexer);
-                Array<Ast_Expr *> exprs = {};
-                exprs.allocator = g_global_linear_allocator;
-                Token token;
-                while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_CURLY) {
-                    Ast_Expr *expr = parse_expr(lexer);
-                    if (!expr) {
-                        return nullptr;
-                    }
-                    exprs.append(expr);
-
-                    Token maybe_comma;
-                    if (!peek_next_token(lexer, &maybe_comma)) {
-                        assert(false && "unexpected EOF");
-                        return nullptr;
-                    }
-                    if (maybe_comma.kind == TK_RIGHT_CURLY) {
-                    }
-                    else {
-                        EXPECT(lexer, TK_COMMA, nullptr);
-                    }
+                base_expr = parse_compound_literal(lexer, base_expr);
+                if (!base_expr) {
+                    return nullptr;
                 }
-                EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
-                assert(base_expr != nullptr);
-                base_expr = SIF_NEW_CLONE(Expr_Compound_Literal(base_expr, exprs, base_expr->location));
                 break;
             }
             case TK_LEFT_SQUARE: {
@@ -1496,8 +1509,6 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
             }
         }
     }
-    // hey future Josh if you add code down here be sure to check the
-    // early-out in the TK_LEFT_CURLY for handling compound literals
     return base_expr;
 }
 
@@ -1550,6 +1561,14 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Ast_Expr *nested = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return SIF_NEW_CLONE(Expr_Paren(nested, token.location));
+        }
+        case TK_LEFT_CURLY: {
+            assert(lexer->allow_compound_literals);
+            Expr_Compound_Literal *compound_literal = parse_compound_literal(lexer, nullptr);
+            if (!compound_literal) {
+                return nullptr;
+            }
+            return compound_literal;
         }
         case TK_PROC: {
             Ast_Proc_Header *header = parse_proc_header(lexer);

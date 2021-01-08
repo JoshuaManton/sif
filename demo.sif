@@ -73,9 +73,6 @@ proc basic_stuff() {
 
 
 
-proc arrays_by_value(arr: [4]int) {
-    arr[2] = 738;
-}
 proc arrays() {
     print("\n\n---- arrays ----\n");
     var my_array: [4]int;
@@ -83,17 +80,26 @@ proc arrays() {
     my_array[1] = 2;
     my_array[2] = 3;
     my_array[3] = 4;
-    print("%\n", my_array[0]);
-    print("%\n", my_array[1]);
-    print("%\n", my_array[2]);
-    print("%\n", my_array[3]);
-    assert(my_array[0] == 1);
-    assert(my_array[1] == 2);
-    assert(my_array[2] == 3);
-    assert(my_array[3] == 4);
+    print("%\n", my_array);
+
+    // As with structs, compound literals work with arrays
+    my_array = {4, 3, 2, 1};
+    print("%\n", my_array);
+
+    // Arrays are value types, so calling a function that changes the array
+    // parameter will not affect the array at the call-site
     arrays_by_value(my_array);
-    print("%\n", my_array[2]);
-    assert(my_array[2] == 3);
+    print("%\n", my_array);
+    assert(my_array[0] == 4);
+    assert(my_array[1] == 3);
+    assert(my_array[2] == 2);
+    assert(my_array[3] == 1);
+}
+proc arrays_by_value(arr: [4]int) {
+    arr[0] = 123;
+    arr[1] = 345;
+    arr[2] = 567;
+    arr[3] = 789;
 }
 
 
@@ -156,15 +162,27 @@ proc structs() {
     f.str = "foozle";
     f.t = 120 == factorial(5);
 
-    // can also use compound literals to initialize
+    // Can also use compound literals to initialize
     f = Foo{149, "hellooo", false};
+
+    // The type of the compound literal can be inferred from context.
+    // Since the compiler knows the type of 'f', you don't have to specify
+    // it in the compound literal.
+    f = {149, "hellooo", false};
+
+    // using runtime type information, you can print whole structs, more on that below.
+    print("%\n", f);
 }
 
 
 
+enum My_Enum {
+    FOO;
+    BAR;
+    BAZ;
+}
 proc enums() {
-    // todo(josh)
-    // print("\n\n---- enums ----\n");
+    print("\n\n---- enums ----\n");
 }
 
 

@@ -2541,15 +2541,26 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
         case EXPR_COMPOUND_LITERAL: {
             Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
-            Operand *type_operand = typecheck_expr(compound_literal->type_expr);
-            if (!type_operand) {
-                return nullptr;
+            Type *target_type = expected_type;
+            if (compound_literal->type_expr == nullptr) {
+                if (expected_type == nullptr) {
+                    report_error(compound_literal->location, "Unable to infer compound literal type from context. Please provide an explicit type.");
+                    return nullptr;
+                }
             }
-            if (!is_type_typeid(type_operand->type)) {
-                report_error(compound_literal->type_expr->location, "Compound literals require a constant type.");
-                return nullptr;
+            else {
+                Operand *type_operand = typecheck_expr(compound_literal->type_expr, type_typeid);
+                if (!type_operand) {
+                    return nullptr;
+                }
+                assert(is_type_typeid(type_operand->type));
+                assert(type_operand->type_value != nullptr);
+                if (expected_type) {
+                    assert(type_operand->type_value == expected_type);
+                }
+                target_type = type_operand->type_value;
             }
-            Type *target_type = type_operand->type_value;
+            assert(target_type != nullptr);
             if (!complete_type(target_type)) {
                 return nullptr;
             }
@@ -2601,7 +2612,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
             }
 
-            result_operand.type = type_operand->type_value;
+            result_operand.type = target_type;
             result_operand.flags = OPERAND_RVALUE;
 
             break;

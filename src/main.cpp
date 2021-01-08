@@ -35,6 +35,8 @@ SMALL
 -cast(Type)value syntax in addition to the current cast(Type, value) maybe?
 -'if' pre-statements: if var foo = bar(); (foo != null) { }
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
+-figure out if I should allow shadowing (maybe with a keyword?)
+-do entrypoint returning i32 implicitly in backend
 
 MEDIUM
 -runtime bounds checks
@@ -42,7 +44,6 @@ MEDIUM
 -@UnaryOperatorOverloading
 -switch statements
 -emit #line directives in backend
--do entrypoint returning i32 implicitly in backend
 -slicing
 -build to dll
 -read command line parameters
@@ -52,27 +53,26 @@ MEDIUM
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
 -polymorphic structs should register their parameters as local constants
 -locally scoped structs and procs
--tagged unions
+-tagged unions?
 -use microsoft_craziness.h
 -enum arrays @EnumArrays
 -allow custom entrypoints
+-assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
+-implicit polymorphism
 
 BIG
 -control flow graph analysis
 -#if
 -C varargs for bindings
 -procedure overloading
--default procedure parameters
+-default procedure parameters?
 -#caller_location
 -#location()
 -multiple return values
 -iterative solver for polymorphism
--implicit polymorphism
 -namespaced imports i.e. `#include Foo "foo.sif"`
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
--assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
--figure out if I should allow shadowing (maybe with a keyword?)
 */
 
 void print_usage() {
