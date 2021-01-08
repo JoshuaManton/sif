@@ -1,19 +1,18 @@
 #include "core:basic.sif"
-#include "core:math.sif"
-// #include "core:dynamic_array.sif"
 
-proc thing(str: cstring) {
-
-}
-
-proc thing2(str: string) {
-
+struct Foo {
+    var a: int;
+    var b: cstring;
+    var c: bool;
 }
 
 proc main() : i32 {
-    var a = "wow";
-    var b: cstring = "foo";
-    thing("asd");
-    thing2("asd");
+    var foo = Foo{1, "wow", true};
+    print("%\n", foo);
+    foo = #partial {1, "wow"};
+    print("%\n", foo);
+
+    var arr: [3]float = #partial {1, 2};
+    print("%\n", arr);
     return 0;
 }

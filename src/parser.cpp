@@ -1562,6 +1562,22 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return SIF_NEW_CLONE(Expr_Paren(nested, token.location));
         }
+        case TK_DIRECTIVE_PARTIAL: {
+            Token partial_token;
+            eat_next_token(lexer, &partial_token);
+            Ast_Expr *expr = parse_expr(lexer);
+            if (expr == nullptr) {
+                return nullptr;
+            }
+            // todo(josh): unparen
+            if (expr->expr_kind != EXPR_COMPOUND_LITERAL) {
+                report_error(partial_token.location, "#partial can only be used on compound literal expressions.");
+                return nullptr;
+            }
+            Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
+            compound_literal->is_partial = true;
+            return compound_literal;
+        }
         case TK_LEFT_CURLY: {
             assert(lexer->allow_compound_literals);
             Expr_Compound_Literal *compound_literal = parse_compound_literal(lexer, nullptr);

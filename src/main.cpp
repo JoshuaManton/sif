@@ -18,7 +18,6 @@
 TODO:
 
 SMALL
--cstring type
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
 -unknown directives don't stop compilation

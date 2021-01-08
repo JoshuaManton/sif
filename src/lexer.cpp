@@ -53,6 +53,7 @@ void init_lexer_globals() {
     token_string_map[TK_DIRECTIVE_INCLUDE]               = "#include";
     token_string_map[TK_DIRECTIVE_FOREIGN_IMPORT]        = "#foreign_import";
     token_string_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT] = "#foreign_system_import";
+    token_string_map[TK_DIRECTIVE_PARTIAL]               = "#partial";
 
     token_string_map[TK_ASSIGN]                          = "=";
     token_string_map[TK_PLUS]                            = "+";
@@ -143,6 +144,7 @@ void init_lexer_globals() {
     token_name_map[TK_DIRECTIVE_INCLUDE]                 = "TK_DIRECTIVE_INCLUDE";
     token_name_map[TK_DIRECTIVE_FOREIGN_IMPORT]          = "TK_DIRECTIVE_FOREIGN_IMPORT";
     token_name_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT]   = "TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT";
+    token_name_map[TK_DIRECTIVE_PARTIAL]                 = "TK_DIRECTIVE_PARTIAL";
 
     token_name_map[TK_ASSIGN]                            = "TK_ASSIGN";
     token_name_map[TK_PLUS]                              = "TK_PLUS";
@@ -709,6 +711,8 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length);
         advance(lexer, length);
         // todo(josh): intern these!!!
+        // todo(josh): intern these!!!
+        // todo(josh): intern these!!!
         if (strcmp(identifier, "assert") == 0) {
             out_token->kind = TK_DIRECTIVE_ASSERT;
             out_token->text = "#assert";
@@ -736,6 +740,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "foreign_system_import") == 0) {
             out_token->kind = TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT;
             out_token->text = "#foreign_system_import";
+        }
+        else if (strcmp(identifier, "partial") == 0) {
+            out_token->kind = TK_DIRECTIVE_PARTIAL;
+            out_token->text = "#partial";
         }
         else {
             lexer->errored = true;

@@ -604,6 +604,7 @@ struct Expr_Implicit_Enum_Selector : public Ast_Expr {
 struct Expr_Compound_Literal : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Array<Ast_Expr *> exprs = {};
+    bool is_partial = {};
     Expr_Compound_Literal(Ast_Expr *type_expr, Array<Ast_Expr *> exprs, Location location)
     : Ast_Expr(EXPR_COMPOUND_LITERAL, location)
     , type_expr(type_expr)

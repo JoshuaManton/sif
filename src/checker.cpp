@@ -1000,11 +1000,12 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
         if (is_type_string(operand->type)) {
             if (is_type_string(expected_type)) {
                 operand->type = expected_type;
+                return true;
             }
             if (expected_type == type_cstring) {
                 operand->type = type_cstring;
+                return true;
             }
-            return true;
         }
     }
 
@@ -2638,8 +2639,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 if (is_type_array(target_type)) {
                     Type_Array *array_type = (Type_Array *)target_type;
                     assert(array_type->count > 0);
+                    if (compound_literal->exprs.count != array_type->count && !compound_literal->is_partial) {
+                        report_error(compound_literal->location, "Compound literal without #partial must supply all fields. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
+                        return nullptr;
+                    }
                     if (compound_literal->exprs.count != 0) {
-                        if (compound_literal->exprs.count != array_type->count) {
+                        if (compound_literal->exprs.count > array_type->count) {
                             report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
                             return nullptr;
                         }
@@ -2647,37 +2652,41 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         Type *element_type = array_type->array_of;
                         For (idx, compound_literal->exprs) {
                             Ast_Expr *expr = compound_literal->exprs[idx];
-                            Operand *expr_operand = typecheck_expr(expr);
+                            Operand *expr_operand = typecheck_expr(expr, element_type);
                             if (!expr_operand) {
                                 return nullptr;
                             }
-                            if (!match_types(expr_operand, element_type, false)) {
-                                report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                                report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
-                                return nullptr;
-                            }
+                            // if (!match_types(expr_operand, element_type, false)) {
+                            //     report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                            //     report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
+                            //     return nullptr;
+                            // }
                         }
                     }
                 }
                 else {
+                    // todo(josh): copy paste from above
+                    if (compound_literal->exprs.count != target_type->variable_fields.count && !compound_literal->is_partial) {
+                        report_error(compound_literal->location, "Compound literal without #partial must supply all fields. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
+                        return nullptr;
+                    }
                     if (compound_literal->exprs.count != 0) {
-                        if (compound_literal->exprs.count != target_type->variable_fields.count) {
+                        if (compound_literal->exprs.count > target_type->variable_fields.count) {
                             report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
                             return nullptr;
                         }
                         For (idx, compound_literal->exprs) {
                             Type *element_type = target_type->variable_fields[idx].operand.type;
-
                             Ast_Expr *expr = compound_literal->exprs[idx];
-                            Operand *expr_operand = typecheck_expr(expr);
+                            Operand *expr_operand = typecheck_expr(expr, element_type);
                             if (!expr_operand) {
                                 return nullptr;
                             }
-                            if (!match_types(expr_operand, element_type, false)) {
-                                report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                                report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
-                                return nullptr;
-                            }
+                            // if (!match_types(expr_operand, element_type, false)) {
+                            //     report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                            //     report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
+                            //     return nullptr;
+                            // }
                         }
                     }
                 }
