@@ -23,10 +23,12 @@ Type *type_bool;
 Type *type_untyped_integer;
 Type *type_untyped_float;
 Type *type_untyped_null;
+Type *type_untyped_string;
 
 Type *type_typeid;
 
 Type *type_string;
+Type *type_cstring;
 Type *type_rawptr;
 
 Type *type_byte;
@@ -113,15 +115,17 @@ void init_checker() {
 
     type_bool = NEW_TYPE(Type_Primitive(intern_string("bool"), 1, 1));
 
-    type_typeid = NEW_TYPE(Type_Primitive(intern_string("typeid"), 8, 8));
-    type_string = NEW_TYPE(Type_Primitive(intern_string("string"), 16, 8));
-    type_rawptr = NEW_TYPE(Type_Primitive(intern_string("rawptr"), 8, 8)); type_rawptr->flags = TF_POINTER;
+    type_typeid  = NEW_TYPE(Type_Primitive(intern_string("typeid"), 8, 8));
+    type_cstring = NEW_TYPE(Type_Primitive(intern_string("cstring"), 8, 8)); type_cstring->flags = TF_POINTER;
+    type_string  = NEW_TYPE(Type_Primitive(intern_string("string"), 16, 8)); type_string->flags = TF_STRING;
+    type_rawptr  = NEW_TYPE(Type_Primitive(intern_string("rawptr"), 8, 8)); type_rawptr->flags = TF_POINTER;
 
     type_any = NEW_TYPE(Type_Primitive(intern_string("any"), 16, 8)); type_any->flags = TF_ANY;
 
     type_untyped_integer = NEW_TYPE(Type_Primitive("untyped integer", -1, -1), false); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
     type_untyped_float   = NEW_TYPE(Type_Primitive("untyped float", -1, -1), false);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
     type_untyped_null    = NEW_TYPE(Type_Primitive("untyped null", -1, -1), false);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
+    type_untyped_string  = NEW_TYPE(Type_Primitive("untyped string", -1, -1), false);  type_untyped_string->flags  = TF_STRING  | TF_UNTYPED;
 
     type_byte = type_u8;
     type_int = type_i64;
@@ -129,8 +133,6 @@ void init_checker() {
     type_float = type_f32;
 
     type_polymorphic = NEW_TYPE(Type_Primitive("type polymorphic", -1, -1), false); type_polymorphic->flags = TF_POLYMORPHIC;
-
-
 
     add_variable_type_field(type_string, intern_string(g_interned_data_string), get_or_create_type_pointer_to(type_u8), 0, {});
     add_variable_type_field(type_string, intern_string(g_interned_count_string), type_int, 8, {});
@@ -162,9 +164,10 @@ void add_global_declarations(Ast_Block *block) {
 
     register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"), type_typeid, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"), type_string, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"), type_rawptr, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block)));
 
     register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block)));
 }
@@ -207,7 +210,7 @@ bool is_type_signed     (Type *type) { return type->flags & TF_SIGNED;      }
 bool is_type_struct     (Type *type) { return type->flags & TF_STRUCT;      }
 bool is_type_incomplete (Type *type) { return type->flags & TF_INCOMPLETE;  }
 bool is_type_typeid     (Type *type) { return type == type_typeid;          }
-bool is_type_string     (Type *type) { return type == type_string;          }
+bool is_type_string     (Type *type) { return type->flags & TF_STRING;      }
 bool is_type_varargs    (Type *type) { return type->flags & TF_VARARGS;     }
 bool is_type_enum       (Type *type) { return type->flags & TF_ENUM;        }
 
@@ -241,6 +244,9 @@ Type *try_concretize_type_without_context(Type *type) {
     }
     if (type == type_untyped_float) {
         return type_float;
+    }
+    if (type == type_untyped_string) {
+        return type_string;
     }
     if (type == type_untyped_null) {
         return nullptr; // note(josh): nothing we can really do here, up to the caller to handle it
@@ -988,6 +994,16 @@ bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
         if (is_type_pointer(operand->type) && is_type_pointer(expected_type)) {
             assert(operand->type == type_untyped_null);
             operand->type = expected_type;
+            return true;
+        }
+
+        if (is_type_string(operand->type)) {
+            if (is_type_string(expected_type)) {
+                operand->type = expected_type;
+            }
+            if (expected_type == type_cstring) {
+                operand->type = type_cstring;
+            }
             return true;
         }
     }
@@ -2688,7 +2704,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             case EXPR_STRING_LITERAL: {
                 Expr_String_Literal *string_literal = (Expr_String_Literal *)expr;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-                result_operand.type = type_string;
+                result_operand.type = type_untyped_string;
                 result_operand.scanned_string_value = string_literal->text;
                 result_operand.escaped_string_value = string_literal->escaped_text;
                 result_operand.scanned_string_length = string_literal->scanner_length;

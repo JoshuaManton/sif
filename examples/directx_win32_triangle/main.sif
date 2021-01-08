@@ -10,26 +10,25 @@ struct Vertex {
 }
 
 proc main() : i32 {
+    //
     var window = create_window("My Cool Window", 1920, 1080);
     init_directx(&window);
     var vertex_shader_blob: ^ID3D10Blob;
     var vertex_shader = compile_vertex_shader_from_file("basic_vertex.hlsl", &vertex_shader_blob);
     var pixel_shader  = compile_pixel_shader_from_file("basic_pixel.hlsl");
 
-    var sv_position_semantic = "SV_POSITION";
-    var texcoord_semantic = "TEXCOORD";
-    var color_semantic = "COLOR";
+    //
     var vertex_fields = ([3]D3D11_INPUT_ELEMENT_DESC){
-        D3D11_INPUT_ELEMENT_DESC{&sv_position_semantic[0], 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
-        D3D11_INPUT_ELEMENT_DESC{&texcoord_semantic[0],    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        D3D11_INPUT_ELEMENT_DESC{&color_semantic[0],       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        D3D11_INPUT_ELEMENT_DESC{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
+        D3D11_INPUT_ELEMENT_DESC{"TEXCOORD",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        D3D11_INPUT_ELEMENT_DESC{"COLOR",       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
-
     var vertex_format: ^ID3D11InputLayout;
     var result = directx_device.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), &vertex_format);
     assert(result == S_OK);
     vertex_shader_blob.Release(vertex_shader_blob);
 
+    //
     var vertices = ([3]Vertex) {
         Vertex{Vector3{-0.5, -0.5, 0}, Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}},
         Vertex{Vector3{0.5, -0.5, 0},  Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}},
@@ -37,6 +36,7 @@ proc main() : i32 {
     };
     var vertex_buffer = create_vertex_buffer(&vertices[0], sizeof(typeof(vertices)));
 
+    //
     while (!window.should_close) {
         update_window(&window);
 
@@ -236,13 +236,11 @@ const D3D_SHADER_COMPILE_FLAGS = D3DCOMPILE_DEBUG | D3DCOMPILE_WARNINGS_ARE_ERRO
 proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) : ^ID3D11VertexShader { // todo(josh): use a temp allocator to go from char * to wchar_t *
     var errors: ^ID3D10Blob;
     var vertex_shader_blob: ^ID3D10Blob;
-    var entry = "main";
-    var compiler = "vs_5_0";
     var success: bool;
     var result_length_in_bytes: i32;
     var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
     defer sif_free(filename_wide, default_allocator());
-    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), &entry[0], &compiler[0], D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
+    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "vs_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
     if (errors != null) {
         var str = cast(^u8, errors.GetBufferPointer(errors));
         print(string_ptr(str, cast(i64, strlen(str))));
@@ -260,13 +258,11 @@ proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) :
 proc compile_pixel_shader_from_file(filename: string) : ^ID3D11PixelShader {
     var errors: ^ID3D10Blob;
     var pixel_shader_blob: ^ID3D10Blob;
-    var entry = "main";
-    var compiler = "ps_5_0";
     var success: bool;
     var result_length_in_bytes: i32;
     var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
     defer sif_free(filename_wide, default_allocator());
-    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), &entry[0], &compiler[0], D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
+    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "ps_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
     if (errors != null) {
         var str = cast(^u8, errors.GetBufferPointer(errors));
         print(string_ptr(str, cast(i64, strlen(str))));

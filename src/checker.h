@@ -40,6 +40,7 @@ enum Type_Flags {
     TF_VARARGS      = 1 << 14, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_ANY          = 1 << 15, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
     TF_ENUM         = 1 << 16, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
+    TF_STRING       = 1 << 17,
 };
 
 enum Check_State {
@@ -191,6 +192,7 @@ extern Type *type_bool;
 extern Type *type_untyped_number;
 extern Type *type_untyped_null;
 extern Type *type_typeid;
+extern Type *type_cstring;
 extern Type *type_string;
 extern Type *type_rawptr;
 extern Type *type_any;

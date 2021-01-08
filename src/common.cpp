@@ -55,6 +55,7 @@ char *g_interned_string_defer;
 char *g_interned_main_string;
 char *g_interned_sif_runtime_string;
 char *g_interned_string_string;
+char *g_interned_cstring_string;
 char *g_interned_rawptr_string;
 char *g_interned_any_string;
 char *g_interned_typeid_string;
@@ -91,6 +92,7 @@ void init_interned_strings() {
     g_interned_main_string        = intern_string("main");
     g_interned_sif_runtime_string = intern_string("sif_runtime");
     g_interned_string_string      = intern_string("string");
+    g_interned_cstring_string     = intern_string("cstring");
     g_interned_rawptr_string      = intern_string("rawptr");
     g_interned_any_string         = intern_string("any");
     g_interned_typeid_string      = intern_string("typeid");

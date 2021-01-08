@@ -177,6 +177,7 @@ struct Type_Info_Bool {
 
 struct Type_Info_String {
     var base: Type_Info;
+    var is_cstring: bool;
 } @sif_runtime
 
 struct Type_Info_Struct_Field {

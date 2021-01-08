@@ -28,6 +28,9 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
             else if (type_primitive->name == g_interned_typeid_string) {
                 sb->print("u64 ");
             }
+            else if (type_primitive->name == g_interned_cstring_string) {
+                sb->print("char *");
+            }
             else {
                 sb->printf("%s ", type_primitive->name);
             }
@@ -463,6 +466,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 else if (expr->operand.type == type_string) {
                     sb->printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
                 }
+                else if (expr->operand.type == type_cstring) {
+                    sb->printf("\"%s\"", expr->operand.scanned_string_value);
+                }
                 else if (is_type_typeid(expr->operand.type)) {
                     sb->printf("%d", expr->operand.type_value->id);
                 }
@@ -490,6 +496,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 }
                 else if (expr->operand.type == type_string) {
                     tsb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+                }
+                else if (expr->operand.type == type_cstring) {
+                    tsb.printf("\"%s\"", expr->operand.scanned_string_value);
                 }
                 else if (is_type_typeid(expr->operand.type)) {
                     tsb.printf("%d", expr->operand.type_value->id);
@@ -557,7 +566,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     char *lhs = c_print_expr(sb, binary->lhs, indent_level); assert(lhs);
                     char *rhs = c_print_expr(sb, binary->rhs, indent_level); assert(rhs);
                     print_indents(sb, indent_level);
-                    if (binary->op == TK_EQUAL_TO && is_type_string(binary->lhs->operand.type) && is_type_string(binary->lhs->operand.type)) {
+                    if (binary->op == TK_EQUAL_TO && (binary->lhs->operand.type == type_string) && (binary->lhs->operand.type == type_string)) {
                         // todo(josh): this should probably be a desugared_procedure thing
                         c_print_type(sb, type_bool, t);
                         sb->printf(" = string_eq(%s, %s);\n", lhs, rhs);
@@ -640,7 +649,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     else if (is_type_array(subscript->lhs->operand.type)) {
                         subscript_sb.printf("%s.elements[%s]", lhs, index);
                     }
-                    else if (is_type_string(subscript->lhs->operand.type)) {
+                    else if (subscript->lhs->operand.type == type_string) {
                         subscript_sb.printf("%s.data[%s]", lhs, index);
                     }
                     else {
@@ -1171,6 +1180,10 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                         else if (type == type_any) {
                             sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, "Type_Info_Struct", TYPE_INFO_KIND_STRUCT, type->id, type->size, type->align);
                             c_print_gen_type_info_struct(sb, ti_name, type);
+                        }
+                        else if (type == type_cstring) {
+                            sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_String, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
+                            sb->printf("    %s->is_cstring = true;\n", ti_name);
                         }
                         else {
                             printf("Unhandled primitive type: %\n", type_to_string(type));

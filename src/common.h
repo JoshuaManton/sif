@@ -41,6 +41,7 @@ extern char *g_interned_string_defer;
 extern char *g_interned_main_string;
 extern char *g_interned_sif_runtime_string;
 extern char *g_interned_string_string;
+extern char *g_interned_cstring_string;
 extern char *g_interned_rawptr_string;
 extern char *g_interned_any_string;
 extern char *g_interned_typeid_string;

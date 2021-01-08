@@ -146,6 +146,8 @@ proc strings() {
     world.count = 5;
     assert(world == "World");
     print("%\n", world);
+
+    // todo(josh): cstrings
 }
 
 

@@ -2,11 +2,18 @@
 #include "core:math.sif"
 // #include "core:dynamic_array.sif"
 
-proc procedure(v: [3]float) {
-    print("%\n", v);
+proc thing(str: cstring) {
+
+}
+
+proc thing2(str: string) {
+
 }
 
 proc main() : i32 {
-    procedure({1, 2, 3});
+    var a = "wow";
+    var b: cstring = "foo";
+    thing("asd");
+    thing2("asd");
     return 0;
 }
