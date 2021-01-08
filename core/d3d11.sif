@@ -377,7 +377,7 @@ const D3D11_WHQL_DRAW_VERTEX_COUNT_2_TO_EXP                                    =
 
 
 struct D3D11_INPUT_ELEMENT_DESC {
-    var SemanticName: cstring;
+    var SemanticName: LPCSTR;
     var SemanticIndex: UINT;
     var Format: DXGI_FORMAT;
     var InputSlot: UINT;
@@ -387,7 +387,7 @@ struct D3D11_INPUT_ELEMENT_DESC {
 }
 struct D3D11_SO_DECLARATION_ENTRY {
     var Stream: UINT;
-    var SemanticName: cstring;
+    var SemanticName: LPCSTR;
     var SemanticIndex: UINT;
     var StartComponent: BYTE;
     var ComponentCount: BYTE;
@@ -1151,8 +1151,8 @@ struct ID3D11ClassLinkageVtbl {
     var GetPrivateData : proc(This: ^ID3D11ClassLinkage, guid: REFGUID, pDataSize: ^UINT, pData: rawptr) : HRESULT;
     var SetPrivateData : proc(This: ^ID3D11ClassLinkage, guid: REFGUID, DataSize: UINT, pData: rawptr) : HRESULT;
     var SetPrivateDataInterface : proc(This: ^ID3D11ClassLinkage, guid: REFGUID, pData: ^IUnknown) : HRESULT;
-    var GetClassInstance : proc(This: ^ID3D11ClassLinkage, pClassInstanceName: cstring, InstanceIndex: UINT, ppInstance: ^^ID3D11ClassInstance) : HRESULT;
-    var CreateClassInstance : proc(This: ^ID3D11ClassLinkage, pClassTypeName: cstring, ConstantBufferOffset: UINT, ConstantVectorOffset: UINT, TextureOffset: UINT, SamplerOffset: UINT, ppInstance: ^^ID3D11ClassInstance) : HRESULT;
+    var GetClassInstance : proc(This: ^ID3D11ClassLinkage, pClassInstanceName: LPCSTR, InstanceIndex: UINT, ppInstance: ^^ID3D11ClassInstance) : HRESULT;
+    var CreateClassInstance : proc(This: ^ID3D11ClassLinkage, pClassTypeName: LPCSTR, ConstantBufferOffset: UINT, ConstantVectorOffset: UINT, TextureOffset: UINT, SamplerOffset: UINT, ppInstance: ^^ID3D11ClassInstance) : HRESULT;
 }
 struct ID3D11CommandList {
     using var vtbl: ^ID3D11CommandListVtbl;

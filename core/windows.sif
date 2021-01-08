@@ -19,8 +19,8 @@ const FLOAT = float;
 enum BOOL i32 { FALSE = 0; TRUE = 1; }
 const SIZE_T = u64;
 
-const LPSTR  = ^byte; // c_string
-const LPCSTR = ^byte; // c_string
+const LPSTR  = cstring;
+const LPCSTR = cstring;
 const LPCWSTR = ^u16;
 
 const WPARAM = u64;
@@ -960,7 +960,7 @@ proc GetIconInfo(hIcon: HICON, piconinfo: ^ICONINFO) : BOOL #foreign; // user32
 // GetIconInfoExA :: (hIcon: HICON, piconinfo: rawptr) : BOOL #foreign user32 #deprecated "Use GetIconInfoExW instead.";
 proc GetIconInfoExW(hIcon: HICON, piconinfo: ^ICONINFOEXW) : BOOL #foreign; // user32
 // LoadIconA :: (hInstance: HINSTANCE, lpIconName: ^byte) : HICON #foreign user32 #deprecated "Use LoadIconW instead.";
-proc LoadIconW(hInstance: HINSTANCE, lpIconName: ^u16) : HICON #foreign; // user32
+proc LoadIconW(hInstance: HINSTANCE, lpIconName: LPCWSTR) : HICON #foreign; // user32
 // LookupIconIdFromDirectory
 // LookupIconIdFromDirectoryEx
 // PrivateExtractIcons
@@ -981,7 +981,7 @@ proc ClipCursor(lpRect: ^RECT) : i32 #foreign; // user32
 proc GetCursorPos(p: ^POINT) : i32 #foreign; // user32
 // GetPhysicalCursorPos
 // LoadCursorA :: (hInstance: HINSTANCE, lpCursorName: ^byte) : HCURSOR #foreign user32 #deprecated "Use LoadCursorW instead.";
-proc LoadCursorW(hInstance: HINSTANCE, lpCursorName: ^byte) : HCURSOR #foreign; // user32
+proc LoadCursorW(hInstance: HINSTANCE, lpCursorName: LPCWSTR) : HCURSOR #foreign; // user32
 // LoadCursorFromFile
 // SetCursor
 // SetCursorPos

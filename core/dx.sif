@@ -31,21 +31,21 @@ proc D3DCompileFromFile(
              pFileName   : LPCWSTR,
              pDefines    : rawptr,//^D3D_SHADER_MACRO,
              pInclude    : ^ID3DInclude,
-             pEntrypoint : ^byte, // @cstring
-             pTarget     : ^byte, // @cstring
+             pEntrypoint : cstring,
+             pTarget     : cstring,
              Flags1      : UINT,
              Flags2      : UINT,
              ppCode      : ^^ID3D10Blob,
              ppErrorMsgs : ^^ID3D10Blob) : HRESULT #foreign;
 
 proc D3DCompile(
-            pSrcData    : ^byte, // @cstring
+            pSrcData    : cstring,
             SrcDataSize : uint,
-            pSourceName : ^byte, // @cstring
+            pSourceName : cstring,
             pDefines    : rawptr,
             pInclude    : ^ID3DInclude,
-            pEntrypoint : ^byte, // @cstring
-            pTarget     : ^byte, // @cstring
+            pEntrypoint : cstring,
+            pTarget     : cstring,
             Flags1      : UINT,
             Flags2      : UINT,
             ppCode      : ^^ID3D10Blob,
