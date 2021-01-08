@@ -1570,6 +1570,13 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             }
             return compound_literal;
         }
+        case TK_DOT: {
+            Token dot_token;
+            eat_next_token(lexer, &dot_token);
+            Token identifier_token;
+            EXPECT(lexer, TK_IDENTIFIER, &identifier_token);
+            return SIF_NEW_CLONE(Expr_Implicit_Enum_Selector(identifier_token.text, dot_token.location));
+        }
         case TK_PROC: {
             Ast_Proc_Header *header = parse_proc_header(lexer);
             return SIF_NEW_CLONE(Expr_Procedure_Type(header, token.location));

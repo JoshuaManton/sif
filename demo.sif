@@ -30,12 +30,6 @@ proc main() : i32 {
 
 
 
-proc factorial(var n: int) : int {
-    if (n == 1) {
-        return 1;
-    }
-    return n * factorial(n-1);
-}
 proc basic_stuff() {
     print("\n\n---- basic_stuff ----\n");
 
@@ -69,6 +63,14 @@ proc basic_stuff() {
     // if a `.` is present, float will be assumed, as above
     var g = 11.0 / 2;
     assert(g == 5.5);
+}
+// the keyword 'var' can be omitted in procedure parameter lists, since
+// variables are the only thing allowed there
+proc factorial(n: int) : int {
+    if (n == 1) {
+        return 1;
+    }
+    return n * factorial(n-1);
 }
 
 
@@ -172,6 +174,12 @@ proc structs() {
 
     // using runtime type information, you can print whole structs, more on that below.
     print("%\n", f);
+
+    // Type inference also works when calling procedures, since the target type is known
+    takes_a_foo({123, "wow", true});
+}
+proc takes_a_foo(foo: Foo) {
+    print("%\n", foo);
 }
 
 
@@ -183,6 +191,21 @@ enum My_Enum {
 }
 proc enums() {
     print("\n\n---- enums ----\n");
+
+    var f = My_Enum.FOO;
+    print("%\n", f);
+
+    // If the enum type can be inferred from context, you don't have to
+    // specify it on the right-hand-side.
+    var b: My_Enum = .BAR;
+    print("%\n", b);
+
+    // As with compound literals, the type can also be inferred from
+    // procedure parameters
+    takes_my_enum(.BAZ);
+}
+proc takes_my_enum(e: My_Enum) {
+    print("%\n", e);
 }
 
 

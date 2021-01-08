@@ -403,6 +403,7 @@ enum Expr_Kind {
     EXPR_DEREFERENCE,
     EXPR_PROCEDURE_CALL,
     EXPR_SELECTOR,
+    EXPR_IMPLICIT_ENUM_SELECTOR,
 
     EXPR_COMPOUND_LITERAL,
 
@@ -589,6 +590,14 @@ struct Expr_Selector : public Ast_Expr {
     : Ast_Expr(EXPR_SELECTOR, location)
     , lhs(lhs)
     , field_name(field_name)
+    {}
+};
+
+struct Expr_Implicit_Enum_Selector : public Ast_Expr {
+    const char *field = nullptr;
+    Expr_Implicit_Enum_Selector(const char *field, Location location)
+    : Ast_Expr(EXPR_IMPLICIT_ENUM_SELECTOR, location)
+    , field(field)
     {}
 };
 

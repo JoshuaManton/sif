@@ -2119,7 +2119,7 @@ Ast_Expr *unparen_expr(Ast_Expr *expr) {
 
 // return value is false if there was a compile error, true otherwise.
 // this means that this procedure can return true even if it doesn't resolve the declaration, so be sure to check out_resolved_declaration for null
-bool try_resolve_identifier(char *name, Ast_Block *start_block, Operand *out_result_operand, Location usage_location, bool climb_up_blocks, Declaration **out_resolved_declaration) {
+bool try_resolve_identifier(const char *name, Ast_Block *start_block, Operand *out_result_operand, Location usage_location, bool climb_up_blocks, Declaration **out_resolved_declaration) {
     Declaration *resolved_declaration = nullptr;
     while (start_block != nullptr) {
         Declaration **existing_declaration = start_block->declarations_lookup.get(name);
@@ -2537,6 +2537,29 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
                 return nullptr;
             }
+            break;
+        }
+        case EXPR_IMPLICIT_ENUM_SELECTOR: {
+            Expr_Implicit_Enum_Selector *selector = (Expr_Implicit_Enum_Selector *)expr;
+            if (expected_type == nullptr) {
+                report_error(selector->location, "Unable to infer type for implicit enum selector. Please specify the enum explicitly.");
+                return nullptr;
+            }
+            if (!is_type_enum(expected_type)) {
+                report_error(selector->location, "Implicit enum selector expression provided for a non-enum type '%s'.", type_to_string(expected_type));
+                return nullptr;
+            }
+            Type_Enum *enum_type = (Type_Enum *)expected_type;
+            Declaration *declaration = {};
+            if (!try_resolve_identifier(selector->field, enum_type->constants_block, &result_operand, selector->location, false, &declaration)) {
+                return nullptr;
+            }
+            if (declaration == nullptr) {
+                report_error(selector->location, "Unable to find enum value '%s' in enum '%s'.", selector->field, type_to_string(expected_type));
+                return nullptr;
+            }
+            assert(result_operand.type != nullptr);
+            assert(is_type_enum(result_operand.type));
             break;
         }
         case EXPR_COMPOUND_LITERAL: {
