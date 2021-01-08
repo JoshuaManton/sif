@@ -197,11 +197,25 @@ proc enums() {
 
     // If the enum type can be inferred from context, you don't have to
     // specify it on the right-hand-side.
-    var b: My_Enum = .BAR;
+    var b: My_Enum = .BAR; // implicit enum selection
     print("%\n", b);
 
+    // Implicit enum selection also works in binary expressions
+    if (b == .BAR) {
+
+    }
+
+    // Note: the following will NOT work because the compiler can't
+    // figure out the enum type to search for the fields FOO and BAR.
+    // if (.FOO == .BAR) {
+    // }
+
+    // If at least one of them supplies the target enum, all good.
+    if (.FOO == My_Enum.BAR) {
+    }
+
     // As with compound literals, the type can also be inferred from
-    // procedure parameters
+    // procedure parameters, allowing you to omit the enum name.
     takes_my_enum(.BAZ);
 }
 proc takes_my_enum(e: My_Enum) {

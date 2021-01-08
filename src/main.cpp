@@ -21,13 +21,11 @@ SMALL
 -cstring type
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
--expected types for compound literals
 -unknown directives don't stop compilation
 -block comments
 -add allocators to demo
 -underscores in numbers
 -prevent identifiers from being C keywords in the backend, like `signed`
--implicit enum selector
 -how should rawptr behave with ^$T? rawptr isn't a pointer _to_ anything, it's just a pointer. hmmmm.
 -Expr_Change (var v2 = v1.{y=4};)
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
@@ -52,7 +50,7 @@ MEDIUM
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
 -polymorphic structs should register their parameters as local constants
--locally scoped structs and procs
+-locally scoped structs/procs/enums
 -tagged unions?
 -use microsoft_craziness.h
 -enum arrays @EnumArrays

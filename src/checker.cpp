@@ -2220,703 +2220,735 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     if (expected_type != nullptr) {
         assert(!(expected_type->flags & TF_UNTYPED)); // note(josh): an expected_type should never be untyped
     }
-    Operand result_operand(expr->location);
-    switch (expr->expr_kind) {
-        case EXPR_UNARY: {
-            // todo(josh): @ErrorMessage
-            Expr_Unary *unary = (Expr_Unary *)expr;
-            Operand *rhs_operand = typecheck_expr(unary->rhs, expected_type);
-            if (rhs_operand == nullptr) {
-                return nullptr;
-            }
-            switch (unary->op) {
-                case TK_PLUS: {
-                    if (!is_type_number(rhs_operand->type)) {
-                        report_error(rhs_operand->location, "Unary plus requires a numeric type.");
-                        return nullptr;
-                    }
-                }
-                case TK_MINUS: {
-                    if (!is_type_number(rhs_operand->type)) {
-                        report_error(rhs_operand->location, "Unary minus requires a numeric type.");
-                        return nullptr;
-                    }
-                    if (rhs_operand->flags & OPERAND_CONSTANT) {
-                        result_operand.int_value = -rhs_operand->int_value;
-                        result_operand.float_value = -rhs_operand->float_value;
-                    }
-                    break;
-                }
-                case TK_BIT_NOT: {
-                    if (!is_type_integer(rhs_operand->type)) {
-                        report_error(rhs_operand->location, "Unary bitwise NOT requires an integer type.");
-                        return nullptr;
-                    }
-                    if (rhs_operand->flags & OPERAND_CONSTANT) {
-                        result_operand.uint_value = ~rhs_operand->int_value;
-                        result_operand.int_value = ~rhs_operand->int_value;
-                    }
-                    break;
-                }
-                case TK_NOT: {
-                    if (!is_type_bool(rhs_operand->type)) {
-                        report_error(rhs_operand->location, "Unary ! requires a bool.");
-                        return nullptr;
-                    }
-                    if (rhs_operand->flags & OPERAND_CONSTANT) {
-                        result_operand.bool_value = !rhs_operand->bool_value;
-                    }
-                    break;
-                }
-                default: {
-                    assert(false);
-                }
-            }
 
-            result_operand.flags = rhs_operand->flags;
-            result_operand.flags &= ~OPERAND_LVALUE;
-            result_operand.type = rhs_operand->type;
-            break;
-        }
-        case EXPR_BINARY: {
-            Expr_Binary *binary = (Expr_Binary *)expr;
-            if (is_cmp_op(binary->op)) {
-                expected_type = nullptr;
-            }
-            Operand *lhs_operand = typecheck_expr(binary->lhs);
-            if (!lhs_operand) {
-                return nullptr;
-            }
-            Operand *rhs_operand = typecheck_expr(binary->rhs);
-            if (!rhs_operand) {
-                return nullptr;
-            }
-            assert(!is_type_incomplete(lhs_operand->type));
-            assert(!is_type_incomplete(rhs_operand->type));
-            Type *most_concrete = get_most_concrete_type(lhs_operand->type, rhs_operand->type);
-            if (expected_type != nullptr) {
-                most_concrete = get_most_concrete_type(most_concrete, expected_type);
-            }
-
-            // speculatively try to match the types to see if we should go into the
-            // normal binop path or the operator overload path
-            Operand lhs_operand_copy = *lhs_operand;
-            Operand rhs_operand_copy = *rhs_operand;
-            bool types_matched = match_types(&lhs_operand_copy, most_concrete, false);
-            types_matched = types_matched && match_types(&rhs_operand_copy, most_concrete, false);
-            if (types_matched && operator_is_defined(lhs_operand_copy.type, rhs_operand_copy.type, binary->op)) {
-                Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
-                if (!lhs_operand) {
+    if (expr->operand.type == nullptr) {
+        Operand result_operand(expr->location);
+        switch (expr->expr_kind) {
+            case EXPR_UNARY: {
+                // todo(josh): @ErrorMessage
+                Expr_Unary *unary = (Expr_Unary *)expr;
+                Operand *rhs_operand = typecheck_expr(unary->rhs, expected_type);
+                if (rhs_operand == nullptr) {
                     return nullptr;
                 }
-                Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
-                if (!rhs_operand) {
-                    return nullptr;
+                switch (unary->op) {
+                    case TK_PLUS: {
+                        if (!is_type_number(rhs_operand->type)) {
+                            report_error(rhs_operand->location, "Unary plus requires a numeric type.");
+                            return nullptr;
+                        }
+                    }
+                    case TK_MINUS: {
+                        if (!is_type_number(rhs_operand->type)) {
+                            report_error(rhs_operand->location, "Unary minus requires a numeric type.");
+                            return nullptr;
+                        }
+                        if (rhs_operand->flags & OPERAND_CONSTANT) {
+                            result_operand.int_value = -rhs_operand->int_value;
+                            result_operand.float_value = -rhs_operand->float_value;
+                        }
+                        break;
+                    }
+                    case TK_BIT_NOT: {
+                        if (!is_type_integer(rhs_operand->type)) {
+                            report_error(rhs_operand->location, "Unary bitwise NOT requires an integer type.");
+                            return nullptr;
+                        }
+                        if (rhs_operand->flags & OPERAND_CONSTANT) {
+                            result_operand.uint_value = ~rhs_operand->int_value;
+                            result_operand.int_value = ~rhs_operand->int_value;
+                        }
+                        break;
+                    }
+                    case TK_NOT: {
+                        if (!is_type_bool(rhs_operand->type)) {
+                            report_error(rhs_operand->location, "Unary ! requires a bool.");
+                            return nullptr;
+                        }
+                        if (rhs_operand->flags & OPERAND_CONSTANT) {
+                            result_operand.bool_value = !rhs_operand->bool_value;
+                        }
+                        break;
+                    }
+                    default: {
+                        assert(false);
+                    }
                 }
 
-                assert(match_types(lhs_operand, most_concrete));
-                assert(match_types(rhs_operand, most_concrete));
-                bool ok = binary_eval(*lhs_operand, *rhs_operand, binary->op, binary->location, &result_operand);
-                if (!ok) {
-                    return nullptr;
-                }
+                result_operand.flags = rhs_operand->flags;
+                result_operand.flags &= ~OPERAND_LVALUE;
+                result_operand.type = rhs_operand->type;
+                break;
             }
-            else {
-                if (is_type_struct(lhs_operand->type)) {
-                    Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
-                    if (!try_resolve_operator_overload(struct_type->ast_struct, binary, binary->lhs, binary->rhs, binary->op, &result_operand)) {
+            case EXPR_BINARY: {
+                Expr_Binary *binary = (Expr_Binary *)expr;
+                if (is_cmp_op(binary->op)) {
+                    expected_type = nullptr; // todo(josh): this looks sketchy because it will affect the typechecking at the bottom of this procedure, maybe pull expected_type into a local variable?
+                }
+                Operand *lhs_operand = nullptr;
+                Operand *rhs_operand = nullptr;
+                Type *implicit_enum_selector_type = nullptr;
+                if (unparen_expr(binary->lhs)->expr_kind == EXPR_IMPLICIT_ENUM_SELECTOR) {
+                    rhs_operand = typecheck_expr(binary->rhs);
+                    if (!rhs_operand) {
+                        return nullptr;
+                    }
+                    if (!is_type_enum(rhs_operand->type)) {
+                        report_error(binary->rhs->location, "Expected enum type, got '%s'.", rhs_operand->type);
+                        return nullptr;
+                    }
+                    implicit_enum_selector_type = rhs_operand->type;
+                }
+                else if (unparen_expr(binary->rhs)->expr_kind == EXPR_IMPLICIT_ENUM_SELECTOR) {
+                    lhs_operand = typecheck_expr(binary->lhs);
+                    if (!lhs_operand) {
+                        return nullptr;
+                    }
+                    if (!is_type_enum(lhs_operand->type)) {
+                        report_error(binary->lhs->location, "Expected enum type, got '%s'.", lhs_operand->type);
+                        return nullptr;
+                    }
+                    implicit_enum_selector_type = lhs_operand->type;
+                }
+                if (lhs_operand == nullptr) {
+                    lhs_operand = typecheck_expr(binary->lhs, implicit_enum_selector_type);
+                    if (!lhs_operand) {
+                        return nullptr;
+                    }
+                }
+                if (rhs_operand == nullptr) {
+                    rhs_operand = typecheck_expr(binary->rhs, implicit_enum_selector_type);
+                    if (!rhs_operand) {
+                        return nullptr;
+                    }
+                }
+                assert(!is_type_incomplete(lhs_operand->type));
+                assert(!is_type_incomplete(rhs_operand->type));
+                Type *most_concrete = get_most_concrete_type(lhs_operand->type, rhs_operand->type);
+                if (expected_type != nullptr) {
+                    most_concrete = get_most_concrete_type(most_concrete, expected_type);
+                }
+
+                // speculatively try to match the types to see if we should go into the
+                // normal binop path or the operator overload path
+                Operand lhs_operand_copy = *lhs_operand;
+                Operand rhs_operand_copy = *rhs_operand;
+                bool types_matched = match_types(&lhs_operand_copy, most_concrete, false);
+                types_matched = types_matched && match_types(&rhs_operand_copy, most_concrete, false);
+                if (types_matched && operator_is_defined(lhs_operand_copy.type, rhs_operand_copy.type, binary->op)) {
+                    Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
+                    if (!lhs_operand) {
+                        return nullptr;
+                    }
+                    Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
+                    if (!rhs_operand) {
+                        return nullptr;
+                    }
+
+                    assert(match_types(lhs_operand, most_concrete));
+                    assert(match_types(rhs_operand, most_concrete));
+                    bool ok = binary_eval(*lhs_operand, *rhs_operand, binary->op, binary->location, &result_operand);
+                    if (!ok) {
                         return nullptr;
                     }
                 }
                 else {
-                    report_error(binary->location, "Operator '%s' is unsupported for types '%s' and '%s'.", token_string(binary->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
-                    return nullptr;
-                }
-            }
-
-            assert(result_operand.type != nullptr);
-            break;
-        }
-        case EXPR_CAST: {
-            Expr_Cast *expr_cast = (Expr_Cast *)expr;
-            Operand *type_operand = typecheck_expr(expr_cast->type_expr);
-            if (!type_operand) {
-                return nullptr;
-            }
-            if (!is_type_typeid(expr_cast->type_expr->operand.type)) {
-                report_error(expr_cast->type_expr->location, "Cast target must be a type.");
-                return nullptr;
-            }
-            Operand *rhs_operand = typecheck_expr(expr_cast->rhs);
-            if (!rhs_operand) {
-                return nullptr;
-            }
-            if (!can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value)) {
-                report_error(expr_cast->location, "Cannot cast from %s to %s.", type_to_string(rhs_operand->type), type_to_string(type_operand->type_value));
-                return nullptr;
-            }
-            result_operand.type = type_operand->type_value;
-            result_operand.flags = OPERAND_RVALUE;
-            if (rhs_operand->flags & OPERAND_CONSTANT) {
-                result_operand.flags |= OPERAND_CONSTANT;
-                result_operand.uint_value            = rhs_operand->uint_value;
-                result_operand.int_value             = rhs_operand->int_value;
-                result_operand.float_value           = rhs_operand->float_value;
-                result_operand.bool_value            = rhs_operand->bool_value;
-                result_operand.type_value            = rhs_operand->type_value;
-                result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
-                result_operand.scanned_string_length = rhs_operand->scanned_string_length;
-                result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
-                result_operand.escaped_string_length = rhs_operand->escaped_string_length;
-            }
-            break;
-        }
-        case EXPR_TRANSMUTE: {
-            Expr_Transmute *transmute = (Expr_Transmute *)expr;
-            Operand *type_operand = typecheck_expr(transmute->type_expr);
-            if (!type_operand) {
-                return nullptr;
-            }
-            if (!is_type_typeid(transmute->type_expr->operand.type)) {
-                report_error(transmute->type_expr->location, "Cast target must be a type.");
-                return nullptr;
-            }
-            Operand *rhs_operand = typecheck_expr(transmute->rhs);
-            if (!rhs_operand) {
-                return nullptr;
-            }
-            assert(type_operand->type_value->size > 0);
-            assert(rhs_operand->type->size > 0);
-            if (rhs_operand->type->size != type_operand->type_value->size) {
-                report_error(transmute->location, "Transmute requires both types to be the same size.");
-                report_info(transmute->location, "Size of target type '%s': %d, size of given expression type '%s': %d.", type_to_string(type_operand->type_value), type_operand->type_value->size, type_to_string(rhs_operand->type), rhs_operand->type->size);
-                return nullptr;
-            }
-            result_operand.type = type_operand->type_value;
-            result_operand.flags = OPERAND_RVALUE;
-            if (rhs_operand->flags & OPERAND_CONSTANT) {
-                result_operand.flags |= OPERAND_CONSTANT;
-                result_operand.uint_value            = rhs_operand->uint_value;
-                result_operand.int_value             = rhs_operand->int_value;
-                result_operand.float_value           = rhs_operand->float_value;
-                result_operand.bool_value            = rhs_operand->bool_value;
-                result_operand.type_value            = rhs_operand->type_value;
-                result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
-                result_operand.scanned_string_length = rhs_operand->scanned_string_length;
-                result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
-                result_operand.escaped_string_length = rhs_operand->escaped_string_length;
-            }
-            break;
-        }
-        case EXPR_ADDRESS_OF: {
-            Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
-            Operand *rhs_operand = typecheck_expr(address_of->rhs);
-            if (!rhs_operand) {
-                return nullptr;
-            }
-            if (!(rhs_operand->flags & OPERAND_LVALUE)) {
-                report_error(address_of->location, "Cannot take the address of a non-lvalue.");
-                return nullptr;
-            }
-            result_operand.type = get_or_create_type_pointer_to(rhs_operand->type);
-            result_operand.flags = OPERAND_RVALUE;
-            break;
-        }
-        case EXPR_SUBSCRIPT: {
-            Expr_Subscript *subscript = (Expr_Subscript *)expr;
-            Operand *lhs_operand = typecheck_expr(subscript->lhs);
-            if (!lhs_operand) {
-                return nullptr;
-            }
-            if (!complete_type(lhs_operand->type)) {
-                return nullptr;
-            }
-
-            Operand *index_operand = typecheck_expr(subscript->index, type_int);
-            if (!index_operand) {
-                return nullptr;
-            }
-            assert(is_type_number(index_operand->type));
-            assert(is_type_integer(index_operand->type));
-
-            Type *elem_type = nullptr;
-            if (is_type_array(lhs_operand->type)) {
-                Type_Array *array_type = (Type_Array *)lhs_operand->type;
-                assert(array_type->size > 0);
-                elem_type = array_type->array_of;
-                result_operand.type = elem_type;
-                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-
-                if (index_operand->flags & OPERAND_CONSTANT) {
-                    if ((index_operand->int_value < 0) || (index_operand->int_value >= array_type->count)) {
-                        report_error(subscript->index->location, "Index %d out of bounds 0..<%d.", index_operand->int_value, array_type->count);
+                    if (is_type_struct(lhs_operand->type)) {
+                        Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
+                        if (!try_resolve_operator_overload(struct_type->ast_struct, binary, binary->lhs, binary->rhs, binary->op, &result_operand)) {
+                            return nullptr;
+                        }
+                    }
+                    else {
+                        report_error(binary->location, "Operator '%s' is unsupported for types '%s' and '%s'.", token_string(binary->op), type_to_string(lhs_operand->type), type_to_string(rhs_operand->type));
                         return nullptr;
                     }
                 }
-            }
-            else if (is_type_slice(lhs_operand->type)) {
-                Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
-                elem_type = slice_type->slice_of;
-                result_operand.type = elem_type;
-                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            }
-            else if (is_type_string(lhs_operand->type)) {
-                elem_type = type_u8;
-                result_operand.type = elem_type;
-                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            }
-            else if (is_type_varargs(lhs_operand->type)) {
-                Type_Varargs *varargs_type = (Type_Varargs *)lhs_operand->type;
-                elem_type = varargs_type->varargs_of;
-                result_operand.type = elem_type;
-                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            }
-            else if (is_type_struct(lhs_operand->type)) {
-                Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
-                if (!try_resolve_operator_overload(struct_type->ast_struct, subscript, subscript->lhs, subscript->index, TK_LEFT_SQUARE, &result_operand)) {
-                    return nullptr;
-                }
-            }
-            else {
-                report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
-                return nullptr;
-            }
-            assert(result_operand.flags != 0);
-            break;
-        }
-        case EXPR_SELECTOR: {
-            Expr_Selector *selector = (Expr_Selector *)expr;
-            Selector_Expression_Lookup_Result lookup;
-            if (!do_selector_lookup(selector->lhs, selector->field_name, &lookup, selector->location)) {
-                return nullptr;
-            }
-            selector->lookup = lookup;
-            result_operand = lookup.operand;
-            break;
-        }
-        case EXPR_DEREFERENCE: {
-            Expr_Dereference *dereference = (Expr_Dereference *)expr;
-            Operand *lhs_operand = typecheck_expr(dereference->lhs);
-            if (!lhs_operand) {
-                return nullptr;
-            }
-            assert(is_type_pointer(lhs_operand->type));
-            Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
-            result_operand.type = pointer_type->pointer_to;
-            result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
-            break;
-        }
-        case EXPR_PROCEDURE_CALL: {
-            Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-            Operand *procedure_operand = typecheck_expr(call->lhs);
-            if (!procedure_operand) {
-                return nullptr;
-            }
-            if (!is_type_polymorphic(procedure_operand->type)) {
-                if (!is_type_procedure(procedure_operand->type)) {
-                    report_error(call->location, "Attempted to call a non-procedure type.");
-                    return nullptr;
-                }
-            }
 
-            if (!typecheck_procedure_call(call, *procedure_operand, call->parameters, &result_operand)) {
-                return nullptr;
+                assert(result_operand.type != nullptr);
+                break;
             }
-            assert(!is_type_polymorphic(call->target_procedure_type));
-            assert(is_type_procedure(call->target_procedure_type));
-            // todo(josh): constant stuff? procedures are a bit weird in that way in that the name is constant but the value isn't
-            break;
-        }
-        case EXPR_IDENTIFIER: {
-            Expr_Identifier *ident = (Expr_Identifier *)expr;
-            Ast_Block *block = ident->parent_block;
-            if (!try_resolve_identifier(ident->name, block, &result_operand, ident->location, true, &ident->resolved_declaration)) {
-                return nullptr;
-            }
-            if (!ident->resolved_declaration) {
-                report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
-                return nullptr;
-            }
-            break;
-        }
-        case EXPR_IMPLICIT_ENUM_SELECTOR: {
-            Expr_Implicit_Enum_Selector *selector = (Expr_Implicit_Enum_Selector *)expr;
-            if (expected_type == nullptr) {
-                report_error(selector->location, "Unable to infer type for implicit enum selector. Please specify the enum explicitly.");
-                return nullptr;
-            }
-            if (!is_type_enum(expected_type)) {
-                report_error(selector->location, "Implicit enum selector expression provided for a non-enum type '%s'.", type_to_string(expected_type));
-                return nullptr;
-            }
-            Type_Enum *enum_type = (Type_Enum *)expected_type;
-            Declaration *declaration = {};
-            if (!try_resolve_identifier(selector->field, enum_type->constants_block, &result_operand, selector->location, false, &declaration)) {
-                return nullptr;
-            }
-            if (declaration == nullptr) {
-                report_error(selector->location, "Unable to find enum value '%s' in enum '%s'.", selector->field, type_to_string(expected_type));
-                return nullptr;
-            }
-            assert(result_operand.type != nullptr);
-            assert(is_type_enum(result_operand.type));
-            break;
-        }
-        case EXPR_COMPOUND_LITERAL: {
-            Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
-            Type *target_type = expected_type;
-            if (compound_literal->type_expr == nullptr) {
-                if (expected_type == nullptr) {
-                    report_error(compound_literal->location, "Unable to infer compound literal type from context. Please provide an explicit type.");
-                    return nullptr;
-                }
-            }
-            else {
-                Operand *type_operand = typecheck_expr(compound_literal->type_expr, type_typeid);
+            case EXPR_CAST: {
+                Expr_Cast *expr_cast = (Expr_Cast *)expr;
+                Operand *type_operand = typecheck_expr(expr_cast->type_expr);
                 if (!type_operand) {
                     return nullptr;
                 }
-                assert(is_type_typeid(type_operand->type));
-                assert(type_operand->type_value != nullptr);
-                if (expected_type) {
-                    assert(type_operand->type_value == expected_type);
+                if (!is_type_typeid(expr_cast->type_expr->operand.type)) {
+                    report_error(expr_cast->type_expr->location, "Cast target must be a type.");
+                    return nullptr;
                 }
-                target_type = type_operand->type_value;
-            }
-            assert(target_type != nullptr);
-            if (!complete_type(target_type)) {
-                return nullptr;
-            }
-
-            if (is_type_array(target_type)) {
-                Type_Array *array_type = (Type_Array *)target_type;
-                assert(array_type->count > 0);
-                if (compound_literal->exprs.count != 0) {
-                    if (compound_literal->exprs.count != array_type->count) {
-                        report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
-                        return nullptr;
-                    }
-
-                    Type *element_type = array_type->array_of;
-                    For (idx, compound_literal->exprs) {
-                        Ast_Expr *expr = compound_literal->exprs[idx];
-                        Operand *expr_operand = typecheck_expr(expr);
-                        if (!expr_operand) {
-                            return nullptr;
-                        }
-                        if (!match_types(expr_operand, element_type, false)) {
-                            report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                            report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
-                            return nullptr;
-                        }
-                    }
+                Operand *rhs_operand = typecheck_expr(expr_cast->rhs);
+                if (!rhs_operand) {
+                    return nullptr;
                 }
-            }
-            else {
-                if (compound_literal->exprs.count != 0) {
-                    if (compound_literal->exprs.count != target_type->variable_fields.count) {
-                        report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
-                        return nullptr;
-                    }
-                    For (idx, compound_literal->exprs) {
-                        Type *element_type = target_type->variable_fields[idx].operand.type;
-
-                        Ast_Expr *expr = compound_literal->exprs[idx];
-                        Operand *expr_operand = typecheck_expr(expr);
-                        if (!expr_operand) {
-                            return nullptr;
-                        }
-                        if (!match_types(expr_operand, element_type, false)) {
-                            report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                            report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
-                            return nullptr;
-                        }
-                    }
+                if (!can_cast(expr_cast->rhs, expr_cast->type_expr->operand.type_value)) {
+                    report_error(expr_cast->location, "Cannot cast from %s to %s.", type_to_string(rhs_operand->type), type_to_string(type_operand->type_value));
+                    return nullptr;
                 }
+                result_operand.type = type_operand->type_value;
+                result_operand.flags = OPERAND_RVALUE;
+                if (rhs_operand->flags & OPERAND_CONSTANT) {
+                    result_operand.flags |= OPERAND_CONSTANT;
+                    result_operand.uint_value            = rhs_operand->uint_value;
+                    result_operand.int_value             = rhs_operand->int_value;
+                    result_operand.float_value           = rhs_operand->float_value;
+                    result_operand.bool_value            = rhs_operand->bool_value;
+                    result_operand.type_value            = rhs_operand->type_value;
+                    result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
+                    result_operand.scanned_string_length = rhs_operand->scanned_string_length;
+                    result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
+                    result_operand.escaped_string_length = rhs_operand->escaped_string_length;
+                }
+                break;
             }
+            case EXPR_TRANSMUTE: {
+                Expr_Transmute *transmute = (Expr_Transmute *)expr;
+                Operand *type_operand = typecheck_expr(transmute->type_expr);
+                if (!type_operand) {
+                    return nullptr;
+                }
+                if (!is_type_typeid(transmute->type_expr->operand.type)) {
+                    report_error(transmute->type_expr->location, "Cast target must be a type.");
+                    return nullptr;
+                }
+                Operand *rhs_operand = typecheck_expr(transmute->rhs);
+                if (!rhs_operand) {
+                    return nullptr;
+                }
+                assert(type_operand->type_value->size > 0);
+                assert(rhs_operand->type->size > 0);
+                if (rhs_operand->type->size != type_operand->type_value->size) {
+                    report_error(transmute->location, "Transmute requires both types to be the same size.");
+                    report_info(transmute->location, "Size of target type '%s': %d, size of given expression type '%s': %d.", type_to_string(type_operand->type_value), type_operand->type_value->size, type_to_string(rhs_operand->type), rhs_operand->type->size);
+                    return nullptr;
+                }
+                result_operand.type = type_operand->type_value;
+                result_operand.flags = OPERAND_RVALUE;
+                if (rhs_operand->flags & OPERAND_CONSTANT) {
+                    result_operand.flags |= OPERAND_CONSTANT;
+                    result_operand.uint_value            = rhs_operand->uint_value;
+                    result_operand.int_value             = rhs_operand->int_value;
+                    result_operand.float_value           = rhs_operand->float_value;
+                    result_operand.bool_value            = rhs_operand->bool_value;
+                    result_operand.type_value            = rhs_operand->type_value;
+                    result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
+                    result_operand.scanned_string_length = rhs_operand->scanned_string_length;
+                    result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
+                    result_operand.escaped_string_length = rhs_operand->escaped_string_length;
+                }
+                break;
+            }
+            case EXPR_ADDRESS_OF: {
+                Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
+                Operand *rhs_operand = typecheck_expr(address_of->rhs);
+                if (!rhs_operand) {
+                    return nullptr;
+                }
+                if (!(rhs_operand->flags & OPERAND_LVALUE)) {
+                    report_error(address_of->location, "Cannot take the address of a non-lvalue.");
+                    return nullptr;
+                }
+                result_operand.type = get_or_create_type_pointer_to(rhs_operand->type);
+                result_operand.flags = OPERAND_RVALUE;
+                break;
+            }
+            case EXPR_SUBSCRIPT: {
+                Expr_Subscript *subscript = (Expr_Subscript *)expr;
+                Operand *lhs_operand = typecheck_expr(subscript->lhs);
+                if (!lhs_operand) {
+                    return nullptr;
+                }
+                if (!complete_type(lhs_operand->type)) {
+                    return nullptr;
+                }
 
-            result_operand.type = target_type;
-            result_operand.flags = OPERAND_RVALUE;
+                Operand *index_operand = typecheck_expr(subscript->index, type_int);
+                if (!index_operand) {
+                    return nullptr;
+                }
+                assert(is_type_number(index_operand->type));
+                assert(is_type_integer(index_operand->type));
 
-            break;
-        }
-        case EXPR_NUMBER_LITERAL: {
-            Expr_Number_Literal *number = (Expr_Number_Literal *)expr;
-            if (number->has_a_dot) {
-                result_operand.type = type_untyped_float;
-            }
-            else {
-                result_operand.type = type_untyped_integer;
-            }
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.uint_value  = number->uint_value;
-            result_operand.int_value   = number->int_value;
-            result_operand.float_value = number->float_value;
-            break;
-        }
-        case EXPR_STRING_LITERAL: {
-            Expr_String_Literal *string_literal = (Expr_String_Literal *)expr;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.type = type_string;
-            result_operand.scanned_string_value = string_literal->text;
-            result_operand.escaped_string_value = string_literal->escaped_text;
-            result_operand.scanned_string_length = string_literal->scanner_length;
-            result_operand.escaped_string_length = string_literal->escaped_length;
-            break;
-        }
-        case EXPR_CHAR_LITERAL: {
-            Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.type = type_u8;
-            result_operand.uint_value = char_literal->c;
-            result_operand.int_value  = char_literal->c;
-            break;
-        }
-        case EXPR_NULL: {
-            result_operand.flags = OPERAND_RVALUE;
-            result_operand.type = type_untyped_null;
-            break;
-        }
-        case EXPR_TRUE: {
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.type = type_bool;
-            result_operand.bool_value = true;
-            break;
-        }
-        case EXPR_FALSE: {
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            result_operand.type = type_bool;
-            result_operand.bool_value = false;
-            break;
-        }
-        case EXPR_SIZEOF: {
-            Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
-            Operand *expr_operand = typecheck_expr(expr_sizeof->expr);
-            if (!expr_operand) {
-                return nullptr;
-            }
-            if (!is_type_typeid(expr_operand->type)) {
-                report_error(expr_operand->location, "Expected a type for sizeof(). Maybe you forgot a typeof()?");
-                return nullptr;
-            }
-            assert(expr_operand->type_value != nullptr);
-            if (!complete_type(expr_operand->type_value)) {
-                return nullptr;
-            }
-            assert(!is_type_incomplete(expr_operand->type_value));
-            assert(expr_operand->type_value->size > 0);
-            result_operand.type = type_untyped_integer;
-            result_operand.uint_value = expr_operand->type_value->size;
-            result_operand.int_value  = expr_operand->type_value->size;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-            break;
-        }
-        case EXPR_TYPEOF: {
-            Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
-            Operand *expr_operand = typecheck_expr(expr_typeof->expr);
-            if (!expr_operand) {
-                return nullptr;
-            }
-            assert(expr_operand->type != nullptr);
-            result_operand.type = type_typeid;
-            result_operand.type_value = expr_operand->type;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            break;
-        }
-        case EXPR_STRUCT_TYPE: {
-            Expr_Struct_Type *anonymous_struct = (Expr_Struct_Type *)expr;
-            assert(anonymous_struct->structure != nullptr);
-            assert(anonymous_struct->structure->type != nullptr);
-            result_operand.type = type_typeid;
-            result_operand.type_value = anonymous_struct->structure->type;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            if (!complete_type(anonymous_struct->structure->type)) {
-                return nullptr;
-            }
-            break;
-        }
-        case EXPR_POINTER_TYPE: {
-            Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
-            assert(expr_pointer->pointer_to != nullptr);
-            Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to, type_typeid);
-            if (!pointer_to_operand) {
-                return nullptr;
-            }
-            assert((pointer_to_operand->flags & OPERAND_CONSTANT) && (pointer_to_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_pointer_to(pointer_to_operand->type_value);
-            break;
-        }
-        case EXPR_REFERENCE_TYPE: {
-            Expr_Reference_Type *expr_reference = (Expr_Reference_Type *)expr;
-            assert(expr_reference->reference_to != nullptr);
-            Operand *reference_to_operand = typecheck_expr(expr_reference->reference_to, type_typeid);
-            if (!reference_to_operand) {
-                return nullptr;
-            }
-            assert((reference_to_operand->flags & OPERAND_CONSTANT) && (reference_to_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_reference_to(reference_to_operand->type_value);
-            break;
-        }
-        case EXPR_ARRAY_TYPE: {
-            Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
-            assert(expr_array->array_of != nullptr);
-            Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
-            if (!array_of_operand) {
-                return nullptr;
-            }
-            assert((array_of_operand->flags & OPERAND_CONSTANT) && (array_of_operand->flags & OPERAND_TYPE));
-            Operand *count_operand = typecheck_expr(expr_array->count_expr, type_int);
-            if (!count_operand) {
-                return nullptr;
-            }
-            assert((count_operand->flags & OPERAND_CONSTANT) && is_type_integer(count_operand->type));
-            if (count_operand->int_value <= 0) {
-                report_error(expr_array->count_expr->location, "Array size must be greater than 0.");
-                return nullptr;
-            }
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
-            break;
-        }
-        case EXPR_SLICE_TYPE: {
-            Expr_Slice_Type *expr_slice = (Expr_Slice_Type *)expr;
-            assert(expr_slice->slice_of != nullptr);
-            Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of, type_typeid);
-            if (!slice_of_operand) {
-                return nullptr;
-            }
-            assert((slice_of_operand->flags & OPERAND_CONSTANT) && (slice_of_operand->flags & OPERAND_TYPE));
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            result_operand.type = type_typeid;
-            result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
-            break;
-        }
-        case EXPR_PROCEDURE_TYPE: {
-            Expr_Procedure_Type *proc_type_expr = (Expr_Procedure_Type *)expr;
-            Operand *proc_operand = typecheck_procedure_header(proc_type_expr->header);
-            if (!proc_operand) {
-                return nullptr;
-            }
-            assert(is_type_procedure(proc_operand->type));
-            Type_Procedure *proc_type = (Type_Procedure *)proc_operand->type;
-            result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-            result_operand.type = type_typeid;
-            result_operand.type_value = proc_operand->type;
-            break;
-        }
-        case EXPR_SPREAD: {
-            Expr_Spread *spread = (Expr_Spread *)expr;
-            assert(spread->rhs != nullptr);
-            Operand *rhs_operand = typecheck_expr(spread->rhs);
-            if (!rhs_operand) {
-                return nullptr;
-            }
-            if (is_type_typeid(rhs_operand->type)) {
-                assert((rhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_TYPE));
-                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-                result_operand.type = type_typeid;
-                result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value);
-            }
-            else {
                 Type *elem_type = nullptr;
-                if (is_type_array(rhs_operand->type)) {
-                    elem_type = ((Type_Array *)rhs_operand->type)->array_of;
+                if (is_type_array(lhs_operand->type)) {
+                    Type_Array *array_type = (Type_Array *)lhs_operand->type;
+                    assert(array_type->size > 0);
+                    elem_type = array_type->array_of;
+                    result_operand.type = elem_type;
+                    result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+
+                    if (index_operand->flags & OPERAND_CONSTANT) {
+                        if ((index_operand->int_value < 0) || (index_operand->int_value >= array_type->count)) {
+                            report_error(subscript->index->location, "Index %d out of bounds 0..<%d.", index_operand->int_value, array_type->count);
+                            return nullptr;
+                        }
+                    }
                 }
-                else if (is_type_slice(rhs_operand->type)) {
-                    elem_type = ((Type_Slice *)rhs_operand->type)->slice_of;
+                else if (is_type_slice(lhs_operand->type)) {
+                    Type_Slice *slice_type = (Type_Slice *)lhs_operand->type;
+                    elem_type = slice_type->slice_of;
+                    result_operand.type = elem_type;
+                    result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
                 }
-                else if (is_type_varargs(rhs_operand->type)) {
-                    elem_type = ((Type_Varargs *)rhs_operand->type)->varargs_of;
+                else if (is_type_string(lhs_operand->type)) {
+                    elem_type = type_u8;
+                    result_operand.type = elem_type;
+                    result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                }
+                else if (is_type_varargs(lhs_operand->type)) {
+                    Type_Varargs *varargs_type = (Type_Varargs *)lhs_operand->type;
+                    elem_type = varargs_type->varargs_of;
+                    result_operand.type = elem_type;
+                    result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                }
+                else if (is_type_struct(lhs_operand->type)) {
+                    Type_Struct *struct_type = (Type_Struct *)lhs_operand->type;
+                    if (!try_resolve_operator_overload(struct_type->ast_struct, subscript, subscript->lhs, subscript->index, TK_LEFT_SQUARE, &result_operand)) {
+                        return nullptr;
+                    }
                 }
                 else {
-                    report_error(spread->location, "Cannot spread expression of type '%s'.", type_to_string(rhs_operand->type));
+                    report_error(subscript->location, "Cannot subscript type '%s'.", type_to_string(lhs_operand->type));
                     return nullptr;
                 }
-                assert(elem_type != nullptr);
-                result_operand.flags = rhs_operand->flags;
-                result_operand.type = get_or_create_type_varargs_of(elem_type);
+                assert(result_operand.flags != 0);
+                break;
             }
-            break;
-        }
-        case EXPR_POLYMORPHIC_TYPE: {
-            // foo: Some_Struct!(123, float);
-            //      ^^^^^^^^^^^^^^^^^^^^^^^^
-
-            Expr_Polymorphic_Type *poly_type = (Expr_Polymorphic_Type *)expr;
-            Operand *type_operand = typecheck_expr(poly_type->type_expr);
-            if (!type_operand) {
-                return nullptr;
-            }
-            assert(is_type_polymorphic(type_operand->type));
-            assert(type_operand->referenced_declaration != nullptr);
-            assert(type_operand->referenced_declaration->kind == DECL_STRUCT);
-            Ast_Struct *referenced_struct = ((Struct_Declaration *)type_operand->referenced_declaration)->structure;
-
-            Ast_Struct *polymorphed_struct = polymorph_struct(referenced_struct, poly_type->location, poly_type->parameters);
-            if (!polymorphed_struct) {
-                return nullptr;
-            }
-            if (!check_declaration(polymorphed_struct->declaration, poly_type->location)) {
-                return nullptr;
-            }
-            assert(polymorphed_struct->declaration != nullptr);
-            assert(polymorphed_struct->declaration->operand.type != nullptr);
-            result_operand = polymorphed_struct->declaration->operand;
-            break;
-        }
-        case EXPR_POLYMORPHIC_VARIABLE: {
-            Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
-            assert(poly->poly_decl != nullptr);
-            if (poly->poly_decl->declaration) {
-                if (!check_declaration(poly->poly_decl->declaration, poly->location, &result_operand)) {
+            case EXPR_SELECTOR: {
+                Expr_Selector *selector = (Expr_Selector *)expr;
+                Selector_Expression_Lookup_Result lookup;
+                if (!do_selector_lookup(selector->lhs, selector->field_name, &lookup, selector->location)) {
                     return nullptr;
                 }
+                selector->lookup = lookup;
+                result_operand = lookup.operand;
+                break;
             }
-            else {
-                result_operand.type = type_polymorphic;
+            case EXPR_DEREFERENCE: {
+                Expr_Dereference *dereference = (Expr_Dereference *)expr;
+                Operand *lhs_operand = typecheck_expr(dereference->lhs);
+                if (!lhs_operand) {
+                    return nullptr;
+                }
+                assert(is_type_pointer(lhs_operand->type));
+                Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
+                result_operand.type = pointer_type->pointer_to;
+                result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+                break;
             }
-            break;
-        }
-        case EXPR_PAREN: {
-            Expr_Paren *paren = (Expr_Paren *)expr;
-            Operand *expr_operand = typecheck_expr(paren->nested, expected_type);
-            if (!expr_operand) {
-                return nullptr;
-            }
-            result_operand = *expr_operand;
-            result_operand.location = paren->location;
-            break;
-        }
-        default: {
-            assert(false);
-        }
-    }
+            case EXPR_PROCEDURE_CALL: {
+                Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
+                Operand *procedure_operand = typecheck_expr(call->lhs);
+                if (!procedure_operand) {
+                    return nullptr;
+                }
+                if (!is_type_polymorphic(procedure_operand->type)) {
+                    if (!is_type_procedure(procedure_operand->type)) {
+                        report_error(call->location, "Attempted to call a non-procedure type.");
+                        return nullptr;
+                    }
+                }
 
-    if ((!(result_operand.flags & OPERAND_NO_VALUE))) {
-        if (is_type_reference(result_operand.type)) {
-            result_operand.flags |= OPERAND_LVALUE;
-            result_operand.reference_type = result_operand.type;
+                if (!typecheck_procedure_call(call, *procedure_operand, call->parameters, &result_operand)) {
+                    return nullptr;
+                }
+                assert(!is_type_polymorphic(call->target_procedure_type));
+                assert(is_type_procedure(call->target_procedure_type));
+                // todo(josh): constant stuff? procedures are a bit weird in that way in that the name is constant but the value isn't
+                break;
+            }
+            case EXPR_IDENTIFIER: {
+                Expr_Identifier *ident = (Expr_Identifier *)expr;
+                Ast_Block *block = ident->parent_block;
+                if (!try_resolve_identifier(ident->name, block, &result_operand, ident->location, true, &ident->resolved_declaration)) {
+                    return nullptr;
+                }
+                if (!ident->resolved_declaration) {
+                    report_error(ident->location, "Unresolved identifier '%s'.", ident->name);
+                    return nullptr;
+                }
+                break;
+            }
+            case EXPR_IMPLICIT_ENUM_SELECTOR: {
+                Expr_Implicit_Enum_Selector *selector = (Expr_Implicit_Enum_Selector *)expr;
+                if (expected_type == nullptr) {
+                    report_error(selector->location, "Unable to infer type for implicit enum selector. Please specify the enum explicitly.");
+                    return nullptr;
+                }
+                if (!is_type_enum(expected_type)) {
+                    report_error(selector->location, "Implicit enum selector expression provided for a non-enum type '%s'.", type_to_string(expected_type));
+                    return nullptr;
+                }
+                Type_Enum *enum_type = (Type_Enum *)expected_type;
+                Declaration *declaration = {};
+                if (!try_resolve_identifier(selector->field, enum_type->constants_block, &result_operand, selector->location, false, &declaration)) {
+                    return nullptr;
+                }
+                if (declaration == nullptr) {
+                    report_error(selector->location, "Unable to find enum value '%s' in enum '%s'.", selector->field, type_to_string(expected_type));
+                    return nullptr;
+                }
+                assert(result_operand.type != nullptr);
+                assert(is_type_enum(result_operand.type));
+                break;
+            }
+            case EXPR_COMPOUND_LITERAL: {
+                Expr_Compound_Literal *compound_literal = (Expr_Compound_Literal *)expr;
+                Type *target_type = expected_type;
+                if (compound_literal->type_expr == nullptr) {
+                    if (expected_type == nullptr) {
+                        report_error(compound_literal->location, "Unable to infer compound literal type from context. Please provide an explicit type.");
+                        return nullptr;
+                    }
+                }
+                else {
+                    Operand *type_operand = typecheck_expr(compound_literal->type_expr, type_typeid);
+                    if (!type_operand) {
+                        return nullptr;
+                    }
+                    assert(is_type_typeid(type_operand->type));
+                    assert(type_operand->type_value != nullptr);
+                    if (expected_type) {
+                        assert(type_operand->type_value == expected_type);
+                    }
+                    target_type = type_operand->type_value;
+                }
+                assert(target_type != nullptr);
+                if (!complete_type(target_type)) {
+                    return nullptr;
+                }
+
+                if (is_type_array(target_type)) {
+                    Type_Array *array_type = (Type_Array *)target_type;
+                    assert(array_type->count > 0);
+                    if (compound_literal->exprs.count != 0) {
+                        if (compound_literal->exprs.count != array_type->count) {
+                            report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
+                            return nullptr;
+                        }
+
+                        Type *element_type = array_type->array_of;
+                        For (idx, compound_literal->exprs) {
+                            Ast_Expr *expr = compound_literal->exprs[idx];
+                            Operand *expr_operand = typecheck_expr(expr);
+                            if (!expr_operand) {
+                                return nullptr;
+                            }
+                            if (!match_types(expr_operand, element_type, false)) {
+                                report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                                report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
+                                return nullptr;
+                            }
+                        }
+                    }
+                }
+                else {
+                    if (compound_literal->exprs.count != 0) {
+                        if (compound_literal->exprs.count != target_type->variable_fields.count) {
+                            report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
+                            return nullptr;
+                        }
+                        For (idx, compound_literal->exprs) {
+                            Type *element_type = target_type->variable_fields[idx].operand.type;
+
+                            Ast_Expr *expr = compound_literal->exprs[idx];
+                            Operand *expr_operand = typecheck_expr(expr);
+                            if (!expr_operand) {
+                                return nullptr;
+                            }
+                            if (!match_types(expr_operand, element_type, false)) {
+                                report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
+                                report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
+                                return nullptr;
+                            }
+                        }
+                    }
+                }
+
+                result_operand.type = target_type;
+                result_operand.flags = OPERAND_RVALUE;
+
+                break;
+            }
+            case EXPR_NUMBER_LITERAL: {
+                Expr_Number_Literal *number = (Expr_Number_Literal *)expr;
+                if (number->has_a_dot) {
+                    result_operand.type = type_untyped_float;
+                }
+                else {
+                    result_operand.type = type_untyped_integer;
+                }
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                result_operand.uint_value  = number->uint_value;
+                result_operand.int_value   = number->int_value;
+                result_operand.float_value = number->float_value;
+                break;
+            }
+            case EXPR_STRING_LITERAL: {
+                Expr_String_Literal *string_literal = (Expr_String_Literal *)expr;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                result_operand.type = type_string;
+                result_operand.scanned_string_value = string_literal->text;
+                result_operand.escaped_string_value = string_literal->escaped_text;
+                result_operand.scanned_string_length = string_literal->scanner_length;
+                result_operand.escaped_string_length = string_literal->escaped_length;
+                break;
+            }
+            case EXPR_CHAR_LITERAL: {
+                Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                result_operand.type = type_u8;
+                result_operand.uint_value = char_literal->c;
+                result_operand.int_value  = char_literal->c;
+                break;
+            }
+            case EXPR_NULL: {
+                result_operand.flags = OPERAND_RVALUE;
+                result_operand.type = type_untyped_null;
+                break;
+            }
+            case EXPR_TRUE: {
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                result_operand.type = type_bool;
+                result_operand.bool_value = true;
+                break;
+            }
+            case EXPR_FALSE: {
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                result_operand.type = type_bool;
+                result_operand.bool_value = false;
+                break;
+            }
+            case EXPR_SIZEOF: {
+                Expr_Sizeof *expr_sizeof = (Expr_Sizeof *)expr;
+                Operand *expr_operand = typecheck_expr(expr_sizeof->expr);
+                if (!expr_operand) {
+                    return nullptr;
+                }
+                if (!is_type_typeid(expr_operand->type)) {
+                    report_error(expr_operand->location, "Expected a type for sizeof(). Maybe you forgot a typeof()?");
+                    return nullptr;
+                }
+                assert(expr_operand->type_value != nullptr);
+                if (!complete_type(expr_operand->type_value)) {
+                    return nullptr;
+                }
+                assert(!is_type_incomplete(expr_operand->type_value));
+                assert(expr_operand->type_value->size > 0);
+                result_operand.type = type_untyped_integer;
+                result_operand.uint_value = expr_operand->type_value->size;
+                result_operand.int_value  = expr_operand->type_value->size;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
+                break;
+            }
+            case EXPR_TYPEOF: {
+                Expr_Typeof *expr_typeof = (Expr_Typeof *)expr;
+                Operand *expr_operand = typecheck_expr(expr_typeof->expr);
+                if (!expr_operand) {
+                    return nullptr;
+                }
+                assert(expr_operand->type != nullptr);
+                result_operand.type = type_typeid;
+                result_operand.type_value = expr_operand->type;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                break;
+            }
+            case EXPR_STRUCT_TYPE: {
+                Expr_Struct_Type *anonymous_struct = (Expr_Struct_Type *)expr;
+                assert(anonymous_struct->structure != nullptr);
+                assert(anonymous_struct->structure->type != nullptr);
+                result_operand.type = type_typeid;
+                result_operand.type_value = anonymous_struct->structure->type;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                if (!complete_type(anonymous_struct->structure->type)) {
+                    return nullptr;
+                }
+                break;
+            }
+            case EXPR_POINTER_TYPE: {
+                Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
+                assert(expr_pointer->pointer_to != nullptr);
+                Operand *pointer_to_operand = typecheck_expr(expr_pointer->pointer_to, type_typeid);
+                if (!pointer_to_operand) {
+                    return nullptr;
+                }
+                assert((pointer_to_operand->flags & OPERAND_CONSTANT) && (pointer_to_operand->flags & OPERAND_TYPE));
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                result_operand.type = type_typeid;
+                result_operand.type_value = get_or_create_type_pointer_to(pointer_to_operand->type_value);
+                break;
+            }
+            case EXPR_REFERENCE_TYPE: {
+                Expr_Reference_Type *expr_reference = (Expr_Reference_Type *)expr;
+                assert(expr_reference->reference_to != nullptr);
+                Operand *reference_to_operand = typecheck_expr(expr_reference->reference_to, type_typeid);
+                if (!reference_to_operand) {
+                    return nullptr;
+                }
+                assert((reference_to_operand->flags & OPERAND_CONSTANT) && (reference_to_operand->flags & OPERAND_TYPE));
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                result_operand.type = type_typeid;
+                result_operand.type_value = get_or_create_type_reference_to(reference_to_operand->type_value);
+                break;
+            }
+            case EXPR_ARRAY_TYPE: {
+                Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
+                assert(expr_array->array_of != nullptr);
+                Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
+                if (!array_of_operand) {
+                    return nullptr;
+                }
+                assert((array_of_operand->flags & OPERAND_CONSTANT) && (array_of_operand->flags & OPERAND_TYPE));
+                Operand *count_operand = typecheck_expr(expr_array->count_expr, type_int);
+                if (!count_operand) {
+                    return nullptr;
+                }
+                assert((count_operand->flags & OPERAND_CONSTANT) && is_type_integer(count_operand->type));
+                if (count_operand->int_value <= 0) {
+                    report_error(expr_array->count_expr->location, "Array size must be greater than 0.");
+                    return nullptr;
+                }
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                result_operand.type = type_typeid;
+                result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
+                break;
+            }
+            case EXPR_SLICE_TYPE: {
+                Expr_Slice_Type *expr_slice = (Expr_Slice_Type *)expr;
+                assert(expr_slice->slice_of != nullptr);
+                Operand *slice_of_operand = typecheck_expr(expr_slice->slice_of, type_typeid);
+                if (!slice_of_operand) {
+                    return nullptr;
+                }
+                assert((slice_of_operand->flags & OPERAND_CONSTANT) && (slice_of_operand->flags & OPERAND_TYPE));
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                result_operand.type = type_typeid;
+                result_operand.type_value = get_or_create_type_slice_of(slice_of_operand->type_value);
+                break;
+            }
+            case EXPR_PROCEDURE_TYPE: {
+                Expr_Procedure_Type *proc_type_expr = (Expr_Procedure_Type *)expr;
+                Operand *proc_operand = typecheck_procedure_header(proc_type_expr->header);
+                if (!proc_operand) {
+                    return nullptr;
+                }
+                assert(is_type_procedure(proc_operand->type));
+                Type_Procedure *proc_type = (Type_Procedure *)proc_operand->type;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                result_operand.type = type_typeid;
+                result_operand.type_value = proc_operand->type;
+                break;
+            }
+            case EXPR_SPREAD: {
+                Expr_Spread *spread = (Expr_Spread *)expr;
+                assert(spread->rhs != nullptr);
+                Operand *rhs_operand = typecheck_expr(spread->rhs);
+                if (!rhs_operand) {
+                    return nullptr;
+                }
+                if (is_type_typeid(rhs_operand->type)) {
+                    assert((rhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_TYPE));
+                    result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                    result_operand.type = type_typeid;
+                    result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value);
+                }
+                else {
+                    Type *elem_type = nullptr;
+                    if (is_type_array(rhs_operand->type)) {
+                        elem_type = ((Type_Array *)rhs_operand->type)->array_of;
+                    }
+                    else if (is_type_slice(rhs_operand->type)) {
+                        elem_type = ((Type_Slice *)rhs_operand->type)->slice_of;
+                    }
+                    else if (is_type_varargs(rhs_operand->type)) {
+                        elem_type = ((Type_Varargs *)rhs_operand->type)->varargs_of;
+                    }
+                    else {
+                        report_error(spread->location, "Cannot spread expression of type '%s'.", type_to_string(rhs_operand->type));
+                        return nullptr;
+                    }
+                    assert(elem_type != nullptr);
+                    result_operand.flags = rhs_operand->flags;
+                    result_operand.type = get_or_create_type_varargs_of(elem_type);
+                }
+                break;
+            }
+            case EXPR_POLYMORPHIC_TYPE: {
+                // foo: Some_Struct!(123, float);
+                //      ^^^^^^^^^^^^^^^^^^^^^^^^
+
+                Expr_Polymorphic_Type *poly_type = (Expr_Polymorphic_Type *)expr;
+                Operand *type_operand = typecheck_expr(poly_type->type_expr);
+                if (!type_operand) {
+                    return nullptr;
+                }
+                assert(is_type_polymorphic(type_operand->type));
+                assert(type_operand->referenced_declaration != nullptr);
+                assert(type_operand->referenced_declaration->kind == DECL_STRUCT);
+                Ast_Struct *referenced_struct = ((Struct_Declaration *)type_operand->referenced_declaration)->structure;
+
+                Ast_Struct *polymorphed_struct = polymorph_struct(referenced_struct, poly_type->location, poly_type->parameters);
+                if (!polymorphed_struct) {
+                    return nullptr;
+                }
+                if (!check_declaration(polymorphed_struct->declaration, poly_type->location)) {
+                    return nullptr;
+                }
+                assert(polymorphed_struct->declaration != nullptr);
+                assert(polymorphed_struct->declaration->operand.type != nullptr);
+                result_operand = polymorphed_struct->declaration->operand;
+                break;
+            }
+            case EXPR_POLYMORPHIC_VARIABLE: {
+                Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
+                assert(poly->poly_decl != nullptr);
+                if (poly->poly_decl->declaration) {
+                    if (!check_declaration(poly->poly_decl->declaration, poly->location, &result_operand)) {
+                        return nullptr;
+                    }
+                }
+                else {
+                    result_operand.type = type_polymorphic;
+                }
+                break;
+            }
+            case EXPR_PAREN: {
+                Expr_Paren *paren = (Expr_Paren *)expr;
+                Operand *expr_operand = typecheck_expr(paren->nested, expected_type);
+                if (!expr_operand) {
+                    return nullptr;
+                }
+                result_operand = *expr_operand;
+                result_operand.location = paren->location;
+                break;
+            }
+            default: {
+                assert(false);
+            }
         }
-        while (result_operand.type->kind == TYPE_REFERENCE) {
-            Type_Reference *reference = (Type_Reference *)result_operand.type;
-            assert(reference->reference_to != nullptr);
-            result_operand.type = reference->reference_to;
+
+        if ((!(result_operand.flags & OPERAND_NO_VALUE))) {
+            if (is_type_reference(result_operand.type)) {
+                result_operand.flags |= OPERAND_LVALUE;
+                result_operand.reference_type = result_operand.type;
+            }
+            while (result_operand.type->kind == TYPE_REFERENCE) {
+                Type_Reference *reference = (Type_Reference *)result_operand.type;
+                assert(reference->reference_to != nullptr);
+                result_operand.type = reference->reference_to;
+            }
         }
+
+        expr->operand = result_operand;
     }
 
     if (expected_type) {
-        if (!match_types(&result_operand, expected_type)) {
+        if (!match_types(&expr->operand, expected_type)) {
             return nullptr;
         }
-        assert(!(result_operand.type->flags & TF_UNTYPED));
+        assert(!(expr->operand.type->flags & TF_UNTYPED));
     }
-
-    expr->operand = result_operand;
     return &expr->operand;
 }
 
