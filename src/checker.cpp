@@ -68,7 +68,7 @@ T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
     return t_ptr;
 }
 
-Struct_Member_Declaration *add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location) {
+Struct_Member_Declaration *try_add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location) {
     assert(variable_type != nullptr);
     assert(!is_type_untyped(variable_type));
     Struct_Field field = {};
@@ -79,11 +79,13 @@ Struct_Member_Declaration *add_variable_type_field(Type *type, const char *name,
     type->all_fields.append(field);
     type->variable_fields.append(field);
     Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location));
-    assert(register_declaration(type->variables_block, decl));
+    if (!register_declaration(type->variables_block, decl)) {
+        return nullptr;
+    }
     return decl;
 }
 
-Struct_Member_Declaration *add_constant_type_field(Type *type, const char *name, Operand operand, Location location) {
+Struct_Member_Declaration *try_add_constant_type_field(Type *type, const char *name, Operand operand, Location location) {
     assert(operand.type != nullptr);
     Struct_Field field = {};
     field.name = name;
@@ -92,7 +94,9 @@ Struct_Member_Declaration *add_constant_type_field(Type *type, const char *name,
     type->all_fields.append(field);
     type->constant_fields.append(field);
     Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location));
-    assert(register_declaration(type->constants_block, decl));
+    if (!register_declaration(type->constants_block, decl)) {
+        return nullptr;
+    }
     return decl;
 }
 
@@ -134,11 +138,11 @@ void init_checker() {
 
     type_polymorphic = NEW_TYPE(Type_Primitive("type polymorphic", -1, -1), false); type_polymorphic->flags = TF_POLYMORPHIC;
 
-    add_variable_type_field(type_string, intern_string(g_interned_data_string), get_or_create_type_pointer_to(type_u8), 0, {});
-    add_variable_type_field(type_string, intern_string(g_interned_count_string), type_int, 8, {});
+    assert(try_add_variable_type_field(type_string, intern_string(g_interned_data_string), get_or_create_type_pointer_to(type_u8), 0, {}));
+    assert(try_add_variable_type_field(type_string, intern_string(g_interned_count_string), type_int, 8, {}));
 
-    add_variable_type_field(type_any, intern_string(g_interned_data_string), type_rawptr, 0, {});
-    add_variable_type_field(type_any, intern_string("type"), type_typeid, 8, {});
+    assert(try_add_variable_type_field(type_any, intern_string(g_interned_data_string), type_rawptr, 0, {}));
+    assert(try_add_variable_type_field(type_any, intern_string("type"), type_typeid, 8, {}));
 }
 
 void add_global_declarations(Ast_Block *block) {
@@ -373,7 +377,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     field_operand.type = enum_type;
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
-                    add_constant_type_field(enum_type, field->name, field_operand, field->location);
+                    assert(try_add_constant_type_field(enum_type, field->name, field_operand, field->location));
                     if (!register_declaration(enum_decl->ast_enum->enum_block, SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->enum_block, field->location)))) {
                         return false;
                     }
@@ -866,6 +870,23 @@ bool complete_type(Type *type) {
                     }
                 }
 
+                // propagate polymorphic parameters into Type_Struct constants_block
+                For (idx, structure->struct_block->declarations) {
+                    Declaration *decl = structure->struct_block->declarations[idx];
+                    switch (decl->kind) {
+                        case DECL_POLYMORPHIC: {
+                            Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
+                            assert(poly_decl->declaration != nullptr);
+                            assert(poly_decl->declaration->operand.flags & OPERAND_CONSTANT);
+                            assert(register_declaration(structure->type->constants_block, poly_decl->declaration));
+                            break;
+                        }
+                        default: {
+                            assert(false);
+                        }
+                    }
+                }
+
                 int size = 0;
                 int largest_alignment = 1;
                 For (idx, structure->body->declarations) {
@@ -888,17 +909,22 @@ bool complete_type(Type *type) {
                                 assert(var->expr != nullptr);
                                 assert(var->constant_operand.type != nullptr);
                                 assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                                var->struct_member = add_constant_type_field(struct_type, var->name, var->constant_operand, var->location);
+                                var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location);
+                                if (!var->struct_member) {
+                                    return false;
+                                }
                             }
                             else {
                                 assert(var->type->size > 0);
                                 if (!structure->is_union) {
                                     size = align_forward(size, var->type->align);
-                                    var->struct_member = add_variable_type_field(struct_type, var->name, var->type, size, var->location);
+                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, size, var->location);
+                                    assert(var->struct_member);
                                     size += var->type->size;
                                 }
                                 else {
-                                    var->struct_member = add_variable_type_field(struct_type, var->name, var->type, 0, var->location);
+                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, 0, var->location);
+                                    assert(var->struct_member);
                                     size = max(size, var->type->size);
                                 }
                                 largest_alignment = max(largest_alignment, var->type->align);
@@ -1061,12 +1087,12 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
     }
     Type_Array *new_type = NEW_TYPE(Type_Array(array_of, count));
     new_type->flags = TF_ARRAY | TF_INCOMPLETE;
-    add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {});
+    assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {}));
     Operand operand = {};
     operand.type = type_int;
     operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
     operand.int_value = count;
-    add_constant_type_field(new_type, intern_string(g_interned_count_string), operand, {});
+    assert(try_add_constant_type_field(new_type, intern_string(g_interned_count_string), operand, {}));
     return new_type;
 }
 
@@ -1080,8 +1106,8 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     new_type->flags = TF_SLICE;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {});
-    add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {});
+    assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
+    assert(try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {}));
     slice_of->slice_of_this_type = new_type;
     return new_type;
 }
@@ -1097,8 +1123,8 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
     new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
-    add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {});
-    add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {});
+    assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
+    assert(try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {}));
     varargs_of->varargs_of_this_type = new_type;
     return new_type;
 }
@@ -1551,7 +1577,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
                 return false;
             }
             assert(parameter_operand.type != nullptr);
-            out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, nullptr, parameter_operand.location)));
+            out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, nullptr, value_expr->location)));
             break;
         }
         default: {
@@ -2637,6 +2663,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
 
                 if (is_type_array(target_type)) {
+                    // note(josh): copy paste from below
                     Type_Array *array_type = (Type_Array *)target_type;
                     assert(array_type->count > 0);
                     if (compound_literal->exprs.count != array_type->count && !compound_literal->is_partial) {
@@ -2656,16 +2683,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                             if (!expr_operand) {
                                 return nullptr;
                             }
-                            // if (!match_types(expr_operand, element_type, false)) {
-                            //     report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                            //     report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
-                            //     return nullptr;
-                            // }
                         }
                     }
                 }
                 else {
-                    // todo(josh): copy paste from above
+                    // note(josh): copy paste from above
                     if (compound_literal->exprs.count != target_type->variable_fields.count && !compound_literal->is_partial) {
                         report_error(compound_literal->location, "Compound literal without #partial must supply all fields. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
                         return nullptr;
@@ -2676,17 +2698,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                             return nullptr;
                         }
                         For (idx, compound_literal->exprs) {
-                            Type *element_type = target_type->variable_fields[idx].operand.type;
                             Ast_Expr *expr = compound_literal->exprs[idx];
+                            Type *element_type = target_type->variable_fields[idx].operand.type;
                             Operand *expr_operand = typecheck_expr(expr, element_type);
                             if (!expr_operand) {
                                 return nullptr;
                             }
-                            // if (!match_types(expr_operand, element_type, false)) {
-                            //     report_error(expr->location, "Expression within compound literal doesn't match the required type for the compound literal.");
-                            //     report_info(expr->location, "Expected '%s', got '%s'.", type_to_string(element_type), type_to_string(expr_operand->type));
-                            //     return nullptr;
-                            // }
                         }
                     }
                 }

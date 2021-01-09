@@ -101,6 +101,9 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     did_parse_polymorphic_thing = false;
 
     Ast_Expr *name_expr = parse_expr(lexer);
+    if (name_expr == nullptr) {
+        return nullptr;
+    }
     bool is_polymorphic_value = false;
     char *var_name = nullptr;
     switch (name_expr->expr_kind) {

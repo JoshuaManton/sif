@@ -1,18 +1,26 @@
 #include "core:basic.sif"
 
-struct Foo {
-    var a: int;
-    var b: cstring;
-    var c: bool;
+struct Foo!($Arg: typeid, $Arg: int) {
+    proc wow() {
+        printa("Foo");
+    }
+}
+
+struct Bar!($Arg: string) {
+    proc wow() {
+        printa("Bar");
+    }
+}
+
+proc work(foo: $T) {
+    T.wow();
+    printa(T.Arg);
 }
 
 proc main() : i32 {
-    var foo = Foo{1, "wow", true};
-    print("%\n", foo);
-    foo = #partial {1, "wow"};
-    print("%\n", foo);
-
-    var arr: [3]float = #partial {1, 2};
-    print("%\n", arr);
+    var foo: Foo!(float);
+    var bar: Bar!(123);
+    work(foo);
+    work(bar);
     return 0;
 }
