@@ -39,7 +39,7 @@ SMALL
 -require an arg before #c_varargs
 -require #c_varargs to be ..any?
 -disallow #c_varargs in non-foreign procedure headers
-- cast untyped string to cstring
+-cast untyped string to cstring
 
 MEDIUM
 -runtime bounds checks

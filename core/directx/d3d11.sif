@@ -1,9 +1,9 @@
 #include "core:windows.sif"
-#include "core:dxgi.sif"
-#include "core:dxgitype.sif"
-#include "core:dxgicommon.sif"
-#include "core:dx.sif"
-#include "core:d3dcommon.sif"
+#include "core:directx/dxgi.sif"
+#include "core:directx/dxgitype.sif"
+#include "core:directx/dxgicommon.sif"
+#include "core:directx/dx.sif"
+#include "core:directx/d3dcommon.sif"
 
 const D3D11_16BIT_INDEX_STRIP_CUT_VALUE                                        =  0xffff;
 const D3D11_32BIT_INDEX_STRIP_CUT_VALUE                                        =  0xffffffff;
