@@ -97,9 +97,17 @@ struct Operand {
 
 struct Ast_Node;
 
+struct Node_Polymorph_Parameter {
+    bool is_polymorphic_value = {};
+    bool is_polymorphic_type = {};
+
+    Operand value = {};
+    Type *type = {};
+};
+
 struct Node_Polymorph {
     Ast_Node *polymorphed_node = {};
-    Array<Operand> polymorph_values = {};
+    Array<Node_Polymorph_Parameter> polymorph_values = {};
 };
 
 struct Ast_Node {
@@ -243,18 +251,19 @@ struct Ast_Var : public Ast_Node {
     Var_Declaration *declaration = {};
     Operand constant_operand = {};
     bool is_polymorphic_value = {};
-    bool is_polymorphic = {};
+    bool is_polymorphic_type = {};
     bool is_using = {};
     Ast_Struct *belongs_to_struct = {}; // note(josh): may be null
     Struct_Member_Declaration *struct_member = {}; // note(josh): only set if belongs_to_struct is set
-    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic, Location location)
+    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic_value, bool is_polymorphic_type, Location location)
     : Ast_Node(AST_VAR, location)
     , name(name)
     , name_expr(name_expr)
     , type_expr(type_expr)
     , expr(expr)
     , is_constant(is_constant)
-    , is_polymorphic(is_polymorphic)
+    , is_polymorphic_value(is_polymorphic_value)
+    , is_polymorphic_type(is_polymorphic_type)
     {}
 };
 
@@ -542,11 +551,10 @@ struct Expr_Subscript : public Ast_Expr {
 
 struct Expr_Polymorphic_Variable : public Ast_Expr {
     Expr_Identifier *ident = {};
-    Polymorphic_Declaration *poly_decl = {};
-    Expr_Polymorphic_Variable(Expr_Identifier *ident, Polymorphic_Declaration *poly_decl, Location location)
+    Declaration *inserted_declaration = {};
+    Expr_Polymorphic_Variable(Expr_Identifier *ident, Location location)
     : Ast_Expr(EXPR_POLYMORPHIC_VARIABLE, location)
     , ident(ident)
-    , poly_decl(poly_decl)
     {}
 };
 
@@ -752,7 +760,6 @@ enum Declaration_Kind {
     DECL_ENUM,
     DECL_VAR,
     DECL_STRUCT_MEMBER,
-    DECL_POLYMORPHIC,
     DECL_CONSTANT_VALUE,
     DECL_PROC,
     DECL_COUNT,
@@ -842,14 +849,6 @@ struct Struct_Member_Declaration : public Declaration {
     , name(name)
     , operand(operand)
     , offset(offset)
-    {}
-};
-
-struct Polymorphic_Declaration : public Declaration {
-    Declaration *declaration = {};
-    Polymorphic_Declaration(char *name, Declaration *decl, Ast_Block *block, Location location)
-    : Declaration(name, DECL_POLYMORPHIC, block, location)
-    , declaration(decl)
     {}
 };
 

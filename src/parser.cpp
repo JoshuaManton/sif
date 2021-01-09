@@ -106,7 +106,8 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     if (name_expr == nullptr) {
         return nullptr;
     }
-    bool is_polymorphic_value = false;
+    bool is_polymorphic_value = did_parse_polymorphic_thing;
+    did_parse_polymorphic_thing = false;
     char *var_name = nullptr;
     switch (name_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
@@ -117,7 +118,6 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         case EXPR_POLYMORPHIC_VARIABLE: {
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)name_expr;
             var_name = poly->ident->name;
-            is_polymorphic_value = true;
             break;
         }
         default: {
@@ -132,6 +132,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         assert(false && "unexpected EOF");
         return nullptr;
     }
+    assert(did_parse_polymorphic_thing == false);
     Ast_Expr *type_expr = nullptr;
     if (colon.kind == TK_COLON) {
         eat_next_token(lexer);
@@ -140,6 +141,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
             return nullptr;
         }
     }
+    bool is_polymorphic_type = did_parse_polymorphic_thing;
 
     Ast_Expr *expr = nullptr;
     Token assign;
@@ -156,7 +158,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         return nullptr;
     }
 
-    Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, did_parse_polymorphic_thing, root_token.location));
+    Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, root_token.location));
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, current_block));
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
@@ -257,7 +259,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             if (!var) {
                 return nullptr;
             }
-            if (var->is_polymorphic) {
+            if (var->is_polymorphic_value || var->is_polymorphic_type) {
                 polymorphic_parameter_indices.append(parameters.count);
             }
 
@@ -1640,11 +1642,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             }
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
             did_parse_polymorphic_thing = true;
-            Polymorphic_Declaration *poly_decl = SIF_NEW_CLONE(Polymorphic_Declaration(ident->name, nullptr, current_block, token.location));
-            if (!register_declaration(current_block, poly_decl)) {
-                return nullptr;
-            }
-            return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, poly_decl, token.location));
+            return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location));
         }
         case TK_LEFT_SQUARE: {
             eat_next_token(lexer);

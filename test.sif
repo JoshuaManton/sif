@@ -1,8 +1,6 @@
 #include "core:basic.sif"
 
 proc takes_constant_proc(Procedure: proc(t: int)) : int {
-    Procedure(321);
-    Procedure(123);
     return 1;
 }
 
@@ -10,7 +8,25 @@ proc does_work(a: int) {
     print("doing work\n");
 }
 
+proc poly(n: [$N]$T) {
+    printa(N);
+}
+
+proc poly_thing($n: $T) {
+    printa(n*n, T);
+}
+
 proc main() : i32 {
+    poly_thing(123);
+    poly_thing(123);
+    poly_thing(123);
+    poly_thing(123);
+    poly_thing(123);
+    poly_thing(123.2);
+    poly(([2]int){1, 2});
+    poly(([2]int){1, 3});
+    poly(([2]float){1, 2});
+    poly(([3]int){0, 1, 2});
     printa(takes_constant_proc(does_work));
     return 0;
 }

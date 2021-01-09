@@ -48,7 +48,7 @@ bool g_silence_errors; // todo(josh): this is pretty janky. would be better to p
 
 bool complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
-bool match_types(Operand *operand, Type *expected_type, bool do_report_error = true);
+bool match_types(Operand operand, Type *expected_type, Operand *out_operand, bool do_report_error = true);
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
 bool typecheck_block(Ast_Block *block);
 Operand *typecheck_procedure_header(Ast_Proc_Header *header);
@@ -304,19 +304,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
         }
-        case DECL_POLYMORPHIC: {
-            Polymorphic_Declaration *poly = (Polymorphic_Declaration *)decl;
-            if (!poly->declaration) {
-                report_error(usage_location, "Internal compiler error: polymorphic declaration has not yet been filled. todo(josh): do iterative solver.");
-                return false;
-            }
-            assert(poly->declaration);
-            if (!check_declaration(poly->declaration, usage_location)) {
-                return false;
-            }
-            decl_operand = poly->declaration->operand;
-            break;
-        }
         case DECL_ENUM: {
             Enum_Declaration *enum_decl = (Enum_Declaration *)decl;
             Type_Enum *enum_type = NEW_TYPE(Type_Enum(enum_decl->name));
@@ -422,7 +409,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     return false;
                 }
                 if (declared_type) {
-                    if (!match_types(expr_operand, declared_type)) {
+                    if (!match_types(*expr_operand, declared_type, expr_operand)) {
                         report_error(var->expr->location, "Variable was declared with type '%s' but was given an expression of type '%s'.", type_to_string(declared_type), type_to_string(expr_operand->type));
                         return false;
                     }
@@ -873,18 +860,7 @@ bool complete_type(Type *type) {
                 // propagate polymorphic parameters into Type_Struct constants_block
                 For (idx, structure->struct_block->declarations) {
                     Declaration *decl = structure->struct_block->declarations[idx];
-                    switch (decl->kind) {
-                        case DECL_POLYMORPHIC: {
-                            Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
-                            assert(poly_decl->declaration != nullptr);
-                            assert(poly_decl->declaration->operand.flags & OPERAND_CONSTANT);
-                            assert(register_declaration(structure->type->constants_block, poly_decl->declaration));
-                            break;
-                        }
-                        default: {
-                            assert(false);
-                        }
-                    }
+                    assert(register_declaration(structure->type->constants_block, decl));
                 }
 
                 int size = 0;
@@ -974,73 +950,79 @@ void type_mismatch(Location location, Type *got, Type *expected) {
     report_error(location, "Type mismatch. Expected '%s', got '%s'.", type_to_string(expected), type_to_string(got));
 }
 
-bool match_types(Operand *operand, Type *expected_type, bool do_report_error) {
-    assert(operand->type != nullptr);
+bool match_types(Operand operand, Type *expected_type, Operand *out_operand, bool do_report_error) {
+    assert(operand.type != nullptr);
     assert(expected_type != nullptr);
 
-    if (operand->type == expected_type) {
+    *out_operand = operand;
+
+    if (out_operand->type == expected_type) {
         return true;
     }
 
     if (expected_type == type_any) {
-        operand->type = try_concretize_type_without_context(operand->type);
-        if (!operand->type) {
-            assert(operand->type == type_untyped_null);
-            report_error(operand->location, "todo(josh): allow assigning null to `any` to clear the value.");
+        out_operand->type = try_concretize_type_without_context(out_operand->type);
+        if (!out_operand->type) {
+            assert(out_operand->type == type_untyped_null);
+            if (do_report_error) {
+                report_error(out_operand->location, "todo(josh): allow assigning null to `any` to clear the value.");
+            }
             return false;
         }
         return true;
     }
 
     if (is_type_reference(expected_type)) {
-        if ((operand->flags & OPERAND_LVALUE)) {
+        if ((out_operand->flags & OPERAND_LVALUE)) {
             return true;
         }
         Type_Reference *reference = (Type_Reference *)expected_type;
-        return match_types(operand, reference->reference_to, do_report_error);
+        return match_types(operand, reference->reference_to, out_operand, do_report_error);
     }
 
-    if (is_type_reference(operand->type)) {
-        Type_Reference *reference_type = (Type_Reference *)operand->type;
+    if (is_type_reference(out_operand->type)) {
+        Type_Reference *reference_type = (Type_Reference *)out_operand->type;
         if (reference_type->reference_to == expected_type) {
             return true;
         }
     }
 
-    if (operand->type->flags & TF_UNTYPED) {
-        if (is_type_number(operand->type) && is_type_number(expected_type)) {
-            if (is_type_integer(expected_type) && is_type_float(operand->type)) {
-                report_error(operand->location, "Expected an integer type, got a float.");
+    if (out_operand->type->flags & TF_UNTYPED) {
+        if (is_type_number(out_operand->type) && is_type_number(expected_type)) {
+            if (is_type_integer(expected_type) && is_type_float(out_operand->type)) {
+                if (do_report_error) {
+                    report_error(out_operand->location, "Expected an integer type, got a float.");
+                }
                 return false;
             }
-            operand->type = expected_type;
+            out_operand->type = expected_type;
             return true;
         }
 
-        if (is_type_pointer(operand->type) && is_type_pointer(expected_type)) {
-            assert(operand->type == type_untyped_null);
-            operand->type = expected_type;
+        if (is_type_pointer(out_operand->type) && is_type_pointer(expected_type)) {
+            assert(out_operand->type == type_untyped_null);
+            out_operand->type = expected_type;
             return true;
         }
 
-        if (is_type_string(operand->type)) {
+        if (is_type_string(out_operand->type)) {
             if (is_type_string(expected_type)) {
-                operand->type = expected_type;
+                out_operand->type = expected_type;
                 return true;
             }
             if (expected_type == type_cstring) {
-                operand->type = type_cstring;
+                out_operand->type = type_cstring;
                 return true;
             }
         }
     }
 
-    if ((expected_type == type_rawptr && is_type_pointer(operand->type)) || (operand->type == type_rawptr && is_type_pointer(expected_type))) {
+    if ((expected_type == type_rawptr && is_type_pointer(out_operand->type)) || (out_operand->type == type_rawptr && is_type_pointer(expected_type))) {
         return true;
     }
 
     if (do_report_error) {
-        type_mismatch(operand->location, operand->type, expected_type);
+        type_mismatch(out_operand->location, out_operand->type, expected_type);
     }
     return false;
 }
@@ -1553,23 +1535,6 @@ int total_num_polymorphs = 0;
 
 bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations);
 
-void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
-    assert(declaration->parent_block == nullptr);
-    bool inserted_replacement = false;
-    For (decl_idx, block->declarations) {
-        Declaration *decl = block->declarations[decl_idx];
-        if (decl->kind == DECL_POLYMORPHIC && (decl->name == declaration->name)) {
-            Polymorphic_Declaration *poly_decl = (Polymorphic_Declaration *)decl;
-            assert(poly_decl->declaration == nullptr);
-            declaration->parent_block = block;
-            poly_decl->declaration = declaration;
-            inserted_replacement = true;
-            break;
-        }
-    }
-    assert(inserted_replacement);
-}
-
 bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
     switch (value_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
@@ -1578,7 +1543,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
         case EXPR_POLYMORPHIC_VARIABLE: {
             // $name: T
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)value_expr;
-            assert(poly->poly_decl->declaration == nullptr);
+            assert(poly->inserted_declaration == nullptr);
             assert(parameter_operand.type != nullptr);
             if (!(parameter_operand.flags & OPERAND_CONSTANT)) {
                 report_error(parameter_operand.location, "Parameter must be constant for polymorphic variable.");
@@ -1617,7 +1582,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
         case EXPR_POLYMORPHIC_VARIABLE: {
             // name: $T
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)type_expr;
-            assert(poly->poly_decl->declaration == nullptr);
+            assert(poly->inserted_declaration == nullptr);
             Type *concrete_type = try_concretize_type_without_context(parameter_type);
             if (!concrete_type) {
                 assert(parameter_type == type_untyped_null);
@@ -1747,21 +1712,21 @@ bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, 
 }
 
 Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Operand> parameters, Location polymorph_location, Array<int> *polymorphic_constants) {
-    Array<Inserted_Polymorph> polymorphic_declarations;
-    polymorphic_declarations.allocator = g_global_linear_allocator;
-
     // create polymorphic declarations and deduplicate polymorphs
     {
         Array<Ast_Var *> *root_vars_to_polymorph = {};
+        Array<Node_Polymorph> *polymorphs_list = {};
         switch (node_to_polymorph->ast_kind) {
             case AST_PROC: {
                 Ast_Proc *proc = (Ast_Proc *)node_to_polymorph;
                 root_vars_to_polymorph = &proc->header->parameters;
+                polymorphs_list = &proc->polymorphs;
                 break;
             }
             case AST_STRUCT: {
                 Ast_Struct *structure = (Ast_Struct *)node_to_polymorph;
                 root_vars_to_polymorph = &structure->polymorphic_parameters;
+                polymorphs_list = &structure->polymorphs;
                 break;
             }
             default: {
@@ -1774,86 +1739,52 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
             return false;
         }
 
-        // go through the parameters and create polymorphic declarations
-        For (idx, *root_vars_to_polymorph) {
-            Ast_Var *param_decl = (*root_vars_to_polymorph)[idx];
-            Operand parameter_operand = parameters[idx];
-            if (!try_create_polymorph_declarations(param_decl, parameter_operand, &polymorphic_declarations)) {
-                report_info(polymorph_location, "Error during polymorph triggered here.");
-                return nullptr;
-            }
-            if (param_decl->is_polymorphic_value) {
-                polymorphic_constants->append(idx);
-            }
-        }
-
-        // check the declarations
-        For (idx, polymorphic_declarations) {
-            Inserted_Polymorph inserted_polymorph = polymorphic_declarations[idx];
-            if (!check_declaration(inserted_polymorph.declaration, inserted_polymorph.declaration->location)) {
-                report_info(polymorph_location, "Error during polymorph triggered here.");
-                return nullptr;
-            }
-        }
-
         // deduplicate
-        switch (node_to_polymorph->ast_kind) {
-            case AST_PROC: {
-                Ast_Proc *proc_to_polymorph = (Ast_Proc *)node_to_polymorph;
-                assert(parameters.count == proc_to_polymorph->header->parameters.count);
-                For (idx, proc_to_polymorph->polymorphs) {
-                    Node_Polymorph polymorph = proc_to_polymorph->polymorphs[idx];
-                    bool all_matched = true;
-                    assert(polymorph.polymorph_values.count == polymorphic_declarations.count);
-                    For (value_idx, polymorph.polymorph_values) {
-                        Operand poly_value  = polymorph.polymorph_values[value_idx];
-                        Operand param_value = polymorphic_declarations[value_idx].declaration->operand;
-                        assert(param_value.type != nullptr);
-                        Operand result;
-                        bool ok = binary_eval(poly_value, param_value, TK_EQUAL_TO, param_value.location, &result);
-                        assert(ok);
-                        assert(result.type == type_bool);
-                        assert(result.flags & OPERAND_CONSTANT);
-                        if (result.bool_value == false) {
-                            all_matched = false;
-                            break;
-                        }
-                    }
-
-                    if (all_matched) {
-                        return (Ast_Proc *)polymorph.polymorphed_node;
+        For (idx, *polymorphs_list) {
+            Node_Polymorph polymorph = (*polymorphs_list)[idx];
+            bool all_matched = true;
+            assert(polymorph.polymorph_values.count == parameters.count);
+            For (value_idx, polymorph.polymorph_values) {
+                Node_Polymorph_Parameter poly_parameter_value = polymorph.polymorph_values[value_idx];
+                Operand param_matched;
+                assert(poly_parameter_value.type);
+                if (!match_types(parameters[value_idx], poly_parameter_value.type, &param_matched, false)) {
+                    all_matched = false;
+                    break;
+                }
+                if (poly_parameter_value.is_polymorphic_value) {
+                    polymorphic_constants->append(value_idx);
+                    assert(param_matched.flags & OPERAND_CONSTANT);
+                    assert(param_matched.type != nullptr);
+                    Operand result;
+                    bool ok = binary_eval(poly_parameter_value.value, param_matched, TK_EQUAL_TO, param_matched.location, &result);
+                    assert(ok);
+                    assert(result.type == type_bool);
+                    assert(result.flags & OPERAND_CONSTANT);
+                    if (result.bool_value == false) {
+                        all_matched = false;
+                        break;
                     }
                 }
-                break;
-            }
-            case AST_STRUCT: {
-                Ast_Struct *structure = (Ast_Struct *)node_to_polymorph;
-                For (idx, structure->polymorphs) {
-                    Node_Polymorph polymorph = structure->polymorphs[idx];
-                    bool all_matched = true;
-                    For (value_idx, polymorph.polymorph_values) {
-                        Operand poly_value  = polymorph.polymorph_values[value_idx];
-                        Operand param_value = parameters[value_idx];
-                        Operand result;
-                        bool ok = binary_eval(poly_value, param_value, TK_EQUAL_TO, param_value.location, &result);
-                        assert(ok);
-                        assert(result.type == type_bool);
-                        assert(result.flags & OPERAND_CONSTANT);
-                        if (result.bool_value == false) {
-                            all_matched = false;
-                            break;
-                        }
-                    }
-
-                    if (all_matched) {
-                        return (Ast_Struct *)polymorph.polymorphed_node;
+                else {
+                    if (node_to_polymorph->ast_kind == AST_STRUCT) {
+                        assert(poly_parameter_value.is_polymorphic_value);
                     }
                 }
-                break;
+                if (poly_parameter_value.is_polymorphic_type) {
+                    assert(param_matched.type != nullptr);
+                    if (poly_parameter_value.type != param_matched.type) {
+                        all_matched = false;
+                        break;
+                    }
+                }
             }
-            default: {
-                assert(false);
+
+            if (all_matched) {
+                return polymorph.polymorphed_node;
             }
+
+            polymorphic_constants->clear();
         }
     }
 
@@ -1890,15 +1821,56 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     }
 
     assert(block_to_insert_declarations_into != nullptr);
+    assert(polymorph_vars != nullptr);
+    assert(parameters.count == polymorph_vars->count);
 
-    Array<Operand> polymorph_values;
-    polymorph_values.allocator = g_global_linear_allocator;
+    // go through the parameters and create polymorphic declarations
+    Array<Inserted_Polymorph> polymorphic_declarations;
+    polymorphic_declarations.allocator = g_global_linear_allocator;
+    For (idx, *polymorph_vars) {
+        Ast_Var *param_decl = (*polymorph_vars)[idx];
+        Operand parameter_operand = parameters[idx];
+        if (!try_create_polymorph_declarations(param_decl, parameter_operand, &polymorphic_declarations)) {
+            report_info(polymorph_location, "Error during polymorph triggered here.");
+            return nullptr;
+        }
+        if (param_decl->is_polymorphic_value) {
+            polymorphic_constants->append(idx);
+        }
+    }
+
+    // check the declarations
     For (idx, polymorphic_declarations) {
         Inserted_Polymorph inserted_polymorph = polymorphic_declarations[idx];
-        insert_polymorph_replacement(block_to_insert_declarations_into, inserted_polymorph.declaration);
+        if (!check_declaration(inserted_polymorph.declaration, inserted_polymorph.declaration->location)) {
+            report_info(polymorph_location, "Error during polymorph triggered here.");
+            return nullptr;
+        }
+        inserted_polymorph.declaration->parent_block = block_to_insert_declarations_into;
+        inserted_polymorph.poly_var->inserted_declaration = inserted_polymorph.declaration;
+        assert(register_declaration(block_to_insert_declarations_into, inserted_polymorph.poly_var->inserted_declaration));
         assert(inserted_polymorph.declaration->check_state == CS_CHECKED);
         assert(inserted_polymorph.declaration->operand.type != nullptr);
-        polymorph_values.append(inserted_polymorph.declaration->operand);
+    }
+
+    Array<Node_Polymorph_Parameter> polymorph_values;
+    polymorph_values.allocator = g_global_linear_allocator;
+    For (idx, *polymorph_vars) {
+        Ast_Var *var = (*polymorph_vars)[idx];
+        Operand param = parameters[idx];
+        Node_Polymorph_Parameter poly_value = {};
+        poly_value.type = param.type;
+
+        if (var->is_polymorphic_value) {
+            assert(param.flags & OPERAND_CONSTANT);
+            poly_value.is_polymorphic_value = true;
+            poly_value.value = param;
+        }
+        if (var->is_polymorphic_type) {
+            poly_value.is_polymorphic_type = true;
+        }
+
+        polymorph_values.append(poly_value);
     }
 
     for (int i = polymorphic_constants->count-1; i >= 0; i--) {
@@ -2142,7 +2114,7 @@ Ast_Proc *find_operator_overload(Ast_Struct *structure, Array<Ast_Expr *> exprs,
             assert(proc->header->parameters[expr_idx]->type != nullptr);
             // speculatively try to match the types
             Operand operand_copy_for_types_match = expr->operand;
-            if (!match_types(&operand_copy_for_types_match, proc->header->parameters[expr_idx]->type, false)) {
+            if (!match_types(expr->operand, proc->header->parameters[expr_idx]->type, &operand_copy_for_types_match, false)) {
                 all_matched = false;
                 break;
             }
@@ -2151,7 +2123,7 @@ Ast_Proc *find_operator_overload(Ast_Struct *structure, Array<Ast_Expr *> exprs,
             // actually match the types
             For (expr_idx, exprs) {
                 Ast_Expr *expr = exprs[expr_idx];
-                assert(match_types(&expr->operand, proc->header->parameters[expr_idx]->type, false));
+                assert(match_types(expr->operand, proc->header->parameters[expr_idx]->type, &expr->operand, false));
             }
             return proc;
         }
@@ -2409,11 +2381,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
 
                 // speculatively try to match the types to see if we should go into the
                 // normal binop path or the operator overload path
-                Operand lhs_operand_copy = *lhs_operand;
-                Operand rhs_operand_copy = *rhs_operand;
-                bool types_matched = match_types(&lhs_operand_copy, most_concrete, false);
-                types_matched = types_matched && match_types(&rhs_operand_copy, most_concrete, false);
-                if (types_matched && operator_is_defined(lhs_operand_copy.type, rhs_operand_copy.type, binary->op)) {
+                Operand lhs_operand_speculative = {};
+                Operand rhs_operand_speculative = {};
+                bool types_matched = match_types(*lhs_operand, most_concrete, &lhs_operand_speculative, false);
+                types_matched = types_matched && match_types(*rhs_operand, most_concrete, &rhs_operand_speculative, false);
+                if (types_matched && operator_is_defined(lhs_operand_speculative.type, rhs_operand_speculative.type, binary->op)) {
                     Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
                     if (!lhs_operand) {
                         return nullptr;
@@ -2423,8 +2395,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                         return nullptr;
                     }
 
-                    assert(match_types(lhs_operand, most_concrete));
-                    assert(match_types(rhs_operand, most_concrete));
+                    assert(match_types(*lhs_operand, most_concrete, lhs_operand));
+                    assert(match_types(*rhs_operand, most_concrete, rhs_operand));
                     bool ok = binary_eval(*lhs_operand, *rhs_operand, binary->op, binary->location, &result_operand);
                     if (!ok) {
                         return nullptr;
@@ -2978,9 +2950,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             }
             case EXPR_POLYMORPHIC_VARIABLE: {
                 Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)expr;
-                assert(poly->poly_decl != nullptr);
-                if (poly->poly_decl->declaration) {
-                    if (!check_declaration(poly->poly_decl->declaration, poly->location, &result_operand)) {
+                if (poly->inserted_declaration) {
+                    if (!check_declaration(poly->inserted_declaration, poly->location, &result_operand)) {
                         return nullptr;
                     }
                 }
@@ -3020,7 +2991,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     }
 
     if (expected_type) {
-        if (!match_types(&expr->operand, expected_type)) {
+        if (!match_types(expr->operand, expected_type, &expr->operand)) {
             return nullptr;
         }
         assert(!(expr->operand.type->flags & TF_UNTYPED));
@@ -3217,7 +3188,7 @@ bool typecheck_node(Ast_Node *node) {
             }
 
             assert(rhs_operand->flags & OPERAND_RVALUE);
-            if (!match_types(rhs_operand, expected_lhs_type)) {
+            if (!match_types(*rhs_operand, expected_lhs_type, rhs_operand)) {
                 return false;
             }
             break;
@@ -3360,7 +3331,7 @@ bool typecheck_node(Ast_Node *node) {
                 if (!return_operand) {
                     return false;
                 }
-                if (!match_types(return_operand, ast_return->matching_procedure->type->return_type, false)) {
+                if (!match_types(*return_operand, ast_return->matching_procedure->type->return_type, return_operand, false)) {
                     report_error(ast_return->expr->location, "Return expression didn't match procedure return type. Expected '%s', got '%s'.", type_to_string(ast_return->matching_procedure->type->return_type), type_to_string(return_operand->type));
                     return false;
                 }
