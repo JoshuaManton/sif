@@ -98,7 +98,16 @@ proc print_arg(arg: any) {
         print_bool(cast(^bool, arg.data)^);
     }
     else if (ti.kind == Type_Info_Kind.STRING) {
-        print_string(cast(^string, arg.data)^);
+        var dti = cast(^Type_Info_String, ti);
+        if (dti.is_cstring) {
+            var str = cast(^cstring, arg.data)^;
+            // todo(josh): this strlen is kind of silly. could just have a print_cstring() routine
+            print_string(string{cast(^u8, str), cast(int, strlen(cast(^u8, str)))});
+        }
+        else {
+            var str = cast(^string, arg.data)^;
+            print_string(cast(^string, arg.data)^);
+        }
     }
     else if (ti.kind == Type_Info_Kind.ENUM) {
         var dti = cast(^Type_Info_Enum, ti);
@@ -311,8 +320,15 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             }
         }
         else if (ti.kind == Type_Info_Kind.STRING) {
-            var str = cast(^string, arg.data)^;
-            arg_length = snprintf(buf_ptr, buf_count, "%.*s", cast(i32, str.count), str.data);
+            var dti = cast(^Type_Info_String, ti);
+            if (dti.is_cstring) {
+                var str = cast(^cstring, arg.data)^;
+                arg_length = snprintf(buf_ptr, buf_count, "%s", str);
+            }
+            else {
+                var str = cast(^string, arg.data)^;
+                arg_length = snprintf(buf_ptr, buf_count, "%.*s", cast(i32, str.count), str.data);
+            }
         }
         else if (ti.kind == Type_Info_Kind.POINTER) {
             arg_length = snprintf(buf_ptr, buf_count, "0x%p", arg.data);

@@ -17,6 +17,9 @@ struct Baz {
 }
 
 proc main() : i32 {
+    var c: cstring = "barzle";
+    print("% %\n", "foozle", c);
+
     var buf: [64]u8;
     var buf_slice: []u8;
     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % % %", cast(i8, 0), cast(i16, 1), cast(i32, 2), cast(i64, 3))));
