@@ -1094,20 +1094,32 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     return new_type;
 }
 
-Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of) {
+Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of, bool is_c_varargs) {
     assert(!is_type_untyped(varargs_of));
-    if (varargs_of->varargs_of_this_type) {
-        return varargs_of->varargs_of_this_type;
+    if (is_c_varargs) {
+        if (varargs_of->c_varargs_of_this_type) {
+            return varargs_of->c_varargs_of_this_type;
+        }
+    }
+    else {
+        if (varargs_of->varargs_of_this_type) {
+            return varargs_of->varargs_of_this_type;
+        }
     }
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(varargs_of);
     Type_Slice *slice_type = get_or_create_type_slice_of(varargs_of);
-    Type_Varargs *new_type = NEW_TYPE(Type_Varargs(varargs_of, pointer_to_element_type, slice_type));
+    Type_Varargs *new_type = NEW_TYPE(Type_Varargs(varargs_of, pointer_to_element_type, slice_type, is_c_varargs));
     new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
     assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
     assert(try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {}));
-    varargs_of->varargs_of_this_type = new_type;
+    if (is_c_varargs) {
+        varargs_of->c_varargs_of_this_type = new_type;
+    }
+    else {
+        varargs_of->varargs_of_this_type = new_type;
+    }
     return new_type;
 }
 
@@ -1280,11 +1292,12 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             result_operand.type = type_bool;
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value    == rhs.int_value;
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value  == rhs.float_value;
-                else if (is_type_bool(lhs.type)    && is_type_bool(rhs.type))     result_operand.bool_value = lhs.bool_value   == rhs.bool_value;
-                else if (is_type_typeid(lhs.type)  && is_type_typeid(rhs.type))   result_operand.bool_value = lhs.type_value   == rhs.type_value;
-                else if (is_type_string(lhs.type)  && is_type_string(rhs.type))   result_operand.bool_value = (lhs.escaped_string_length == rhs.escaped_string_length) && (strcmp(lhs.escaped_string_value, rhs.escaped_string_value) == 0);
+                     if (is_type_integer(lhs.type)   && is_type_integer(rhs.type))   result_operand.bool_value = lhs.int_value    == rhs.int_value;
+                else if (is_type_float(lhs.type)     && is_type_float(rhs.type))     result_operand.bool_value = lhs.float_value  == rhs.float_value;
+                else if (is_type_bool(lhs.type)      && is_type_bool(rhs.type))      result_operand.bool_value = lhs.bool_value   == rhs.bool_value;
+                else if (is_type_typeid(lhs.type)    && is_type_typeid(rhs.type))    result_operand.bool_value = lhs.type_value   == rhs.type_value;
+                else if (is_type_procedure(lhs.type) && is_type_procedure(rhs.type)) result_operand.bool_value = lhs.proc_value   == rhs.proc_value;
+                else if (is_type_string(lhs.type)    && is_type_string(rhs.type))    result_operand.bool_value = (lhs.escaped_string_length == rhs.escaped_string_length) && (strcmp(lhs.escaped_string_value, rhs.escaped_string_value) == 0);
                 else {
                     report_error(location, "Operator == is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1296,11 +1309,12 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             result_operand.type = type_bool;
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value   != rhs.int_value;
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value != rhs.float_value;
-                else if (is_type_bool(lhs.type)    && is_type_bool(rhs.type))     result_operand.bool_value = lhs.bool_value  != rhs.bool_value;
-                else if (is_type_typeid(lhs.type)  && is_type_typeid(rhs.type))   result_operand.bool_value = lhs.type_value  != rhs.type_value;
-                else if (is_type_string(lhs.type)  && is_type_string(rhs.type))   result_operand.bool_value = (lhs.escaped_string_length != rhs.escaped_string_length) || (strcmp(lhs.escaped_string_value, rhs.escaped_string_value) != 0);
+                     if (is_type_integer(lhs.type)   && is_type_integer(rhs.type))   result_operand.bool_value = lhs.int_value   != rhs.int_value;
+                else if (is_type_float(lhs.type)     && is_type_float(rhs.type))     result_operand.bool_value = lhs.float_value != rhs.float_value;
+                else if (is_type_bool(lhs.type)      && is_type_bool(rhs.type))      result_operand.bool_value = lhs.bool_value  != rhs.bool_value;
+                else if (is_type_typeid(lhs.type)    && is_type_typeid(rhs.type))    result_operand.bool_value = lhs.type_value  != rhs.type_value;
+                else if (is_type_procedure(lhs.type) && is_type_procedure(rhs.type)) result_operand.bool_value = lhs.proc_value  != rhs.proc_value;
+                else if (is_type_string(lhs.type)    && is_type_string(rhs.type))    result_operand.bool_value = (lhs.escaped_string_length != rhs.escaped_string_length) || (strcmp(lhs.escaped_string_value, rhs.escaped_string_value) != 0);
                 else {
                     report_error(location, "Operator != is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1684,7 +1698,6 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
                 Type *proc_param_type = parameter_type_proc->parameter_types[idx];
                 Ast_Var *proc_param = proc_type->header->parameters[idx];
                 if (!try_create_polymorph_type_declarations(proc_param->type_expr, proc_param_type, parameter_location, out_polymorphic_declarations)) {
-                    assert(false);
                     return false;
                 }
             }
@@ -2156,15 +2169,6 @@ bool try_resolve_operator_overload(Ast_Struct *structure, Ast_Expr *root_expr, A
         }
     }
     return true;
-}
-
-Ast_Expr *unparen_expr(Ast_Expr *expr) {
-    assert(expr != nullptr);
-    while (expr->expr_kind == EXPR_PAREN) {
-        Expr_Paren *paren = (Expr_Paren *)expr;
-        expr = paren->nested;
-    }
-    return expr;
 }
 
 // return value is false if there was a compile error, true otherwise.
@@ -2658,9 +2662,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     }
                     assert(is_type_typeid(type_operand->type));
                     assert(type_operand->type_value != nullptr);
-                    if (expected_type) {
-                        assert(type_operand->type_value == expected_type);
-                    }
                     target_type = type_operand->type_value;
                 }
                 assert(target_type != nullptr);
@@ -2899,7 +2900,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     assert((rhs_operand->flags & OPERAND_CONSTANT) && (rhs_operand->flags & OPERAND_TYPE));
                     result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
                     result_operand.type = type_typeid;
-                    result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value);
+                    result_operand.type_value = get_or_create_type_varargs_of(rhs_operand->type_value, spread->is_c_varargs);
                 }
                 else {
                     Type *elem_type = nullptr;
@@ -2918,7 +2919,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     }
                     assert(elem_type != nullptr);
                     result_operand.flags = rhs_operand->flags;
-                    result_operand.type = get_or_create_type_varargs_of(elem_type);
+                    result_operand.type = get_or_create_type_varargs_of(elem_type, false);
                 }
                 break;
             }
@@ -2991,6 +2992,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
     }
 
     if (expected_type) {
+        if (expr->operand.flags & OPERAND_NO_VALUE) {
+            report_error(expr->location, "Expected '%s', got no value.", type_to_string(expected_type));
+            return nullptr;
+        }
         if (!match_types(expr->operand, expected_type, &expr->operand)) {
             return nullptr;
         }

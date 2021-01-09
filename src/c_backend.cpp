@@ -12,7 +12,6 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
         return;
     }
 
-    // todo(josh): handle procedure types
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *type_primitive = (Type_Primitive *)type;
@@ -68,7 +67,16 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
             sb->print(" ");
             break;
         }
-        case TYPE_VARARGS: // note(josh): fallthrough
+        case TYPE_VARARGS: {
+            Type_Varargs *varargs = (Type_Varargs *)type;
+            if (varargs->is_c_varargs) {
+                sb->print("...");
+            }
+            else {
+                sb->print("Slice ");
+            }
+            break;
+        }
         case TYPE_SLICE: {
             sb->print("Slice ");
             break;
@@ -90,7 +98,6 @@ void c_print_line_directive(Chunked_String_Builder *sb, Location location) {
 }
 
 void c_print_type_postfix(Chunked_String_Builder *sb, Type *type) {
-    // todo(josh): handle procedure types
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             break;
@@ -126,7 +133,9 @@ void c_print_type_postfix(Chunked_String_Builder *sb, Type *type) {
             sb->print(")");
             break;
         }
-        case TYPE_VARARGS: // note(josh): fallthrough
+        case TYPE_VARARGS: {
+            break;
+        }
         case TYPE_SLICE: {
             break;
         }
@@ -156,7 +165,6 @@ void c_print_type_plain_prefix(Chunked_String_Builder *sb, Type *type) {
         return;
     }
 
-    // todo(josh): handle procedure types
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             Type_Primitive *type_primitive = (Type_Primitive *)type;
@@ -226,7 +234,6 @@ void c_print_type_plain_prefix(Chunked_String_Builder *sb, Type *type) {
 }
 
 void c_print_type_plain_postfix(Chunked_String_Builder *sb, Type *type) {
-    // todo(josh): handle procedure types
     switch (type->kind) {
         case TYPE_PRIMITIVE: {
             break;
@@ -290,7 +297,14 @@ void c_print_var(Chunked_String_Builder *sb, Ast_Var *var, int indent_level) {
         rhs = c_print_expr(sb, var->expr, indent_level, var->type);
     }
     print_indents(sb, indent_level);
-    c_print_type(sb, var->type, var->declaration->name);
+    const char *name_to_print = var->declaration->name;
+    if (is_type_varargs(var->type)) {
+        Type_Varargs *varargs = (Type_Varargs *)var->type;
+        if (varargs->is_c_varargs) {
+            name_to_print = "";
+        }
+    }
+    c_print_type(sb, var->type, name_to_print);
     if (rhs) {
         sb->printf(" = %s", rhs);
     }
@@ -338,6 +352,7 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
             assert(idx == proc_type->parameter_types.count-1);
             int varargs_count = call_parameter.exprs.count;
             if (varargs_count == 1 && (unparen_expr(call_parameter.exprs[0])->expr_kind == EXPR_SPREAD)) {
+                assert(!varargs->is_c_varargs);
                 Expr_Spread *spread = (Expr_Spread *)unparen_expr(call_parameter.exprs[0]);
                 char *spread_name = nullptr;
                 if (is_type_array(spread->rhs->operand.type)) {
@@ -356,26 +371,35 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
                 out_temporaries->append(spread_name);
             }
             else {
-                char *t = c_temporary();
-                print_indents(sb, indent_level);
-                c_print_type(sb, varargs->varargs_of, t);
-                sb->printf("[%d];\n", max(1, varargs_count));
-                For (idx, call_parameter.exprs) {
-                    Ast_Expr *param = call_parameter.exprs[idx];
-                    char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
-                    c_print_line_directive(sb, param->location);
-                    print_indents(sb, indent_level);
-                    sb->printf("%s[%d] = %s;\n", t, idx, param_name);
+                if (varargs->is_c_varargs) {
+                    For (idx, call_parameter.exprs) {
+                        Ast_Expr *param = call_parameter.exprs[idx];
+                        char *param_name = c_print_expr(sb, param, indent_level);
+                        out_temporaries->append(param_name);
+                    }
                 }
-                char *slice = c_temporary();
-                print_indents(sb, indent_level);
-                c_print_type(sb, get_or_create_type_slice_of(varargs->varargs_of), slice);
-                sb->print(";\n");
-                print_indents(sb, indent_level);
-                sb->printf("%s.data = %s;\n", slice, t);
-                print_indents(sb, indent_level);
-                sb->printf("%s.count = %d;\n", slice, varargs_count);
-                out_temporaries->append(slice);
+                else {
+                    char *t = c_temporary();
+                    print_indents(sb, indent_level);
+                    c_print_type(sb, varargs->varargs_of, t);
+                    sb->printf("[%d];\n", max(1, varargs_count));
+                    For (idx, call_parameter.exprs) {
+                        Ast_Expr *param = call_parameter.exprs[idx];
+                        char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
+                        c_print_line_directive(sb, param->location);
+                        print_indents(sb, indent_level);
+                        sb->printf("%s[%d] = %s;\n", t, idx, param_name);
+                    }
+                    char *slice = c_temporary();
+                    print_indents(sb, indent_level);
+                    c_print_type(sb, get_or_create_type_slice_of(varargs->varargs_of), slice);
+                    sb->print(";\n");
+                    print_indents(sb, indent_level);
+                    sb->printf("%s.data = %s;\n", slice, t);
+                    print_indents(sb, indent_level);
+                    sb->printf("%s.count = %d;\n", slice, varargs_count);
+                    out_temporaries->append(slice);
+                }
             }
             return;
         }

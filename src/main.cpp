@@ -35,6 +35,11 @@ SMALL
 -figure out if I should allow shadowing (maybe with a keyword?)
 -do entrypoint returning i32 implicitly in backend
 -procedure literal expression handling
+-explicitly disallow varargs types in non-procedure-header contexts
+-require an arg before #c_varargs
+-require #c_varargs to be ..any?
+-disallow #c_varargs in non-foreign procedure headers
+- cast untyped string to cstring
 
 MEDIUM
 -runtime bounds checks

@@ -1209,6 +1209,14 @@ bool is_postfix_op(Token_Kind kind) {
     return false;
 }
 
+Ast_Expr *unparen_expr(Ast_Expr *expr) {
+    assert(expr != nullptr);
+    while (expr->expr_kind == EXPR_PAREN) {
+        Expr_Paren *paren = (Expr_Paren *)expr;
+        expr = paren->nested;
+    }
+    return expr;
+}
 
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Expr *parse_or_expr(Lexer *lexer);
@@ -1569,6 +1577,21 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return SIF_NEW_CLONE(Expr_Paren(nested, token.location));
         }
+        case TK_DIRECTIVE_C_VARARGS: {
+            Token directive_token;
+            eat_next_token(lexer, &directive_token);
+            Ast_Expr *type = parse_expr(lexer);
+            if (!type) {
+                return nullptr;
+            }
+            if (unparen_expr(type)->expr_kind != EXPR_SPREAD) {
+                report_error(directive_token.location, "#c_varargs can only be used on a '..type' expression.");
+                return nullptr;
+            }
+            Expr_Spread *spread = (Expr_Spread *)type;
+            spread->is_c_varargs = true;
+            return spread;
+        }
         case TK_DIRECTIVE_PARTIAL: {
             Token partial_token;
             eat_next_token(lexer, &partial_token);
@@ -1576,8 +1599,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (expr == nullptr) {
                 return nullptr;
             }
-            // todo(josh): unparen
-            if (expr->expr_kind != EXPR_COMPOUND_LITERAL) {
+            if (unparen_expr(expr)->expr_kind != EXPR_COMPOUND_LITERAL) {
                 report_error(partial_token.location, "#partial can only be used on compound literal expressions.");
                 return nullptr;
             }

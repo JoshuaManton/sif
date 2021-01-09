@@ -18,6 +18,8 @@ proc acos        (x: f64)                    : f64         #foreign;
 proc sqrt        (x: f64)                    : f64         #foreign;
 proc fabsf       (a: float)                  : float       #foreign;
 
+proc snprintf(buffer: ^u8, buffer_size: u64, fmt: cstring, args: #c_varargs ..any) : i32 #foreign;
+
 
 
 proc is_power_of_two(n: int) : bool {
@@ -245,6 +247,222 @@ proc printa(args: ..any) {
         print_arg(arg);
     }
     print_char('\n');
+}
+
+
+
+proc bprint_arg(buf: []u8, arg: any) : int {
+    var arg_length: i32;
+    var buf_ptr = &buf[0];
+    var buf_count = cast(u64, buf.count);
+    if (transmute(u64, arg.type) == 0) {
+        arg_length = snprintf(buf_ptr, buf_count, "<null>");
+    }
+    else {
+        var ti = get_type_info(arg.type);
+        if (ti.kind == Type_Info_Kind.INTEGER) {
+            var dti = cast(^Type_Info_Integer, ti);
+            if (dti.is_signed) {
+                if (ti.size == 1) {
+                    arg_length= snprintf(buf_ptr, buf_count, "%i", cast(^i8, arg.data)^);
+                }
+                else if (ti.size == 2) {
+                    arg_length = snprintf(buf_ptr, buf_count, "%hi", cast(^i16, arg.data)^);
+                }
+                else if (ti.size == 4) {
+                    arg_length = snprintf(buf_ptr, buf_count, "%d", cast(^i32, arg.data)^);
+                }
+                else {
+                    assert(ti.size == 8);
+                    arg_length = snprintf(buf_ptr, buf_count, "%lld", cast(^i64, arg.data)^);
+                }
+            }
+            else {
+                if (ti.size == 1) {
+                    arg_length = snprintf(buf_ptr, buf_count, "%u", cast(^u8, arg.data)^);
+                }
+                else if (ti.size == 2) {
+                    arg_length = snprintf(buf_ptr, buf_count, "%hu", cast(^u16, arg.data)^);
+                }
+                else if (ti.size == 4) {
+                    arg_length = snprintf(buf_ptr, buf_count, "%u", cast(^u32, arg.data)^);
+                }
+                else {
+                    assert(ti.size == 8);
+                    arg_length = snprintf(buf_ptr, buf_count, "%llu", cast(^u64, arg.data)^);
+                }
+            }
+        }
+        else if (ti.kind == Type_Info_Kind.FLOAT) {
+            if (ti.size == 4) {
+                arg_length = snprintf(buf_ptr, buf_count, "%f", cast(^f32, arg.data)^);
+            }
+            else {
+                assert(ti.size == 8);
+                arg_length = snprintf(buf_ptr, buf_count, "%f", cast(^f64, arg.data)^);
+            }
+        }
+        else if (ti.kind == Type_Info_Kind.BOOL) {
+            if (cast(^bool, arg.data)^) {
+                arg_length = snprintf(buf_ptr, buf_count, "true");
+            }
+            else {
+                arg_length = snprintf(buf_ptr, buf_count, "false");
+            }
+        }
+        else if (ti.kind == Type_Info_Kind.STRING) {
+            var str = cast(^string, arg.data)^;
+            arg_length = snprintf(buf_ptr, buf_count, "%.*s", cast(i32, str.count), str.data);
+        }
+        else if (ti.kind == Type_Info_Kind.POINTER) {
+            arg_length = snprintf(buf_ptr, buf_count, "0x%p", arg.data);
+        }
+        else if (ti.kind == Type_Info_Kind.REFERENCE) {
+            arg_length = snprintf(buf_ptr, buf_count, "0x%p", arg.data);
+        }
+        else if (ti.kind == Type_Info_Kind.TYPEID) {
+            var ti = get_type_info(cast(^typeid, arg.data)^);
+            arg_length = snprintf(buf_ptr, buf_count, "%.*s", cast(i32, ti.printable_name.count), ti.printable_name.data);
+        }
+        else if (ti.kind == Type_Info_Kind.ENUM) {
+            var dti = cast(^Type_Info_Enum, ti);
+            var enum_value = cast(^int, arg.data)^;
+            var found_field: string;
+            for (var i = 0; i < dti.fields.count; i += 1) {
+                var field = dti.fields[i];
+                if (field.value == enum_value) {
+                    found_field = field.name;
+                    break;
+                }
+            }
+            if (found_field.data != null) {
+                arg_length = snprintf(buf_ptr, buf_count, "%.*s.%.*s", cast(i32, dti.base.printable_name.count), dti.base.printable_name.data, cast(i32, found_field.count), found_field.data);
+            }
+            else {
+                arg_length = snprintf(buf_ptr, buf_count, "%.*s.<unknown enum value %lld>", cast(i32, dti.base.printable_name.count), dti.base.printable_name.data, enum_value);
+            }
+        }
+        else if (ti.kind == Type_Info_Kind.ARRAY) {
+            var dti = cast(^Type_Info_Array, ti);
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "["));
+            for (var i = 0; i < dti.count; i += 1) {
+                if (i != 0) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                }
+                var elem = ptr_offset(cast(^u8, arg.data), dti.array_of.size * i);
+                var a: any;
+                a.data = elem;
+                a.type = dti.array_of.id;
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", a));
+            }
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
+        }
+        else if (ti.kind == Type_Info_Kind.SLICE) {
+            var dti = cast(^Type_Info_Slice, ti);
+            var slice = transmute(^Raw_Slice, arg.data)^;
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "["));
+            for (var i = 0; i < slice.count; i += 1) {
+                if (i != 0) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                }
+                var elem = ptr_offset(cast(^u8, slice.data), dti.slice_of.size * i);
+                var a: any;
+                a.data = elem;
+                a.type = dti.slice_of.id;
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", a));
+            }
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
+        }
+        else if (ti.kind == Type_Info_Kind.STRUCT) {
+            var dti = cast(^Type_Info_Struct, ti);
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%{", dti.base.printable_name));
+            for (var i = 0; i < dti.fields.count; i += 1) {
+                var field = dti.fields[i];
+                if (i != 0) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                }
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "% = ", field.name));
+                var elem = ptr_offset(cast(^u8, arg.data), field.offset);
+                if (field.type.id == string) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                }
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", any{elem, field.type.id}));
+                if (field.type.id == string) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                }
+            }
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "}"));
+        }
+        else if (ti.kind == Type_Info_Kind.UNION) {
+            var dti = cast(^Type_Info_Union, ti);
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "union{"));
+            for (var i = 0; i < dti.fields.count; i += 1) {
+                if (i != 0) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                }
+                var field = dti.fields[i];
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), field.type.printable_name));
+            }
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "}"));
+        }
+        else if (ti.kind == Type_Info_Kind.PROCEDURE) {
+            var dti = cast(^Type_Info_Procedure, ti);
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "proc("));
+            for (var i = 0; i < dti.parameter_types.count; i += 1) {
+                var param_type = dti.parameter_types[i];
+                if (i != 0) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                }
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", param_type.id));
+            }
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ")"));
+            if (dti.return_type != null) {
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), " : %", dti.return_type.id));
+            }
+        }
+        else {
+            print("<unhandled type %>\n", arg.type);
+        }
+    }
+    return cast(int, arg_length);
+}
+
+proc bprint(buf: []u8, fmt: string, args: ..any) : int {
+    var cursor: int;
+    var arg_index = 0;
+    for (var i = 0; i < fmt.count; i += 1) {
+        var c = fmt[i];
+        if (c == '%') {
+            if ((i+1) < fmt.count) {
+                if (fmt[i+1] == '%') {
+                    print_char('%');
+                    i += 1;
+                    continue;
+                }
+            }
+
+            var arg = args[arg_index];
+            cursor += bprint_arg(slice_ptr(&buf[min(cursor, buf.count-1)], cast(int, max(0, buf.count - cursor + 1))), arg);
+            arg_index += 1;
+        }
+        else {
+            buf[cursor] = c;
+            cursor += 1;
+        }
+    }
+    return cursor;
+}
+
+proc bprinta(buf: []u8, args: ..any) : int {
+    var cursor = 0;
+    for (var i = 0; i < args.count; i += 1) {
+        if (i != 0) {
+            cursor += bprint(slice_ptr(ptr_offset(buf.data, cursor), max(0, buf.count - cursor)), " ");
+        }
+        var arg = args[i];
+        cursor += bprint_arg(slice_ptr(ptr_offset(buf.data, cursor), max(0, buf.count - cursor)), arg);
+    }
+    return cursor;
 }
 
 

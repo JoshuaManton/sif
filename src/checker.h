@@ -71,6 +71,7 @@ struct Type {
     Type_Pointer *pointer_to_this_type = {};
     Type_Slice *slice_of_this_type = {};
     Type_Varargs *varargs_of_this_type = {};
+    Type_Varargs *c_varargs_of_this_type = {};
     Type_Reference *reference_to_this_type = {};
     Type(Type_Kind kind)
     : kind(kind)
@@ -158,11 +159,13 @@ struct Type_Varargs : public Type {
     Type *varargs_of = {};
     Type_Pointer *data_pointer_type = {};
     Type_Slice *slice_type = {};
-    Type_Varargs(Type *varargs_of, Type_Pointer *data_pointer_type, Type_Slice *slice_type)
+    bool is_c_varargs = {};
+    Type_Varargs(Type *varargs_of, Type_Pointer *data_pointer_type, Type_Slice *slice_type, bool is_c_varargs)
     : Type(TYPE_VARARGS)
     , varargs_of(varargs_of)
     , slice_type(slice_type)
     , data_pointer_type(data_pointer_type)
+    , is_c_varargs(is_c_varargs)
     {}
 };
 
@@ -233,6 +236,6 @@ Type_Pointer *get_or_create_type_pointer_to(Type *type);
 Type_Reference *get_or_create_type_reference_to(Type *type);
 Type_Array *get_or_create_type_array_of(Type *type, int count);
 Type_Slice *get_or_create_type_slice_of(Type *type);
-Type_Varargs *get_or_create_type_varargs_of(Type *type);
+Type_Varargs *get_or_create_type_varargs_of(Type *type, bool is_c_varargs);
 bool complete_type(Type *type);
 Ast_Expr *unparen_expr(Ast_Expr *expr);

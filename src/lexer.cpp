@@ -54,6 +54,7 @@ void init_lexer_globals() {
     token_string_map[TK_DIRECTIVE_FOREIGN_IMPORT]        = "#foreign_import";
     token_string_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT] = "#foreign_system_import";
     token_string_map[TK_DIRECTIVE_PARTIAL]               = "#partial";
+    token_string_map[TK_DIRECTIVE_C_VARARGS]             = "#c_varargs";
 
     token_string_map[TK_ASSIGN]                          = "=";
     token_string_map[TK_PLUS]                            = "+";
@@ -145,6 +146,7 @@ void init_lexer_globals() {
     token_name_map[TK_DIRECTIVE_FOREIGN_IMPORT]          = "TK_DIRECTIVE_FOREIGN_IMPORT";
     token_name_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT]   = "TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT";
     token_name_map[TK_DIRECTIVE_PARTIAL]                 = "TK_DIRECTIVE_PARTIAL";
+    token_name_map[TK_DIRECTIVE_C_VARARGS]               = "TK_DIRECTIVE_C_VARARGS";
 
     token_name_map[TK_ASSIGN]                            = "TK_ASSIGN";
     token_name_map[TK_PLUS]                              = "TK_PLUS";
@@ -744,6 +746,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "partial") == 0) {
             out_token->kind = TK_DIRECTIVE_PARTIAL;
             out_token->text = "#partial";
+        }
+        else if (strcmp(identifier, "c_varargs") == 0) {
+            out_token->kind = TK_DIRECTIVE_C_VARARGS;
+            out_token->text = "#c_varargs";
         }
         else {
             lexer->errored = true;

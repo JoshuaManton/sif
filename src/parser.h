@@ -746,6 +746,7 @@ struct Expr_Struct_Type : public Ast_Expr {
 
 struct Expr_Spread : public Ast_Expr {
     Ast_Expr *rhs = nullptr;
+    bool is_c_varargs = {};
     Expr_Spread(Ast_Expr *rhs, Location location)
     : Ast_Expr(EXPR_SPREAD, location)
     , rhs(rhs)
@@ -873,6 +874,7 @@ bool register_declaration(Ast_Block *block, Declaration *new_declaration);
 bool parse_file(const char *filename, Location include_location);
 Ast_Block *begin_parsing(const char *filename);
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true, char *name_override = nullptr);
+Ast_Expr *unparen_expr(Ast_Expr *expr);
 Ast_Expr *parse_expr(Lexer *lexer);
 Ast_Var *parse_var(Lexer *lexer);
 Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override = nullptr);
