@@ -1,26 +1,16 @@
 #include "core:basic.sif"
 
-struct Foo!($Arg: typeid, $Arg: int) {
-    proc wow() {
-        printa("Foo");
-    }
+proc takes_constant_proc(Procedure: proc(t: int)) : int {
+    Procedure(321);
+    Procedure(123);
+    return 1;
 }
 
-struct Bar!($Arg: string) {
-    proc wow() {
-        printa("Bar");
-    }
-}
-
-proc work(foo: $T) {
-    T.wow();
-    printa(T.Arg);
+proc does_work(a: int) {
+    print("doing work\n");
 }
 
 proc main() : i32 {
-    var foo: Foo!(float);
-    var bar: Bar!(123);
-    work(foo);
-    work(bar);
+    printa(takes_constant_proc(does_work));
     return 0;
 }

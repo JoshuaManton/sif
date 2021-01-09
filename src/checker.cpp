@@ -1544,7 +1544,14 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
 
 
 
+struct Inserted_Polymorph {
+    Expr_Polymorphic_Variable *poly_var = {};
+    Declaration *declaration = {};
+};
+
 int total_num_polymorphs = 0;
+
+bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations);
 
 void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
     assert(declaration->parent_block == nullptr);
@@ -1557,12 +1564,13 @@ void insert_polymorph_replacement(Ast_Block *block, Declaration *declaration) {
             declaration->parent_block = block;
             poly_decl->declaration = declaration;
             inserted_replacement = true;
+            break;
         }
     }
     assert(inserted_replacement);
 }
 
-bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
+bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
     switch (value_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             break;
@@ -1577,7 +1585,10 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
                 return false;
             }
             assert(parameter_operand.type != nullptr);
-            out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, nullptr, value_expr->location)));
+            Inserted_Polymorph inserted_polymorph = {};
+            inserted_polymorph.poly_var = poly;
+            inserted_polymorph.declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, nullptr, value_expr->location));
+            out_polymorphic_declarations->append(inserted_polymorph);
             break;
         }
         default: {
@@ -1598,7 +1609,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
     return true;
 }
 
-bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter_type, Location parameter_location, Array<Declaration *> *out_polymorphic_declarations) {
+bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter_type, Location parameter_location, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
     switch (type_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             break;
@@ -1617,7 +1628,10 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
             type_operand.type = type_typeid;
             type_operand.type_value = concrete_type;
-            out_polymorphic_declarations->append(SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_location)));
+            Inserted_Polymorph inserted_polymorph = {};
+            inserted_polymorph.poly_var = poly;
+            inserted_polymorph.declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_location));
+            out_polymorphic_declarations->append(inserted_polymorph);
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
@@ -1691,15 +1705,37 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             }
             return try_create_polymorph_type_declarations(array_type->array_of, parameter_array->array_of, parameter_location, out_polymorphic_declarations);
         }
+        case EXPR_PROCEDURE_TYPE: {
+            Expr_Procedure_Type *proc_type = (Expr_Procedure_Type *)type_expr;
+            if (!is_type_procedure(parameter_type)) {
+                report_error(parameter_location, "Expected a procedure type, got '%s'.", type_to_string(parameter_type));
+                return false;
+            }
+            Type_Procedure *parameter_type_proc = (Type_Procedure *)parameter_type;
+            if (proc_type->header->parameters.count != parameter_type_proc->parameter_types.count) {
+                assert(false);
+            }
+            For (idx, parameter_type_proc->parameter_types) {
+                Type *proc_param_type = parameter_type_proc->parameter_types[idx];
+                Ast_Var *proc_param = proc_type->header->parameters[idx];
+                if (!try_create_polymorph_type_declarations(proc_param->type_expr, proc_param_type, parameter_location, out_polymorphic_declarations)) {
+                    assert(false);
+                    return false;
+                }
+            }
+            break;
+        }
         default: {
+            printf("Unhandled case in try_create_polymorph_type_declarations(): %d\n", type_expr->expr_kind);
             assert(false);
         }
     }
     return true;
 }
 
-bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Declaration *> *out_polymorphic_declarations) {
+bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
     assert(parameter_operand.type != nullptr);
+
     if (!try_create_polymorph_type_declarations(var->type_expr, parameter_operand.type, parameter_operand.location, out_polymorphic_declarations)) {
         return false;
     }
@@ -1707,12 +1743,11 @@ bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, 
     if (!try_create_polymorph_value_declaration(var->name_expr, parameter_operand, out_polymorphic_declarations)) {
         return false;
     }
-
     return true;
 }
 
 Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Operand> parameters, Location polymorph_location, Array<int> *polymorphic_constants) {
-    Array<Declaration *> polymorphic_declarations;
+    Array<Inserted_Polymorph> polymorphic_declarations;
     polymorphic_declarations.allocator = g_global_linear_allocator;
 
     // create polymorphic declarations and deduplicate polymorphs
@@ -1754,8 +1789,8 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
 
         // check the declarations
         For (idx, polymorphic_declarations) {
-            Declaration *decl = polymorphic_declarations[idx];
-            if (!check_declaration(decl, decl->location)) {
+            Inserted_Polymorph inserted_polymorph = polymorphic_declarations[idx];
+            if (!check_declaration(inserted_polymorph.declaration, inserted_polymorph.declaration->location)) {
                 report_info(polymorph_location, "Error during polymorph triggered here.");
                 return nullptr;
             }
@@ -1772,7 +1807,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
                     assert(polymorph.polymorph_values.count == polymorphic_declarations.count);
                     For (value_idx, polymorph.polymorph_values) {
                         Operand poly_value  = polymorph.polymorph_values[value_idx];
-                        Operand param_value = polymorphic_declarations[value_idx]->operand;
+                        Operand param_value = polymorphic_declarations[value_idx].declaration->operand;
                         assert(param_value.type != nullptr);
                         Operand result;
                         bool ok = binary_eval(poly_value, param_value, TK_EQUAL_TO, param_value.location, &result);
@@ -1859,11 +1894,11 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     Array<Operand> polymorph_values;
     polymorph_values.allocator = g_global_linear_allocator;
     For (idx, polymorphic_declarations) {
-        Declaration *poly_decl = polymorphic_declarations[idx];
-        insert_polymorph_replacement(block_to_insert_declarations_into, poly_decl);
-        assert(poly_decl->check_state == CS_CHECKED);
-        assert(poly_decl->operand.type != nullptr);
-        polymorph_values.append(poly_decl->operand);
+        Inserted_Polymorph inserted_polymorph = polymorphic_declarations[idx];
+        insert_polymorph_replacement(block_to_insert_declarations_into, inserted_polymorph.declaration);
+        assert(inserted_polymorph.declaration->check_state == CS_CHECKED);
+        assert(inserted_polymorph.declaration->operand.type != nullptr);
+        polymorph_values.append(inserted_polymorph.declaration->operand);
     }
 
     for (int i = polymorphic_constants->count-1; i >= 0; i--) {
@@ -2598,7 +2633,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
                 assert(!is_type_polymorphic(call->target_procedure_type));
                 assert(is_type_procedure(call->target_procedure_type));
-                // todo(josh): constant stuff? procedures are a bit weird in that way in that the name is constant but the value isn't
                 break;
             }
             case EXPR_IDENTIFIER: {
@@ -3062,7 +3096,8 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
     Operand operand = {};
     operand.referenced_declaration = header->declaration;
     operand.type = header->type;
-    operand.flags = OPERAND_RVALUE;
+    operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
+    operand.proc_value = header;
     header->operand = operand;
     return &header->operand;
 }

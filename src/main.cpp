@@ -34,6 +34,7 @@ SMALL
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 -figure out if I should allow shadowing (maybe with a keyword?)
 -do entrypoint returning i32 implicitly in backend
+-procedure literal expression handling
 
 MEDIUM
 -runtime bounds checks
@@ -48,7 +49,6 @@ MEDIUM
 -make C output a bit prettier, whatever that means
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
--polymorphic structs should register their parameters as local constants
 -locally scoped structs/procs/enums
 -tagged unions?
 -use microsoft_craziness.h

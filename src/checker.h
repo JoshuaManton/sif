@@ -209,6 +209,7 @@ void add_global_declarations(Ast_Block *block);
 bool typecheck_global_scope(Ast_Block *block);
 
 bool is_type_pointer    (Type *type);
+bool is_type_procedure  (Type *type);
 bool is_type_polymorphic(Type *type);
 bool is_type_reference  (Type *type);
 bool is_type_array      (Type *type);

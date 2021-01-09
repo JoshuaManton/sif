@@ -98,7 +98,9 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     bool is_constant = root_token.kind == TK_CONST;
 
+    bool old_did_parse_polymorphic_thing = did_parse_polymorphic_thing;
     did_parse_polymorphic_thing = false;
+    defer(did_parse_polymorphic_thing = old_did_parse_polymorphic_thing);
 
     Ast_Expr *name_expr = parse_expr(lexer);
     if (name_expr == nullptr) {

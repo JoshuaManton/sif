@@ -40,6 +40,7 @@ struct Ast_Block;
 struct Ast_Struct;
 struct Ast_Statement_Expr;
 struct Ast_Defer;
+struct Ast_Proc_Header;
 
 struct Declaration;
 struct Type_Declaration;
@@ -72,11 +73,12 @@ struct Operand {
     u64 flags = {};
     Type *type = {};
 
-    u64 uint_value     = {};
-    i64 int_value      = {};
-    f64 float_value    = {};
-    bool bool_value    = {};
-    Type *type_value   = {};
+    u64 uint_value   = {};
+    i64 int_value    = {};
+    f64 float_value  = {};
+    bool bool_value  = {};
+    Type *type_value = {};
+    Ast_Proc_Header *proc_value = {};
     char *scanned_string_value = {};
     int scanned_string_length = {};
     char *escaped_string_value = {};

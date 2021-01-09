@@ -469,6 +469,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 else if (expr->operand.type == type_cstring) {
                     sb->printf("\"%s\"", expr->operand.scanned_string_value);
                 }
+                else if (is_type_procedure(expr->operand.type)) {
+                    sb->print(expr->operand.proc_value->declaration->link_name);
+                }
                 else if (is_type_typeid(expr->operand.type)) {
                     sb->printf("%d", expr->operand.type_value->id);
                 }
@@ -499,6 +502,9 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 }
                 else if (expr->operand.type == type_cstring) {
                     tsb.printf("\"%s\"", expr->operand.scanned_string_value);
+                }
+                else if (is_type_procedure(expr->operand.type)) {
+                    tsb.print(expr->operand.proc_value->declaration->link_name);
                 }
                 else if (is_type_typeid(expr->operand.type)) {
                     tsb.printf("%d", expr->operand.type_value->id);
