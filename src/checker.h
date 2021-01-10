@@ -2,9 +2,11 @@
 
 #include <cstdlib>
 
-#include "basic.h"
+#include "os_windows.h"
 #include "common.h"
 #include "parser.h"
+
+#include "basic.h"
 
 enum Type_Kind {
     TYPE_INVALID,

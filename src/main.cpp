@@ -42,6 +42,7 @@ SMALL
 -cast untyped string to cstring
 -'using' in procedure parameters
 -deduplicate #foreign_import/#foreign_system_import
+-#no_bounds_checks
 
 MEDIUM
 -runtime null checks

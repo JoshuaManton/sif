@@ -6,35 +6,50 @@
 #include "parser.h"
 #include "os_windows.h"
 
-Array<Expr_Identifier *>              g_identifiers_to_resolve;
-Array<Declaration *>                  g_all_declarations;
+#define NUM_PARSER_THREADS 4
+
 Array<Ast_Directive_Assert *>         g_all_assert_directives;
 Array<Ast_Directive_Print *>          g_all_print_directives;
 Array<Ast_Directive_C_Code *>         g_all_c_code_directives;
 Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
+Array<char *>                         g_all_included_files;
 
-Array<char *> g_all_included_files; // note(josh): for deduplicating #includes
+bool g_done_all_parsing;
+Mutex g_mutex_lexers_to_process;
+Array<Lexer> g_lexers_to_process;
 
-Ast_Proc_Header *g_currently_parsing_proc;
+Thread g_parser_threads[NUM_PARSER_THREADS];
+u32 parser_worker_thread(void *userdata);
+
+Ast_Block *g_global_scope;
 
 void init_parser() {
-    g_identifiers_to_resolve.allocator        = g_global_linear_allocator;
-    g_all_declarations.allocator              = g_global_linear_allocator;
+    assert(g_global_scope == nullptr);
+    g_global_scope = SIF_NEW_CLONE(Ast_Block({}, {}));
+    g_global_scope->flags |= BF_IS_GLOBAL_SCOPE;
+
     g_all_assert_directives.allocator         = g_global_linear_allocator;
     g_all_print_directives.allocator          = g_global_linear_allocator;
     g_all_c_code_directives.allocator         = g_global_linear_allocator;
     g_all_foreign_import_directives.allocator = g_global_linear_allocator;
     g_all_included_files.allocator            = g_global_linear_allocator;
+    g_lexers_to_process.allocator             = g_global_linear_allocator;
+
+    g_mutex_lexers_to_process = create_mutex();
+
+    for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
+        g_parser_threads[i] = create_thread(parser_worker_thread, nullptr);
+    }
 }
 
-Ast_Block *push_ast_block(Ast_Block *block) {
-    Ast_Block *old_block = current_block;
-    current_block = block;
+Ast_Block *push_ast_block(Lexer *lexer, Ast_Block *block) {
+    Ast_Block *old_block = lexer->current_block;
+    lexer->current_block = block;
     return old_block;
 }
 
-void pop_ast_block(Ast_Block *old_block) {
-    current_block = old_block;
+void pop_ast_block(Lexer *lexer, Ast_Block *old_block) {
+    lexer->current_block = old_block;
 }
 
 bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
@@ -48,7 +63,7 @@ bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
     }
     block->declarations.append(new_declaration);
     block->declarations_lookup.insert(new_declaration->name, new_declaration);
-    g_all_declarations.append(new_declaration);
+    // g_all_declarations.append(new_declaration);
     return true;
 }
 
@@ -154,11 +169,11 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         return nullptr;
     }
 
-    Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, root_token.location));
-    var->declaration = SIF_NEW_CLONE(Var_Declaration(var, current_block));
+    Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, lexer->current_block, root_token.location));
+    var->declaration = SIF_NEW_CLONE(Var_Declaration(var, lexer->current_block));
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
-        if (!register_declaration(current_block, var->declaration)) {
+        if (!register_declaration(lexer->current_block, var->declaration)) {
             return nullptr;
         }
     }
@@ -175,9 +190,9 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Ast_Proc_Header *header = nullptr;
     {
         Location proc_location = token.location;
-        Ast_Block *procedure_block = SIF_NEW_CLONE(Ast_Block(token.location));
-        Ast_Block *old_block = push_ast_block(procedure_block);
-        defer(pop_ast_block(old_block));
+        Ast_Block *procedure_block = SIF_NEW_CLONE(Ast_Block(lexer->current_block, token.location));
+        Ast_Block *old_block = push_ast_block(lexer, procedure_block);
+        defer(pop_ast_block(lexer, old_block));
 
         bool is_operator_overload = false;
         Token_Kind operator_to_overload = TK_INVALID;
@@ -298,7 +313,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             proc_name = intern_string(name_override);
         }
 
-        header = SIF_NEW_CLONE(Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, proc_location));
+        header = SIF_NEW_CLONE(Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, lexer->current_block, proc_location));
     }
 
     return header;
@@ -314,12 +329,12 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     if (!header->is_foreign) {
         EXPECT(lexer, TK_LEFT_CURLY, nullptr);
 
-        Ast_Proc_Header *old_current_proc = g_currently_parsing_proc;
-        g_currently_parsing_proc = header;
-        Ast_Block *old_block = push_ast_block(header->procedure_block);
+        Ast_Proc_Header *old_current_proc = lexer->currently_parsing_proc;
+        lexer->currently_parsing_proc = header;
+        Ast_Block *old_block = push_ast_block(lexer, header->procedure_block);
         body = parse_block(lexer);
-        pop_ast_block(old_block);
-        g_currently_parsing_proc = old_current_proc;
+        pop_ast_block(lexer, old_block);
+        lexer->currently_parsing_proc = old_current_proc;
         if (body == nullptr) {
             return nullptr;
         }
@@ -329,10 +344,10 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
 
     if (header->operator_to_overload == TK_INVALID) {
         assert(header->name != nullptr);
-        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, current_block));
+        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, lexer->current_block));
         header->declaration->notes = parse_notes(lexer);
         header->declaration->is_polymorphic = header->is_polymorphic;
-        if (!register_declaration(current_block, header->declaration)) {
+        if (!register_declaration(lexer->current_block, header->declaration)) {
             return nullptr;
         }
     }
@@ -340,7 +355,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
         assert(header->name == nullptr);
     }
 
-    Ast_Proc *proc = SIF_NEW_CLONE(Ast_Proc(header, body, header->location));
+    Ast_Proc *proc = SIF_NEW_CLONE(Ast_Proc(header, body, lexer->current_block, header->location));
     header->procedure = proc;
     return proc;
 }
@@ -360,13 +375,13 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
         EXPECT(lexer, TK_STRUCT, &token);
     }
 
-    Ast_Struct *structure = SIF_NEW_CLONE(Ast_Struct(is_union, token.location));
+    Ast_Struct *structure = SIF_NEW_CLONE(Ast_Struct(is_union, lexer->current_block, token.location));
 
     bool is_polymorphic = false;
     {
-        structure->struct_block = SIF_NEW_CLONE(Ast_Block(token.location));
-        Ast_Block *old_block1 = push_ast_block(structure->struct_block);
-        defer(pop_ast_block(old_block1));
+        structure->struct_block = SIF_NEW_CLONE(Ast_Block(lexer->current_block, token.location));
+        Ast_Block *old_block1 = push_ast_block(lexer, structure->struct_block);
+        defer(pop_ast_block(lexer, old_block1));
 
         // name
         Token name_token;
@@ -457,10 +472,10 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
         }
     }
 
-    structure->declaration = SIF_NEW_CLONE(Struct_Declaration(structure, current_block));
+    structure->declaration = SIF_NEW_CLONE(Struct_Declaration(structure, lexer->current_block));
     structure->declaration->notes = parse_notes(lexer);
     structure->declaration->is_polymorphic = is_polymorphic;
-    if (!register_declaration(current_block, structure->declaration)) {
+    if (!register_declaration(lexer->current_block, structure->declaration)) {
         return nullptr;
     }
     return structure;
@@ -477,7 +492,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
     Token name_token;
     EXPECT(lexer, TK_IDENTIFIER, &name_token);
 
-    Ast_Enum *ast_enum = SIF_NEW_CLONE(Ast_Enum(name_token.text, root_token.location));
+    Ast_Enum *ast_enum = SIF_NEW_CLONE(Ast_Enum(name_token.text, lexer->current_block, root_token.location));
 
     Array<Enum_Field> enum_fields = {};
     enum_fields.allocator = g_global_linear_allocator;
@@ -493,9 +508,9 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
     EXPECT(lexer, TK_LEFT_CURLY, nullptr);
     {
-        ast_enum->enum_block = SIF_NEW_CLONE(Ast_Block(lexer->location));
-        Ast_Block *old_block = push_ast_block(ast_enum->enum_block);
-        defer(pop_ast_block(old_block));
+        ast_enum->enum_block = SIF_NEW_CLONE(Ast_Block(lexer->current_block, lexer->location));
+        Ast_Block *old_block = push_ast_block(lexer, ast_enum->enum_block);
+        defer(pop_ast_block(lexer, old_block));
 
         Token right_curly;
         while (peek_next_token(lexer, &right_curly) && right_curly.kind != TK_RIGHT_CURLY) {
@@ -525,9 +540,9 @@ Ast_Enum *parse_enum(Lexer *lexer) {
     EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
 
     ast_enum->fields = enum_fields;
-    ast_enum->declaration = SIF_NEW_CLONE(Enum_Declaration(ast_enum, current_block));
+    ast_enum->declaration = SIF_NEW_CLONE(Enum_Declaration(ast_enum, lexer->current_block));
     ast_enum->declaration->notes = parse_notes(lexer);
-    if (!register_declaration(current_block, ast_enum->declaration)) {
+    if (!register_declaration(lexer->current_block, ast_enum->declaration)) {
         return nullptr;
     }
     return ast_enum;
@@ -616,7 +631,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (var) {
                 return var;
             }
-            return SIF_NEW_CLONE(Ast_Using(expr, using_token.location));
+            return SIF_NEW_CLONE(Ast_Using(expr, lexer->current_block, using_token.location));
         }
 
         case TK_DEFER: {
@@ -626,11 +641,11 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (!stmt) {
                 return nullptr;
             }
-            if (!g_currently_parsing_proc) {
+            if (!lexer->currently_parsing_proc) {
                 report_error(defer_token.location, "defer statements must be inside a procedure.");
                 return nullptr;
             }
-            return SIF_NEW_CLONE(Ast_Defer(stmt, defer_token.location));
+            return SIF_NEW_CLONE(Ast_Defer(stmt, lexer->current_block, defer_token.location));
         }
 
         case TK_PROC: {
@@ -678,7 +693,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (!block) {
                 return nullptr;
             }
-            Ast_Block_Statement *stmt = SIF_NEW_CLONE(Ast_Block_Statement(block, block->location));
+            Ast_Block_Statement *stmt = SIF_NEW_CLONE(Ast_Block_Statement(block, lexer->current_block, block->location));
             return stmt;
         }
 
@@ -690,7 +705,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (!ok) {
                 return nullptr;
             }
-            Ast_Directive_Include *include = SIF_NEW_CLONE(Ast_Directive_Include(filename_token.text, root_token.location));
+            Ast_Directive_Include *include = SIF_NEW_CLONE(Ast_Directive_Include(filename_token.text, lexer->current_block, root_token.location));
             return include;
         }
 
@@ -699,7 +714,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             Token path_token;
             EXPECT(lexer, TK_STRING, &path_token);
             const char *absolute = relative_to_absolute_path(path_token.text, root_token.location.filepath);
-            Ast_Directive_Foreign_Import *foreign_import = SIF_NEW_CLONE(Ast_Directive_Foreign_Import(nullptr, absolute, root_token.location));
+            Ast_Directive_Foreign_Import *foreign_import = SIF_NEW_CLONE(Ast_Directive_Foreign_Import(nullptr, absolute, lexer->current_block, root_token.location));
             return foreign_import;
         }
 
@@ -707,7 +722,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer);
             Token path_token;
             EXPECT(lexer, TK_STRING, &path_token);
-            Ast_Directive_Foreign_Import *foreign_import = SIF_NEW_CLONE(Ast_Directive_Foreign_Import(nullptr, path_token.text, root_token.location));
+            Ast_Directive_Foreign_Import *foreign_import = SIF_NEW_CLONE(Ast_Directive_Foreign_Import(nullptr, path_token.text, lexer->current_block, root_token.location));
             return foreign_import;
         }
 
@@ -719,7 +734,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 return nullptr;
             }
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            Ast_Directive_Assert *assert = SIF_NEW_CLONE(Ast_Directive_Assert(expr, root_token.location));
+            Ast_Directive_Assert *assert = SIF_NEW_CLONE(Ast_Directive_Assert(expr, lexer->current_block, root_token.location));
             return assert;
         }
 
@@ -731,7 +746,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 return nullptr;
             }
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            Ast_Directive_Print *print = SIF_NEW_CLONE(Ast_Directive_Print(expr, root_token.location));
+            Ast_Directive_Print *print = SIF_NEW_CLONE(Ast_Directive_Print(expr, lexer->current_block, root_token.location));
             return print;
         }
 
@@ -739,7 +754,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer);
             Token code;
             EXPECT(lexer, TK_STRING, &code);
-            Ast_Directive_C_Code *c_code = SIF_NEW_CLONE(Ast_Directive_C_Code(code.text, root_token.location));
+            Ast_Directive_C_Code *c_code = SIF_NEW_CLONE(Ast_Directive_C_Code(code.text, lexer->current_block, root_token.location));
             return c_code;
         }
 
@@ -747,27 +762,27 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (eat_semicolon) {
                 eat_next_token(lexer);
             }
-            Ast_Empty_Statement *stmt = SIF_NEW_CLONE(Ast_Empty_Statement(root_token.location));
+            Ast_Empty_Statement *stmt = SIF_NEW_CLONE(Ast_Empty_Statement(lexer->current_block, root_token.location));
             return stmt;
         }
 
         case TK_FOR: {
             eat_next_token(lexer);
-            if (g_currently_parsing_proc == nullptr) {
+            if (lexer->currently_parsing_proc == nullptr) {
                 report_error(root_token.location, "Cannot use `for` at file scope.");
                 return nullptr;
             }
 
-            Ast_For_Loop *for_loop = SIF_NEW_CLONE(Ast_For_Loop(root_token.location));
-            assert(g_currently_parsing_proc != nullptr);
-            Ast_Node *old_loop = g_currently_parsing_proc->current_parsing_loop;
-            g_currently_parsing_proc->current_parsing_loop = for_loop;
-            defer(g_currently_parsing_proc->current_parsing_loop = old_loop);
+            Ast_For_Loop *for_loop = SIF_NEW_CLONE(Ast_For_Loop(lexer->current_block, root_token.location));
+            assert(lexer->currently_parsing_proc != nullptr);
+            Ast_Node *old_loop = lexer->currently_parsing_proc->current_parsing_loop;
+            lexer->currently_parsing_proc->current_parsing_loop = for_loop;
+            defer(lexer->currently_parsing_proc->current_parsing_loop = old_loop);
 
             {
-                Ast_Block *block = SIF_NEW_CLONE(Ast_Block(lexer->location));
-                Ast_Block *old_block = push_ast_block(block);
-                defer(pop_ast_block(old_block));
+                Ast_Block *block = SIF_NEW_CLONE(Ast_Block(lexer->current_block, lexer->location));
+                Ast_Block *old_block = push_ast_block(lexer, block);
+                defer(pop_ast_block(lexer, old_block));
 
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);
                 for_loop->pre = parse_single_statement(lexer, false);
@@ -795,14 +810,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_WHILE: {
             eat_next_token(lexer);
-            if (g_currently_parsing_proc == nullptr) {
+            if (lexer->currently_parsing_proc == nullptr) {
                 report_error(root_token.location, "Cannot use `while` at file scope.");
                 return nullptr;
             }
-            Ast_While_Loop *while_loop = SIF_NEW_CLONE(Ast_While_Loop(root_token.location));
-            Ast_Node *old_loop = g_currently_parsing_proc->current_parsing_loop;
-            g_currently_parsing_proc->current_parsing_loop = while_loop;
-            defer(g_currently_parsing_proc->current_parsing_loop = old_loop);
+            Ast_While_Loop *while_loop = SIF_NEW_CLONE(Ast_While_Loop(lexer->current_block, root_token.location));
+            Ast_Node *old_loop = lexer->currently_parsing_proc->current_parsing_loop;
+            lexer->currently_parsing_proc->current_parsing_loop = while_loop;
+            defer(lexer->currently_parsing_proc->current_parsing_loop = old_loop);
 
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);
             while_loop->condition = parse_expr(lexer);
@@ -820,7 +835,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_IF: {
             eat_next_token(lexer);
-            if (g_currently_parsing_proc == nullptr) {
+            if (lexer->currently_parsing_proc == nullptr) {
                 report_error(root_token.location, "Cannot use `if` at file scope.");
                 return nullptr;
             }
@@ -844,13 +859,13 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 eat_next_token(lexer);
                 else_body = parse_block_including_curly_brackets(lexer);
             }
-            Ast_If *ast_if = SIF_NEW_CLONE(Ast_If(condition, body, else_body, root_token.location));
+            Ast_If *ast_if = SIF_NEW_CLONE(Ast_If(condition, body, else_body, lexer->current_block, root_token.location));
             return ast_if;
         }
 
         case TK_RETURN: {
             eat_next_token(lexer);
-            if (g_currently_parsing_proc == nullptr) {
+            if (lexer->currently_parsing_proc == nullptr) {
                 report_error(root_token.location, "Cannot use `return` at file scope.");
                 return nullptr;
             }
@@ -870,36 +885,36 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 }
                 EXPECT(lexer, TK_SEMICOLON, nullptr);
             }
-            assert(g_currently_parsing_proc != nullptr);
-            return SIF_NEW_CLONE(Ast_Return(g_currently_parsing_proc, return_expr, root_token.location));
+            assert(lexer->currently_parsing_proc != nullptr);
+            return SIF_NEW_CLONE(Ast_Return(lexer->currently_parsing_proc, return_expr, lexer->current_block, root_token.location));
         }
 
         case TK_CONTINUE: {
             eat_next_token(lexer);
-            if (g_currently_parsing_proc == nullptr) {
+            if (lexer->currently_parsing_proc == nullptr) {
                 report_error(root_token.location, "Cannot use `continue` at file scope.");
                 return nullptr;
             }
-            if (g_currently_parsing_proc->current_parsing_loop == nullptr) {
+            if (lexer->currently_parsing_proc->current_parsing_loop == nullptr) {
                 report_error(root_token.location, "`continue` must be used from within a loop.");
                 return nullptr;
             }
             EXPECT(lexer, TK_SEMICOLON, nullptr);
-            return SIF_NEW_CLONE(Ast_Continue(g_currently_parsing_proc->current_parsing_loop, root_token.location));
+            return SIF_NEW_CLONE(Ast_Continue(lexer->currently_parsing_proc->current_parsing_loop, lexer->current_block, root_token.location));
         }
 
         case TK_BREAK: {
             eat_next_token(lexer);
-            if (g_currently_parsing_proc == nullptr) {
+            if (lexer->currently_parsing_proc == nullptr) {
                 report_error(root_token.location, "Cannot use `break` at file scope.");
                 return nullptr;
             }
-            if (g_currently_parsing_proc->current_parsing_loop == nullptr) {
+            if (lexer->currently_parsing_proc->current_parsing_loop == nullptr) {
                 report_error(root_token.location, "`break` must be used from within a loop.");
                 return nullptr;
             }
             EXPECT(lexer, TK_SEMICOLON, nullptr);
-            return SIF_NEW_CLONE(Ast_Break(g_currently_parsing_proc->current_parsing_loop, root_token.location));
+            return SIF_NEW_CLONE(Ast_Break(lexer->currently_parsing_proc->current_parsing_loop, lexer->current_block, root_token.location));
         }
 
         default: {
@@ -918,7 +933,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     if (eat_semicolon) {
                         eat_next_token(lexer);
                     }
-                    return SIF_NEW_CLONE(Ast_Statement_Expr(expr, expr->location));
+                    return SIF_NEW_CLONE(Ast_Statement_Expr(expr, lexer->current_block, expr->location));
                 }
 
                 case TK_PLUS_ASSIGN:     // fallthrough
@@ -937,7 +952,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     if (eat_semicolon) {
                         EXPECT(lexer, TK_SEMICOLON, nullptr);
                     }
-                    return SIF_NEW_CLONE(Ast_Assign(op.kind, expr, rhs, expr->location));
+                    return SIF_NEW_CLONE(Ast_Assign(op.kind, expr, rhs, lexer->current_block, expr->location));
                 }
                 default: {
                     unexpected_token(lexer, next_token);
@@ -953,11 +968,11 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_new_block) {
     Ast_Block *old_block = nullptr;
     if (push_new_block) {
-        Ast_Block *block = SIF_NEW_CLONE(Ast_Block(lexer->location));
-        old_block = push_ast_block(block);
+        Ast_Block *block = SIF_NEW_CLONE(Ast_Block(lexer->current_block, lexer->location));
+        old_block = push_ast_block(lexer, block);
     }
     defer(if (push_new_block) {
-        pop_ast_block(old_block);
+        pop_ast_block(lexer, old_block);
     });
 
     Token root_token;
@@ -992,7 +1007,7 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
                 break;
             }
             default: {
-                current_block->nodes.append(node);
+                lexer->current_block->nodes.append(node);
             }
         }
 
@@ -1000,7 +1015,7 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement, bool push_ne
             break;
         }
     }
-    return current_block;
+    return lexer->current_block;
 }
 
 bool parse_file(const char *requested_filename, Location include_location) {
@@ -1044,6 +1059,8 @@ bool parse_file(const char *requested_filename, Location include_location) {
         return false;
     }
     Lexer lexer(absolute_path, root_file_text);
+    lexer.current_block = g_global_scope;
+    assert(lexer.current_block);
     Ast_Block *block = parse_block(&lexer, false, false);
     if (!block) {
         return false;
@@ -1052,21 +1069,29 @@ bool parse_file(const char *requested_filename, Location include_location) {
 }
 
 Ast_Block *begin_parsing(const char *filename) {
-    assert(current_block == nullptr);
-    Ast_Block *global_scope = SIF_NEW_CLONE(Ast_Block({}));
-    global_scope->flags |= BF_IS_GLOBAL_SCOPE;
-    Ast_Block *old_block = push_ast_block(global_scope);
-
     bool ok = parse_file("core:runtime.sif", {});
     assert(ok);
 
     ok = parse_file(filename, {});
-
-    pop_ast_block(old_block);
     if (!ok) {
         return nullptr;
     }
-    return global_scope;
+    return g_global_scope;
+}
+
+u32 parser_worker_thread(void *userdata) {
+    while (!g_done_all_parsing) {
+        wait_for_mutex(g_mutex_lexers_to_process);
+        if (g_lexers_to_process.count > 0) {
+            Lexer lexer = g_lexers_to_process.pop();
+            release_mutex(g_mutex_lexers_to_process);
+            Ast_Block *block = parse_block(&lexer, false, false);
+            if (!block) {
+                return false;
+            }
+        }
+    }
+    return 0;
 }
 
 
@@ -1249,7 +1274,7 @@ Ast_Expr *parse_or_expr(Lexer *lexer) {
         if (!rhs) {
             return nullptr;
         }
-        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs));
+        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs, lexer->current_block, op.location));
     }
     return expr;
 }
@@ -1269,7 +1294,7 @@ Ast_Expr *parse_and_expr(Lexer *lexer) {
         if (!rhs) {
             return nullptr;
         }
-        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs));
+        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs, lexer->current_block, op.location));
     }
     return expr;
 }
@@ -1289,7 +1314,7 @@ Ast_Expr *parse_cmp_expr(Lexer *lexer) {
         if (!rhs) {
             return nullptr;
         }
-        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs));
+        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs, lexer->current_block, op.location));
     }
     return expr;
 }
@@ -1309,7 +1334,7 @@ Ast_Expr *parse_add_expr(Lexer *lexer) {
         if (!rhs) {
             return nullptr;
         }
-        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs));
+        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs, lexer->current_block, op.location));
     }
     return expr;
 }
@@ -1329,7 +1354,7 @@ Ast_Expr *parse_mul_expr(Lexer *lexer) {
         if (!rhs) {
             return nullptr;
         }
-        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs));
+        expr = SIF_NEW_CLONE(Expr_Binary(op.kind, lhs, rhs, lexer->current_block, op.location));
     }
     return expr;
 }
@@ -1347,7 +1372,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 if (!rhs) {
                     return nullptr;
                 }
-                return SIF_NEW_CLONE(Expr_Address_Of(rhs, op.location));
+                return SIF_NEW_CLONE(Expr_Address_Of(rhs, lexer->current_block, op.location));
             }
             case TK_MINUS:
             case TK_PLUS:
@@ -1357,14 +1382,14 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                 if (!rhs) {
                     return nullptr;
                 }
-                return SIF_NEW_CLONE(Expr_Unary(op.kind, rhs, op.location));
+                return SIF_NEW_CLONE(Expr_Unary(op.kind, rhs, lexer->current_block, op.location));
             }
             case TK_DOT_DOT: {
                 Ast_Expr *rhs = parse_postfix_expr(lexer);
                 if (!rhs) {
                     return nullptr;
                 }
-                return SIF_NEW_CLONE(Expr_Spread(rhs, op.location));
+                return SIF_NEW_CLONE(Expr_Spread(rhs, lexer->current_block, op.location));
             }
             case TK_SIZEOF: {
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);
@@ -1373,7 +1398,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                     return nullptr;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                return SIF_NEW_CLONE(Expr_Sizeof(expr, op.location));
+                return SIF_NEW_CLONE(Expr_Sizeof(expr, lexer->current_block, op.location));
             }
             case TK_TYPEOF: {
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);
@@ -1382,7 +1407,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                     return nullptr;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                return SIF_NEW_CLONE(Expr_Typeof(expr, op.location));
+                return SIF_NEW_CLONE(Expr_Typeof(expr, lexer->current_block, op.location));
             }
             default: {
                 assert(false);
@@ -1423,7 +1448,7 @@ Expr_Compound_Literal *parse_compound_literal(Lexer *lexer, Ast_Expr *type_expr)
         }
     }
     EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
-    Expr_Compound_Literal *compound_literal = SIF_NEW_CLONE(Expr_Compound_Literal(type_expr, exprs, start_location));
+    Expr_Compound_Literal *compound_literal = SIF_NEW_CLONE(Expr_Compound_Literal(type_expr, exprs, lexer->current_block, start_location));
     return compound_literal;
 }
 
@@ -1462,7 +1487,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     first = false;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                base_expr = SIF_NEW_CLONE(Expr_Procedure_Call(base_expr, parameters, base_expr->location));
+                base_expr = SIF_NEW_CLONE(Expr_Procedure_Call(base_expr, parameters, lexer->current_block, base_expr->location));
                 break;
             }
             case TK_LEFT_CURLY: {
@@ -1483,12 +1508,12 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 }
                 EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
 
-                base_expr = SIF_NEW_CLONE(Expr_Subscript(base_expr, index, base_expr->location));
+                base_expr = SIF_NEW_CLONE(Expr_Subscript(base_expr, index, lexer->current_block, base_expr->location));
                 break;
             }
             case TK_CARET: {
                 eat_next_token(lexer);
-                base_expr = SIF_NEW_CLONE(Expr_Dereference(base_expr, base_expr->location));
+                base_expr = SIF_NEW_CLONE(Expr_Dereference(base_expr, lexer->current_block, base_expr->location));
                 break;
             }
             case TK_NOT: {
@@ -1510,14 +1535,14 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                     first = false;
                 }
                 EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                base_expr = SIF_NEW_CLONE(Expr_Polymorphic_Type(base_expr, parameters, base_expr->location));
+                base_expr = SIF_NEW_CLONE(Expr_Polymorphic_Type(base_expr, parameters, lexer->current_block, base_expr->location));
                 break;
             }
             case TK_DOT: {
                 eat_next_token(lexer);
                 Token name_token;
                 EXPECT(lexer, TK_IDENTIFIER, &name_token);
-                base_expr = SIF_NEW_CLONE(Expr_Selector(base_expr, name_token.text, base_expr->location));
+                base_expr = SIF_NEW_CLONE(Expr_Selector(base_expr, name_token.text, lexer->current_block, base_expr->location));
                 break;
             }
             default: {
@@ -1539,26 +1564,25 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
     switch (token.kind) {
         case TK_NULL: {
             eat_next_token(lexer);
-            return SIF_NEW_CLONE(Expr_Null(token.location));
+            return SIF_NEW_CLONE(Expr_Null(lexer->current_block, token.location));
         }
         case TK_TRUE: {
             eat_next_token(lexer);
-            return SIF_NEW_CLONE(Expr_True(token.location));
+            return SIF_NEW_CLONE(Expr_True(lexer->current_block, token.location));
         }
         case TK_FALSE: {
             eat_next_token(lexer);
-            return SIF_NEW_CLONE(Expr_False(token.location));
+            return SIF_NEW_CLONE(Expr_False(lexer->current_block, token.location));
         }
         case TK_IDENTIFIER: {
             eat_next_token(lexer);
             char *ident_name = token.text;
-            Expr_Identifier *ident = SIF_NEW_CLONE(Expr_Identifier(ident_name, token.location));
-            g_identifiers_to_resolve.append(ident);
+            Expr_Identifier *ident = SIF_NEW_CLONE(Expr_Identifier(ident_name, lexer->current_block, token.location));
             return ident;
         }
         case TK_NUMBER: {
             eat_next_token(lexer);
-            return SIF_NEW_CLONE(Expr_Number_Literal(token.uint_value, token.int_value, token.float_value, token.has_a_dot, token.location));
+            return SIF_NEW_CLONE(Expr_Number_Literal(token.uint_value, token.int_value, token.float_value, token.has_a_dot, lexer->current_block, token.location));
         }
         case TK_CHAR: {
             eat_next_token(lexer);
@@ -1567,17 +1591,17 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 report_error(token.location, "Character literal must be length 1.");
                 return nullptr;
             }
-            return SIF_NEW_CLONE(Expr_Char_Literal(token.escaped_text[0], token.location));
+            return SIF_NEW_CLONE(Expr_Char_Literal(token.escaped_text[0], lexer->current_block, token.location));
         }
         case TK_STRING: {
             eat_next_token(lexer);
-            return SIF_NEW_CLONE(Expr_String_Literal(token.text, token.scanner_length, token.escaped_text, token.escaped_length, token.location));
+            return SIF_NEW_CLONE(Expr_String_Literal(token.text, token.scanner_length, token.escaped_text, token.escaped_length, lexer->current_block, token.location));
         }
         case TK_LEFT_PAREN: {
             eat_next_token(lexer);
             Ast_Expr *nested = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            return SIF_NEW_CLONE(Expr_Paren(nested, token.location));
+            return SIF_NEW_CLONE(Expr_Paren(nested, lexer->current_block, token.location));
         }
         case TK_DIRECTIVE_C_VARARGS: {
             Token directive_token;
@@ -1622,16 +1646,16 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             eat_next_token(lexer, &dot_token);
             Token identifier_token;
             EXPECT(lexer, TK_IDENTIFIER, &identifier_token);
-            return SIF_NEW_CLONE(Expr_Implicit_Enum_Selector(identifier_token.text, dot_token.location));
+            return SIF_NEW_CLONE(Expr_Implicit_Enum_Selector(identifier_token.text, lexer->current_block, dot_token.location));
         }
         case TK_PROC: {
             Ast_Proc_Header *header = parse_proc_header(lexer);
-            return SIF_NEW_CLONE(Expr_Procedure_Type(header, token.location));
+            return SIF_NEW_CLONE(Expr_Procedure_Type(header, lexer->current_block, token.location));
         }
         case TK_STRUCT: // note(josh): fallthrough
         case TK_UNION: {
             Ast_Struct *structure = parse_struct_or_union(lexer);
-            return SIF_NEW_CLONE(Expr_Struct_Type(structure, token.location));
+            return SIF_NEW_CLONE(Expr_Struct_Type(structure, lexer->current_block, token.location));
         }
         case TK_CAST: {
             eat_next_token(lexer);
@@ -1643,7 +1667,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             EXPECT(lexer, TK_COMMA, nullptr);
             Ast_Expr *rhs = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            return SIF_NEW_CLONE(Expr_Cast(type_expr, rhs, token.location));
+            return SIF_NEW_CLONE(Expr_Cast(type_expr, rhs, lexer->current_block, token.location));
         }
         case TK_TRANSMUTE: {
             eat_next_token(lexer);
@@ -1655,7 +1679,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             EXPECT(lexer, TK_COMMA, nullptr);
             Ast_Expr *rhs = parse_expr(lexer);
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            return SIF_NEW_CLONE(Expr_Transmute(type_expr, rhs, token.location));
+            return SIF_NEW_CLONE(Expr_Transmute(type_expr, rhs, lexer->current_block, token.location));
         }
         case TK_DOLLAR: {
             eat_next_token(lexer);
@@ -1666,7 +1690,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             }
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
             num_polymorphic_variables_parsed += 1;
-            return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location));
+            return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, lexer->current_block, token.location));
         }
         case TK_LEFT_SQUARE: {
             eat_next_token(lexer);
@@ -1682,7 +1706,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 if (!slice_of) {
                     return nullptr;
                 }
-                return SIF_NEW_CLONE(Expr_Slice_Type(slice_of, token.location));
+                return SIF_NEW_CLONE(Expr_Slice_Type(slice_of, lexer->current_block, token.location));
             }
             else {
                 // it's an array
@@ -1695,7 +1719,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 if (!array_of) {
                     return nullptr;
                 }
-                return SIF_NEW_CLONE(Expr_Array_Type(array_of, length, token.location));
+                return SIF_NEW_CLONE(Expr_Array_Type(array_of, length, lexer->current_block, token.location));
             }
             assert(false && "unreachable");
         }
@@ -1705,7 +1729,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (!pointer_to) {
                 return nullptr;
             }
-            return SIF_NEW_CLONE(Expr_Pointer_Type(pointer_to, token.location));
+            return SIF_NEW_CLONE(Expr_Pointer_Type(pointer_to, lexer->current_block, token.location));
         }
         case TK_GREATER_THAN: {
             eat_next_token(lexer);
@@ -1713,7 +1737,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (!reference_to) {
                 return nullptr;
             }
-            return SIF_NEW_CLONE(Expr_Reference_Type(reference_to, token.location));
+            return SIF_NEW_CLONE(Expr_Reference_Type(reference_to, lexer->current_block, token.location));
         }
         default: {
             unexpected_token(lexer, token);

@@ -57,8 +57,6 @@ struct Type_Struct;
 struct Type_Array;
 struct Type_Enum;
 
-static Ast_Block *current_block;
-
 enum Operand_Flags {
     OPERAND_CONSTANT = 1 << 0,
     OPERAND_TYPE     = 1 << 1,
@@ -115,7 +113,7 @@ struct Ast_Node {
     Ast_Kind ast_kind = AST_INVALID;
     Location location = {};
     Array<Node_Polymorph> polymorphs = {};
-    Ast_Node(Ast_Kind ast_kind, Location location)
+    Ast_Node(Ast_Kind ast_kind, Ast_Block *current_block, Location location)
     : ast_kind(ast_kind)
     , parent_block(current_block)
     , location(location)
@@ -134,8 +132,8 @@ struct Ast_Block : public Ast_Node {
     u64 flags = {};
     Hashtable<const char *, Declaration *> declarations_lookup = {};
     Array<Ast_Defer *> c_gen_defer_stack = {};
-    Ast_Block(Location location)
-    : Ast_Node(AST_BLOCK, location)
+    Ast_Block(Ast_Block *current_block, Location location)
+    : Ast_Node(AST_BLOCK, current_block, location)
     {
         nodes.allocator = g_global_linear_allocator;
         declarations.allocator = g_global_linear_allocator;
@@ -161,8 +159,8 @@ struct Ast_Proc_Header : public Ast_Node {
     Proc_Declaration *declaration = {};
     Ast_Node *current_parsing_loop = {};
     Array<Ast_Defer *> defers = {};
-    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Location location)
-    : Ast_Node(AST_PROC_HEADER, location)
+    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_PROC_HEADER, current_block, location)
     , name(name)
     , procedure_block(procedure_block)
     , parameters(parameters)
@@ -180,8 +178,8 @@ struct Ast_Proc_Header : public Ast_Node {
 struct Ast_Proc : public Ast_Node {
     Ast_Proc_Header *header = {};
     Ast_Block *body = nullptr;
-    Ast_Proc(Ast_Proc_Header *header, Ast_Block *body, Location location)
-    : Ast_Node(AST_PROC, location)
+    Ast_Proc(Ast_Proc_Header *header, Ast_Block *body, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_PROC, current_block, location)
     , header(header)
     , body(body)
     {}
@@ -191,8 +189,8 @@ struct Ast_Assign : public Ast_Node {
     Token_Kind op = {};
     Ast_Expr *lhs = {};
     Ast_Expr *rhs = {};
-    Ast_Assign(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs, Location location)
-    : Ast_Node(AST_ASSIGN, location)
+    Ast_Assign(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_ASSIGN, current_block, location)
     , op(op)
     , lhs(lhs)
     , rhs(rhs)
@@ -201,32 +199,32 @@ struct Ast_Assign : public Ast_Node {
 
 struct Ast_Directive_Include : public Ast_Node {
     char *filename = {};
-    Ast_Directive_Include(char *filename, Location location)
-    : Ast_Node(AST_DIRECTIVE_INCLUDE, location)
+    Ast_Directive_Include(char *filename, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_DIRECTIVE_INCLUDE, current_block, location)
     , filename(filename)
     {}
 };
 
 struct Ast_Directive_Assert : public Ast_Node {
     Ast_Expr *expr = {};
-    Ast_Directive_Assert(Ast_Expr *expr, Location location)
-    : Ast_Node(AST_DIRECTIVE_ASSERT, location)
+    Ast_Directive_Assert(Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_DIRECTIVE_ASSERT, current_block, location)
     , expr(expr)
     {}
 };
 
 struct Ast_Directive_Print : public Ast_Node {
     Ast_Expr *expr = {};
-    Ast_Directive_Print(Ast_Expr *expr, Location location)
-    : Ast_Node(AST_DIRECTIVE_PRINT, location)
+    Ast_Directive_Print(Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_DIRECTIVE_PRINT, current_block, location)
     , expr(expr)
     {}
 };
 
 struct Ast_Directive_C_Code : public Ast_Node {
     char *text = {};
-    Ast_Directive_C_Code(char *text, Location location)
-    : Ast_Node(AST_DIRECTIVE_C_CODE, location)
+    Ast_Directive_C_Code(char *text, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_DIRECTIVE_C_CODE, current_block, location)
     , text(text)
     {}
 };
@@ -234,8 +232,8 @@ struct Ast_Directive_C_Code : public Ast_Node {
 struct Ast_Directive_Foreign_Import : public Ast_Node {
     const char *name = {};
     const char *path = {};
-    Ast_Directive_Foreign_Import(const char *name, const char *path, Location location)
-    : Ast_Node(AST_DIRECTIVE_FOREIGN_IMPORT, location)
+    Ast_Directive_Foreign_Import(const char *name, const char *path, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_DIRECTIVE_FOREIGN_IMPORT, current_block, location)
     , name(name)
     , path(path)
     {}
@@ -255,8 +253,8 @@ struct Ast_Var : public Ast_Node {
     bool is_using = {};
     Ast_Struct *belongs_to_struct = {}; // note(josh): may be null
     Struct_Member_Declaration *struct_member = {}; // note(josh): only set if belongs_to_struct is set
-    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic_value, bool is_polymorphic_type, Location location)
-    : Ast_Node(AST_VAR, location)
+    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic_value, bool is_polymorphic_type, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_VAR, current_block, location)
     , name(name)
     , name_expr(name_expr)
     , type_expr(type_expr)
@@ -269,16 +267,16 @@ struct Ast_Var : public Ast_Node {
 
 struct Ast_Using : public Ast_Node {
     Ast_Expr *expr = {};
-    Ast_Using(Ast_Expr *expr, Location location)
-    : Ast_Node(AST_USING, location)
+    Ast_Using(Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_USING, current_block, location)
     , expr(expr)
     {}
 };
 
 struct Ast_Defer : public Ast_Node {
     Ast_Node *node_to_defer = {};
-    Ast_Defer(Ast_Node *node_to_defer, Location location)
-    : Ast_Node(AST_DEFER, location)
+    Ast_Defer(Ast_Node *node_to_defer, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_DEFER, current_block, location)
     , node_to_defer(node_to_defer)
     {}
 };
@@ -294,8 +292,8 @@ struct Ast_Struct : public Ast_Node {
     Array<Ast_Proc *> operator_overloads = {};
     Array<Ast_Proc *> procedures = {}; // todo(josh): maybe combine this with the operator_overloads above?
     Array<Ast_Var *> polymorphic_parameters = {};
-    Ast_Struct(bool is_union, Location location)
-    : Ast_Node(AST_STRUCT, location)
+    Ast_Struct(bool is_union, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_STRUCT, current_block, location)
     , is_union(is_union)
     {
         fields.allocator = g_global_linear_allocator;
@@ -309,8 +307,8 @@ struct Ast_If : public Ast_Node {
     Ast_Expr *condition = {};
     Ast_Block *body = {};
     Ast_Block *else_body = {};
-    Ast_If(Ast_Expr *condition, Ast_Block *body, Ast_Block *else_body, Location location)
-    : Ast_Node(AST_IF, location)
+    Ast_If(Ast_Expr *condition, Ast_Block *body, Ast_Block *else_body, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_IF, current_block, location)
     , condition(condition)
     , body(body)
     , else_body(else_body)
@@ -322,16 +320,16 @@ struct Ast_For_Loop : public Ast_Node {
     Ast_Expr *condition = {};
     Ast_Node *post = {};
     Ast_Block *body = {};
-    Ast_For_Loop(Location location)
-    : Ast_Node(AST_FOR_LOOP, location)
+    Ast_For_Loop(Ast_Block *current_block, Location location)
+    : Ast_Node(AST_FOR_LOOP, current_block, location)
     {}
 };
 
 struct Ast_While_Loop : public Ast_Node {
     Ast_Expr *condition = {};
     Ast_Block *body = {};
-    Ast_While_Loop(Location location)
-    : Ast_Node(AST_WHILE_LOOP, location)
+    Ast_While_Loop(Ast_Block *current_block, Location location)
+    : Ast_Node(AST_WHILE_LOOP, current_block, location)
     {}
 };
 
@@ -348,8 +346,8 @@ struct Ast_Enum : public Ast_Node {
     Type_Enum *type = nullptr;
     Enum_Declaration *declaration = {};
     Ast_Expr *base_type_expr = {};
-    Ast_Enum(char *name, Location location)
-    : Ast_Node(AST_ENUM, location)
+    Ast_Enum(char *name, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_ENUM, current_block, location)
     , name(name)
     {}
 };
@@ -357,8 +355,8 @@ struct Ast_Enum : public Ast_Node {
 struct Ast_Return : public Ast_Node {
     Ast_Proc_Header *matching_procedure = {};
     Ast_Expr *expr = {};
-    Ast_Return(Ast_Proc_Header *matching_procedure, Ast_Expr *expr, Location location)
-    : Ast_Node(AST_RETURN, location)
+    Ast_Return(Ast_Proc_Header *matching_procedure, Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_RETURN, current_block, location)
     , matching_procedure(matching_procedure)
     , expr(expr)
     {}
@@ -366,39 +364,39 @@ struct Ast_Return : public Ast_Node {
 
 struct Ast_Break : public Ast_Node {
     Ast_Node *matching_loop = {};
-    Ast_Break(Ast_Node *matching_loop, Location location)
-    : Ast_Node(AST_BREAK, location)
+    Ast_Break(Ast_Node *matching_loop, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_BREAK, current_block, location)
     , matching_loop(matching_loop)
     {}
 };
 
 struct Ast_Continue : public Ast_Node {
     Ast_Node *matching_loop = {};
-    Ast_Continue(Ast_Node *matching_loop, Location location)
-    : Ast_Node(AST_CONTINUE, location)
+    Ast_Continue(Ast_Node *matching_loop, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_CONTINUE, current_block, location)
     , matching_loop(matching_loop)
     {}
 };
 
 struct Ast_Statement_Expr : public Ast_Node {
     Ast_Expr *expr = {};
-    Ast_Statement_Expr(Ast_Expr *expr, Location location)
-    : Ast_Node(AST_STATEMENT_EXPR, location)
+    Ast_Statement_Expr(Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_STATEMENT_EXPR, current_block, location)
     , expr(expr)
     {}
 };
 
 struct Ast_Block_Statement : public Ast_Node {
     Ast_Block *block = {};
-    Ast_Block_Statement(Ast_Block *block, Location location)
-    : Ast_Node(AST_BLOCK_STATEMENT, location)
+    Ast_Block_Statement(Ast_Block *block, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_BLOCK_STATEMENT, current_block, location)
     , block(block)
     {}
 };
 
 struct Ast_Empty_Statement : public Ast_Node {
-    Ast_Empty_Statement(Location location)
-    : Ast_Node(AST_EMPTY_STATEMENT, location)
+    Ast_Empty_Statement(Ast_Block *current_block, Location location)
+    : Ast_Node(AST_EMPTY_STATEMENT, current_block, location)
     {}
 };
 
@@ -458,8 +456,8 @@ struct Ast_Expr : public Ast_Node {
     Operand operand = {};
     Ast_Proc *desugared_procedure_to_call = {};
     Array<Procedure_Call_Parameter> processed_procedure_call_parameters = {};
-    Ast_Expr(Expr_Kind kind, Location location)
-    : Ast_Node(AST_EXPR, location)
+    Ast_Expr(Expr_Kind kind, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_EXPR, current_block, location)
     , expr_kind(kind)
     {}
 };
@@ -468,8 +466,8 @@ struct Expr_Binary : public Ast_Expr {
     Token_Kind op = TK_INVALID;
     Ast_Expr *lhs = nullptr;
     Ast_Expr *rhs = nullptr;
-    Expr_Binary(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs)
-    : Ast_Expr(EXPR_BINARY, lhs->location)
+    Expr_Binary(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_BINARY, current_block, location)
     , op(op)
     , lhs(lhs)
     , rhs(rhs)
@@ -478,8 +476,8 @@ struct Expr_Binary : public Ast_Expr {
 
 struct Expr_Address_Of : public Ast_Expr {
     Ast_Expr *rhs = nullptr;
-    Expr_Address_Of(Ast_Expr *rhs, Location location)
-    : Ast_Expr(EXPR_ADDRESS_OF, location)
+    Expr_Address_Of(Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_ADDRESS_OF, current_block, location)
     , rhs(rhs)
     {}
 };
@@ -487,8 +485,8 @@ struct Expr_Address_Of : public Ast_Expr {
 struct Expr_Unary : public Ast_Expr {
     Token_Kind op = TK_INVALID;
     Ast_Expr *rhs = nullptr;
-    Expr_Unary(Token_Kind op, Ast_Expr *rhs, Location location)
-    : Ast_Expr(EXPR_UNARY, location)
+    Expr_Unary(Token_Kind op, Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_UNARY, current_block, location)
     , op(op)
     , rhs(rhs)
     {}
@@ -497,8 +495,8 @@ struct Expr_Unary : public Ast_Expr {
 struct Expr_Identifier : public Ast_Expr {
     char *name = nullptr;
     Declaration *resolved_declaration = nullptr;
-    Expr_Identifier(char *name, Location location)
-    : Ast_Expr(EXPR_IDENTIFIER, location)
+    Expr_Identifier(char *name, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_IDENTIFIER, current_block, location)
     , name(name)
     {}
 };
@@ -508,8 +506,8 @@ struct Expr_Number_Literal : public Ast_Expr {
     i64 int_value = {};
     f64 float_value = {};
     bool has_a_dot = false;
-    Expr_Number_Literal(u64 uint_value, i64 int_value, f64 float_value, bool has_a_dot, Location location)
-    : Ast_Expr(EXPR_NUMBER_LITERAL, location)
+    Expr_Number_Literal(u64 uint_value, i64 int_value, f64 float_value, bool has_a_dot, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_NUMBER_LITERAL, current_block, location)
     , uint_value(uint_value)
     , int_value(int_value)
     , float_value(float_value)
@@ -519,8 +517,8 @@ struct Expr_Number_Literal : public Ast_Expr {
 
 struct Expr_Char_Literal : public Ast_Expr {
     char c = {};
-    Expr_Char_Literal(char c, Location location)
-    : Ast_Expr(EXPR_CHAR_LITERAL, location)
+    Expr_Char_Literal(char c, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_CHAR_LITERAL, current_block, location)
     , c(c)
     {}
 };
@@ -530,8 +528,8 @@ struct Expr_String_Literal : public Ast_Expr {
     int scanner_length = {};
     char *escaped_text = {};
     int escaped_length = {};
-    Expr_String_Literal(char *text, int scanner_length, char *escaped_text, int escaped_length, Location location)
-    : Ast_Expr(EXPR_STRING_LITERAL, location)
+    Expr_String_Literal(char *text, int scanner_length, char *escaped_text, int escaped_length, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_STRING_LITERAL, current_block, location)
     , text(text)
     , scanner_length(scanner_length)
     , escaped_text(escaped_text)
@@ -542,8 +540,8 @@ struct Expr_String_Literal : public Ast_Expr {
 struct Expr_Subscript : public Ast_Expr {
     Ast_Expr *lhs = {};
     Ast_Expr *index = {};
-    Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index, Location location)
-    : Ast_Expr(EXPR_SUBSCRIPT, location)
+    Expr_Subscript(Ast_Expr *lhs, Ast_Expr *index, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_SUBSCRIPT, current_block, location)
     , lhs(lhs)
     , index(index)
     {}
@@ -552,16 +550,16 @@ struct Expr_Subscript : public Ast_Expr {
 struct Expr_Polymorphic_Variable : public Ast_Expr {
     Expr_Identifier *ident = {};
     Declaration *inserted_declaration = {};
-    Expr_Polymorphic_Variable(Expr_Identifier *ident, Location location)
-    : Ast_Expr(EXPR_POLYMORPHIC_VARIABLE, location)
+    Expr_Polymorphic_Variable(Expr_Identifier *ident, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_POLYMORPHIC_VARIABLE, current_block, location)
     , ident(ident)
     {}
 };
 
 struct Expr_Dereference : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
-    Expr_Dereference(Ast_Expr *lhs, Location location)
-    : Ast_Expr(EXPR_DEREFERENCE, location)
+    Expr_Dereference(Ast_Expr *lhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_DEREFERENCE, current_block, location)
     , lhs(lhs)
     {}
 };
@@ -570,8 +568,8 @@ struct Expr_Procedure_Call : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     Array<Ast_Expr *> parameters = {};
     Type_Procedure *target_procedure_type = {};
-    Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters, Location location)
-    : Ast_Expr(EXPR_PROCEDURE_CALL, location)
+    Expr_Procedure_Call(Ast_Expr *lhs, Array<Ast_Expr *> parameters, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_PROCEDURE_CALL, current_block, location)
     , lhs(lhs)
     , parameters(parameters)
     {}
@@ -596,8 +594,8 @@ struct Expr_Selector : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     char *field_name = nullptr;
     Selector_Expression_Lookup_Result lookup = {};
-    Expr_Selector(Ast_Expr *lhs, char *field_name, Location location)
-    : Ast_Expr(EXPR_SELECTOR, location)
+    Expr_Selector(Ast_Expr *lhs, char *field_name, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_SELECTOR, current_block, location)
     , lhs(lhs)
     , field_name(field_name)
     {}
@@ -605,8 +603,8 @@ struct Expr_Selector : public Ast_Expr {
 
 struct Expr_Implicit_Enum_Selector : public Ast_Expr {
     const char *field = nullptr;
-    Expr_Implicit_Enum_Selector(const char *field, Location location)
-    : Ast_Expr(EXPR_IMPLICIT_ENUM_SELECTOR, location)
+    Expr_Implicit_Enum_Selector(const char *field, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_IMPLICIT_ENUM_SELECTOR, current_block, location)
     , field(field)
     {}
 };
@@ -615,8 +613,8 @@ struct Expr_Compound_Literal : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Array<Ast_Expr *> exprs = {};
     bool is_partial = {};
-    Expr_Compound_Literal(Ast_Expr *type_expr, Array<Ast_Expr *> exprs, Location location)
-    : Ast_Expr(EXPR_COMPOUND_LITERAL, location)
+    Expr_Compound_Literal(Ast_Expr *type_expr, Array<Ast_Expr *> exprs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_COMPOUND_LITERAL, current_block, location)
     , type_expr(type_expr)
     , exprs(exprs)
     {}
@@ -624,8 +622,8 @@ struct Expr_Compound_Literal : public Ast_Expr {
 
 struct Expr_Paren : public Ast_Expr {
     Ast_Expr *nested = nullptr;
-    Expr_Paren(Ast_Expr *nested, Location location)
-    : Ast_Expr(EXPR_PAREN, location)
+    Expr_Paren(Ast_Expr *nested, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_PAREN, current_block, location)
     , nested(nested)
     {}
 };
@@ -633,8 +631,8 @@ struct Expr_Paren : public Ast_Expr {
 struct Expr_Cast : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Ast_Expr *rhs;
-    Expr_Cast(Ast_Expr *type_expr, Ast_Expr *rhs, Location location)
-    : Ast_Expr(EXPR_CAST, location)
+    Expr_Cast(Ast_Expr *type_expr, Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_CAST, current_block, location)
     , type_expr(type_expr)
     , rhs(rhs)
     {}
@@ -643,8 +641,8 @@ struct Expr_Cast : public Ast_Expr {
 struct Expr_Transmute : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Ast_Expr *rhs;
-    Expr_Transmute(Ast_Expr *type_expr, Ast_Expr *rhs, Location location)
-    : Ast_Expr(EXPR_TRANSMUTE, location)
+    Expr_Transmute(Ast_Expr *type_expr, Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_TRANSMUTE, current_block, location)
     , type_expr(type_expr)
     , rhs(rhs)
     {}
@@ -652,50 +650,50 @@ struct Expr_Transmute : public Ast_Expr {
 
 struct Expr_Sizeof : public Ast_Expr {
     Ast_Expr *expr = {};
-    Expr_Sizeof(Ast_Expr *expr, Location location)
-    : Ast_Expr(EXPR_SIZEOF, location)
+    Expr_Sizeof(Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_SIZEOF, current_block, location)
     , expr(expr)
     {}
 };
 
 struct Expr_Typeof : public Ast_Expr {
     Ast_Expr *expr = {};
-    Expr_Typeof(Ast_Expr *expr, Location location)
-    : Ast_Expr(EXPR_TYPEOF, location)
+    Expr_Typeof(Ast_Expr *expr, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_TYPEOF, current_block, location)
     , expr(expr)
     {}
 };
 
 struct Expr_Null : public Ast_Expr {
-    Expr_Null(Location location)
-    : Ast_Expr(EXPR_NULL, location)
+    Expr_Null(Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_NULL, current_block, location)
     {}
 };
 
 struct Expr_True : public Ast_Expr {
-    Expr_True(Location location)
-    : Ast_Expr(EXPR_TRUE, location)
+    Expr_True(Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_TRUE, current_block, location)
     {}
 };
 
 struct Expr_False : public Ast_Expr {
-    Expr_False(Location location)
-    : Ast_Expr(EXPR_FALSE, location)
+    Expr_False(Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_FALSE, current_block, location)
     {}
 };
 
 struct Expr_Pointer_Type : public Ast_Expr {
     Ast_Expr *pointer_to = nullptr;
-    Expr_Pointer_Type(Ast_Expr *pointer_to, Location location)
-    : Ast_Expr(EXPR_POINTER_TYPE, location)
+    Expr_Pointer_Type(Ast_Expr *pointer_to, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_POINTER_TYPE, current_block, location)
     , pointer_to(pointer_to)
     {}
 };
 
 struct Expr_Reference_Type : public Ast_Expr {
     Ast_Expr *reference_to = nullptr;
-    Expr_Reference_Type(Ast_Expr *reference_to, Location location)
-    : Ast_Expr(EXPR_REFERENCE_TYPE, location)
+    Expr_Reference_Type(Ast_Expr *reference_to, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_REFERENCE_TYPE, current_block, location)
     , reference_to(reference_to)
     {}
 };
@@ -703,8 +701,8 @@ struct Expr_Reference_Type : public Ast_Expr {
 struct Expr_Polymorphic_Type : public Ast_Expr {
     Ast_Expr *type_expr = {};
     Array<Ast_Expr *> parameters = {};
-    Expr_Polymorphic_Type(Ast_Expr *type_expr, Array<Ast_Expr *> parameters, Location location)
-    : Ast_Expr(EXPR_POLYMORPHIC_TYPE, location)
+    Expr_Polymorphic_Type(Ast_Expr *type_expr, Array<Ast_Expr *> parameters, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_POLYMORPHIC_TYPE, current_block, location)
     , type_expr(type_expr)
     , parameters(parameters)
     {}
@@ -713,8 +711,8 @@ struct Expr_Polymorphic_Type : public Ast_Expr {
 struct Expr_Array_Type : public Ast_Expr {
     Ast_Expr *array_of = nullptr;
     Ast_Expr *count_expr = nullptr;
-    Expr_Array_Type(Ast_Expr *array_of, Ast_Expr *count_expr, Location location)
-    : Ast_Expr(EXPR_ARRAY_TYPE, location)
+    Expr_Array_Type(Ast_Expr *array_of, Ast_Expr *count_expr, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_ARRAY_TYPE, current_block, location)
     , array_of(array_of)
     , count_expr(count_expr)
     {}
@@ -722,24 +720,24 @@ struct Expr_Array_Type : public Ast_Expr {
 
 struct Expr_Slice_Type : public Ast_Expr {
     Ast_Expr *slice_of = nullptr;
-    Expr_Slice_Type(Ast_Expr *slice_of, Location location)
-    : Ast_Expr(EXPR_SLICE_TYPE, location)
+    Expr_Slice_Type(Ast_Expr *slice_of, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_SLICE_TYPE, current_block, location)
     , slice_of(slice_of)
     {}
 };
 
 struct Expr_Procedure_Type : public Ast_Expr {
     Ast_Proc_Header *header = {};
-    Expr_Procedure_Type(Ast_Proc_Header *header, Location location)
-    : Ast_Expr(EXPR_PROCEDURE_TYPE, location)
+    Expr_Procedure_Type(Ast_Proc_Header *header, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_PROCEDURE_TYPE, current_block, location)
     , header(header)
     {}
 };
 
 struct Expr_Struct_Type : public Ast_Expr {
     Ast_Struct *structure = {};
-    Expr_Struct_Type(Ast_Struct *structure, Location location)
-    : Ast_Expr(EXPR_STRUCT_TYPE, location)
+    Expr_Struct_Type(Ast_Struct *structure, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_STRUCT_TYPE, current_block, location)
     , structure(structure)
     {}
 };
@@ -747,8 +745,8 @@ struct Expr_Struct_Type : public Ast_Expr {
 struct Expr_Spread : public Ast_Expr {
     Ast_Expr *rhs = nullptr;
     bool is_c_varargs = {};
-    Expr_Spread(Ast_Expr *rhs, Location location)
-    : Ast_Expr(EXPR_SPREAD, location)
+    Expr_Spread(Ast_Expr *rhs, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_SPREAD, current_block, location)
     , rhs(rhs)
     {}
 };
@@ -773,7 +771,7 @@ enum Declaration_Check_State {
 };
 
 struct Declaration {
-    Ast_Block *parent_block = {}; // note(josh): temporarily null while doing polymorphism
+    Ast_Block *parent_block = {};
     Declaration_Check_State check_state = {};
     const char *name = {};
     const char *link_name = {};
@@ -868,10 +866,10 @@ extern Array<Ast_Directive_C_Code *>         g_all_c_code_directives;
 extern Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
 
 void init_parser();
-Ast_Block *push_ast_block(Ast_Block *block);
-void pop_ast_block(Ast_Block *old_block);
+Ast_Block *push_ast_block(Lexer *lexer, Ast_Block *block);
+void pop_ast_block(Lexer *lexer, Ast_Block *old_block);
 bool register_declaration(Ast_Block *block, Declaration *new_declaration);
-bool parse_file(const char *filename, Location include_location);
+bool parse_file(const char *requested_filename, Location include_location);
 Ast_Block *begin_parsing(const char *filename);
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon = true, char *name_override = nullptr);
 Ast_Expr *unparen_expr(Ast_Expr *expr);

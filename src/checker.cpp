@@ -1,5 +1,4 @@
 #include "checker.h"
-#include "os_windows.h"
 
 #define POINTER_SIZE 8
 
@@ -63,8 +62,8 @@ T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
         t_ptr->id = all_types.count;
     }
 
-    t_ptr->variables_block = SIF_NEW_CLONE(Ast_Block({}));
-    t_ptr->constants_block = SIF_NEW_CLONE(Ast_Block({}));
+    t_ptr->variables_block = SIF_NEW_CLONE(Ast_Block({}, {}));
+    t_ptr->constants_block = SIF_NEW_CLONE(Ast_Block({}, {}));
     return t_ptr;
 }
 
@@ -184,20 +183,6 @@ Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
     return incomplete_type;
 }
 
-void make_incomplete_types_for_all_structs() {
-    For (idx, g_all_declarations) {
-        Declaration *decl = g_all_declarations[idx];
-        if (decl->kind != DECL_STRUCT) { // todo(josh): @Speed maybe make a g_all_structs?
-            continue;
-        }
-        if (decl->is_polymorphic) {
-            continue;
-        }
-        Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
-        make_incomplete_type_for_struct(struct_decl->structure);
-    }
-}
-
 bool is_type_pointer    (Type *type) { return type->flags & TF_POINTER;     }
 bool is_type_polymorphic(Type *type) { return type->flags & TF_POLYMORPHIC; }
 bool is_type_reference  (Type *type) { return type->flags & TF_REFERENCE;   }
@@ -300,6 +285,9 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         case DECL_STRUCT: {
             Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
             decl_operand.type = type_typeid;
+            if (!struct_decl->structure->type) {
+                struct_decl->structure->type = make_incomplete_type_for_struct(struct_decl->structure);
+            }
             decl_operand.type_value = struct_decl->structure->type;
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
             break;
@@ -576,7 +564,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
     }
     else {
-        if (decl->parent_block) { // note(josh): some declarations don't have a parent block yet like when we are doing polymorphs
+        if (decl->parent_block) { // note(josh): some declarations don't have a parent block yet like when we are doing polymorphs // todo(josh): can we remove this now?
             if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
                 if (!decl->is_polymorphic) {
                     ordered_declarations.append(decl);
@@ -593,7 +581,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
 bool typecheck_global_scope(Ast_Block *block) {
     assert(block->flags & BF_IS_GLOBAL_SCOPE);
-    make_incomplete_types_for_all_structs(); // todo(josh): this is kinda goofy. should be able to just do this as we traverse the program
 
     For (idx, block->declarations) {
         Declaration *decl = block->declarations[idx];
@@ -1806,8 +1793,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     Lexer lexer(node_to_polymorph->location.filepath, node_to_polymorph->location.text);
     lexer.location = node_to_polymorph->location;
     lexer.location.index = 0;
-    Ast_Block *old_block = push_ast_block(node_to_polymorph->parent_block);
-    defer(pop_ast_block(old_block));
+    lexer.current_block = node_to_polymorph->parent_block;
     String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     sb.print(original_name);
     sb.printf("__polymorph_%d", total_num_polymorphs);
@@ -1901,14 +1887,19 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
         case AST_STRUCT: {
             Ast_Struct *structure_polymorph = (Ast_Struct *)new_parse;
             structure_polymorph->declaration->is_polymorphic = false;
-            Type_Struct *incomplete_type = make_incomplete_type_for_struct(structure_polymorph);
-            incomplete_type->polymorphic_parameter_values = parameters;
-            incomplete_type->is_polymorph_of = (Ast_Struct *)node_to_polymorph;
-            // todo(josh): I'm not sure if this should be here or if it should just happen with each usage like with every other time with call complete_type()
-            if (!complete_type(incomplete_type)) {
+            assert(structure_polymorph->type == nullptr);
+            if (!check_declaration(structure_polymorph->declaration, polymorph_location)) {
                 report_info(polymorph_location, "Error during polymorph triggered here.");
                 return nullptr;
             }
+            assert(structure_polymorph->type != nullptr);
+            structure_polymorph->type->polymorphic_parameter_values = parameters;
+            structure_polymorph->type->is_polymorph_of = (Ast_Struct *)node_to_polymorph;
+            // todo(josh): I'm not sure if this should be here or if it should just happen with each usage like with every other time with call complete_type()
+            // if (!complete_type(structure_polymorph->type)) {
+            //     report_info(polymorph_location, "Error during polymorph triggered here.");
+            //     return nullptr;
+            // }
             break;
         }
         case AST_PROC: {
@@ -2812,7 +2803,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
             case EXPR_STRUCT_TYPE: {
                 Expr_Struct_Type *anonymous_struct = (Expr_Struct_Type *)expr;
                 assert(anonymous_struct->structure != nullptr);
-                assert(anonymous_struct->structure->type != nullptr);
+                assert(anonymous_struct->structure->type == nullptr);
+                anonymous_struct->structure->type = make_incomplete_type_for_struct(anonymous_struct->structure);
                 result_operand.type = type_typeid;
                 result_operand.type_value = anonymous_struct->structure->type;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;

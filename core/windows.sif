@@ -4220,20 +4220,17 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
         return null;
     }
 
-    var name_u16s = cast(^u16, sif_alloc(cast(i64, (query_num_chars+1) * sizeof(u16)), DEFAULT_ALIGNMENT, allocator)); // 2 extra bytes for zero termination WCHAR.
-    var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), name_u16s, query_num_chars);
+    var name_u16s = new_slice(u16, cast(int, query_num_chars+1), allocator);
+    var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), &name_u16s[0], query_num_chars);
 
     if (result_num_chars > 0) {
-        assert(result_num_chars <= query_num_chars);
-        var name_slice = slice_ptr(name_u16s, cast(i64, result_num_chars));
-        // todo(josh): this looks sketch
-        name_slice[cast(i64, result_num_chars)] = 0;
+        assert(cast(int, result_num_chars) < name_u16s.count);
+        name_u16s[cast(i64, result_num_chars)] = 0;
+        name_u16s.count -= 1;
         out_success^ = true;
         out_result_length_in_bytes^ = result_num_chars * 2;
-        return name_u16s;
     }
-
-    return name_u16s;
+    return &name_u16s[0];
 }
 
 proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) : string {

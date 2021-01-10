@@ -51,3 +51,36 @@ double query_timer(Timer *timer) {
     assert(QueryPerformanceCounter(&large_integer_counter) != 0);
     return large_integer_counter.QuadPart / timer->frequency;
 }
+
+
+
+Mutex create_mutex() {
+    HANDLE handle = CreateMutex(nullptr, false, nullptr);
+    Mutex mutex = {};
+    mutex.handle = handle;
+    return mutex;
+}
+
+void wait_for_mutex(Mutex mutex) {
+    DWORD wait_result = WaitForSingleObject(mutex.handle, INFINITE);
+    assert(wait_result == WAIT_OBJECT_0);
+}
+
+void release_mutex(Mutex mutex) {
+    bool result = ReleaseMutex(mutex.handle);
+    assert(result);
+}
+
+Thread create_thread(u32 (*function)(void *userdata), void *userdata) {
+    DWORD id = {};
+    HANDLE handle = CreateThread(
+            NULL,      // default security attributes
+            0,         // use default stack size
+            (DWORD (*)(void *))function,  // thread function name
+            userdata,  // argument to thread function
+            0,         // use default creation flags
+            &id);
+    Thread thread = {};
+    thread.handle = handle;
+    return thread;
+}

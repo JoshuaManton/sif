@@ -129,6 +129,9 @@ struct Token {
     f64 float_value = {};
 };
 
+struct Ast_Block;
+struct Ast_Proc_Header;
+
 struct Lexer {
     char *text = nullptr;
     Location location = {};
@@ -136,6 +139,8 @@ struct Lexer {
     bool allow_compound_literals = true;
     bool has_peeked_token = {};
     Token peeked_token = {};
+    Ast_Block *current_block;
+    Ast_Proc_Header *currently_parsing_proc;
     Lexer(const char *filepath, char *text)
     : text(text)
     {
