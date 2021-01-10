@@ -72,7 +72,7 @@ Array<char *> parse_notes(Lexer *lexer) {
 
 
 
-bool did_parse_polymorphic_thing = false;
+int num_polymorphic_variables_parsed = 0;
 
 Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     Token root_token;
@@ -98,16 +98,13 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     bool is_constant = root_token.kind == TK_CONST;
 
-    bool old_did_parse_polymorphic_thing = did_parse_polymorphic_thing;
-    did_parse_polymorphic_thing = false;
-    defer(did_parse_polymorphic_thing = old_did_parse_polymorphic_thing);
+    int polymorph_count_before_name = num_polymorphic_variables_parsed;
 
     Ast_Expr *name_expr = parse_expr(lexer);
     if (name_expr == nullptr) {
         return nullptr;
     }
-    bool is_polymorphic_value = did_parse_polymorphic_thing;
-    did_parse_polymorphic_thing = false;
+    bool is_polymorphic_value = polymorph_count_before_name != num_polymorphic_variables_parsed;
     char *var_name = nullptr;
     switch (name_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
@@ -132,7 +129,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         assert(false && "unexpected EOF");
         return nullptr;
     }
-    assert(did_parse_polymorphic_thing == false);
+    int polymorph_count_before_type = num_polymorphic_variables_parsed;
     Ast_Expr *type_expr = nullptr;
     if (colon.kind == TK_COLON) {
         eat_next_token(lexer);
@@ -141,7 +138,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
             return nullptr;
         }
     }
-    bool is_polymorphic_type = did_parse_polymorphic_thing;
+    bool is_polymorphic_type = polymorph_count_before_type != num_polymorphic_variables_parsed;
 
     Ast_Expr *expr = nullptr;
     Token assign;
@@ -1663,7 +1660,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 return nullptr;
             }
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
-            did_parse_polymorphic_thing = true;
+            num_polymorphic_variables_parsed += 1;
             return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, token.location));
         }
         case TK_LEFT_SQUARE: {

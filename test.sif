@@ -1,76 +1,82 @@
 #include "core:basic.sif"
 #include "core:string_builder.sif"
 
-enum Foo {
-    BAR;
-    BAZ;
-}
-struct Bar {
-    var a: int;
-    var b: string;
-    var c: bool;
-    var baz: Baz;
-}
-
-struct Baz {
-    var a: int;
-}
-
-proc main() : i32 {
-    var c: cstring = "barzle";
-    print("% %\n", "foozle", c);
-
-    var buf: [64]u8;
-    var buf_slice: []u8;
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % % %", cast(i8, 0), cast(i16, 1), cast(i32, 2), cast(i64, 3))));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % % %", cast(u8, 0), cast(u16, 1), cast(u32, 2), cast(u64, 3))));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% %", cast(f32, 1), cast(f64, 2))));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % %", true, "wow", false)));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", get_type_info(Type_Info))));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % %", int, float, string)));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % %", Foo.BAR, Foo.BAZ, cast(Foo, 12))));
-    printa(buf_slice.count, transmute(string, buf_slice));
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", ([4]int){1, 2, 3, 4})));
-    printa(buf_slice.count, transmute(string, buf_slice));
-
-    var arr = ([4]int){4, 3, 2, 1};
-    var bar_slice = to_slice(&arr);
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", bar_slice)));
-    printa(buf_slice.count, transmute(string, buf_slice));
-
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", Bar{123, "foo", true, Baz{442}})));
-    printa(buf_slice.count, transmute(string, buf_slice));
-
-    buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", main)));
-    printa(buf_slice.count, transmute(string, buf_slice));
-
-    var sb = make_string_builder(4, default_allocator());
-    defer destroy_string_builder(sb);
-    sbprinta(&sb, 1, 2, Bar{123, "foo", true, Baz{442}});
-    printa(string_builder_to_string(sb));
-
-    return 0;
-}
-
-// proc takes_constant_proc(PROCEDUREEEEEEEEEEE: proc(t: $T)) {
-//     PROCEDUREEEEEEEEEEE(1);
+// enum Foo {
+//     BAR;
+//     BAZ;
+// }
+// struct Bar {
+//     var a: int;
+//     var b: string;
+//     var c: bool;
+//     var baz: Baz;
 // }
 
-// proc work_1(a: int) {
-//     print("work_1\n");
-// }
-// proc work_2(a: float) {
-//     print("work_2\n");
+// struct Baz {
+//     var a: int;
 // }
 
 // proc main() : i32 {
-//     takes_constant_proc(work_1);
-//     takes_constant_proc(work_2);
+//     var c: cstring = "barzle";
+//     print("% %\n", "foozle", c);
+
+//     var buf: [64]u8;
+//     var buf_slice: []u8;
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % % %", cast(i8, 0), cast(i16, 1), cast(i32, 2), cast(i64, 3))));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % % %", cast(u8, 0), cast(u16, 1), cast(u32, 2), cast(u64, 3))));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% %", cast(f32, 1), cast(f64, 2))));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % %", true, "wow", false)));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", get_type_info(Type_Info))));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % %", int, float, string)));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "% % %", Foo.BAR, Foo.BAZ, cast(Foo, 12))));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", ([4]int){1, 2, 3, 4})));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+
+//     var arr = ([4]int){4, 3, 2, 1};
+//     var bar_slice = to_slice(&arr);
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", bar_slice)));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", Bar{123, "foo", true, Baz{442}})));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+
+//     buf_slice = slice_ptr(&buf[0], min(buf.count, bprint(to_slice(&buf), "%", main)));
+//     printa(buf_slice.count, transmute(string, buf_slice));
+
+//     var sb = make_string_builder(4, default_allocator());
+//     defer destroy_string_builder(sb);
+//     sbprinta(&sb, 1, 2, Bar{123, "foo", true, Baz{442}});
+//     printa(string_builder_to_string(sb));
+
 //     return 0;
 // }
+
+proc takes_constant_proc($PROCEDUREEEEEEEEEEE: proc(t: $T)) {
+    PROCEDUREEEEEEEEEEE(1);
+    printa(T);
+}
+
+proc work_1(a: int) {
+    print("work_1\n");
+}
+proc work_2(a: float) {
+    print("work_2\n");
+}
+proc work_3(a: float) {
+    print("work_3\n");
+}
+
+proc main() : i32 {
+    takes_constant_proc(work_1);
+    takes_constant_proc(work_1);
+    takes_constant_proc(work_2);
+    takes_constant_proc(work_3);
+    return 0;
+}

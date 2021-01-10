@@ -40,6 +40,8 @@ SMALL
 -require #c_varargs to be ..any?
 -disallow #c_varargs in non-foreign procedure headers
 -cast untyped string to cstring
+-'using' in procedure parameters
+-deduplicate #foreign_import/#foreign_system_import
 
 MEDIUM
 -runtime bounds checks
