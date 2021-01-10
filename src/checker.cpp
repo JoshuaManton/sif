@@ -1540,16 +1540,11 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
 
 
 
-struct Inserted_Polymorph {
-    Expr_Polymorphic_Variable *poly_var = {};
-    Declaration *declaration = {};
-};
-
 int total_num_polymorphs = 0;
 
-bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations);
+bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Ast_Block *block_to_insert_into, Array<Declaration *> *out_polymorphic_declarations);
 
-bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
+bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Ast_Block *block_to_insert_into, Array<Declaration *> *out_polymorphic_declarations) {
     switch (value_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
             break;
@@ -1564,10 +1559,10 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
                 return false;
             }
             assert(parameter_operand.type != nullptr);
-            Inserted_Polymorph inserted_polymorph = {};
-            inserted_polymorph.poly_var = poly;
-            inserted_polymorph.declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, nullptr, value_expr->location));
-            out_polymorphic_declarations->append(inserted_polymorph);
+            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, block_to_insert_into, value_expr->location));
+            poly->inserted_declaration = declaration;
+            assert(register_declaration(block_to_insert_into, declaration));
+            out_polymorphic_declarations->append(declaration);
             break;
         }
         default: {
@@ -1588,11 +1583,8 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
     return true;
 }
 
-bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter_type, Location parameter_location, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
+bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter_type, Location parameter_location, Ast_Block *block_to_insert_into, Array<Declaration *> *out_polymorphic_declarations) {
     switch (type_expr->expr_kind) {
-        case EXPR_IDENTIFIER: {
-            break;
-        }
         case EXPR_POLYMORPHIC_VARIABLE: {
             // name: $T
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)type_expr;
@@ -1607,10 +1599,10 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
             type_operand.type = type_typeid;
             type_operand.type_value = concrete_type;
-            Inserted_Polymorph inserted_polymorph = {};
-            inserted_polymorph.poly_var = poly;
-            inserted_polymorph.declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, nullptr, parameter_location));
-            out_polymorphic_declarations->append(inserted_polymorph);
+            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, block_to_insert_into, parameter_location));
+            poly->inserted_declaration = declaration;
+            assert(register_declaration(block_to_insert_into, declaration));
+            out_polymorphic_declarations->append(declaration);
             break;
         }
         case EXPR_POLYMORPHIC_TYPE: {
@@ -1642,7 +1634,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             assert(struct_type->polymorphic_parameter_values.count == poly_type->parameters.count);
             For (idx, poly_type->parameters) {
                 Ast_Expr *poly_expr = poly_type->parameters[idx];
-                bool ok = try_create_polymorph_value_declaration(poly_expr, struct_type->polymorphic_parameter_values[idx], out_polymorphic_declarations);
+                bool ok = try_create_polymorph_value_declaration(poly_expr, struct_type->polymorphic_parameter_values[idx], block_to_insert_into, out_polymorphic_declarations);
                 assert(ok);
                 return ok;
             }
@@ -1655,7 +1647,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
                 return false;
             }
             Type_Pointer *parameter_pointer = (Type_Pointer *)parameter_type;
-            return try_create_polymorph_type_declarations(pointer->pointer_to, parameter_pointer->pointer_to, parameter_location, out_polymorphic_declarations);
+            return try_create_polymorph_type_declarations(pointer->pointer_to, parameter_pointer->pointer_to, parameter_location, block_to_insert_into, out_polymorphic_declarations);
         }
         case EXPR_SLICE_TYPE: {
             Expr_Slice_Type *slice_type = (Expr_Slice_Type *)type_expr;
@@ -1664,7 +1656,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
                 return false;
             }
             Type_Slice *parameter_slice = (Type_Slice *)parameter_type;
-            return try_create_polymorph_type_declarations(slice_type->slice_of, parameter_slice->slice_of, parameter_location, out_polymorphic_declarations);
+            return try_create_polymorph_type_declarations(slice_type->slice_of, parameter_slice->slice_of, parameter_location, block_to_insert_into, out_polymorphic_declarations);
         }
         case EXPR_ARRAY_TYPE: {
             Expr_Array_Type *array_type = (Expr_Array_Type *)type_expr;
@@ -1677,12 +1669,12 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             number_operand.type = type_int;
             number_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
             number_operand.int_value = parameter_array->count;
-            if (!try_create_polymorph_value_declaration(array_type->count_expr, number_operand, out_polymorphic_declarations)) {
+            if (!try_create_polymorph_value_declaration(array_type->count_expr, number_operand, block_to_insert_into, out_polymorphic_declarations)) {
                 assert(array_type->count_expr->operand.type != nullptr);
                 report_error(parameter_location, "Expected an array of size %d, got %d.", array_type->count_expr->operand.int_value, parameter_array->count);
                 return false;
             }
-            return try_create_polymorph_type_declarations(array_type->array_of, parameter_array->array_of, parameter_location, out_polymorphic_declarations);
+            return try_create_polymorph_type_declarations(array_type->array_of, parameter_array->array_of, parameter_location, block_to_insert_into, out_polymorphic_declarations);
         }
         case EXPR_PROCEDURE_TYPE: {
             Expr_Procedure_Type *proc_type = (Expr_Procedure_Type *)type_expr;
@@ -1697,35 +1689,44 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             For (idx, parameter_type_proc->parameter_types) {
                 Type *proc_param_type = parameter_type_proc->parameter_types[idx];
                 Ast_Var *proc_param = proc_type->header->parameters[idx];
-                if (!try_create_polymorph_type_declarations(proc_param->type_expr, proc_param_type, parameter_location, out_polymorphic_declarations)) {
+                if (!try_create_polymorph_type_declarations(proc_param->type_expr, proc_param_type, parameter_location, block_to_insert_into, out_polymorphic_declarations)) {
+                    return false;
+                }
+            }
+            if (proc_type->header->return_type_expr) {
+                if (parameter_type_proc->return_type == nullptr) {
+                    report_error(parameter_location, "Expected a procedure type with a return value.");
+                    return false;
+                }
+                if (!try_create_polymorph_type_declarations(proc_type->header->return_type_expr, parameter_type_proc->return_type, parameter_location, block_to_insert_into, out_polymorphic_declarations)) {
+                    return false;
+                }
+            }
+            else {
+                if (parameter_type_proc->return_type != nullptr) {
+                    report_error(parameter_location, "Expected a procedure type without a return value.");
                     return false;
                 }
             }
             break;
         }
-        default: {
-            printf("Unhandled case in try_create_polymorph_type_declarations(): %d\n", type_expr->expr_kind);
-            assert(false);
-        }
     }
     return true;
 }
 
-bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Array<Inserted_Polymorph> *out_polymorphic_declarations) {
+bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Ast_Block *block_to_insert_into, Array<Declaration *> *out_polymorphic_declarations) {
     assert(parameter_operand.type != nullptr);
-
-    if (!try_create_polymorph_type_declarations(var->type_expr, parameter_operand.type, parameter_operand.location, out_polymorphic_declarations)) {
+    if (!try_create_polymorph_type_declarations(var->type_expr, parameter_operand.type, parameter_operand.location, block_to_insert_into, out_polymorphic_declarations)) {
         return false;
     }
-
-    if (!try_create_polymorph_value_declaration(var->name_expr, parameter_operand, out_polymorphic_declarations)) {
+    if (!try_create_polymorph_value_declaration(var->name_expr, parameter_operand, block_to_insert_into, out_polymorphic_declarations)) {
         return false;
     }
     return true;
 }
 
 Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array<Operand> parameters, Location polymorph_location, Array<int> *polymorphic_constants) {
-    // create polymorphic declarations and deduplicate polymorphs
+    // deduplicate polymorphs
     {
         Array<Ast_Var *> *root_vars_to_polymorph = {};
         Array<Node_Polymorph> *polymorphs_list = {};
@@ -1838,39 +1839,39 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     assert(parameters.count == polymorph_vars->count);
 
     // go through the parameters and create polymorphic declarations
-    Array<Inserted_Polymorph> polymorphic_declarations;
+    Array<Declaration *> polymorphic_declarations;
     polymorphic_declarations.allocator = g_global_linear_allocator;
     For (idx, *polymorph_vars) {
         Ast_Var *param_decl = (*polymorph_vars)[idx];
         Operand parameter_operand = parameters[idx];
-        if (!try_create_polymorph_declarations(param_decl, parameter_operand, &polymorphic_declarations)) {
+        if (!try_create_polymorph_declarations(param_decl, parameter_operand, block_to_insert_declarations_into, &polymorphic_declarations)) {
             report_info(polymorph_location, "Error during polymorph triggered here.");
             return nullptr;
-        }
-        if (param_decl->is_polymorphic_value) {
-            polymorphic_constants->append(idx);
         }
     }
 
     // check the declarations
     For (idx, polymorphic_declarations) {
-        Inserted_Polymorph inserted_polymorph = polymorphic_declarations[idx];
-        if (!check_declaration(inserted_polymorph.declaration, inserted_polymorph.declaration->location)) {
+        Declaration *inserted_declaration = polymorphic_declarations[idx];
+        if (!check_declaration(inserted_declaration, inserted_declaration->location)) {
             report_info(polymorph_location, "Error during polymorph triggered here.");
             return nullptr;
         }
-        inserted_polymorph.declaration->parent_block = block_to_insert_declarations_into;
-        inserted_polymorph.poly_var->inserted_declaration = inserted_polymorph.declaration;
-        assert(register_declaration(block_to_insert_declarations_into, inserted_polymorph.poly_var->inserted_declaration));
-        assert(inserted_polymorph.declaration->check_state == CS_CHECKED);
-        assert(inserted_polymorph.declaration->operand.type != nullptr);
+        assert(inserted_declaration->check_state == CS_CHECKED);
+        assert(inserted_declaration->operand.type != nullptr);
     }
 
+    // build the list of polymorph parameters for future deduplication
     Array<Node_Polymorph_Parameter> polymorph_values;
     polymorph_values.allocator = g_global_linear_allocator;
     For (idx, *polymorph_vars) {
         Ast_Var *var = (*polymorph_vars)[idx];
         Operand param = parameters[idx];
+
+        if (var->is_polymorphic_value) {
+            polymorphic_constants->append(idx);
+        }
+
         Node_Polymorph_Parameter poly_value = {};
         poly_value.type = param.type;
 
@@ -1886,6 +1887,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
         polymorph_values.append(poly_value);
     }
 
+    // remove constant-value-polys from parameter list
     for (int i = polymorphic_constants->count-1; i >= 0; i--) {
         polymorph_vars->ordered_remove((*polymorphic_constants)[i]);
     }
@@ -2798,6 +2800,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                     return nullptr;
                 }
                 assert(expr_operand->type != nullptr);
+                if (is_type_untyped(expr_operand->type)) {
+                    report_error(expr->location, "Cannot use 'typeof' on an untyped declaration.");
+                    return nullptr;
+                }
                 result_operand.type = type_typeid;
                 result_operand.type_value = expr_operand->type;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;

@@ -58,19 +58,26 @@
 //     return 0;
 // }
 
-proc takes_constant_proc($PROCEDUREEEEEEEEEEE: proc(t: $T)) {
-    PROCEDUREEEEEEEEEEE(1);
+proc takes_constant_proc(PROCEDUREEEEEEEEEEE: proc(t: $T) : T) {
+    // PROCEDUREEEEEEEEEEE(1);
     printa(T);
 }
 
-proc work_1(a: int) {
+struct Bar {
+    const FOO: int = 321;
+}
+
+proc work_1(a: Bar) : Bar {
     print("work_1\n");
+    return Bar{};
 }
-proc work_2(a: float) {
+proc work_2(a: int) : int {
     print("work_2\n");
+    return 123;
 }
-proc work_3(a: float) {
+proc work_3(a: Bar) : Bar {
     print("work_3\n");
+    return Bar{};
 }
 
 proc main() : i32 {
