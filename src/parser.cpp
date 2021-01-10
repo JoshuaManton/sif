@@ -1021,6 +1021,12 @@ bool parse_file(const char *requested_filename, Location include_location) {
 
     const char *filename = include_sb.string();
     char *absolute_path = intern_string(get_absolute_path(filename, g_global_linear_allocator));
+    int path_len = strlen(absolute_path);
+    for (int i = 0; i < path_len; i += 1) {
+        if (absolute_path[i] == '\\') {
+            absolute_path[i] = '/';
+        }
+    }
 
     For (idx, g_all_included_files) {
         if (g_all_included_files[idx] == absolute_path) {

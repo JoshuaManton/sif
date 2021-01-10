@@ -427,6 +427,25 @@ void c_print_hidden_using_selectors(Chunked_String_Builder *sb, Declaration *dec
     }
 }
 
+char *c_print_gen_location(Chunked_String_Builder *sb, int indent_level, Location location) {
+    char *t = c_temporary();
+    print_indents(sb, indent_level);
+    sb->printf("struct Source_Code_Location %s = {0};\n", t);
+    print_indents(sb, indent_level);
+    sb->printf("%s.filepath = MAKE_STRING(\"%s\", %d);\n", t, location.filepath, strlen(location.filepath));
+    print_indents(sb, indent_level);
+    sb->printf("%s.line = %d;\n", t, location.line);
+    print_indents(sb, indent_level);
+    sb->printf("%s.character = %d;\n", t, location.character);
+    return t;
+}
+
+void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, Location location, char *lhs_name, char *count_field, char *index_name) {
+    char *location_t = c_print_gen_location(sb, indent_level, location);
+    print_indents(sb, indent_level);
+    sb->printf("sif_bounds_check(%s.%s, %s, %s);\n", lhs_name, count_field, index_name, location_t);
+}
+
 char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     char *t = nullptr;
 
@@ -667,6 +686,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         else if (is_type_varargs(subscript->lhs->operand.type)) {
                             slice_type = ((Type_Varargs *)subscript->lhs->operand.type)->slice_type;
                         }
+                        c_print_bounds_check(sb, indent_level, subscript->location, lhs, "count", index);
                         assert(slice_type != nullptr);
                         subscript_sb.print("((");
                         c_print_type(&subscript_sb, slice_type->data_pointer_type, "");
@@ -677,9 +697,11 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         subscript_sb.print("]");
                     }
                     else if (is_type_array(subscript->lhs->operand.type)) {
+                        // todo(josh): assert not out of bounds
                         subscript_sb.printf("%s.elements[%s]", lhs, index);
                     }
                     else if (subscript->lhs->operand.type == type_string) {
+                        c_print_bounds_check(sb, indent_level, subscript->location, lhs, "count", index);
                         subscript_sb.printf("%s.data[%s]", lhs, index);
                     }
                     else {
@@ -1395,7 +1417,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("}\n");
     sb.print("void assert(bool condition) {\n");
     sb.print("    if (!condition) {\n");
-    sb.print("        printf(\"Assertion failed.\");\n");
+    sb.print("        printf(\"Assertion failed.\\n\");\n");
     sb.print("        *((char *)0) = 0;\n");
     sb.print("    }\n");
     sb.print("}\n");

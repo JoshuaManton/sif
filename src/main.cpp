@@ -44,7 +44,7 @@ SMALL
 -deduplicate #foreign_import/#foreign_system_import
 
 MEDIUM
--runtime bounds checks
+-runtime null checks
 -@PointerArithmetic
 -@UnaryOperatorOverloading
 -switch statements
@@ -68,13 +68,11 @@ MEDIUM
 BIG
 -control flow graph analysis
 -#if
--C varargs for bindings
 -procedure overloading
 -default procedure parameters?
 -#caller_location
 -#location()
 -multiple return values
--iterative solver for polymorphism
 -namespaced imports i.e. `#include Foo "foo.sif"`
 -right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 */
