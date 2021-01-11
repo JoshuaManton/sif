@@ -50,6 +50,7 @@ SMALL
 MEDIUM
 -enum arrays @EnumArrays
 
+-remove runtime's dependency on basic
 -runtime null checks
 -@PointerArithmetic
 -@UnaryOperatorOverloading
@@ -73,6 +74,7 @@ MEDIUM
 -<<< and >>> for shift rotate?
 
 BIG
+-turn everything in the checker to tuples :(
 -control flow graph analysis
 -#if
 -procedure overloading
@@ -89,10 +91,14 @@ void print_usage() {
     printf("  sif <build|run|check> <file> [optional flags]\n\n");
 
     printf("Optional flags:\n");
-    printf("  -show-timings           Print a log of times for different compilation stages.\n");
-    printf("  -keep-temp-files        Don't delete intermediate files used for compilation.\n");
-    printf("  -no-type-info           Don't generate runtime type information.\n");
-    printf("  -o <output>.exe         Override the default output .exe name.\n");
+    printf("  -o <output>.exe             Override the default output .exe name.\n");
+    // printf("  -opt <level>                Optimization level.\n");
+    printf("  -debug                      Generate debug information.\n");
+    printf("  -log-cl-command             Print the invocation command for cl.exe.\n");
+    printf("  -show-timings               Print a log of times for different compilation stages.\n");
+    printf("  -keep-temp-files            Don't delete intermediate files used for compilation.\n");
+    printf("  -no-type-info               Don't generate runtime type information.\n");
+    printf("  -no-line-directives         Don't emit #line directives in C output.\n");
 }
 
 char *sif_core_lib_path;
@@ -104,6 +110,7 @@ bool g_logged_error = {};
 
 Timer g_global_timer = {};
 bool g_no_type_info = {};
+bool g_no_line_directives = {};
 
 void main(int argc, char **argv) {
     init_timer(&g_global_timer);
@@ -172,6 +179,9 @@ void main(int argc, char **argv) {
         }
         else if (strcmp(arg, "-log-cl-command") == 0) {
             log_cl_command = true;
+        }
+        else if (strcmp(arg, "-no-line-directives") == 0) {
+            g_no_line_directives = true;
         }
         else if (strcmp(arg, "-o") == 0) {
             if ((i+1) >= argc) {

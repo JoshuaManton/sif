@@ -1,6 +1,13 @@
 #include "c_backend.h"
 #include "os_windows.h"
 
+extern Timer g_global_timer;
+extern bool g_no_type_info;
+extern bool g_no_line_directives;
+
+extern Ast_Proc *g_main_proc;
+extern Array<Type *> all_types;
+
 void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name);
 void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name);
 char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type = nullptr);
@@ -94,12 +101,14 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
 }
 
 void c_print_line_directive(Chunked_String_Builder *sb, Location location, char *comment = "") {
-    sb->printf("#line %d \"%s\"", location.line, location.filepath);
-    if (comment != nullptr) {
-        sb->printf(" // %s\n", comment);
-    }
-    else {
-        sb->printf("\n");
+    if (!g_no_line_directives) {
+        sb->printf("#line %d \"%s\"", location.line, location.filepath);
+        if (comment != nullptr) {
+            sb->printf(" // %s\n", comment);
+        }
+        else {
+            sb->printf("\n");
+        }
     }
 }
 
@@ -1204,9 +1213,6 @@ void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_leve
     c_print_defers_from_block_to_block(sb, indent_level, block, block);
 }
 
-extern Ast_Proc *g_main_proc;
-extern Array<Type *> all_types;
-
 void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Type *type) {
     sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Struct_Field));\n", ti_name, type->variable_fields.count);
     sb->printf("    %s->fields.count = %d;\n", ti_name, type->variable_fields.count);
@@ -1239,9 +1245,6 @@ void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Typ
 #define TYPE_INFO_KIND_REFERENCE 10
 #define TYPE_INFO_KIND_PROCEDURE 11
 #define TYPE_INFO_KIND_TYPEID    12
-
-extern Timer g_global_timer;
-extern bool g_no_type_info;
 
 void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     assert(proc->body != nullptr);
