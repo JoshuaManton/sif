@@ -52,7 +52,7 @@ proc main() : i32 {
     var json = json_serialize(&foo, default_allocator());
     print("---- SERIALIZED ----\n\n%\n", json);
 
-    foo = #partial {};
+    foo = {};
     var value = json_parse_value(json, default_allocator());
     json_write_value(&foo, value, default_allocator());
     print("\n---- DESERIALIZED BACK ----\n\n%\n", foo);

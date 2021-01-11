@@ -22,7 +22,6 @@ SMALL
 -put struct and struct member notes in type info
 -put struct constants in Type_Info
 -'using' in procedure parameters
--fix compound literals requiring #partial for '{}'
 
 -deduplicate #foreign_import/#foreign_system_import
 -handle unary operators nicer, currently quick-and-dirty
