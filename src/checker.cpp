@@ -51,7 +51,7 @@ bool g_silence_errors; // todo(josh): this is pretty janky. would be better to p
 bool complete_type(Type *type);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand operand, Type *expected_type, Operand *out_operand, bool do_report_error = true);
-Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
+Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr, bool require_value = true);
 bool typecheck_block(Ast_Block *block);
 Operand *typecheck_procedure_header(Ast_Proc_Header *header);
 
@@ -2322,7 +2322,7 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
     return true;
 }
 
-Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
+Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
         assert(!(expected_type->flags & TF_UNTYPED)); // note(josh): an expected_type should never be untyped
@@ -3049,6 +3049,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 result_operand.type = reference->reference_to;
             }
         }
+        else {
+            if (require_value) {
+                report_error(expr->location, "Expression does not yield a value.");
+                return nullptr;
+            }
+        }
 
         expr->operand = result_operand;
     }
@@ -3250,7 +3256,7 @@ bool typecheck_node(Ast_Node *node) {
 
         case AST_STATEMENT_EXPR: {
             Ast_Statement_Expr *stmt = (Ast_Statement_Expr *)node;
-            Operand *statement_operand = typecheck_expr(stmt->expr);
+            Operand *statement_operand = typecheck_expr(stmt->expr, nullptr, false);
             if (!statement_operand) {
                 return false;
             }
