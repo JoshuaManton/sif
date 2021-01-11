@@ -368,7 +368,7 @@ struct Quaternion {
 struct Matrix3 {
     var elements: [3][3]float;
 
-    operator [](m: >Matrix3, idx: int) : [3]float {
+    operator [](m: >Matrix3, idx: int) : >[3]float {
         return m.elements[idx];
     }
 
@@ -429,7 +429,7 @@ struct Matrix3 {
 struct Matrix4 {
     var elements: [4][4]float;
 
-    operator [](m: >Matrix4, idx: int) : [4]float {
+    operator [](m: >Matrix4, idx: int) : >[4]float {
         return m.elements[idx];
     }
 
