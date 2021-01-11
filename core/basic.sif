@@ -530,7 +530,7 @@ proc copy_slice(dst: []$T, src: []T) {
 
 proc new_string(count: int, allocator: Allocator) : string {
     var str: string;
-    str.data = sif_alloc(count, DEFAULT_ALIGNMENT, allocator);
+    str.data = cast(^u8, sif_alloc(count, DEFAULT_ALIGNMENT, allocator));
     zero_pointer(str.data, count);
     str.count = count;
     return str;

@@ -94,7 +94,7 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
 }
 
 void c_print_line_directive(Chunked_String_Builder *sb, Location location) {
-    sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
+    // sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
 }
 
 void c_print_type_postfix(Chunked_String_Builder *sb, Type *type) {
@@ -518,7 +518,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 else if (is_type_typeid(expr->operand.type)) {
                     sb->printf("%d", expr->operand.type_value->id);
                 }
-                else if (is_type_pointer(expr->operand.type)) {
+                else if (expr->operand.type->flags & TF_POINTER) {
                     sb->printf("((");
                     c_print_type(sb, expr->operand.type, "");
                     sb->printf(")%d)", expr->operand.int_value);
@@ -552,7 +552,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 else if (is_type_typeid(expr->operand.type)) {
                     tsb.printf("%d", expr->operand.type_value->id);
                 }
-                else if (is_type_pointer(expr->operand.type)) {
+                else if (expr->operand.type->flags & TF_POINTER) {
                     tsb.printf("((");
                     c_print_type(&tsb, expr->operand.type, "");
                     tsb.printf(")%d)", expr->operand.int_value);
@@ -1418,7 +1418,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("void assert(bool condition) {\n");
     sb.print("    if (!condition) {\n");
     sb.print("        printf(\"Assertion failed.\\n\");\n");
-    sb.print("        __debug_break();\n");
+    sb.print("        *((int *)0) = 0;\n");
     sb.print("    }\n");
     sb.print("}\n");
 
@@ -1430,7 +1430,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
         sb.print(directive->text);
     }
 
-    // todo(josh): we could clean this up a bunch by introducing some kind of
+    // todo(josh): @Speed we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather
     // than predeclaring literally everything in the program
     sb.print("\n// Forward declarations\n");

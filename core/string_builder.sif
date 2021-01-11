@@ -9,7 +9,7 @@ proc make_string_builder(length: int, allocator: Allocator) : String_Builder {
     var sb: String_Builder;
     sb.buffer_length = length;
     sb.allocator = allocator;
-    sb.buffer = sif_alloc(length, DEFAULT_ALIGNMENT, allocator);
+    sb.buffer = cast(^u8, sif_alloc(length, DEFAULT_ALIGNMENT, allocator));
     return sb;
 }
 
@@ -22,7 +22,7 @@ proc sbprint(sb: ^String_Builder, fmt: string, args: ..any) {
     if (sb.cursor + length > sb.buffer_length) {
         var old = sb.buffer;
         sb.buffer_length = (sb.cursor + length) * 2;
-        sb.buffer = sif_alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator);
+        sb.buffer = cast(^u8, sif_alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator));
         copy_slice(slice_ptr(sb.buffer, sb.buffer_length), slice_ptr(old, sb.cursor));
         sif_free(old, sb.allocator);
         var length2 = bprint(slice_ptr(ptr_offset(sb.buffer, sb.cursor), max(0, sb.buffer_length - sb.cursor)), fmt, ..args);
@@ -37,7 +37,7 @@ proc sbprinta(sb: ^String_Builder, args: ..any) {
     if (sb.cursor + length > sb.buffer_length) {
         var old = sb.buffer;
         sb.buffer_length = (sb.cursor + length) * 2;
-        sb.buffer = sif_alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator);
+        sb.buffer = cast(^u8, sif_alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator));
         copy_slice(slice_ptr(sb.buffer, sb.buffer_length), slice_ptr(old, sb.cursor));
         sif_free(old, sb.allocator);
         var length2 = bprinta(slice_ptr(ptr_offset(sb.buffer, sb.cursor), max(0, sb.buffer_length - sb.cursor)), ..args);

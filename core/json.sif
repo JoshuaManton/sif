@@ -406,9 +406,14 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
     }
     else if (ti.kind == .POINTER) {
         var dti = cast(^Type_Info_Pointer, ti);
-        var new_ptr = sif_alloc(dti.pointer_to.size, DEFAULT_ALIGNMENT, allocator);
-        json_write_value_ti(new_ptr, dti.pointer_to, value, allocator);
-        cast(^rawptr, ptr)^ = new_ptr;
+        if (dti.pointer_to == null) {
+            // rawptr
+        }
+        else {
+            var new_ptr = sif_alloc(dti.pointer_to.size, DEFAULT_ALIGNMENT, allocator);
+            json_write_value_ti(new_ptr, dti.pointer_to, value, allocator);
+            cast(^rawptr, ptr)^ = new_ptr;
+        }
     }
     else {
         json_error(value.location, "Unhandled Type_Info kind in json_write_value(): '%'.", ti.kind);

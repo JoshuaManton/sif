@@ -66,9 +66,9 @@ proc slice_ptr(ptr: ^$T, count: int) : []T {
     return slice;
 } @sif_runtime
 
-proc string_ptr(ptr: ^u8, count: int) : string {
+proc string_ptr(ptr: rawptr, count: int) : string {
     var str: string;
-    str.data = ptr;
+    str.data = cast(^u8, ptr);
     str.count = count;
     return str;
 } @sif_runtime

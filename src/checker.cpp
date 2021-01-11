@@ -538,8 +538,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
     if (decl->kind == DECL_STRUCT) {
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
         For (idx, struct_decl->structure->operator_overloads) {
-            // todo(josh): this should just go through the normal check_declaration() path. having it copy pasted here is dumb
-            // but operator overloads don't currently have a declaration since they don't have names. hmm.
             Ast_Proc *procedure = struct_decl->structure->operator_overloads[idx];
             assert(!procedure->header->is_foreign);
             assert(procedure->body != nullptr);
@@ -553,6 +551,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
+            ordered_declarations.append(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
         }
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
@@ -562,6 +561,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!register_declaration(struct_decl->structure->type->constants_block, procedure->header->declaration)) {
                 return false;
             }
+            ordered_declarations.append(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
         }
     }
     else {
@@ -974,6 +974,15 @@ bool complete_type(Type *type) {
                 ordered_declarations.append(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr), g_global_linear_allocator));
                 break;
             }
+            case TYPE_REFERENCE: {
+                Type_Reference *reference_type = (Type_Reference *)type;
+                assert(reference_type->reference_to);
+                if (!complete_type(reference_type->reference_to)) {
+                    return false;
+                }
+                reference_type->flags &= ~(TF_INCOMPLETE);
+                break;
+            }
         }
     }
     return true;
@@ -1050,7 +1059,7 @@ bool match_types(Operand operand, Type *expected_type, Operand *out_operand, boo
         }
     }
 
-    if ((expected_type == type_rawptr && is_type_pointer(out_operand->type)) || (out_operand->type == type_rawptr && is_type_pointer(expected_type))) {
+    if (expected_type == type_rawptr && (out_operand->type->flags & TF_POINTER)) {
         return true;
     }
 
@@ -1081,7 +1090,7 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
         return reference_to->reference_to_this_type;
     }
     Type_Reference *new_type = NEW_TYPE(Type_Reference(reference_to));
-    new_type->flags = TF_REFERENCE;
+    new_type->flags = TF_REFERENCE | TF_INCOMPLETE;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     reference_to->reference_to_this_type = new_type;
@@ -3025,6 +3034,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
         }
 
         if ((!(result_operand.flags & OPERAND_NO_VALUE))) {
+            if (!complete_type(result_operand.type)) { // if an expressions yields a type, that type better be complete! I think.
+                return nullptr;
+            }
             if (is_type_reference(result_operand.type)) {
                 result_operand.flags |= OPERAND_LVALUE;
                 result_operand.reference_type = result_operand.type;
