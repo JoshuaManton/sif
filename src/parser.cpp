@@ -75,11 +75,21 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         assert(false && "unexpected EOF");
         return nullptr;
     }
+    bool is_using = false;
+    if (root_token.kind == TK_USING) {
+        eat_next_token(lexer);
+        is_using = true;
+    }
+    Token var_or_const_token;
+    if (!peek_next_token(lexer, &var_or_const_token)) {
+        assert(false && "unexpected EOF");
+        return nullptr;
+    }
     bool had_var_or_const = true;
-    if (root_token.kind != TK_VAR) {
-        if (root_token.kind != TK_CONST) {
+    if (var_or_const_token.kind != TK_VAR) {
+        if (var_or_const_token.kind != TK_CONST) {
             if (require_var) {
-                report_error(root_token.location, "Unexpected token %s, expected `var` or `const`.", token_string(root_token.kind));
+                report_error(var_or_const_token.location, "Unexpected token %s, expected `var` or `const`.", token_string(var_or_const_token.kind));
                 return nullptr;
             }
             else {
@@ -91,7 +101,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         eat_next_token(lexer);
     }
 
-    bool is_constant = root_token.kind == TK_CONST;
+    bool is_constant = var_or_const_token.kind == TK_CONST;
 
     int polymorph_count_before_name = num_polymorphic_variables_parsed;
     Ast_Expr *name_expr = parse_expr(lexer);
@@ -150,6 +160,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     }
 
     Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    var->is_using = is_using;
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, lexer->current_block), lexer->allocator);
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
