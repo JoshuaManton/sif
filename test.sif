@@ -3,19 +3,35 @@
 // #include "core:json.sif"
 
 struct Foo {
-    var asd: int;
-}
+    var a: int @wow_a_note;
+    var b: int;
+    var c: int @wow @two_notes;
+} @this_is_a_struct_note @wow_two_struct_notes
 
-proc get_foo() : ^Foo {
-    return new_clone(Foo{123}, default_allocator());
-}
+enum Bar {
+    FOO;
+    BAR;
+    BAZ;
+} @enums_can @have_notes_too
 
 proc main() : i32 {
-    if var foo = get_foo(); (foo != null) {
-        printa(foo^);
+    var bar_ti = cast(^Type_Info_Enum, get_type_info(Bar));
+    print("enum Bar\n");
+    for (var enum_note_idx = 0; enum_note_idx < bar_ti.notes.count; enum_note_idx += 1) {
+        print("    enum note: %\n", bar_ti.notes[enum_note_idx]);
     }
-    else {
-        printa("no foo");
+
+    var foo_ti = cast(^Type_Info_Struct, get_type_info(Foo));
+    print("struct Foo\n");
+    for (var struct_note_idx = 0; struct_note_idx < foo_ti.notes.count; struct_note_idx += 1) {
+        print("    struct note: %\n", foo_ti.notes[struct_note_idx]);
+    }
+    for (var field_idx = 0; field_idx < foo_ti.fields.count; field_idx += 1) {
+        var field = foo_ti.fields[field_idx];
+        print("field: %\n", field.name);
+        for (var note_idx = 0; note_idx < field.notes.count; note_idx += 1) {
+            print("    note: %\n", field.notes[note_idx]);
+        }
     }
     return 0;
 }

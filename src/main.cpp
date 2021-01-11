@@ -18,11 +18,11 @@
 TODO:
 
 SMALL
--'if' pre-statements: if var foo = bar(); (foo != null) { }
--put struct and struct member notes in type info
 -put struct constants in Type_Info
 -short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
 
+-use a custom allocator in __init_sif_runtime
+-enum field @notes?
 -deduplicate #foreign_import/#foreign_system_import
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N

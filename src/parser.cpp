@@ -72,7 +72,7 @@ int num_polymorphic_variables_parsed = 0;
 Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
     bool is_using = false;
@@ -82,7 +82,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     }
     Token var_or_const_token;
     if (!peek_next_token(lexer, &var_or_const_token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
     bool had_var_or_const = true;
@@ -130,7 +130,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     Token colon;
     if (!peek_next_token(lexer, &colon)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
     int polymorph_count_before_type = num_polymorphic_variables_parsed;
@@ -159,9 +159,12 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         return nullptr;
     }
 
+    Array<char *> notes = parse_notes(lexer);
+
     Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
     var->is_using = is_using;
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, lexer->current_block), lexer->allocator);
+    var->declaration->notes = notes;
     var->is_polymorphic_value = is_polymorphic_value;
     if (!var->is_polymorphic_value) {
         if (!register_declaration(lexer->current_block, var->declaration)) {
@@ -174,7 +177,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
 
@@ -192,7 +195,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             eat_next_token(lexer, &token);
             Token name_token = {};
             if (!peek_next_token(lexer, &name_token)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
             if (name_token.kind != TK_LEFT_PAREN) {
@@ -205,7 +208,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             eat_next_token(lexer, &token);
             Token operator_token;
             if (!peek_next_token(lexer, &operator_token)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
             switch (operator_token.kind) {
@@ -274,7 +277,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         Ast_Expr *return_type_expr = {};
         Token colon = {};
         if (!peek_next_token(lexer, &colon)) {
-            assert(false && "unexpected EOF");
+            report_error(lexer->location, "Unexpected end of file.");
             return nullptr;
         }
         if (colon.kind == TK_COLON) {
@@ -291,7 +294,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         Token foreign;
         bool is_foreign = false;
         if (!peek_next_token(lexer, &foreign)) {
-            assert(false && "unexpected EOF");
+            report_error(lexer->location, "Unexpected end of file.");
             return nullptr;
         }
         if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
@@ -354,7 +357,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
 Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
     bool is_union = false;
@@ -377,7 +380,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
         // name
         Token name_token;
         if (!peek_next_token(lexer, &name_token)) {
-            assert(false && "unexpected EOF");
+            report_error(lexer->location, "Unexpected end of file.");
             return nullptr;
         }
         if (name_token.kind != TK_LEFT_CURLY) {
@@ -400,7 +403,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
         // polymorphic parameters
         Token maybe_poly;
         if (!peek_next_token(lexer, &maybe_poly)) {
-            assert(false && "unexpected EOF");
+            report_error(lexer->location, "Unexpected end of file.");
             return nullptr;
         }
         if (maybe_poly.kind == TK_NOT) {
@@ -490,7 +493,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
     Token maybe_type;
     if (!peek_next_token(lexer, &maybe_type)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
     if (maybe_type.kind != TK_LEFT_CURLY) {
@@ -510,7 +513,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 
             Token maybe_equals;
             if (!peek_next_token(lexer, &maybe_equals)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
 
@@ -542,7 +545,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
 Ast_Block *parse_block_including_curly_brackets(Lexer *lexer) {
     Token open_curly;
     if (!peek_next_token(lexer, &open_curly)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
     bool only_parse_one_statement = true;
@@ -569,7 +572,7 @@ const char *relative_to_absolute_path(const char *relative_path, const char *rel
 Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_override) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
 
@@ -582,7 +585,6 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (eat_semicolon) {
                 EXPECT(lexer, TK_SEMICOLON, nullptr);
             }
-            var->declaration->notes = parse_notes(lexer);
             return var;
         }
 
@@ -602,7 +604,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             eat_next_token(lexer, &using_token);
             Token maybe_var;
             if (!peek_next_token(lexer, &maybe_var)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
 
@@ -838,7 +840,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 }
                 Token maybe_left_paren;
                 if (!peek_next_token(lexer, &maybe_left_paren)) {
-                    assert(false && "unexpected EOF");
+                    report_error(lexer->location, "Unexpected end of file.");
                     return nullptr;
                 }
                 if (maybe_left_paren.kind != TK_LEFT_PAREN) {
@@ -858,7 +860,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             }
             Token else_token;
             if (!peek_next_token(lexer, &else_token)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
             Ast_Block *else_body = nullptr;
@@ -878,7 +880,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             }
             Token semicolon;
             if (!peek_next_token(lexer, &semicolon)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
             Ast_Expr *return_expr = nullptr;
@@ -932,7 +934,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
             Token next_token;
             if (!peek_next_token(lexer, &next_token)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
             switch (next_token.kind) {
@@ -1087,7 +1089,7 @@ Ast_Block *begin_parsing(const char *filename) {
 bool is_or_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     switch (token.kind) {
@@ -1101,7 +1103,7 @@ bool is_or_op(Lexer *lexer) {
 bool is_and_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     return is_and_op(token.kind);
@@ -1118,7 +1120,7 @@ bool is_and_op(Token_Kind kind) {
 bool is_cmp_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     return is_cmp_op(token.kind);
@@ -1140,7 +1142,7 @@ bool is_cmp_op(Token_Kind kind) {
 bool is_add_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     return is_add_op(token.kind);
@@ -1159,7 +1161,7 @@ bool is_add_op(Token_Kind kind) {
 bool is_mul_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     return is_mul_op(token.kind);
@@ -1181,7 +1183,7 @@ bool is_mul_op(Token_Kind kind) {
 bool is_unary_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     return is_unary_op(token.kind);
@@ -1205,7 +1207,7 @@ bool is_unary_op(Token_Kind kind) {
 bool is_postfix_op(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return false;
     }
     return is_postfix_op(token.kind);
@@ -1426,7 +1428,7 @@ Expr_Compound_Literal *parse_compound_literal(Lexer *lexer, Ast_Expr *type_expr)
 
         Token maybe_comma;
         if (!peek_next_token(lexer, &maybe_comma)) {
-            assert(false && "unexpected EOF");
+            report_error(lexer->location, "Unexpected end of file.");
             return nullptr;
         }
         if (maybe_comma.kind == TK_RIGHT_CURLY) {
@@ -1443,7 +1445,7 @@ Expr_Compound_Literal *parse_compound_literal(Lexer *lexer, Ast_Expr *type_expr)
 Ast_Expr *parse_postfix_expr(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
 
@@ -1545,7 +1547,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
 Ast_Expr *parse_base_expr(Lexer *lexer) {
     Token token;
     if (!peek_next_token(lexer, &token)) {
-        assert(false && "unexpected EOF");
+        report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
 
@@ -1684,7 +1686,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             eat_next_token(lexer);
             Token maybe_right_square;
             if (!peek_next_token(lexer, &maybe_right_square)) {
-                assert(false && "unexpected EOF");
+                report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
             if (maybe_right_square.kind == TK_RIGHT_SQUARE) {

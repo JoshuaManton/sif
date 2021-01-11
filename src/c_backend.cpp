@@ -1213,6 +1213,15 @@ void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Typ
     For (idx, type->variable_fields) {
         Struct_Field field = type->variable_fields[idx];
         sb->printf("    GTISF(%s, \"%s\", %d, %d, %d, %d);\n", ti_name, field.name, strlen(field.name), idx, field.operand.type->id, field.offset);
+        if (field.notes.count > 0) {
+            // todo(josh): make macros for these
+            sb->printf("    ((struct Type_Info_Struct_Field *)%s->fields.data)[%d].notes.data  = malloc(%d * sizeof(String));\n", ti_name, idx, field.notes.count);
+            sb->printf("    ((struct Type_Info_Struct_Field *)%s->fields.data)[%d].notes.count = %d;\n", ti_name, idx, field.notes.count);
+            For (note_idx, field.notes) {
+                char *note = field.notes[note_idx];
+                sb->printf("    ((String *)((struct Type_Info_Struct_Field *)%s->fields.data)[%d].notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, idx, note_idx, note, strlen(note));
+            }
+        }
     }
 }
 
@@ -1333,6 +1342,15 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                     case TYPE_STRUCT: {
                         Type_Struct *struct_type = (Type_Struct *)type;
                         sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? "Type_Info_Union" : "Type_Info_Struct"), (struct_type->is_union ? TYPE_INFO_KIND_UNION : TYPE_INFO_KIND_STRUCT), type->id, type->size, type->align);
+                        // todo(josh): make macros for these
+                        if (struct_type->notes.count > 0) {
+                            sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, struct_type->notes.count);
+                            sb->printf("    %s->notes.count = %d;\n", ti_name, struct_type->notes.count);
+                            For (note_idx, struct_type->notes) {
+                                char *note = struct_type->notes[note_idx];
+                                sb->printf("    ((String *)%s->notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, note_idx, note, strlen(note));
+                            }
+                        }
                         c_print_gen_type_info_struct(sb, ti_name, type);
                         break;
                     }
@@ -1345,6 +1363,15 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                     case TYPE_ENUM: {
                         Type_Enum *type_enum = (Type_Enum *)type;
                         sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Enum, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
+                        // todo(josh): make macros for these
+                        if (type_enum->notes.count > 0) {
+                            sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, type_enum->notes.count);
+                            sb->printf("    %s->notes.count = %d;\n", ti_name, type_enum->notes.count);
+                            For (note_idx, type_enum->notes) {
+                                char *note = type_enum->notes[note_idx];
+                                sb->printf("    ((String *)%s->notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, note_idx, note, strlen(note));
+                            }
+                        }
                         sb->printf("    %s->base_type = GTIP(%d);\n", ti_name, type_enum->base_type->id);
                         sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Enum_Field));\n", ti_name, type_enum->constant_fields.count);
                         sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->constant_fields.count);

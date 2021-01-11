@@ -101,10 +101,12 @@ struct Type_Struct : public Type {
     Ast_Struct *is_polymorph_of = {};
     Array<Operand> polymorphic_parameter_values = {};
     bool is_union = {};
+    Array<char *> notes = {};
     Type_Struct(Ast_Struct *structure)
     : Type(TYPE_STRUCT)
     , name(structure->name)
     , ast_struct(structure)
+    , notes(structure->declaration->notes)
     {
         polymorphic_parameter_values.allocator = g_global_linear_allocator;
     }
@@ -113,9 +115,11 @@ struct Type_Struct : public Type {
 struct Type_Enum : public Type {
     const char *name = nullptr;
     Type *base_type = {};
-    Type_Enum(const char *name)
+    Array<char *> notes = {};
+    Type_Enum(const char *name, Array<char *> notes)
     : Type(TYPE_ENUM)
     , name(name)
+    , notes(notes)
     {
         flags |= TF_INTEGER;
     }

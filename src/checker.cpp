@@ -68,7 +68,7 @@ T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
     return t_ptr;
 }
 
-Struct_Member_Declaration *try_add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location) {
+Struct_Member_Declaration *try_add_variable_type_field(Type *type, const char *name, Type *variable_type, int offset, Location location, Array<char *> notes = {}) {
     assert(variable_type != nullptr);
     assert(!is_type_untyped(variable_type));
     Struct_Field field = {};
@@ -76,6 +76,7 @@ Struct_Member_Declaration *try_add_variable_type_field(Type *type, const char *n
     field.offset = offset;
     field.operand.type = variable_type;
     field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
+    field.notes = notes;
     type->all_fields.append(field);
     type->variable_fields.append(field);
     Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location), g_global_linear_allocator);
@@ -85,12 +86,13 @@ Struct_Member_Declaration *try_add_variable_type_field(Type *type, const char *n
     return decl;
 }
 
-Struct_Member_Declaration *try_add_constant_type_field(Type *type, const char *name, Operand operand, Location location) {
+Struct_Member_Declaration *try_add_constant_type_field(Type *type, const char *name, Operand operand, Location location, Array<char *> notes = {}) {
     assert(operand.type != nullptr);
     Struct_Field field = {};
     field.name = name;
     field.offset = -1;
     field.operand = operand;
+    field.notes = notes;
     type->all_fields.append(field);
     type->constant_fields.append(field);
     Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location), g_global_linear_allocator);
@@ -296,7 +298,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
         case DECL_ENUM: {
             Enum_Declaration *enum_decl = (Enum_Declaration *)decl;
-            Type_Enum *enum_type = NEW_TYPE(Type_Enum(enum_decl->name));
+            Type_Enum *enum_type = NEW_TYPE(Type_Enum(enum_decl->name, enum_decl->notes));
             Type *enum_base_type = type_int;
             if (enum_decl->ast_enum->base_type_expr) {
                 Operand *type_operand = typecheck_expr(enum_decl->ast_enum->base_type_expr, type_typeid);
@@ -918,7 +920,7 @@ bool complete_type(Type *type) {
                                 assert(var->expr != nullptr);
                                 assert(var->constant_operand.type != nullptr);
                                 assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                                var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location);
+                                var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location, var->declaration->notes);
                                 if (!var->struct_member) {
                                     return false;
                                 }
@@ -927,12 +929,12 @@ bool complete_type(Type *type) {
                                 assert(var->type->size > 0);
                                 if (!structure->is_union) {
                                     size = align_forward(size, var->type->align);
-                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, size, var->location);
+                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, size, var->location, var->declaration->notes);
                                     assert(var->struct_member);
                                     size += var->type->size;
                                 }
                                 else {
-                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, 0, var->location);
+                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, 0, var->location, var->declaration->notes);
                                     assert(var->struct_member);
                                     size = max(size, var->type->size);
                                 }

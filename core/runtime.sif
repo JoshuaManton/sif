@@ -143,7 +143,7 @@ proc string_eq(var a: string, var b: string) : bool {
 
 
 
-var _global_type_table: []Union_All_Type_Infos; @sif_runtime
+var _global_type_table: []Union_All_Type_Infos @sif_runtime;
 
 proc get_type_info(type: typeid) : ^Type_Info {
     var idx = transmute(u64, type);
@@ -199,17 +199,20 @@ struct Type_Info_Struct_Field {
     var name: string;
     var type: ^Type_Info;
     var offset: int;
+    var notes: []string;
 } @sif_runtime
 struct Type_Info_Struct {
     var base: Type_Info;
     var name: string;
     var fields: []Type_Info_Struct_Field;
+    var notes: []string;
 } @sif_runtime
 
 struct Type_Info_Union {
     var base: Type_Info;
     var name: string;
     var fields: []Type_Info_Struct_Field;
+    var notes: []string;
 } @sif_runtime
 
 struct Type_Info_Enum_Field {
@@ -220,6 +223,7 @@ struct Type_Info_Enum {
     var base: Type_Info;
     var base_type: ^Type_Info;
     var fields: []Type_Info_Enum_Field;
+    var notes: []string;
 } @sif_runtime
 
 struct Type_Info_Pointer {

@@ -546,7 +546,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     }
     else if (lexer->text[lexer->location.index] == '@') {
         advance(lexer, 1);
-        assert(is_letter_or_underscore(lexer->text[lexer->location.index])); // todo(josh): @ErrorMessage
+        if (!is_letter_or_underscore(lexer->text[lexer->location.index])) {
+            report_error(token_location, "Notes must start with a letter or underscore.");
+            return false;
+        }
         int length;
         char *note = scan_identifier(&lexer->text[lexer->location.index], &length, lexer->allocator);
         advance(lexer, length);

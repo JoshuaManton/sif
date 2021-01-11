@@ -586,6 +586,7 @@ struct Struct_Field {
     const char *name = {};
     Operand operand = {};
     int offset = {}; // -1 if is_constant
+    Array<char *> notes = {};
 };
 
 struct Selector_Expression_Lookup_Result {
