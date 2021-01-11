@@ -822,20 +822,39 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         case TK_IF: {
-            eat_next_token(lexer);
-            if (lexer->currently_parsing_proc == nullptr) {
-                report_error(root_token.location, "Cannot use `if` at file scope.");
-                return nullptr;
-            }
-            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-            Ast_Expr *condition = parse_expr(lexer);
-            if (!condition) {
-                return nullptr;
-            }
-            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            Ast_Block *body = parse_block_including_curly_brackets(lexer);
-            if (body == nullptr) {
-                return nullptr;
+            Ast_Block *if_block = nullptr;
+            Ast_Node *pre_statement = nullptr;
+            Ast_Block *body = nullptr;
+            Ast_Expr *condition = nullptr;
+            {
+                if_block = SIF_NEW_CLONE(Ast_Block(lexer->allocator, lexer->current_block, lexer->location), lexer->allocator);
+                Ast_Block *old_block = push_ast_block(lexer, if_block);
+                defer(pop_ast_block(lexer, old_block));
+
+                eat_next_token(lexer);
+                if (lexer->currently_parsing_proc == nullptr) {
+                    report_error(root_token.location, "Cannot use `if` at file scope.");
+                    return nullptr;
+                }
+                Token maybe_left_paren;
+                if (!peek_next_token(lexer, &maybe_left_paren)) {
+                    assert(false && "unexpected EOF");
+                    return nullptr;
+                }
+                if (maybe_left_paren.kind != TK_LEFT_PAREN) {
+                    pre_statement = parse_single_statement(lexer);
+                }
+
+                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+                condition = parse_expr(lexer);
+                if (!condition) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+                body = parse_block_including_curly_brackets(lexer);
+                if (body == nullptr) {
+                    return nullptr;
+                }
             }
             Token else_token;
             if (!peek_next_token(lexer, &else_token)) {
@@ -847,7 +866,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 eat_next_token(lexer);
                 else_body = parse_block_including_curly_brackets(lexer);
             }
-            Ast_If *ast_if = SIF_NEW_CLONE(Ast_If(condition, body, else_body, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+            Ast_If *ast_if = SIF_NEW_CLONE(Ast_If(if_block, pre_statement, condition, body, else_body, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
             return ast_if;
         }
 

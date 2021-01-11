@@ -305,11 +305,15 @@ struct Ast_Struct : public Ast_Node {
 };
 
 struct Ast_If : public Ast_Node {
+    Ast_Node *pre_statement = {};
+    Ast_Block *if_block = {}; // note(josh): this is the lexical scope of the entire if statement, NOT the body
     Ast_Expr *condition = {};
     Ast_Block *body = {};
     Ast_Block *else_body = {};
-    Ast_If(Ast_Expr *condition, Ast_Block *body, Ast_Block *else_body, Allocator allocator, Ast_Block *current_block, Location location)
+    Ast_If(Ast_Block *if_block, Ast_Node *pre_statement, Ast_Expr *condition, Ast_Block *body, Ast_Block *else_body, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_IF, allocator, current_block, location)
+    , if_block(if_block)
+    , pre_statement(pre_statement)
     , condition(condition)
     , body(body)
     , else_body(else_body)

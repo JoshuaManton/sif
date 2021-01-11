@@ -1,34 +1,21 @@
 #include "core:basic.sif"
-#include "core:string_builder.sif"
-#include "core:json.sif"
+// #include "core:string_builder.sif"
+// #include "core:json.sif"
 
 struct Foo {
-    var a: int;
-    var b: string;
-    var c: float;
-    var d: bool;
+    var asd: int;
 }
 
-proc do_thing(using foo: Foo) {
-    a = 123;
-    b = "asd";
-    printa(foo);
+proc get_foo() : ^Foo {
+    return new_clone(Foo{123}, default_allocator());
 }
 
 proc main() : i32 {
-    {
-        var foo: Foo;
-        using foo;
-        a = 123;
-        b = "asd";
-        printa(foo);
+    if var foo = get_foo(); (foo != null) {
+        printa(foo^);
     }
-    {
-        using var foo: Foo;
-        a = 321;
-        b = "qwe";
-        printa(foo);
+    else {
+        printa("no foo");
     }
-    do_thing({567, "fjak", 1.2, true});
     return 0;
 }

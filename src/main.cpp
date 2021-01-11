@@ -18,14 +18,14 @@
 TODO:
 
 SMALL
--short circuiting
+-'if' pre-statements: if var foo = bar(); (foo != null) { }
 -put struct and struct member notes in type info
 -put struct constants in Type_Info
+-short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
 
 -deduplicate #foreign_import/#foreign_system_import
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
--unknown directives don't stop compilation
 -block comments
 -add allocators to demo
 -underscores in numbers
@@ -34,8 +34,8 @@ SMALL
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -declare distinct types
 -cast(Type)value syntax in addition to the current cast(Type, value) maybe?
--'if' pre-statements: if var foo = bar(); (foo != null) { }
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
+-unknown directives don't stop compilation
 -figure out if I should allow shadowing (maybe with a keyword?)
 -do entrypoint returning i32 implicitly in backend
 -procedure literal expression handling
@@ -68,6 +68,9 @@ MEDIUM
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops
 -implicit polymorphism
+-loop/block labels a la Odin
+-investigate how to get perfect number literal translation
+-<<< and >>> for shift rotate?
 
 BIG
 -control flow graph analysis

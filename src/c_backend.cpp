@@ -1042,6 +1042,13 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             Ast_If *ast_if = (Ast_If *)node;
             assert(ast_if->condition != nullptr);
             assert(ast_if->body != nullptr);
+            c_print_line_directive(sb, ast_if->location, "if block");
+            print_indents(sb, indent_level);
+            sb->print("{\n");
+            indent_level += 1;
+            if (ast_if->pre_statement) {
+                c_print_statement(sb, ast_if->if_block, ast_if->pre_statement, indent_level, true);
+            }
             // c_print_line_directive(sb, ast_if->location, "if statement expr");
             char *cond_name = c_print_expr(sb, ast_if->condition, indent_level);
             c_print_line_directive(sb, ast_if->location, "if statement");
@@ -1057,6 +1064,9 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
                 print_indents(sb, indent_level);
                 sb->print("}\n");
             }
+            indent_level -= 1;
+            print_indents(sb, indent_level);
+            sb->print("}\n");
             break;
         }
 
