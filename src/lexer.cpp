@@ -11,6 +11,7 @@
 static char *token_string_map[TK_COUNT];
 static char *token_name_map[TK_COUNT];
 
+// todo(josh): @Multithreading
 int total_lexed_lines;
 
 void init_lexer_globals() {
@@ -248,7 +249,7 @@ char *clone_string(char *string, int length) {
     return new_string;
 }
 
-char *scan_identifier(char *text, int *out_length) {
+char *scan_identifier(char *text, int *out_length, Allocator allocator) {
     char *start = text;
     assert(is_letter_or_underscore(*start));
     while (is_letter_or_underscore(*text) || is_digit(*text)) {
@@ -256,17 +257,19 @@ char *scan_identifier(char *text, int *out_length) {
     }
     int length = text - start;
     *out_length = length;
-    char *result = intern_string(start, length);
+    char *copy = (char *)alloc(allocator, length + 1, DEFAULT_ALIGNMENT);
+    memcpy(copy, start, length);
+    char *result = intern_string(copy, length);
     return result;
 }
 
-char *unescape_string(char *str, int *out_escaped_length) {
+char *unescape_string(char *str, int *out_escaped_length, Allocator allocator) {
     // trim out quotes
     int string_length = strlen(str);
     int escaped_length = string_length;
 
     bool escape = false;
-    String_Builder sb = make_string_builder(g_global_linear_allocator, 1024);
+    String_Builder sb = make_string_builder(allocator, 1024);
     for (char *c = str; (*c != '\0' || escape); c++) {
         if (!escape) {
             if (*c == '\\') {
@@ -305,7 +308,7 @@ char *unescape_string(char *str, int *out_escaped_length) {
 }
 
 // note(josh): returns the string without quotes, out_length includes the quotes though since the lexer needs to know how much to advance by
-char *scan_string(char delim, char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string) {
+char *scan_string(char delim, char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string, Allocator allocator) {
     assert(*text == delim);
     text += 1;
     char *start = text;
@@ -333,7 +336,7 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
     *out_scanner_length = length + 2; // note(josh): +2 for the quotation marks
     *out_newlines_in_string = newlines;
     char *duplicate = clone_string(start, length);
-    *escaped_string = unescape_string(duplicate, out_escaped_length);
+    *escaped_string = unescape_string(duplicate, out_escaped_length, allocator);
     return duplicate;
 }
 
@@ -451,7 +454,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
 
     if (is_letter_or_underscore(lexer->text[lexer->location.index])) {
         int length = 0;
-        char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length);
+        char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length, lexer->allocator);
         advance(lexer, length);
         out_token->kind = TK_IDENTIFIER;
         out_token->text = identifier;
@@ -501,7 +504,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string('\'', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        char *string = scan_string('\'', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
         lexer->location.line += newlines;
         total_lexed_lines += newlines;
         advance(lexer, scanner_length);
@@ -516,7 +519,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string('`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        char *string = scan_string('`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
         lexer->location.line += newlines;
         total_lexed_lines += newlines;
         advance(lexer, scanner_length);
@@ -531,7 +534,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string('"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines);
+        char *string = scan_string('"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
         lexer->location.line += newlines;
         total_lexed_lines += newlines;
         advance(lexer, scanner_length);
@@ -545,7 +548,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         advance(lexer, 1);
         assert(is_letter_or_underscore(lexer->text[lexer->location.index])); // todo(josh): @ErrorMessage
         int length;
-        char *note = scan_identifier(&lexer->text[lexer->location.index], &length);
+        char *note = scan_identifier(&lexer->text[lexer->location.index], &length, lexer->allocator);
         advance(lexer, length);
         out_token->kind = TK_NOTE;
         out_token->text = note;
@@ -710,7 +713,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else if (lexer->text[lexer->location.index] == '#') {
         advance(lexer, 1);
         int length = 0;
-        char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length);
+        char *identifier = scan_identifier(&lexer->text[lexer->location.index], &length, lexer->allocator);
         advance(lexer, length);
         // todo(josh): intern these!!!
         // todo(josh): intern these!!!
@@ -812,10 +815,13 @@ void eat_next_token(Lexer *lexer, Token *out_token) {
 // todo(josh): please for the love of all that is holy delete this soon
 extern bool g_silence_errors; // sigh. really should have a Context struct that gets passed around
 
+extern bool g_logged_error;
+
 void report_error(Location location, const char *fmt, ...) {
     if (g_silence_errors) {
         return;
     }
+    g_logged_error = true;
     printf("%s(%d:%d) Error: ", location.filepath, location.line, location.character);
     va_list args;
     va_start(args, fmt);

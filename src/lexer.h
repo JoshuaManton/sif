@@ -141,6 +141,7 @@ struct Lexer {
     Token peeked_token = {};
     Ast_Block *current_block;
     Ast_Proc_Header *currently_parsing_proc;
+    Allocator allocator;
     Lexer(const char *filepath, char *text)
     : text(text)
     {

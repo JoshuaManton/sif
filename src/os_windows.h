@@ -19,6 +19,8 @@ void delete_file(char *);
 
 
 
+void sleep(u64 ms);
+
 typedef void *Handle;
 
 struct Mutex {
@@ -26,7 +28,7 @@ struct Mutex {
 };
 
 Mutex create_mutex();
-void wait_for_mutex(Mutex mutex);
+bool wait_for_mutex(Mutex mutex);
 void release_mutex(Mutex mutex);
 
 struct Thread {
@@ -34,3 +36,4 @@ struct Thread {
 };
 
 Thread create_thread(u32 (*function)(void *userdata), void *userdata);
+void wait_for_thread(Thread thread);

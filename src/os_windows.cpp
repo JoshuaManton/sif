@@ -61,9 +61,10 @@ Mutex create_mutex() {
     return mutex;
 }
 
-void wait_for_mutex(Mutex mutex) {
+bool wait_for_mutex(Mutex mutex) {
     DWORD wait_result = WaitForSingleObject(mutex.handle, INFINITE);
     assert(wait_result == WAIT_OBJECT_0);
+    return true;
 }
 
 void release_mutex(Mutex mutex) {
@@ -83,4 +84,15 @@ Thread create_thread(u32 (*function)(void *userdata), void *userdata) {
     Thread thread = {};
     thread.handle = handle;
     return thread;
+}
+
+void wait_for_thread(Thread thread) {
+    DWORD result = WaitForSingleObject(thread.handle, INFINITE);
+    assert(result == WAIT_OBJECT_0);
+}
+
+
+
+void sleep(u64 ms) {
+    Sleep(ms);
 }

@@ -43,6 +43,9 @@ Array<Declaration *> ordered_declarations;
 
 Ast_Proc *g_main_proc;
 
+Array<Ast_Directive_Assert *> g_all_assert_directives;
+Array<Ast_Directive_Print *>  g_all_print_directives;
+
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
 bool complete_type(Type *type);
@@ -51,19 +54,17 @@ bool match_types(Operand operand, Type *expected_type, Operand *out_operand, boo
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr);
 bool typecheck_block(Ast_Block *block);
 Operand *typecheck_procedure_header(Ast_Proc_Header *header);
-bool do_assert_directives();
-bool do_print_directives();
 
 template<typename T>
 T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
-    T *t_ptr = SIF_NEW_CLONE(init);
+    T *t_ptr = SIF_NEW_CLONE(init, g_global_linear_allocator);
     if (add_to_all_types_list) {
         all_types.append(t_ptr);
         t_ptr->id = all_types.count;
     }
 
-    t_ptr->variables_block = SIF_NEW_CLONE(Ast_Block({}, {}));
-    t_ptr->constants_block = SIF_NEW_CLONE(Ast_Block({}, {}));
+    t_ptr->variables_block = SIF_NEW_CLONE(Ast_Block(g_global_linear_allocator, {}, {}), g_global_linear_allocator);
+    t_ptr->constants_block = SIF_NEW_CLONE(Ast_Block(g_global_linear_allocator, {}, {}), g_global_linear_allocator);
     return t_ptr;
 }
 
@@ -77,7 +78,7 @@ Struct_Member_Declaration *try_add_variable_type_field(Type *type, const char *n
     field.operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
     type->all_fields.append(field);
     type->variable_fields.append(field);
-    Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location));
+    Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, field.operand, offset, type->variables_block, location), g_global_linear_allocator);
     if (!register_declaration(type->variables_block, decl)) {
         return nullptr;
     }
@@ -92,7 +93,7 @@ Struct_Member_Declaration *try_add_constant_type_field(Type *type, const char *n
     field.operand = operand;
     type->all_fields.append(field);
     type->constant_fields.append(field);
-    Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location));
+    Struct_Member_Declaration *decl = SIF_NEW_CLONE(Struct_Member_Declaration(name, operand, -1, type->constants_block, location), g_global_linear_allocator);
     if (!register_declaration(type->constants_block, decl)) {
         return nullptr;
     }
@@ -100,6 +101,8 @@ Struct_Member_Declaration *try_add_constant_type_field(Type *type, const char *n
 }
 
 void init_checker() {
+    g_all_assert_directives.allocator = g_global_linear_allocator;
+    g_all_print_directives.allocator = g_global_linear_allocator;
     all_types.allocator = g_global_linear_allocator;
     ordered_declarations.allocator = g_global_linear_allocator;
 
@@ -147,32 +150,32 @@ void init_checker() {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block), g_global_linear_allocator));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block), g_global_linear_allocator));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block), g_global_linear_allocator));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block), g_global_linear_allocator));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block), g_global_linear_allocator));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block)));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block), g_global_linear_allocator));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block), g_global_linear_allocator));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block)));
+    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block), g_global_linear_allocator));
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
@@ -213,7 +216,6 @@ Type *get_most_concrete_type(Type *a, Type *b) {
                 return b;
             }
             else {
-                assert(a == b);
                 return a;
             }
         }
@@ -247,7 +249,7 @@ Type *try_concretize_type_without_context(Type *type) {
 void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Block *block_with_declarations, Declaration *from_using, Ast_Node *node_to_link_back_to) {
     For (idx, block_with_declarations->declarations) {
         Declaration *decl_to_broadcast = block_with_declarations->declarations[idx];
-        Using_Declaration *new_declaration = SIF_NEW_CLONE(Using_Declaration(node_to_link_back_to, decl_to_broadcast, block_to_broadcast_into, node_to_link_back_to->location));
+        Using_Declaration *new_declaration = SIF_NEW_CLONE(Using_Declaration(node_to_link_back_to, decl_to_broadcast, block_to_broadcast_into, node_to_link_back_to->location), g_global_linear_allocator);
         new_declaration->from_using = from_using;
         assert(register_declaration(block_to_broadcast_into, new_declaration));
     }
@@ -353,7 +355,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     field_operand.int_value = enum_field_value;
                     enum_field_value += 1;
                     assert(try_add_constant_type_field(enum_type, field->name, field_operand, field->location));
-                    if (!register_declaration(enum_decl->ast_enum->enum_block, SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->enum_block, field->location)))) {
+                    if (!register_declaration(enum_decl->ast_enum->enum_block, SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->enum_block, field->location), g_global_linear_allocator))) {
                         return false;
                     }
                     field->resolved = true;
@@ -564,11 +566,10 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
     }
     else {
-        if (decl->parent_block) { // note(josh): some declarations don't have a parent block yet like when we are doing polymorphs // todo(josh): can we remove this now?
-            if (decl->parent_block->flags & BF_IS_GLOBAL_SCOPE) {
-                if (!decl->is_polymorphic) {
-                    ordered_declarations.append(decl);
-                }
+        assert(decl->parent_block);
+        if (decl->parent_block->flags & BF_IS_FILE_SCOPE) {
+            if (!decl->is_polymorphic) {
+                ordered_declarations.append(decl);
             }
         }
     }
@@ -608,11 +609,55 @@ bool typecheck_global_scope(Ast_Block *block) {
             return false;
         }
     }
-    if (!do_assert_directives()) {
-        return false;
+
+    // do assert directives
+    For (idx, g_all_assert_directives) {
+        Ast_Directive_Assert *assert_directive = g_all_assert_directives[idx];
+        Operand *expr_operand = typecheck_expr(assert_directive->expr, type_bool);
+        if (!expr_operand) {
+            return nullptr;
+        }
+        assert(expr_operand->type == type_bool);
+        if (!(expr_operand->flags & OPERAND_CONSTANT)) {
+            report_error(assert_directive->expr->location, "#assert directive parameter must be constant.");
+            return false;
+        }
+        if (!expr_operand->bool_value) {
+            report_error(assert_directive->location, "#assert directive failed.");
+            return false;
+        }
     }
-    if (!do_print_directives()) {
-        return false;
+
+    // do print directives
+    For (idx, g_all_print_directives) {
+        Ast_Directive_Print *print_directive = g_all_print_directives[idx];
+        Operand *expr_operand = typecheck_expr(print_directive->expr);
+        if (!expr_operand) {
+            return false;
+        }
+        if (!(expr_operand->flags & OPERAND_CONSTANT)) {
+            report_error(print_directive->expr->location, "#print directive require a constant.");
+            return false;
+        }
+
+        if (is_type_integer(expr_operand->type)) {
+            report_info(print_directive->location, "%lld", expr_operand->int_value);
+        }
+        else if (is_type_float(expr_operand->type)) {
+            report_info(print_directive->location, "%f", expr_operand->float_value);
+        }
+        else if (expr_operand->type == type_bool) {
+            report_info(print_directive->location, (expr_operand->bool_value ? "true" : "false"));
+        }
+        else if (is_type_string(expr_operand->type)) {
+            report_info(print_directive->location, "%s", expr_operand->escaped_string_value);
+        }
+        else if (is_type_typeid(expr_operand->type)) {
+            report_info(print_directive->location, "%s", type_to_string(expr_operand->type_value));
+        }
+        else {
+            assert(false);
+        }
     }
 
     // note(josh): complete any types that haven't been completed because they haven't been used.
@@ -925,7 +970,7 @@ bool complete_type(Type *type) {
                 array_type->align = array_type->array_of->align;
                 assert(array_type->size > 0);
                 array_type->flags &= ~(TF_INCOMPLETE);
-                ordered_declarations.append(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr)));
+                ordered_declarations.append(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr), g_global_linear_allocator));
                 break;
             }
         }
@@ -1546,7 +1591,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
                 return false;
             }
             assert(parameter_operand.type != nullptr);
-            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, block_to_insert_into, value_expr->location));
+            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, block_to_insert_into, value_expr->location), g_global_linear_allocator);
             poly->inserted_declaration = declaration;
             assert(register_declaration(block_to_insert_into, declaration));
             out_polymorphic_declarations->append(declaration);
@@ -1586,7 +1631,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
             type_operand.type = type_typeid;
             type_operand.type_value = concrete_type;
-            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, block_to_insert_into, parameter_location));
+            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, block_to_insert_into, parameter_location), g_global_linear_allocator);
             poly->inserted_declaration = declaration;
             assert(register_declaration(block_to_insert_into, declaration));
             out_polymorphic_declarations->append(declaration);
@@ -1794,6 +1839,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
     lexer.location = node_to_polymorph->location;
     lexer.location.index = 0;
     lexer.current_block = node_to_polymorph->parent_block;
+    lexer.allocator = g_global_linear_allocator;
     String_Builder sb = make_string_builder(g_global_linear_allocator, 128);
     sb.print(original_name);
     sb.printf("__polymorph_%d", total_num_polymorphs);
@@ -3052,7 +3098,7 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
             op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
             header->name = intern_string(op_overload_name_sb.string());
             assert(header->declaration == nullptr);
-            header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block));
+            header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block), g_global_linear_allocator);
         }
         else {
             assert(header->name != nullptr);
@@ -3074,60 +3120,6 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
     operand.proc_value = header;
     header->operand = operand;
     return &header->operand;
-}
-
-bool do_assert_directives() {
-    For (idx, g_all_assert_directives) {
-        Ast_Directive_Assert *assert_directive = g_all_assert_directives[idx];
-        Operand *expr_operand = typecheck_expr(assert_directive->expr, type_bool);
-        if (!expr_operand) {
-            return nullptr;
-        }
-        assert(expr_operand->type == type_bool);
-        if (!(expr_operand->flags & OPERAND_CONSTANT)) {
-            report_error(assert_directive->expr->location, "#assert directive parameter must be constant.");
-            return false;
-        }
-        if (!expr_operand->bool_value) {
-            report_error(assert_directive->location, "#assert directive failed.");
-            return false;
-        }
-    }
-    return true;
-}
-
-bool do_print_directives() {
-    For (idx, g_all_print_directives) {
-        Ast_Directive_Print *print_directive = g_all_print_directives[idx];
-        Operand *expr_operand = typecheck_expr(print_directive->expr);
-        if (!expr_operand) {
-            return false;
-        }
-        if (!(expr_operand->flags & OPERAND_CONSTANT)) {
-            report_error(print_directive->expr->location, "#print directive require a constant.");
-            return false;
-        }
-
-        if (is_type_integer(expr_operand->type)) {
-            report_info(print_directive->location, "%lld", expr_operand->int_value);
-        }
-        else if (is_type_float(expr_operand->type)) {
-            report_info(print_directive->location, "%f", expr_operand->float_value);
-        }
-        else if (expr_operand->type == type_bool) {
-            report_info(print_directive->location, (expr_operand->bool_value ? "true" : "false"));
-        }
-        else if (is_type_string(expr_operand->type)) {
-            report_info(print_directive->location, "%s", expr_operand->escaped_string_value);
-        }
-        else if (is_type_typeid(expr_operand->type)) {
-            report_info(print_directive->location, "%s", type_to_string(expr_operand->type_value));
-        }
-        else {
-            assert(false);
-        }
-    }
-    return true;
 }
 
 bool typecheck_node(Ast_Node *node) {
@@ -3362,6 +3354,16 @@ bool typecheck_node(Ast_Node *node) {
         }
 
         case AST_EMPTY_STATEMENT: {
+            break;
+        }
+
+        case AST_DIRECTIVE_ASSERT: {
+            g_all_assert_directives.append((Ast_Directive_Assert *)node);
+            break;
+        }
+
+        case AST_DIRECTIVE_PRINT: {
+            g_all_print_directives.append((Ast_Directive_Print *)node);
             break;
         }
 

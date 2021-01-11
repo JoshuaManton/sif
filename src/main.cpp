@@ -43,6 +43,7 @@ SMALL
 -'using' in procedure parameters
 -deduplicate #foreign_import/#foreign_system_import
 -#no_bounds_checks
+-#print and #assert don't work in global scope right now
 
 MEDIUM
 -runtime null checks
@@ -94,6 +95,7 @@ char *sif_core_lib_path;
 Allocator g_global_linear_allocator;
 
 extern int total_lexed_lines;
+bool g_logged_error = {};
 
 Timer g_global_timer = {};
 bool g_no_type_info = {};
@@ -200,7 +202,7 @@ void main(int argc, char **argv) {
     double parsing_start_time = query_timer(&g_global_timer);
 
     Ast_Block *global_scope = begin_parsing(file_to_compile);
-    if (!global_scope) {
+    if (!global_scope || g_logged_error) {
         printf("There were errors.\n");
         return;
     }
@@ -243,6 +245,8 @@ void main(int argc, char **argv) {
             command_sb.print("/Zi /Fd ");
         }
         command_sb.print("output.c /nologo /wd4028 ");
+
+        // todo(josh): @Multithreading mutex
         For (idx, g_all_foreign_import_directives) {
             command_sb.printf("%s ", g_all_foreign_import_directives[idx]->path);
         }

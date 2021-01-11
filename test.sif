@@ -1,8 +1,9 @@
 #include "core:basic.sif"
 #include "core:string_builder.sif"
 
+#assert(1 == 2);
+
 proc main() : i32 {
-    var a: [4]u8;
-    var slice = slice_ptr(&a[0], a.count);
+    printa(1 == "123");
     return 0;
 }

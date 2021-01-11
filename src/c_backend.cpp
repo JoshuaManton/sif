@@ -1424,6 +1424,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
 
     sb.print("#define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(COND)?1:-1]\n");
 
+    // todo(josh): @Multithreading mutex
     For (idx, g_all_c_code_directives) {
         Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];
         sb.print(directive->text);

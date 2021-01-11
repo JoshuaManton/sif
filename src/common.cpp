@@ -1,6 +1,5 @@
 #include "common.h"
 
-Chunked_String_Builder g_interned_string_buffer;
 Hashtable<u64, char *> g_interned_strings;
 
 char *intern_string(char *str, int length_override) {
@@ -22,10 +21,8 @@ char *intern_string(char *str, int length_override) {
     if (interned) {
         return *interned;
     }
-    char *copy = g_interned_string_buffer.write_with_length(str, length);
-    g_interned_string_buffer.append_null();
-    g_interned_strings.insert(hash, copy);
-    return copy;
+    g_interned_strings.insert(hash, str);
+    return str;
 }
 
 char *g_interned_string_return;
@@ -63,7 +60,6 @@ char *g_interned_data_string;
 char *g_interned_count_string;
 
 void init_interned_strings() {
-    g_interned_string_buffer = make_chunked_string_builder(g_global_linear_allocator, 1 * 1024);
     g_interned_strings = make_hashtable<u64, char *>(g_global_linear_allocator, 10 * 1024);
     g_interned_string_return     = intern_string("return");
     g_interned_string_var        = intern_string("var");
