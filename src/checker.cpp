@@ -3346,7 +3346,7 @@ bool typecheck_node(Ast_Node *node) {
                     report_error(ast_return->location, "Return statement missing expression. Expected expression with type '%s'.", type_to_string(ast_return->matching_procedure->type->return_type));
                     return false;
                 }
-                Operand *return_operand = typecheck_expr(ast_return->expr);
+                Operand *return_operand = typecheck_expr(ast_return->expr, ast_return->matching_procedure->type->return_type);
                 if (!return_operand) {
                     return false;
                 }
