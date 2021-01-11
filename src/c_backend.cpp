@@ -1198,6 +1198,14 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             break;
         }
 
+        case AST_DIRECTIVE_ASSERT: {
+            break;
+        }
+
+        case AST_DIRECTIVE_PRINT: {
+            break;
+        }
+
         default: {
             assert(false);
             break;
