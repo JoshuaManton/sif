@@ -94,7 +94,7 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
 }
 
 void c_print_line_directive(Chunked_String_Builder *sb, Location location) {
-    // sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
+    sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
 }
 
 void c_print_type_postfix(Chunked_String_Builder *sb, Type *type) {
@@ -1418,7 +1418,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("void assert(bool condition) {\n");
     sb.print("    if (!condition) {\n");
     sb.print("        printf(\"Assertion failed.\\n\");\n");
-    sb.print("        *((char *)0) = 0;\n");
+    sb.print("        __debug_break();\n");
     sb.print("    }\n");
     sb.print("}\n");
 

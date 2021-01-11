@@ -7,16 +7,18 @@
 proc print_char  (c: u8)                                   #foreign;
 proc print_int   (i: i64)                                  #foreign;
 proc print_uint  (i: u64)                                  #foreign;
-proc print_float (f: float)                                #foreign;
+proc print_float (f: f32)                                  #foreign;
 proc print_bool  (b: bool)                                 #foreign;
 proc print_string(str: string)                             #foreign;
-proc strlen      (cstr: ^u8)                 : u64         #foreign;
+proc strlen      (cstr: cstring)             : u64         #foreign;
 proc sin         (x: f64)                    : f64         #foreign;
 proc cos         (x: f64)                    : f64         #foreign;
 proc tan         (x: f64)                    : f64         #foreign;
 proc acos        (x: f64)                    : f64         #foreign;
 proc sqrt        (x: f64)                    : f64         #foreign;
-proc fabsf       (a: float)                  : float       #foreign;
+proc fabsf       (a: f32)                    : f32         #foreign;
+proc atoi        (cstr: cstring)             : i32         #foreign;
+proc atof        (cstr: cstring)             : f64         #foreign;
 
 proc snprintf(buffer: ^u8, buffer_size: u64, fmt: cstring, args: #c_varargs ..any) : i32 #foreign;
 
@@ -102,11 +104,11 @@ proc print_arg(arg: any) {
         if (dti.is_cstring) {
             var str = cast(^cstring, arg.data)^;
             // todo(josh): this strlen is kind of silly. could just have a print_cstring() routine
-            print_string(string{cast(^u8, str), cast(int, strlen(cast(^u8, str)))});
+            print_string(string{cast(^u8, str), cast(int, strlen(str))});
         }
         else {
             var str = cast(^string, arg.data)^;
-            print_string(cast(^string, arg.data)^);
+            print_string(str);
         }
     }
     else if (ti.kind == Type_Info_Kind.ENUM) {
@@ -331,10 +333,10 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             }
         }
         else if (ti.kind == Type_Info_Kind.POINTER) {
-            arg_length = snprintf(buf_ptr, buf_count, "0x%p", arg.data);
+            arg_length = snprintf(buf_ptr, buf_count, "0x%p", cast(^rawptr, arg.data)^);
         }
         else if (ti.kind == Type_Info_Kind.REFERENCE) {
-            arg_length = snprintf(buf_ptr, buf_count, "0x%p", arg.data);
+            arg_length = snprintf(buf_ptr, buf_count, "0x%p", cast(^rawptr, arg.data)^);
         }
         else if (ti.kind == Type_Info_Kind.TYPEID) {
             var ti = get_type_info(cast(^typeid, arg.data)^);
@@ -462,7 +464,9 @@ proc bprint(buf: []u8, fmt: string, args: ..any) : int {
             arg_index += 1;
         }
         else {
-            buf[cursor] = c;
+            if (cursor < buf.count) {
+                buf[cursor] = c;
+            }
             cursor += 1;
         }
     }
@@ -497,6 +501,14 @@ proc delete(ptr: ^$T, allocator: Allocator) {
     }
 }
 
+proc new_clone(value: $T, allocator: Allocator) : ^T {
+    var ptr = cast(^T, sif_alloc(sizeof(T), DEFAULT_ALIGNMENT, allocator));
+    ptr^ = value;
+    return ptr;
+}
+
+
+
 proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
     var ptr = cast(^T, sif_alloc(sizeof(T) * count, DEFAULT_ALIGNMENT, allocator));
     var slice = slice_ptr(ptr, count);
@@ -514,14 +526,24 @@ proc copy_slice(dst: []$T, src: []T) {
     memcpy(&dst[0], &src[0], cast(u64, min(dst.count, src.count) * sizeof(T)));
 }
 
-proc clone_string(str: string, allocator: Allocator) : string {
-    var new_str = new_slice(byte, str.count, allocator);
-    copy_slice(new_str, transmute([]byte, str));
-    return transmute(string, new_str);
+
+
+proc new_string(count: int, allocator: Allocator) : string {
+    var str: string;
+    str.data = sif_alloc(count, DEFAULT_ALIGNMENT, allocator);
+    zero_pointer(str.data, count);
+    str.count = count;
+    return str;
 }
 
 proc delete_string(str: string, allocator: Allocator) {
     if (str.data != null) {
         sif_free(str.data, allocator);
     }
+}
+
+proc clone_string(str: string, allocator: Allocator) : string {
+    var new_str = new_string(str.count, allocator);
+    copy_slice(transmute([]byte, new_str), transmute([]byte, str));
+    return new_str;
 }

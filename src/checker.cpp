@@ -186,7 +186,7 @@ Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
     return incomplete_type;
 }
 
-bool is_type_pointer    (Type *type) { return type->flags & TF_POINTER;     }
+bool is_type_pointer    (Type *type) { return type->kind == TYPE_POINTER;   }
 bool is_type_polymorphic(Type *type) { return type->flags & TF_POLYMORPHIC; }
 bool is_type_reference  (Type *type) { return type->flags & TF_REFERENCE;   }
 bool is_type_procedure  (Type *type) { return type->flags & TF_PROCEDURE;   }
@@ -466,6 +466,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 //             it's a reference to? probably. hmmmm
                 if (is_type_pointer(var->type)) {
                     Type_Pointer *pointer_type = (Type_Pointer *)var->type;
+                    assert(pointer_type->pointer_to);
                     if (!complete_type(pointer_type->pointer_to)) {
                         return false;
                     }
@@ -552,7 +553,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
-            ordered_declarations.append(procedure->header->declaration);
         }
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
@@ -562,7 +562,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!register_declaration(struct_decl->structure->type->constants_block, procedure->header->declaration)) {
                 return false;
             }
-            ordered_declarations.append(procedure->header->declaration);
         }
     }
     else {
@@ -759,6 +758,7 @@ char *type_to_string(Type *type, int *out_length) {
         }
         case TYPE_POINTER: {
             Type_Pointer *pointer = (Type_Pointer *)type;
+            assert(pointer->pointer_to);
             sb.printf("^%s", type_to_string(pointer->pointer_to));
             break;
         }
@@ -831,6 +831,7 @@ char *type_to_string_plain(Type *type) {
         }
         case TYPE_POINTER: {
             Type_Pointer *pointer = (Type_Pointer *)type;
+            assert(pointer->pointer_to);
             sb.printf("pointer_%s", type_to_string(pointer->pointer_to));
             break;
         }
@@ -1031,7 +1032,7 @@ bool match_types(Operand operand, Type *expected_type, Operand *out_operand, boo
             return true;
         }
 
-        if (is_type_pointer(out_operand->type) && is_type_pointer(expected_type)) {
+        if ((out_operand->type->flags & TF_POINTER) && (expected_type->flags & TF_POINTER)) {
             assert(out_operand->type == type_untyped_null);
             out_operand->type = expected_type;
             return true;
@@ -1205,11 +1206,11 @@ bool can_cast(Ast_Expr *expr, Type *type) {
         if (is_type_number(type)) {
             return true;
         }
-        if (is_type_pointer(type)) {
+        if (type->flags & TF_POINTER) {
             return true;
         }
     }
-    if (is_type_pointer(expr->operand.type) && is_type_pointer(type)) {
+    if ((expr->operand.type->flags & TF_POINTER) && (type->flags & TF_POINTER)) {
         return true;
     }
     return false;
@@ -1223,7 +1224,7 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
             else if (is_type_bool(lhs)    && is_type_bool(rhs))     return true;
             else if (is_type_typeid(lhs)  && is_type_typeid(rhs))   return true;
             else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
-            else if (is_type_pointer(lhs) && is_type_pointer(rhs))  return true;
+            else if ((lhs->flags & TF_POINTER) && (rhs->flags & TF_POINTER))  return true;
             break;
         }
         case TK_NOT_EQUAL_TO: {
@@ -1232,7 +1233,7 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
             else if (is_type_bool(lhs)    && is_type_bool(rhs))     return true;
             else if (is_type_typeid(lhs)  && is_type_typeid(rhs))   return true;
             else if (is_type_string(lhs)  && is_type_string(rhs))   return true;
-            else if (is_type_pointer(lhs) && is_type_pointer(rhs))  return true;
+            else if ((lhs->flags & TF_POINTER) && (rhs->flags & TF_POINTER))  return true;
             break;
         }
         case TK_PLUS: {
@@ -1679,6 +1680,8 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
                 return false;
             }
             Type_Pointer *parameter_pointer = (Type_Pointer *)parameter_type;
+            assert(pointer->pointer_to);
+            assert(parameter_pointer->pointer_to);
             return try_create_polymorph_type_declarations(pointer->pointer_to, parameter_pointer->pointer_to, parameter_location, block_to_insert_into, out_polymorphic_declarations);
         }
         case EXPR_SLICE_TYPE: {
@@ -2626,6 +2629,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type) {
                 }
                 assert(is_type_pointer(lhs_operand->type));
                 Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
+                assert(pointer_type->pointer_to);
                 result_operand.type = pointer_type->pointer_to;
                 result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
                 break;

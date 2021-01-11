@@ -1,0 +1,681 @@
+#include "core:basic.sif"
+#include "core:dynamic_array.sif"
+
+// todo(josh): custom serializer/deserializer callback
+
+proc json_serialize(ptr: ^$T, allocator: Allocator) : string {
+    var sb = make_string_builder(1024, allocator);
+    json_serialize_ti(&sb, ptr, get_type_info(T), 0);
+    return string_builder_to_string(sb);
+}
+
+proc json_print_indents(sb: ^String_Builder, indent_level: int) {
+    for (var i = 0; i < indent_level; i += 1) {
+        sbprint(sb, "    ");
+    }
+}
+
+proc json_serialize_ti(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_level: int) : bool {
+    if (ti.kind == .INTEGER) {
+        var dti = cast(^Type_Info_Integer, ti);
+        if (dti.is_signed) {
+            if (ti.size == 1) {
+                sbprinta(sb, cast(^i8, ptr)^);
+            }
+            else if (ti.size == 2) {
+                sbprinta(sb, cast(^i16, ptr)^);
+            }
+            else if (ti.size == 4) {
+                sbprinta(sb, cast(^i32, ptr)^);
+            }
+            else {
+                assert(ti.size == 8);
+                sbprinta(sb, cast(^i64, ptr)^);
+            }
+        }
+        else {
+            if (ti.size == 1) {
+                sbprinta(sb, cast(^u8, ptr)^);
+            }
+            else if (ti.size == 2) {
+                sbprinta(sb, cast(^u16, ptr)^);
+            }
+            else if (ti.size == 4) {
+                sbprinta(sb, cast(^u32, ptr)^);
+            }
+            else {
+                assert(ti.size == 8);
+                sbprinta(sb, cast(^u64, ptr)^);
+            }
+        }
+    }
+    else if (ti.kind == .FLOAT) {
+        var dti = cast(^Type_Info_Float, ti);
+        if (ti.size == 4) {
+            sbprinta(sb, cast(^f32, ptr)^);
+        }
+        else {
+            assert(ti.size == 8);
+            sbprinta(sb, cast(^f64, ptr)^);
+        }
+    }
+    else if (ti.kind == .STRING) {
+        var dti = cast(^Type_Info_String, ti);
+        if (dti.is_cstring) {
+            sbprint(sb, "\"%\"", cast(^cstring, ptr)^);
+        }
+        else {
+            sbprint(sb, "\"%\"", cast(^string, ptr)^);
+        }
+    }
+    else if (ti.kind == .BOOL) {
+        var dti = cast(^Type_Info_Bool, ti);
+        sbprinta(sb, cast(^bool, ptr)^);
+    }
+    else if (ti.kind == .STRUCT) {
+        var dti = cast(^Type_Info_Struct, ti);
+        sbprinta(sb, "{\n");
+        indent_level += 1;
+        for (var i = 0; i < dti.fields.count; i += 1) {
+            var field = dti.fields[i];
+            if (i != 0) {
+                sbprint(sb, ",\n");
+            }
+            json_print_indents(sb, indent_level);
+            sbprint(sb, "\"%\": ", field.name);
+            json_serialize_ti(sb, ptr_offset(cast(^byte, ptr), field.offset), field.type, indent_level);
+        }
+        sbprinta(sb, "\n");
+        indent_level -= 1;
+        json_print_indents(sb, indent_level);
+        sbprinta(sb, "}");
+    }
+    else if (ti.kind == .ARRAY) {
+        var dti = cast(^Type_Info_Array, ti);
+        sbprinta(sb, "[\n");
+        indent_level += 1;
+        for (var i = 0; i < dti.count; i += 1) {
+            if (i != 0) {
+                sbprint(sb, ",\n");
+            }
+            json_print_indents(sb, indent_level);
+            json_serialize_ti(sb, ptr_offset(cast(^byte, ptr), i * dti.array_of.size), dti.array_of, indent_level);
+        }
+        sbprint(sb, "\n");
+        indent_level -= 1;
+        json_print_indents(sb, indent_level);
+        sbprinta(sb, "]");
+    }
+    else if (ti.kind == .SLICE) {
+        var dti = cast(^Type_Info_Slice, ti);
+        var slice = cast(^Raw_Slice, ptr)^;
+        sbprinta(sb, "[\n");
+        indent_level += 1;
+        for (var i = 0; i < slice.count; i += 1) {
+            if (i != 0) {
+                sbprint(sb, ",\n");
+            }
+            json_print_indents(sb, indent_level);
+            json_serialize_ti(sb, ptr_offset(cast(^byte, slice.data), i * dti.slice_of.size), dti.slice_of, indent_level);
+        }
+        sbprint(sb, "\n");
+        indent_level -= 1;
+        json_print_indents(sb, indent_level);
+        sbprinta(sb, "]");
+    }
+    else if (ti.kind == .POINTER) {
+        var dti = cast(^Type_Info_Pointer, ti);
+        json_serialize_ti(sb, cast(^rawptr, ptr)^, dti.pointer_to, indent_level);
+    }
+    else {
+        print("Unhandled Type_Info kind in json_serialize_ti(): '%'.\n", ti.kind);
+        sbprinta(sb, "{}\n");
+        return false;
+    }
+    return true;
+}
+
+
+
+struct JSON_Value {
+    var kind: JSON_Value_Kind;
+    var location: JSON_Location;
+}
+
+enum JSON_Value_Kind {
+    INVALID;
+    NUMBER;
+    STRING;
+    BOOL;
+    NULL;
+    OBJECT;
+    ARRAY;
+}
+
+struct JSON_Value_Number {
+    using var base: JSON_Value;
+    var int_value: i64;
+    var uint_value: u64;
+    var float_value: f64;
+}
+
+struct JSON_Value_String {
+    using var base: JSON_Value;
+    var value: string;
+}
+
+struct JSON_Value_Bool {
+    using var base: JSON_Value;
+    var value: bool;
+}
+
+struct JSON_Value_Null {
+    using var base: JSON_Value;
+}
+
+struct JSON_Value_Object {
+    using var base: JSON_Value;
+    var fields: []JSON_Object_Field;
+}
+struct JSON_Object_Field {
+    var name: string;
+    var value: ^JSON_Value;
+}
+
+struct JSON_Value_Array {
+    using var base: JSON_Value;
+    var values: []^JSON_Value;
+}
+
+proc json_parse_value(json: string, allocator: Allocator) : ^JSON_Value {
+    var lexer: JSON_Lexer;
+    json_init_lexer(&lexer, json, allocator);
+    return json_parse_value_lexer(&lexer);
+}
+
+proc json_parse_value_lexer(lexer: ^JSON_Lexer) : ^JSON_Value {
+    var token: JSON_Token;
+    if (!json_peek(lexer, &token)) {
+        return null;
+    }
+
+    if (token.kind == .NUMBER)            { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Number{{.NUMBER, token.location}, token.int_value, token.uint_value, token.float_value}, lexer.allocator)); }
+    else if (token.kind == .STRING)       { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_String{{.STRING, token.location}, token.text}, lexer.allocator)); }
+    else if (token.kind == .LEFT_CURLY)   { return cast(^JSON_Value, json_parse_object(lexer)); }
+    else if (token.kind == .LEFT_SQUARE)  { return cast(^JSON_Value, json_parse_array(lexer));  }
+    else if (token.kind == .TRUE)         { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Bool{{.BOOL, token.location}, true}, lexer.allocator)); }
+    else if (token.kind == .FALSE)        { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Bool{{.BOOL, token.location}, false}, lexer.allocator)); }
+    else if (token.kind == .NULL)         { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Null{{.NULL, token.location}, }, lexer.allocator)); }
+    else if (token.kind == .COMMA)        { json_error(token.location, "Unexpected token: %.", token.kind); }
+    else if (token.kind == .COLON)        { json_error(token.location, "Unexpected token: %.", token.kind); }
+    else if (token.kind == .RIGHT_CURLY)  { json_error(token.location, "Unexpected token: %.", token.kind); }
+    else if (token.kind == .RIGHT_SQUARE) { json_error(token.location, "Unexpected token: %.", token.kind); }
+
+    json_error(token.location, "Unexpected token: %.", token.kind);
+    return null;
+}
+
+proc json_parse_object(lexer: ^JSON_Lexer) : ^JSON_Value_Object {
+    var root_token: JSON_Token;
+    if (!json_expect(lexer, .LEFT_CURLY, &root_token)) {
+        assert(false);
+        return null;
+    }
+
+    var fields: Dynamic_Array!(JSON_Object_Field);
+    fields.allocator = lexer.allocator;
+    while (true) {
+        var token: JSON_Token;
+        if (!json_peek(lexer, &token)) {
+            assert(false);
+            return null;
+        }
+        if (token.kind == .RIGHT_CURLY) {
+            break;
+        }
+        if (fields.count != 0) {
+            if (!json_expect(lexer, .COMMA, null)) {
+                return null;
+            }
+        }
+        var field_name: JSON_Token;
+        if (!json_expect(lexer, .STRING, &field_name)) {
+            return null;
+        }
+        if (!json_expect(lexer, .COLON, null)) {
+            return null;
+        }
+        var field_value = json_parse_value_lexer(lexer);
+        append(&fields, JSON_Object_Field{field_name.string_value, field_value});
+    }
+    if (!json_expect(lexer, .RIGHT_CURLY, null)) {
+        assert(false);
+        return null;
+    }
+    var fields_slice = fields.elements;
+    fields_slice.count = fields.count;
+    return new_clone(JSON_Value_Object{{.OBJECT, root_token.location}, fields_slice}, lexer.allocator);
+}
+
+proc json_parse_array(lexer: ^JSON_Lexer) : ^JSON_Value_Array {
+    var root_token: JSON_Token;
+    if (!json_expect(lexer, .LEFT_SQUARE, &root_token)) {
+        assert(false);
+        return null;
+    }
+    var values: Dynamic_Array!(^JSON_Value);
+    values.allocator = lexer.allocator;
+    while (true) {
+        var token: JSON_Token;
+        if (!json_peek(lexer, &token)) {
+            assert(false);
+            return null;
+        }
+        if (token.kind == .RIGHT_SQUARE) {
+            break;
+        }
+        if (values.count != 0) {
+            if (!json_expect(lexer, .COMMA, null)) {
+                return null;
+            }
+        }
+        var value = json_parse_value_lexer(lexer);
+        append(&values, value);
+    }
+    if (!json_expect(lexer, .RIGHT_SQUARE, null)) {
+        assert(false);
+        return null;
+    }
+    var values_slice = values.elements;
+    values_slice.count = values.count;
+    return new_clone(JSON_Value_Array{{.ARRAY, root_token.location}, values_slice}, lexer.allocator);
+}
+
+proc json_write_value(ptr: ^$T, value: ^JSON_Value, allocator: Allocator) {
+    json_write_value_ti(ptr, get_type_info(T), value, allocator);
+}
+
+proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, allocator: Allocator) {
+    if (ti.kind == .INTEGER) {
+        var dti = cast(^Type_Info_Integer, ti);
+        assert(value.kind == .NUMBER);
+        var json_number = cast(^JSON_Value_Number, value);
+        if (dti.is_signed) {
+            if (ti.size == 1) {
+                cast(^i8, ptr)^ = cast(i8, json_number.int_value);
+            }
+            else if (ti.size == 2) {
+                cast(^i16, ptr)^ = cast(i16, json_number.int_value);
+            }
+            else if (ti.size == 4) {
+                cast(^i32, ptr)^ = cast(i32, json_number.int_value);
+            }
+            else {
+                assert(ti.size == 8);
+                cast(^i64, ptr)^ = cast(i64, json_number.int_value);
+            }
+        }
+        else {
+            if (ti.size == 1) {
+                cast(^u8, ptr)^ = cast(u8, json_number.uint_value);
+            }
+            else if (ti.size == 2) {
+                cast(^u16, ptr)^ = cast(u16, json_number.uint_value);
+            }
+            else if (ti.size == 4) {
+                cast(^u32, ptr)^ = cast(u32, json_number.uint_value);
+            }
+            else {
+                assert(ti.size == 8);
+                cast(^u64, ptr)^ = cast(u64, json_number.uint_value);
+            }
+        }
+    }
+    else if (ti.kind == .FLOAT) {
+        var dti = cast(^Type_Info_Float, ti);
+        assert(value.kind == .NUMBER);
+        var json_number = cast(^JSON_Value_Number, value);
+        if (ti.size == 4) {
+                cast(^f32, ptr)^ = cast(f32, json_number.float_value);
+            }
+            else {
+                assert(ti.size == 8);
+                cast(^f64, ptr)^ = cast(f64, json_number.float_value);
+            }
+    }
+    else if (ti.kind == .STRING) {
+        var dti = cast(^Type_Info_String, ti);
+        assert(value.kind == .STRING);
+        var json_string = cast(^JSON_Value_String, value);
+        if (json_string.value.count > 0) {
+            if (dti.is_cstring) {
+                var str = new_string(json_string.value.count+1, allocator);
+                str[str.count-1] = 0;
+                memcpy(&str[0], &json_string.value[0], cast(u64, json_string.value.count));
+                cast(^cstring, ptr)^ = cast(cstring, str.data);
+            }
+            else {
+                var str = new_string(json_string.value.count, allocator);
+                memcpy(&str[0], &json_string.value[0], cast(u64, json_string.value.count));
+                cast(^string, ptr)^ = str;
+            }
+        }
+    }
+    else if (ti.kind == .BOOL) {
+        var dti = cast(^Type_Info_Bool, ti);
+        assert(ti.size == 1);
+        assert(value.kind == .BOOL);
+        var json_bool = cast(^JSON_Value_Bool, value);
+        cast(^bool, ptr)^ = json_bool.value;
+    }
+    else if (ti.kind == .STRUCT) {
+        var dti = cast(^Type_Info_Struct, ti);
+        assert(value.kind == .OBJECT);
+        var json_object = cast(^JSON_Value_Object, value);
+        for (var i = 0; i < json_object.fields.count; i += 1) {
+            var json_field = json_object.fields[i];
+            for (var j = 0; j < dti.fields.count; j += 1) {
+                var struct_field = dti.fields[j];
+                if (struct_field.name == json_field.name) {
+                    json_write_value_ti(ptr_offset(cast(^u8, ptr), struct_field.offset), struct_field.type, json_field.value, allocator);
+                    break;
+                }
+            }
+        }
+    }
+    else if (ti.kind == .ARRAY) {
+        var dti = cast(^Type_Info_Array, ti);
+        assert(value.kind == .ARRAY);
+        // todo(josh): log an error if the counts don't match
+        var json_array = cast(^JSON_Value_Array, value);
+        var max_index = min(json_array.values.count, dti.count);
+        for (var i = 0; i < max_index; i += 1) {
+            json_write_value_ti(ptr_offset(cast(^u8, ptr), i * dti.array_of.size), dti.array_of, json_array.values[i], allocator);
+        }
+    }
+    else if (ti.kind == .SLICE) {
+        var dti = cast(^Type_Info_Slice, ti);
+        var ptr_slice = cast(^Raw_Slice, ptr);
+        assert(value.kind == .ARRAY);
+        var json_array = cast(^JSON_Value_Array, value);
+        ptr_slice.count = json_array.values.count;
+        ptr_slice.data = sif_alloc(dti.slice_of.size * json_array.values.count, DEFAULT_ALIGNMENT, allocator);
+        for (var i = 0; i < json_array.values.count; i += 1) {
+            json_write_value_ti(ptr_offset(cast(^u8, ptr_slice.data), i * dti.slice_of.size), dti.slice_of, json_array.values[i], allocator);
+        }
+    }
+    else if (ti.kind == .POINTER) {
+        var dti = cast(^Type_Info_Pointer, ti);
+        var new_ptr = sif_alloc(dti.pointer_to.size, DEFAULT_ALIGNMENT, allocator);
+        json_write_value_ti(new_ptr, dti.pointer_to, value, allocator);
+        cast(^rawptr, ptr)^ = new_ptr;
+    }
+    else {
+        json_error(value.location, "Unhandled Type_Info kind in json_write_value(): '%'.", ti.kind);
+    }
+}
+
+proc json_error(location: JSON_Location, error_message: string, args: ..any) {
+    print("(%:%) JSON Error: ", location.line, location.character);
+    print(error_message, ..args);
+    print("\n");
+}
+
+
+
+struct JSON_Lexer {
+    var text: string;
+    using var location: JSON_Location;
+    var allocator: Allocator;
+}
+
+struct JSON_Location {
+    var line: int;
+    var character: int;
+    var index: int;
+}
+
+enum JSON_Token_Kind {
+    NONE;
+
+    NUMBER;
+    STRING;
+
+    COMMA;
+    COLON;
+
+    LEFT_CURLY;
+    RIGHT_CURLY;
+    LEFT_SQUARE;
+    RIGHT_SQUARE;
+
+    TRUE;
+    FALSE;
+    NULL;
+
+    EOF;
+}
+
+struct JSON_Token {
+    var text: string;
+    var location: JSON_Location;
+    var kind: JSON_Token_Kind;
+    var int_value: i64;
+    var uint_value: u64;
+    var float_value: f64;
+    var string_value: string;
+}
+
+proc json_init_lexer(lexer: ^JSON_Lexer, json: string, allocator: Allocator) {
+    lexer.text = json;
+    lexer.line = 1;
+    lexer.character = 1;
+    lexer.allocator = allocator;
+}
+
+proc json_advance_lexer(lexer: ^JSON_Lexer, amount: int) {
+    lexer.character += amount;
+    lexer.index += amount;
+}
+
+proc json_get_next_token(lexer: ^JSON_Lexer, out_token: ^JSON_Token) : bool {
+    if (lexer.index >= lexer.text.count) {
+        return false;
+    }
+    while (lexer.index < lexer.text.count && is_whitespace(lexer.text[lexer.index])) {
+        if (lexer.text[lexer.index] == '\n') {
+            lexer.line += 1;
+            lexer.character = 0; // json_advance_lexer() directly below will make this 1
+        }
+        json_advance_lexer(lexer, 1);
+    }
+
+    if (lexer.index >= lexer.text.count) {
+        out_token^ = #partial {"", lexer.location, .EOF};
+        return false;
+    }
+
+    out_token^ = #partial {}; // todo(josh): {} shouldn't require #partial
+    out_token.location = lexer.location;
+    var c = lexer.text[lexer.index];
+    var start_index = lexer.index;
+    if (c == '"') {
+        var str = json_scan_string(lexer);
+        assert(str[0] == '"');
+        assert(str[str.count-1] == '"');
+        out_token.kind = .STRING;
+        out_token.text = str;
+        out_token.string_value = string_ptr(&str[1], str.count-2);
+    }
+    else if (c == '-' || is_one_to_nine(c)) {
+        json_scan_number(lexer, &out_token.int_value, &out_token.uint_value, &out_token.float_value, lexer.allocator);
+        out_token.kind = .NUMBER;
+        out_token.text = string_ptr(&lexer.text[start_index], lexer.index - start_index);
+    }
+    else if (c == '{') {
+        json_advance_lexer(lexer, 1);
+        out_token.kind = .LEFT_CURLY;
+        out_token.text = "{";
+    }
+    else if (c == '}') {
+        json_advance_lexer(lexer, 1);
+        out_token.kind = .RIGHT_CURLY;
+        out_token.text = "}";
+    }
+    else if (c == '[') {
+        json_advance_lexer(lexer, 1);
+        out_token.kind = .LEFT_SQUARE;
+        out_token.text = "[";
+    }
+    else if (c == ']') {
+        json_advance_lexer(lexer, 1);
+        out_token.kind = .RIGHT_SQUARE;
+        out_token.text = "]";
+    }
+    else if (c == ':') {
+        json_advance_lexer(lexer, 1);
+        out_token.kind = .COLON;
+        out_token.text = ":";
+    }
+    else if (c == ',') {
+        json_advance_lexer(lexer, 1);
+        out_token.kind = .COMMA;
+        out_token.text = ",";
+    }
+    else if (is_letter_or_underscore(c)) {
+        var str = json_scan_identifier(lexer);
+        if (str == "null") {
+            out_token.kind = .NULL;
+            out_token.text = str;
+        }
+        else if (str == "true") {
+            out_token.kind = .TRUE;
+            out_token.text = str;
+        }
+        else if (str == "false") {
+            out_token.kind = .FALSE;
+            out_token.text = str;
+        }
+        else {
+            json_error(lexer.location, "Unknown identifier: '%'.", str);
+            return false;
+        }
+    }
+    else {
+        json_error(lexer.location, "Unknown character: '%'.", lexer.text[lexer.index]);
+        return false;
+    }
+    return true;
+}
+
+proc json_scan_identifier(lexer: ^JSON_Lexer) : string {
+    var start_index = lexer.index;
+    while (lexer.index < lexer.text.count && is_letter_or_underscore(lexer.text[lexer.index])) {
+        json_advance_lexer(lexer, 1);
+    }
+    return string_ptr(&lexer.text[start_index], lexer.index - start_index);
+}
+
+proc json_scan_string(lexer: ^JSON_Lexer) : string {
+    assert(lexer.text[lexer.index] == '"');
+    var start_index = lexer.index;
+    json_advance_lexer(lexer, 1);
+    var escaped = false;
+    while (lexer.index < lexer.text.count && lexer.text[lexer.index] != '"' || escaped) {
+        escaped = false;
+        if (lexer.text[lexer.index] == '\\') {
+            escaped = true;
+        }
+        json_advance_lexer(lexer, 1);
+    }
+    assert(!escaped);
+    assert(lexer.text[lexer.index] == '"');
+    json_advance_lexer(lexer, 1);
+    return string_ptr(&lexer.text[start_index], lexer.index - start_index);
+}
+
+proc json_scan_number(lexer: ^JSON_Lexer, int_value: ^i64, uint_value: ^u64, float_value: ^f64, allocator: Allocator) {
+    var start_index = lexer.index;
+    while (lexer.index < lexer.text.count && lexer.text[lexer.index] == '-') {
+        json_advance_lexer(lexer, 1);
+    }
+    while (lexer.index < lexer.text.count && is_zero_to_nine(lexer.text[lexer.index])) {
+        json_advance_lexer(lexer, 1);
+    }
+    if (lexer.index < lexer.text.count && lexer.text[lexer.index] == '.') {
+        json_advance_lexer(lexer, 1);
+    }
+    while (lexer.index < lexer.text.count && is_zero_to_nine(lexer.text[lexer.index])) {
+        json_advance_lexer(lexer, 1);
+    }
+    // todo(josh): scientific notation
+
+    var number_text = string_ptr(&lexer.text[start_index], lexer.index - start_index);
+    var number_text_cstr = new_string(number_text.count+1, allocator);
+    copy_slice(transmute([]byte, number_text_cstr), transmute([]byte, number_text));
+    number_text_cstr[number_text.count] = 0;
+    int_value^   = cast(i64, atoi(cast(cstring, &number_text[0])));
+    uint_value^  = cast(u64, atoi(cast(cstring, &number_text[0]))); // todo(josh): this is incorrect
+    float_value^ = atof(cast(cstring, &number_text[0]));
+}
+
+proc json_expect(lexer: ^JSON_Lexer, kind: JSON_Token_Kind, out_token: ^JSON_Token) : bool {
+    var dummy: JSON_Token;
+    if (out_token == null) {
+        out_token = &dummy;
+    }
+    if (!json_get_next_token(lexer, out_token)) {
+        return false;
+    }
+    if (out_token.kind == kind) {
+        return true;
+    }
+    return false;
+}
+
+proc json_peek(lexer: ^JSON_Lexer, out_token: ^JSON_Token) : bool {
+    var dummy: JSON_Token;
+    if (out_token == null) {
+        out_token = &dummy;
+    }
+    var lexer_copy = lexer^;
+    if (!json_get_next_token(&lexer_copy, out_token)) {
+        return false;
+    }
+    return true;
+}
+
+proc json_eat_next_token(lexer: ^JSON_Lexer, out_token: ^JSON_Token) : bool {
+    var dummy: JSON_Token;
+    if (out_token == null) {
+        out_token = &dummy;
+    }
+    if (!json_get_next_token(lexer, out_token)) {
+        return false;
+    }
+    return true;
+}
+
+proc is_letter_or_underscore(c: u8) : bool {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+}
+
+proc is_whitespace(c: u8) : bool {
+    return (c == ' ') || (c == '\n') || (c == '\t') || (c == '\r'); //  || (c == '\v'); // todo(josh): what other whitespace chars are there?
+}
+
+proc is_digit(c: u8) : bool {
+    return (c >= '0') && (c <= '9');
+}
+
+proc is_hex_char(c: u8) : bool {
+    return is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+proc is_zero_to_nine(c: u8) : bool {
+    return (c >= '0') && (c <= '9');
+}
+
+proc is_one_to_nine(c: u8) : bool {
+    return (c >= '1') && (c <= '9');
+}

@@ -18,6 +18,11 @@
 TODO:
 
 SMALL
+-short circuiting
+-put struct and struct member notes in type info
+-put struct constants in Type_Info
+-deduplicate #foreign_import/#foreign_system_import
+-'using' in procedure parameters
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
 -unknown directives don't stop compilation
@@ -40,8 +45,6 @@ SMALL
 -require #c_varargs to be ..any?
 -disallow #c_varargs in non-foreign procedure headers
 -cast untyped string to cstring
--'using' in procedure parameters
--deduplicate #foreign_import/#foreign_system_import
 -#no_bounds_checks
 -#print and #assert don't work in global scope right now
 

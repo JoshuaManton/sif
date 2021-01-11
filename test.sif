@@ -1,9 +1,60 @@
 #include "core:basic.sif"
 #include "core:string_builder.sif"
+#include "core:json.sif"
 
-#assert(1 == 2);
+struct Foo {
+    var a: int;
+    var b: string;
+    var c: float;
+    var d: bool;
+    var e: Bar;
+}
+
+struct Bar {
+    var arr: [4]int;
+    var slice: []string;
+    var cstrings: []cstring;
+    var bazzes: [4]^Baz;
+}
+
+struct Baz {
+    var a: int;
+    var b: string;
+    var c: float;
+    var d: bool;
+}
 
 proc main() : i32 {
-    printa(1 == "123");
+    var foo: Foo;
+    foo.a = 124;
+    foo.b = "wow a string";
+    foo.c = 32.4;
+    foo.d = true;
+    foo.e.arr[0] = 1;
+    foo.e.arr[1] = 4;
+    foo.e.arr[2] = 9;
+    foo.e.arr[3] = 5;
+    foo.e.slice = new_slice(string, 4, default_allocator());
+    foo.e.slice[0] = "wowza 1";
+    foo.e.slice[1] = "wowza 2";
+    foo.e.slice[2] = "wowza 3";
+    foo.e.slice[3] = "wowza 4";
+    foo.e.cstrings = new_slice(cstring, 4, default_allocator());
+    foo.e.cstrings[0] = "jhkashk wowza 1";
+    foo.e.cstrings[1] = "faaksl wowza 2";
+    foo.e.cstrings[2] = "";
+    foo.e.cstrings[3] = "";
+    foo.e.bazzes[0] = new_clone(Baz{1, "dsa", 42.2, true}, default_allocator());
+    foo.e.bazzes[1] = new_clone(Baz{1, "dsa", 42.2, true}, default_allocator());
+    foo.e.bazzes[2] = new_clone(Baz{1, "dsa", 42.2, true}, default_allocator());
+    foo.e.bazzes[3] = new_clone(Baz{1, "dsfa", 42.2, true}, default_allocator());
+
+    var json = json_serialize(&foo, default_allocator());
+    print("---- SERIALIZED ----\n\n%\n", json);
+
+    foo = #partial {};
+    var value = json_parse_value(json, default_allocator());
+    json_write_value(&foo, value, default_allocator());
+    print("\n---- DESERIALIZED BACK ----\n\n%\n", foo);
     return 0;
 }
