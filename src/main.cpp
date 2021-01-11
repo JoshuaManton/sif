@@ -21,8 +21,10 @@ SMALL
 -short circuiting
 -put struct and struct member notes in type info
 -put struct constants in Type_Info
--deduplicate #foreign_import/#foreign_system_import
 -'using' in procedure parameters
+-fix compound literals requiring #partial for '{}'
+
+-deduplicate #foreign_import/#foreign_system_import
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
 -unknown directives don't stop compilation
@@ -30,7 +32,6 @@ SMALL
 -add allocators to demo
 -underscores in numbers
 -prevent identifiers from being C keywords in the backend, like `signed`
--how should rawptr behave with ^$T? rawptr isn't a pointer _to_ anything, it's just a pointer. hmmmm.
 -Expr_Change (var v2 = v1.{y=4};)
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -declare distinct types
@@ -49,11 +50,12 @@ SMALL
 -#print and #assert don't work in global scope right now
 
 MEDIUM
+-enum arrays @EnumArrays
+
 -runtime null checks
 -@PointerArithmetic
 -@UnaryOperatorOverloading
 -switch statements
--emit #line directives in backend
 -slicing
 -build to dll
 -read command line parameters
@@ -64,7 +66,6 @@ MEDIUM
 -locally scoped structs/procs/enums
 -tagged unions?
 -use microsoft_craziness.h
--enum arrays @EnumArrays
 -allow custom entrypoints
 -assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
 -foreach loops

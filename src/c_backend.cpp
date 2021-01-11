@@ -93,8 +93,14 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
     }
 }
 
-void c_print_line_directive(Chunked_String_Builder *sb, Location location) {
-    // sb->printf("#line %d \"%s\"\n", location.line, location.filepath);
+void c_print_line_directive(Chunked_String_Builder *sb, Location location, char *comment = "") {
+    sb->printf("#line %d \"%s\"", location.line, location.filepath);
+    if (comment != nullptr) {
+        sb->printf(" // %s\n", comment);
+    }
+    else {
+        sb->printf("\n");
+    }
 }
 
 void c_print_type_postfix(Chunked_String_Builder *sb, Type *type) {
@@ -290,11 +296,14 @@ void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_
     c_print_type_plain_postfix(sb, type);
 }
 
-void c_print_var(Chunked_String_Builder *sb, Ast_Var *var, int indent_level) {
+void c_print_var(Chunked_String_Builder *sb, Ast_Var *var, int indent_level, bool do_line_directive) {
     assert(!var->is_constant);
     char *rhs = nullptr;
     if (var->expr) {
         rhs = c_print_expr(sb, var->expr, indent_level, var->type);
+    }
+    if (do_line_directive) {
+        c_print_line_directive(sb, var->location, "var decl");
     }
     print_indents(sb, indent_level);
     const char *name_to_print = var->declaration->name;
@@ -322,7 +331,7 @@ void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *heade
         if (idx != 0) {
             header_name_sb.print(", ");
         }
-        c_print_var(&header_name_sb, parameter, 0);
+        c_print_var(&header_name_sb, parameter, 0, false);
     }
     header_name_sb.print(")");
     c_print_type(sb, header->type->return_type, header_name_sb.make_string());
@@ -344,6 +353,7 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
         Type *target_type = proc_type->parameter_types[idx];
         if (!is_type_varargs(target_type)) {
             assert(call_parameter.exprs.count == 1);
+            // c_print_line_directive(sb, call_parameter.exprs[0]->location, "proc call parameter");
             char *param = c_print_expr(sb, call_parameter.exprs[0], indent_level, target_type);
             out_temporaries->append(param);
         }
@@ -360,7 +370,7 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
                     char *rhs_name = c_print_expr(sb, spread->rhs, indent_level);
                     spread_name = c_temporary();
                     print_indents(sb, indent_level);
-                    c_print_line_directive(sb, spread->location);
+                    c_print_line_directive(sb, spread->location, "proc call slice spread");
                     sb->printf("Slice %s = MAKE_SLICE(&%s.elements[0], %d);\n", spread_name, rhs_name, array_type->count);
                 }
                 else {
@@ -380,22 +390,26 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
                 }
                 else {
                     char *t = c_temporary();
+                    c_print_line_directive(sb, root_expr->location, "proc call vararg slice decl");
                     print_indents(sb, indent_level);
                     c_print_type(sb, varargs->varargs_of, t);
                     sb->printf("[%d];\n", max(1, varargs_count));
                     For (idx, call_parameter.exprs) {
                         Ast_Expr *param = call_parameter.exprs[idx];
                         char *param_name = c_print_expr(sb, param, indent_level, varargs->varargs_of);
-                        c_print_line_directive(sb, param->location);
+                        c_print_line_directive(sb, param->location, "proc call vararg expr");
                         print_indents(sb, indent_level);
                         sb->printf("%s[%d] = %s;\n", t, idx, param_name);
                     }
                     char *slice = c_temporary();
+                    c_print_line_directive(sb, root_expr->location, "proc call vararg slice decl");
                     print_indents(sb, indent_level);
                     c_print_type(sb, get_or_create_type_slice_of(varargs->varargs_of), slice);
                     sb->print(";\n");
+                    c_print_line_directive(sb, root_expr->location, "proc call vararg slice set data");
                     print_indents(sb, indent_level);
                     sb->printf("%s.data = %s;\n", slice, t);
+                    c_print_line_directive(sb, root_expr->location, "proc call vararg slice set count");
                     print_indents(sb, indent_level);
                     sb->printf("%s.count = %d;\n", slice, varargs_count);
                     out_temporaries->append(slice);
@@ -429,12 +443,16 @@ void c_print_hidden_using_selectors(Chunked_String_Builder *sb, Declaration *dec
 
 char *c_print_gen_location(Chunked_String_Builder *sb, int indent_level, Location location) {
     char *t = c_temporary();
+    c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
     sb->printf("struct Source_Code_Location %s = {0};\n", t);
+    c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
     sb->printf("%s.filepath = MAKE_STRING(\"%s\", %d);\n", t, location.filepath, strlen(location.filepath));
+    c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
     sb->printf("%s.line = %d;\n", t, location.line);
+    c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
     sb->printf("%s.character = %d;\n", t, location.character);
     return t;
@@ -442,14 +460,14 @@ char *c_print_gen_location(Chunked_String_Builder *sb, int indent_level, Locatio
 
 void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, Location location, char *lhs_name, char *count_field, char *index_name) {
     char *location_t = c_print_gen_location(sb, indent_level, location);
+    c_print_line_directive(sb, location, "bounds check");
     print_indents(sb, indent_level);
     sb->printf("sif_bounds_check(%s.%s, %s, %s);\n", lhs_name, count_field, index_name, location_t);
+    c_print_line_directive(sb, location, "bounds check after");
 }
 
 char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     char *t = nullptr;
-
-    c_print_line_directive(sb, expr->location);
 
     if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
         assert(expr->operand.type != nullptr);
@@ -474,6 +492,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
         Array<char *> params;
         params.allocator = g_global_linear_allocator;
         c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->processed_procedure_call_parameters, indent_level, &params);
+        c_print_line_directive(sb, expr->location, "proc call desugared procedure");
         print_indents(sb, indent_level);
         if (expr->desugared_procedure_to_call->header->type->return_type) {
             t = c_temporary();
@@ -494,6 +513,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
             if (target_type == type_any) {
                 assert(!is_type_untyped(expr->operand.type));
                 t = c_temporary();
+                c_print_line_directive(sb, expr->location, "expr constant to any");
                 print_indents(sb, indent_level);
                 c_print_type(sb, expr->operand.type, t);
                 sb->print(" = ");
@@ -582,6 +602,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     Expr_Unary *unary = (Expr_Unary *)expr;
                     t = c_temporary();
                     char *rhs = c_print_expr(sb, unary->rhs, indent_level);
+                    c_print_line_directive(sb, unary->location, "expr unary");
                     print_indents(sb, indent_level);
                     c_print_type(sb, unary->operand.type, t);
                     sb->print(" = ");
@@ -614,6 +635,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     t = c_temporary();
                     char *lhs = c_print_expr(sb, binary->lhs, indent_level); assert(lhs);
                     char *rhs = c_print_expr(sb, binary->rhs, indent_level); assert(rhs);
+                    c_print_line_directive(sb, binary->location, "expr binary");
                     print_indents(sb, indent_level);
                     if (binary->op == TK_EQUAL_TO && (binary->lhs->operand.type == type_string) && (binary->lhs->operand.type == type_string)) {
                         // todo(josh): this should probably be a desugared_procedure thing
@@ -653,6 +675,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
                     assert(call->target_procedure_type != nullptr);
                     assert(!is_type_polymorphic(call->target_procedure_type));
+                    c_print_line_directive(sb, call->location, "expr procedure call");
                     char *procedure_name = c_print_expr(sb, call->lhs, indent_level);
                     Array<char *> params;
                     params.allocator = g_global_linear_allocator;
@@ -719,6 +742,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         expr_names.append(name);
                     }
                     t = c_temporary();
+                    c_print_line_directive(sb, compound_literal->location, "compound literal decl");
                     print_indents(sb, indent_level);
                     c_print_type(sb, compound_literal->operand.type, t);
                     sb->print(" = {0};\n");
@@ -727,12 +751,14 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     if (is_type_array(compound_literal_type)) {
                         Type_Array *array_type = (Type_Array *)compound_literal_type;
                         For (idx, expr_names) {
+                            c_print_line_directive(sb, compound_literal->location, "compound literal assignment");
                             print_indents(sb, indent_level);
                             sb->printf("%s.elements[%d] = %s;\n", t, idx, expr_names[idx]);
                         }
                     }
                     else {
                         For (idx, expr_names) {
+                            c_print_line_directive(sb, compound_literal->location, "compound literal assignment");
                             print_indents(sb, indent_level);
                             Struct_Field target_field = compound_literal_type->variable_fields[idx];
                             assert(!(target_field.operand.flags & OPERAND_CONSTANT));
@@ -761,6 +787,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 }
                 case EXPR_SELECTOR: {
                     Expr_Selector *selector = (Expr_Selector *)expr;
+                    c_print_line_directive(sb, selector->location, "expr selector");
                     char *lhs = c_print_expr(sb, selector->lhs, indent_level);
                     assert(lhs);
                     Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
@@ -791,6 +818,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 case EXPR_CAST: {
                     Expr_Cast *expr_cast = (Expr_Cast *)expr;
                     char *rhs = c_print_expr(sb, expr_cast->rhs, indent_level);
+                    c_print_line_directive(sb, expr_cast->location, "expr cast");
                     t = c_temporary();
                     print_indents(sb, indent_level);
                     c_print_type(sb, expr_cast->type_expr->operand.type_value, t);
@@ -802,6 +830,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 case EXPR_TRANSMUTE: {
                     Expr_Transmute *transmute = (Expr_Transmute *)expr;
                     char *rhs = c_print_expr(sb, transmute->rhs, indent_level);
+                    c_print_line_directive(sb, transmute->location, "expr transmute");
                     t = c_temporary();
                     print_indents(sb, indent_level);
                     c_print_type(sb, transmute->type_expr->operand.type_value, t);
@@ -848,6 +877,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     Expr_Paren *paren = (Expr_Paren *)expr;
                     t = c_temporary();
                     char *nested = c_print_expr(sb, paren->nested, indent_level, target_type);
+                    c_print_line_directive(sb, paren->location, "expr paren");
                     print_indents(sb, indent_level);
                     c_print_type(sb, expr->operand.type, t);
                     sb->printf(" = %s;\n", nested);
@@ -915,7 +945,7 @@ void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_leve
 
 void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_level, bool print_semicolon) {
     if (!var->is_constant) {
-        c_print_var(sb, var, indent_level);
+        c_print_var(sb, var, indent_level, true);
         if (var->expr == nullptr) {
             sb->printf(" = {0}");
         }
@@ -935,6 +965,8 @@ void c_print_defers_from_block_to_block(Chunked_String_Builder *sb, int indent_l
     while (true) {
         for (int idx = current->c_gen_defer_stack.count-1; idx >= 0; idx -= 1) {
             Ast_Defer *ast_defer = (Ast_Defer *)current->c_gen_defer_stack[idx];
+            print_indents(sb, indent_level);
+            sb->printf("// defer %d\n", idx);
             c_print_statement(sb, current, ast_defer->node_to_defer, indent_level, true);
         }
         if (current == to) {
@@ -962,7 +994,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             Ast_Assign *assign = (Ast_Assign *)node;
             char *lhs = c_print_expr(sb, assign->lhs, indent_level);
             char *rhs = c_print_expr(sb, assign->rhs, indent_level, assign->lhs->operand.type);
-            c_print_line_directive(sb, assign->location);
+            c_print_line_directive(sb, assign->location, "assign statement");
             print_indents(sb, indent_level);
             sb->print(lhs);
             switch (assign->op) {
@@ -997,6 +1029,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
 
         case AST_BLOCK_STATEMENT: {
             Ast_Block_Statement *block_statement = (Ast_Block_Statement *)node;
+            c_print_line_directive(sb, block_statement->location, "block statement");
             print_indents(sb, indent_level);
             sb->print("{\n");
             c_print_block(sb, block_statement->block, indent_level + 1);
@@ -1009,7 +1042,9 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             Ast_If *ast_if = (Ast_If *)node;
             assert(ast_if->condition != nullptr);
             assert(ast_if->body != nullptr);
+            // c_print_line_directive(sb, ast_if->location, "if statement expr");
             char *cond_name = c_print_expr(sb, ast_if->condition, indent_level);
+            c_print_line_directive(sb, ast_if->location, "if statement");
             print_indents(sb, indent_level);
             sb->printf("if (%s) {\n", cond_name);
             c_print_block(sb, ast_if->body, indent_level+1);
@@ -1027,16 +1062,22 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
 
         case AST_FOR_LOOP: {
             Ast_For_Loop *for_loop = (Ast_For_Loop *)node;
+            c_print_line_directive(sb, for_loop->location, "for loop block");
             print_indents(sb, indent_level);
             sb->print("{\n");
+            c_print_line_directive(sb, for_loop->location, "for loop pre");
             c_print_statement(sb, block, for_loop->pre, indent_level+1, true);
             print_indents(sb, indent_level+1);
+            c_print_line_directive(sb, for_loop->location, "for loop while");
             sb->print("while (true) {\n");
             char *cond_name = c_print_expr(sb, for_loop->condition, indent_level+2);
             assert(cond_name);
+            c_print_line_directive(sb, for_loop->location, "for loop condition");
             print_indents(sb, indent_level+2);
             sb->printf("if (!%s) { break; }\n", cond_name);
+            c_print_line_directive(sb, for_loop->body->location, "for loop body");
             c_print_block(sb, for_loop->body, indent_level + 2);
+            c_print_line_directive(sb, for_loop->location, "for loop post");
             c_print_statement(sb, block, for_loop->post, indent_level+2, true);
             print_indents(sb, indent_level+1);
             sb->print("}\n");
@@ -1047,12 +1088,15 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
 
         case AST_WHILE_LOOP: {
             Ast_While_Loop *while_loop = (Ast_While_Loop *)node;
+            c_print_line_directive(sb, while_loop->location, "while loop");
             print_indents(sb, indent_level);
             sb->print("while (true) {\n");
             char *cond_name = c_print_expr(sb, while_loop->condition, indent_level+1);
             assert(cond_name);
+            c_print_line_directive(sb, while_loop->condition->location, "while condition");
             print_indents(sb, indent_level+1);
             sb->printf("if (!%s) { break; }\n", cond_name);
+            c_print_line_directive(sb, while_loop->body->location, "while body");
             c_print_block(sb, while_loop->body, indent_level + 1);
             print_indents(sb, indent_level);
             sb->print("}\n");
@@ -1063,9 +1107,11 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             Ast_Return *ast_return = (Ast_Return *)node;
             char *t = nullptr;
             if (ast_return->expr) {
+                c_print_line_directive(sb, ast_return->expr->location, "return expr");
                 char *expr_name = c_print_expr(sb, ast_return->expr, indent_level, ast_return->matching_procedure->type->return_type);
                 // note(josh): extra value copy for defer
                 t = c_temporary();
+                c_print_line_directive(sb, ast_return->expr->location, "return expr value copy");
                 print_indents(sb, indent_level);
                 c_print_type(sb, ast_return->matching_procedure->type->return_type, t);
                 sb->printf(" = %s;\n", expr_name);
@@ -1073,6 +1119,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             assert(ast_return->matching_procedure->procedure != nullptr);
             assert(ast_return->matching_procedure->procedure->body != nullptr);
             c_print_defers_from_block_to_block(sb, indent_level, block, ast_return->matching_procedure->procedure->body);
+            c_print_line_directive(sb, ast_return->location, "return statement");
             print_indents(sb, indent_level);
             sb->print("return");
             if (t) {
@@ -1096,6 +1143,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             }
             assert(loop_block != nullptr);
             c_print_defers_from_block_to_block(sb, indent_level, block, loop_block);
+            c_print_line_directive(sb, ast_break->location, "break statement");
             print_indents(sb, indent_level);
             sb->print("break;\n");
             break;
@@ -1119,6 +1167,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             }
             assert(loop_block != nullptr);
             c_print_defers_from_block_to_block(sb, indent_level, block, loop_block);
+            c_print_line_directive(sb, ast_continue->location, "continue statement");
             print_indents(sb, indent_level);
             sb->print("continue;\n");
             break;
@@ -1325,9 +1374,11 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
         // printf("type_info_gen_time: %f\n", type_info_gen_time_end - type_info_gen_time_start);
     }
 
+    c_print_line_directive(sb, proc->header->location, "proc location");
     c_print_procedure_header(sb, proc->header);
     sb->print(" {\n");
     if (proc == g_main_proc) {
+        c_print_line_directive(sb, proc->header->location, "__init_sif_runtime()");
         print_indents(sb, 1);
         sb->print("__init_sif_runtime();\n");
     }
@@ -1489,7 +1540,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
                         continue;
                     }
                     did_print_at_least_one_member = true;
-                    c_print_var(&sb, var, 1);
+                    c_print_var(&sb, var, 1, false);
                     sb.print(";\n");
                 }
                 if (!did_print_at_least_one_member) {
@@ -1513,7 +1564,7 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
                 if (!var->var->is_constant) {
-                    c_print_var(&sb, var->var, 0);
+                    c_print_var(&sb, var->var, 0, true);
                     if (var->var->expr == nullptr) {
                         sb.printf(" = {0}");
                     }
