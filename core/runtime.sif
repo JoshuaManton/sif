@@ -1,3 +1,6 @@
+// todo(josh): remove this dependency
+#include "core:basic.sif"
+
 proc malloc      (size: int)                                    : rawptr #foreign; @sif_runtime
 proc free        (ptr: rawptr)                                           #foreign; @sif_runtime
 proc assert      (condition: bool)                                       #foreign; @sif_runtime
@@ -34,6 +37,7 @@ struct Source_Code_Location {
 
 proc sif_bounds_check(count: int, index: int, location: Source_Code_Location) {
     if (index < 0 || index >= count) {
+        // todo(josh): remove this dependency on basic
         print("%(%:%): Bounds check failed: Index % is out of bounds 0..<%.\n", location.filepath, location.line, location.character, index, count);
         assert(false);
     }

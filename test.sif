@@ -5,6 +5,5 @@ proc no_value(x: int) {
 }
 
 proc main() : i32 {
-    var a = no_value(123);
     return 0;
 }
