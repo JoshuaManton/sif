@@ -175,24 +175,23 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 }
 
 Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
-    Token token;
-    if (!peek_next_token(lexer, &token)) {
+    Token root_token;
+    if (!peek_next_token(lexer, &root_token)) {
         report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
 
-    Ast_Proc_Header *header = nullptr;
+    Ast_Proc_Header *header = SIF_NEW_CLONE(Ast_Proc_Header(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
     {
-        Location proc_location = token.location;
-        Ast_Block *procedure_block = SIF_NEW_CLONE(Ast_Block(lexer->allocator, lexer->current_block, token.location), lexer->allocator);
-        Ast_Block *old_block = push_ast_block(lexer, procedure_block);
+        header->procedure_block = SIF_NEW_CLONE(Ast_Block(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+        Ast_Block *old_block = push_ast_block(lexer, header->procedure_block);
         defer(pop_ast_block(lexer, old_block));
 
         bool is_operator_overload = false;
         Token_Kind operator_to_overload = TK_INVALID;
         char *proc_name = nullptr;
-        if (token.kind == TK_PROC) {
-            eat_next_token(lexer, &token);
+        if (root_token.kind == TK_PROC) {
+            eat_next_token(lexer, nullptr);
             Token name_token = {};
             if (!peek_next_token(lexer, &name_token)) {
                 report_error(lexer->location, "Unexpected end of file.");
@@ -203,9 +202,9 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
                 proc_name = name_token.text;
             }
         }
-        else if (token.kind == TK_OPERATOR) {
+        else if (root_token.kind == TK_OPERATOR) {
             is_operator_overload = true;
-            eat_next_token(lexer, &token);
+            eat_next_token(lexer, nullptr);
             Token operator_token;
             if (!peek_next_token(lexer, &operator_token)) {
                 report_error(lexer->location, "Unexpected end of file.");
@@ -248,14 +247,18 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             assert(false);
         }
 
+        if (name_override != nullptr) {
+            proc_name = intern_string(name_override);
+        }
+
+        header->name = proc_name;
+        header->operator_to_overload = operator_to_overload;
+
         // parameter list
         EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-        Array<Ast_Var *> parameters = {};
-        parameters.allocator = lexer->allocator;
         bool first = true;
-        Array<int> polymorphic_parameter_indices;
-        polymorphic_parameter_indices.allocator = lexer->allocator;
-        while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
+        Token right_paren;
+        while (peek_next_token(lexer, &right_paren) && right_paren.kind != TK_RIGHT_PAREN) {
             if (!first) {
                 EXPECT(lexer, TK_COMMA, nullptr);
             }
@@ -265,16 +268,17 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
                 return nullptr;
             }
             if (var->is_polymorphic_value || var->is_polymorphic_type) {
-                polymorphic_parameter_indices.append(parameters.count);
+                header->polymorphic_parameter_indices.append(header->parameters.count);
             }
-
-            parameters.append(var);
+            var->is_parameter_for_procedure = header;
+            header->parameters.append(var);
             first = false;
         }
         EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
 
+        header->is_polymorphic = header->polymorphic_parameter_indices.count > 0;
+
         // return type
-        Ast_Expr *return_type_expr = {};
         Token colon = {};
         if (!peek_next_token(lexer, &colon)) {
             report_error(lexer->location, "Unexpected end of file.");
@@ -284,30 +288,23 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             eat_next_token(lexer);
             assert(lexer->allow_compound_literals);
             lexer->allow_compound_literals = false;
-            return_type_expr = parse_expr(lexer);
+            header->return_type_expr = parse_expr(lexer);
             lexer->allow_compound_literals = true;
-            if (!return_type_expr) {
+            if (!header->return_type_expr) {
                 return nullptr;
             }
         }
 
         Token foreign;
-        bool is_foreign = false;
         if (!peek_next_token(lexer, &foreign)) {
             report_error(lexer->location, "Unexpected end of file.");
             return nullptr;
         }
         if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
             eat_next_token(lexer);
-            is_foreign = true;
+            header->is_foreign = true;
             EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
         }
-
-        if (name_override != nullptr) {
-            proc_name = intern_string(name_override);
-        }
-
-        header = SIF_NEW_CLONE(Ast_Proc_Header(proc_name, procedure_block, parameters, return_type_expr, is_foreign, operator_to_overload, polymorphic_parameter_indices, lexer->allocator, lexer->current_block, proc_location), lexer->allocator);
     }
 
     return header;

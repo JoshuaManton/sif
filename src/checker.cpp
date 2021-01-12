@@ -475,6 +475,19 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 }
                 broadcast_declarations_for_using(var->parent_block, var->type->variables_block, var->declaration, var);
             }
+
+            if (is_type_varargs(var->type)) {
+                if (var->is_parameter_for_procedure == nullptr) {
+                    report_error(var->location, "Vararg types are only allowed as procedure parameters.");
+                    return false;
+                }
+                Type_Varargs *varargs_type = (Type_Varargs *)var->type;
+                if (varargs_type->is_c_varargs && !var->is_parameter_for_procedure->is_foreign) {
+                    report_error(var->location, "#c_varargs is only allowed on #foreign procedures.");
+                    return false;
+                }
+            }
+
             break;
         }
         case DECL_PROC: {
@@ -2092,7 +2105,7 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
     for (; param_idx < params_to_emit.count; param_idx += 1) {
         Type *target_type = target_procedure_type->parameter_types[type_idx];
         if (is_type_varargs(target_type)) {
-            assert(type_idx < target_procedure_type->parameter_types.count);
+            assert(type_idx == target_procedure_type->parameter_types.count-1);
             break;
         }
         Ast_Expr *parameter = params_to_emit[param_idx];
@@ -2120,6 +2133,10 @@ bool typecheck_procedure_call(Ast_Expr *expr, Operand procedure_operand, Array<A
             if (parameter_is_spread) {
                 if (vararg_parameter.exprs.count > 0) {
                     report_error(parameter->location, "Cannot mix normal varargs with a spread operation.");
+                    return false;
+                }
+                if (vararg_type->is_c_varargs) {
+                    report_error(parameter->location, "Cannot spread into #c_varargs.");
                     return false;
                 }
                 target_type = vararg_type;
@@ -3088,6 +3105,13 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
             if (idx != header->parameters.count-1) {
                 report_error(parameter->location, "Varargs must be the last parameter for a procedure.");
                 return nullptr;
+            }
+            Type_Varargs *varargs_type = (Type_Varargs *)parameter->type;
+            if (varargs_type->is_c_varargs) {
+                if (idx == 0) {
+                    report_error(parameter->location, "#c_varargs cannot be the first parameter for a procedure.");
+                    return nullptr;
+                }
             }
         }
         parameter_types.append(parameter->type);

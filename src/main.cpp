@@ -19,10 +19,10 @@ TODO:
 
 SMALL
 -put struct constants in Type_Info
--short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
 
+-do entrypoint returning i32 implicitly in backend
+-short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
 -use a custom allocator in __init_sif_runtime
--enum field @notes?
 -deduplicate #foreign_import/#foreign_system_import
 -handle unary operators nicer, currently quick-and-dirty
 -opt=N
@@ -37,32 +37,31 @@ SMALL
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 -unknown directives don't stop compilation
 -figure out if I should allow shadowing (maybe with a keyword?)
--do entrypoint returning i32 implicitly in backend
 -procedure literal expression handling
--explicitly disallow varargs types in non-procedure-header contexts
 -require an arg before #c_varargs
--require #c_varargs to be ..any?
--disallow #c_varargs in non-foreign procedure headers
 -cast untyped string to cstring
 -#no_bounds_checks
 -#print and #assert don't work in global scope right now
+-enum field @notes?
 
 MEDIUM
 -enum arrays @EnumArrays
+-locally scoped structs/procs/enums
+-allow operator overloads to be declared outside a struct
 
+-investigate how to get perfect number literal translation
+-slicing
 -remove runtime's dependency on basic
 -runtime null checks
 -@PointerArithmetic
 -@UnaryOperatorOverloading
 -switch statements
--slicing
 -build to dll
 -read command line parameters
 -check for use-before-declaration of local vars
 -make C output a bit prettier, whatever that means
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
--locally scoped structs/procs/enums
 -tagged unions?
 -use microsoft_craziness.h
 -allow custom entrypoints
@@ -70,20 +69,18 @@ MEDIUM
 -foreach loops
 -implicit polymorphism
 -loop/block labels a la Odin
--investigate how to get perfect number literal translation
 -<<< and >>> for shift rotate?
 
 BIG
--turn everything in the checker to tuples :(
 -control flow graph analysis
 -#if
 -procedure overloading
+-turn everything in the checker to tuples :(
 -default procedure parameters?
 -#caller_location
 -#location()
 -multiple return values
 -namespaced imports i.e. `#include Foo "foo.sif"`
--right now operator overloading requires the first parameter to be the struct that you are overloading for. this is not ideal because you want to be able to do float * vector
 */
 
 void print_usage() {

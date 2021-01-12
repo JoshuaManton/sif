@@ -160,17 +160,10 @@ struct Ast_Proc_Header : public Ast_Node {
     Proc_Declaration *declaration = {};
     Ast_Node *current_parsing_loop = {};
     Array<Ast_Defer *> defers = {};
-    Ast_Proc_Header(char *name, Ast_Block *procedure_block, Array<Ast_Var *> parameters, Ast_Expr *return_type_expr, bool is_foreign, Token_Kind operator_to_overload, Array<int> polymorphic_parameter_indices, Allocator allocator, Ast_Block *current_block, Location location)
+    Ast_Proc_Header(Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_PROC_HEADER, allocator, current_block, location)
-    , name(name)
-    , procedure_block(procedure_block)
-    , parameters(parameters)
-    , return_type_expr(return_type_expr)
-    , is_foreign(is_foreign)
-    , operator_to_overload(operator_to_overload)
-    , is_polymorphic(polymorphic_parameter_indices.count > 0)
-    , polymorphic_parameter_indices(polymorphic_parameter_indices)
     {
+        polymorphic_parameter_indices.allocator = allocator;
         parameters.allocator = allocator;
         defers.allocator = allocator;
     }
@@ -252,6 +245,7 @@ struct Ast_Var : public Ast_Node {
     bool is_polymorphic_value = {};
     bool is_polymorphic_type = {};
     bool is_using = {};
+    Ast_Proc_Header *is_parameter_for_procedure = {}; // note(josh): may be null
     Ast_Struct *belongs_to_struct = {}; // note(josh): may be null
     Struct_Member_Declaration *struct_member = {}; // note(josh): only set if belongs_to_struct is set
     Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic_value, bool is_polymorphic_type, Allocator allocator, Ast_Block *current_block, Location location)
