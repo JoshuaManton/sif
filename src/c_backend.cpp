@@ -530,6 +530,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     sb->printf("%f", expr->operand.float_value);
                 }
                 else if (is_type_integer(expr->operand.type)) {
+                    // todo(josh): handle uints
                     sb->printf("%d", expr->operand.int_value);
                 }
                 else if (expr->operand.type == type_bool) {
@@ -564,6 +565,7 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     tsb.printf("%f", expr->operand.float_value);
                 }
                 else if (is_type_integer(expr->operand.type)) {
+                    // todo(josh): handle uints
                     tsb.printf("%d", expr->operand.int_value);
                 }
                 else if (expr->operand.type == type_bool) {

@@ -2727,16 +2727,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     // note(josh): copy paste from below
                     Type_Array *array_type = (Type_Array *)target_type;
                     assert(array_type->count > 0);
-                    if (compound_literal->exprs.count > 0 && compound_literal->exprs.count != array_type->count && !compound_literal->is_partial) {
-                        report_error(compound_literal->location, "Compound literal without #partial must supply all fields. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
-                        return nullptr;
-                    }
                     if (compound_literal->exprs.count != 0) {
-                        if (compound_literal->exprs.count > array_type->count) {
-                            report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", array_type->count, compound_literal->exprs.count);
+                        if ((compound_literal->exprs.count != array_type->count) && !compound_literal->is_partial) {
+                            report_error(compound_literal->location, "Expected %d expressions for compound literal, got %d. Use #partial if you don't want to specify all values.", array_type->count, compound_literal->exprs.count);
                             return nullptr;
                         }
-
                         Type *element_type = array_type->array_of;
                         For (idx, compound_literal->exprs) {
                             Ast_Expr *expr = compound_literal->exprs[idx];
@@ -2749,13 +2744,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 }
                 else {
                     // note(josh): copy paste from above
-                    if (compound_literal->exprs.count > 0 && compound_literal->exprs.count != target_type->variable_fields.count && !compound_literal->is_partial) {
-                        report_error(compound_literal->location, "Compound literal without #partial must supply all fields. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
-                        return nullptr;
-                    }
                     if (compound_literal->exprs.count != 0) {
-                        if (compound_literal->exprs.count > target_type->variable_fields.count) {
-                            report_error(compound_literal->location, "Expression count for compound literal doesn't match the type. Expected %d, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
+                        if ((compound_literal->exprs.count != target_type->variable_fields.count) && !compound_literal->is_partial) {
+                            report_error(compound_literal->location, "Expected %d expressions for compound literal, got %d. Use #partial if you don't want to specify all values.", target_type->variable_fields.count, compound_literal->exprs.count);
                             return nullptr;
                         }
                         For (idx, compound_literal->exprs) {

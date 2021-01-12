@@ -3530,7 +3530,7 @@ proc GetLocalTime(time: ^SYSTEMTIME) #foreign; // kernel32
 proc GetSystemTime(time : ^SYSTEMTIME) #foreign; // kernel32
 // GetSystemTimeAdjustment
 // GetSystemTimeAdjustmentPrecise
-// GetSystemTimeAsFileTime
+proc GetSystemTimeAsFileTime(lpFileTime: ^FILETIME) #foreign; // kernel32
 // GetSystemTimePreciseAsFileTime
 // GetSystemTimes
 // GetTickCount

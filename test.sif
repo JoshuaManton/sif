@@ -1,9 +1,7 @@
 #include "core:basic.sif"
-
-proc no_value(x: int) {
-    // I don't return anything
-}
+#include "core:math.sif"
 
 proc main() : i32 {
     return 0;
 }
+
