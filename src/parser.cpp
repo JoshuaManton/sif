@@ -65,6 +65,28 @@ Array<char *> parse_notes(Lexer *lexer) {
     return notes;
 }
 
+Ast_Expr_List *parse_expr_list(Lexer *lexer) {
+    Array<Ast_Expr *> exprs = {};
+    exprs.allocator = lexer->allocator;
+    Ast_Expr *root_expr = parse_expr(lexer);
+    if (!root_expr) {
+        return nullptr;
+    }
+    exprs.append(root_expr);
+    Token comma;
+    // todo(josh): parameterize delimiter/end token
+    while (peek_next_token(lexer, &comma) && comma.kind == TK_COMMA) {
+        EXPECT(lexer, TK_COMMA, nullptr);
+        Ast_Expr *expr = parse_expr(lexer);
+        if (!expr) {
+            return nullptr;
+        }
+        exprs.append(expr);
+    }
+    assert(exprs.count > 0);
+    return SIF_NEW_CLONE(Ast_Expr_List(exprs, lexer->allocator, lexer->current_block, root_expr->location), lexer->allocator);
+}
+
 
 
 int num_polymorphic_variables_parsed = 0;
@@ -924,8 +946,8 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         default: {
-            Ast_Expr *expr = parse_expr(lexer);
-            if (expr == nullptr) {
+            Ast_Expr_List *lhs_list = parse_expr_list(lexer);
+            if (lhs_list == nullptr) {
                 return nullptr;
             }
 
@@ -939,7 +961,11 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     if (eat_semicolon) {
                         eat_next_token(lexer);
                     }
-                    return SIF_NEW_CLONE(Ast_Statement_Expr(expr, lexer->allocator, lexer->current_block, expr->location), lexer->allocator);
+                    if (lhs_list->exprs.count != 1) {
+                        report_error(lhs_list->location, "Expected 1 expression, got %d.", lhs_list->exprs.count);
+                        return nullptr;
+                    }
+                    return SIF_NEW_CLONE(Ast_Statement_Expr(lhs_list->exprs[0], lexer->allocator, lexer->current_block, lhs_list->exprs[0]->location), lexer->allocator);
                 }
 
                 case TK_PLUS_ASSIGN:     // fallthrough
@@ -951,14 +977,14 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 case TK_ASSIGN: { // todo(josh): <<=, &&=, etc
                     Token op;
                     assert(get_next_token(lexer, &op));
-                    Ast_Expr *rhs = parse_expr(lexer);
-                    if (rhs == nullptr) {
+                    Ast_Expr_List *rhs_list = parse_expr_list(lexer);
+                    if (rhs_list == nullptr) {
                         return nullptr;
                     }
                     if (eat_semicolon) {
                         EXPECT(lexer, TK_SEMICOLON, nullptr);
                     }
-                    return SIF_NEW_CLONE(Ast_Assign(op.kind, expr, rhs, lexer->allocator, lexer->current_block, expr->location), lexer->allocator);
+                    return SIF_NEW_CLONE(Ast_Assign(op.kind, lhs_list, rhs_list, lexer->allocator, lexer->current_block, lhs_list->location), lexer->allocator);
                 }
                 default: {
                     unexpected_token(lexer, next_token);

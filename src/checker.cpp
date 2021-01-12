@@ -605,7 +605,10 @@ bool typecheck_global_scope(Ast_Block *block) {
         For (note_idx, decl->notes) {
             char *note = decl->notes[note_idx];
             if (note == g_interned_sif_runtime_string) {
-                assert(check_declaration(decl, decl->location));
+                if (!check_declaration(decl, decl->location)) {
+                    report_error(decl->location, "Internal compiler error. check_declaration() failed.");
+                    return false;
+                }
                 if (decl->kind == DECL_STRUCT) {
                     assert(complete_type(((Struct_Declaration *)decl)->structure->type));
                 }
@@ -2342,6 +2345,55 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
     return true;
 }
 
+Type_Tuple *typecheck_expr_list(Ast_Expr_List *list, Array<Operand *> *out_operands) {
+    assert(list->exprs.count > 0);
+    Array<Operand *> operands = {};
+    operands.allocator = g_global_linear_allocator;
+    Array<Type *> types = {};
+    types.allocator = g_global_linear_allocator;
+    For (idx, list->exprs) {
+        Operand *operand = typecheck_expr(list->exprs[idx]);
+        if (operand == nullptr) {
+            return nullptr;
+        }
+        operands.append(operand);
+        types.append(operand->type);
+    }
+    *out_operands = operands;
+    return SIF_NEW_CLONE(Type_Tuple(types), g_global_linear_allocator);
+}
+
+bool typecheck_expr_list_against_type_tuple(Ast_Expr_List *list, Type_Tuple *tuple_type, Array<Operand *> *out_operands, Token_Kind op = TK_ASSIGN) {
+    assert(list->exprs.count > 0);
+    Array<Operand *> operands = {};
+    operands.allocator = g_global_linear_allocator;
+    assert(list->exprs.count == tuple_type->types.count);
+    For (idx, list->exprs) {
+        Type *expected_lhs_type = tuple_type->types[idx];
+        Ast_Expr *expr = list->exprs[idx];
+        // if (is_type_reference(expected_lhs_type)) {
+        //     Type_Reference *type_reference = (Type_Reference *)expected_lhs_type;
+        //     expected_lhs_type = type_reference->reference_to;
+        // }
+        assert(expected_lhs_type != nullptr);
+        Operand *operand = typecheck_expr(expr, expected_lhs_type);
+        if (operand == nullptr) {
+            return false;
+        }
+        operands.append(operand);
+
+        assert(operand->flags & OPERAND_RVALUE);
+        if (op != TK_ASSIGN) {
+            if (!operator_is_defined(expected_lhs_type, operand->type, op)) {
+                report_error(expr->location, "Operator '%s' is not defined for types '%s and '%s'.", token_string(op), type_to_string(expected_lhs_type), type_to_string(operand->type));
+                return false;
+            }
+        }
+    }
+    *out_operands = operands;
+    return true;
+}
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value) {
     assert(expr != nullptr);
     if (expected_type != nullptr) {
@@ -3176,28 +3228,20 @@ bool typecheck_node(Ast_Node *node) {
 
         case AST_ASSIGN: {
             Ast_Assign *assign = (Ast_Assign *)node;
-            Operand *lhs_operand = typecheck_expr(assign->lhs);
-            if (!lhs_operand) {
+
+            if (assign->lhs->exprs.count > 1 && assign->op != TK_ASSIGN) {
+                report_error(assign->location, "Cannot use assignment operator %s with multiple expressions. Only simple '=' assignments are allowed.", token_string(assign->op));
                 return false;
             }
-            if (!(lhs_operand->flags & OPERAND_LVALUE)) {
-                report_error(assign->location, "Cannot assign to non-lvalue.");
-                return false;
-            }
-            Type *expected_lhs_type = lhs_operand->type;
-            if (is_type_reference(expected_lhs_type)) {
-                Type_Reference *type_reference = (Type_Reference *)expected_lhs_type;
-                expected_lhs_type = type_reference->reference_to;
-            }
-            assert(expected_lhs_type != nullptr);
-            Operand *rhs_operand = typecheck_expr(assign->rhs, expected_lhs_type);
-            if (!rhs_operand) {
+
+            if (assign->lhs->exprs.count != assign->rhs->exprs.count) {
+                report_error(assign->location, "Expected %d expressions on right-hand-side, got %d.", assign->lhs->exprs.count, assign->rhs->exprs.count);
                 return false;
             }
 
             Token_Kind binary_operation = TK_INVALID;
             switch (assign->op) {
-                case TK_ASSIGN:             binary_operation = TK_INVALID;     break;
+                case TK_ASSIGN:             binary_operation = TK_ASSIGN;      break;
                 case TK_PLUS_ASSIGN:        binary_operation = TK_PLUS;        break;
                 case TK_MINUS_ASSIGN:       binary_operation = TK_MINUS;       break;
                 case TK_MULTIPLY_ASSIGN:    binary_operation = TK_MULTIPLY;    break;
@@ -3213,19 +3257,20 @@ bool typecheck_node(Ast_Node *node) {
                     assert(false);
                 }
             }
-
-            if (binary_operation == TK_INVALID) {
-                assert(assign->op = TK_ASSIGN);
+            Array<Operand *> lhs_operands;
+            Type_Tuple *tuple = typecheck_expr_list(assign->lhs, &lhs_operands);
+            if (tuple == nullptr) {
+                return false;
             }
-            else {
-                if (!operator_is_defined(expected_lhs_type, rhs_operand->type, binary_operation)) {
-                    report_error(assign->location, "Operator '%s' is not defined for types '%s and '%s'.", token_string(assign->op), type_to_string(expected_lhs_type), type_to_string(rhs_operand->type));
+            For (idx, lhs_operands) {
+                Operand *lhs_operand = lhs_operands[idx];
+                if (!(lhs_operand->flags & OPERAND_LVALUE)) {
+                    report_error(assign->location, "Cannot assign to non-lvalue.");
                     return false;
                 }
             }
-
-            assert(rhs_operand->flags & OPERAND_RVALUE);
-            if (!match_types(*rhs_operand, expected_lhs_type, rhs_operand)) {
+            Array<Operand *> rhs_operands;
+            if (!typecheck_expr_list_against_type_tuple(assign->rhs, tuple, &rhs_operands, binary_operation)) {
                 return false;
             }
             break;

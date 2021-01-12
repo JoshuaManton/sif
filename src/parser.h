@@ -23,6 +23,7 @@ enum Ast_Kind {
     AST_CONTINUE,
     AST_ASSIGN,
     AST_EXPR,
+    AST_EXPR_LIST,
     AST_EMPTY_STATEMENT,
     AST_STATEMENT_EXPR,
     AST_BLOCK_STATEMENT,
@@ -34,6 +35,7 @@ enum Ast_Kind {
 };
 
 struct Ast_Expr;
+struct Ast_Expr_List;
 struct Ast_Var;
 struct Ast_Proc;
 struct Ast_Block;
@@ -181,9 +183,9 @@ struct Ast_Proc : public Ast_Node {
 
 struct Ast_Assign : public Ast_Node {
     Token_Kind op = {};
-    Ast_Expr *lhs = {};
-    Ast_Expr *rhs = {};
-    Ast_Assign(Token_Kind op, Ast_Expr *lhs, Ast_Expr *rhs, Allocator allocator, Ast_Block *current_block, Location location)
+    Ast_Expr_List *lhs = {};
+    Ast_Expr_List *rhs = {};
+    Ast_Assign(Token_Kind op, Ast_Expr_List *lhs, Ast_Expr_List *rhs, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_ASSIGN, allocator, current_block, location)
     , op(op)
     , lhs(lhs)
@@ -458,6 +460,14 @@ struct Ast_Expr : public Ast_Node {
     Ast_Expr(Expr_Kind kind, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_EXPR, allocator, current_block, location)
     , expr_kind(kind)
+    {}
+};
+
+struct Ast_Expr_List : public Ast_Node {
+    Array<Ast_Expr *> exprs = {};
+    Ast_Expr_List(Array<Ast_Expr *> exprs, Allocator allocator, Ast_Block *current_block, Location location)
+    : Ast_Node(AST_EXPR_LIST, allocator, current_block, location)
+    , exprs(exprs)
     {}
 };
 

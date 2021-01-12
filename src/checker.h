@@ -88,6 +88,14 @@ struct Type_Primitive : public Type {
     }
 };
 
+struct Type_Tuple : public Type {
+    Array<Type *>types = {};
+    Type_Tuple(Array<Type *>types)
+    : Type(TYPE_TUPLE)
+    , types(types)
+    {}
+};
+
 struct Type_Struct : public Type {
     char *name = nullptr;
     Ast_Struct *ast_struct = {};

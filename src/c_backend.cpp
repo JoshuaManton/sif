@@ -1003,31 +1003,50 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
 
         case AST_ASSIGN: {
             Ast_Assign *assign = (Ast_Assign *)node;
-            char *lhs = c_print_expr(sb, assign->lhs, indent_level);
-            char *rhs = c_print_expr(sb, assign->rhs, indent_level, assign->lhs->operand.type);
-            c_print_line_directive(sb, assign->location, "assign statement");
-            print_indents(sb, indent_level);
-            sb->print(lhs);
+            char *assign_op = nullptr;
             switch (assign->op) {
-                case TK_ASSIGN:             sb->print(" = "); break;
-                case TK_PLUS_ASSIGN:        sb->print(" += "); break;
-                case TK_MINUS_ASSIGN:       sb->print(" -= "); break;
-                case TK_MULTIPLY_ASSIGN:    sb->print(" *= "); break;
-                case TK_DIVIDE_ASSIGN:      sb->print(" /= "); break;
-                case TK_MOD_ASSIGN:         sb->print(" %= "); break;
-                case TK_LEFT_SHIFT_ASSIGN:  sb->print(" <<= "); break;
-                case TK_RIGHT_SHIFT_ASSIGN: sb->print(" >>= "); break;
-                case TK_BIT_AND_ASSIGN:     sb->print(" &= "); break;
-                case TK_BIT_OR_ASSIGN:      sb->print(" |= "); break;
-                case TK_BOOLEAN_AND_ASSIGN: sb->print(" &&= "); break;
-                case TK_BOOLEAN_OR_ASSIGN:  sb->print(" ||= "); break;
+                case TK_ASSIGN:             assign_op = " = ";   break;
+                case TK_PLUS_ASSIGN:        assign_op = " += ";  break;
+                case TK_MINUS_ASSIGN:       assign_op = " -= ";  break;
+                case TK_MULTIPLY_ASSIGN:    assign_op = " *= ";  break;
+                case TK_DIVIDE_ASSIGN:      assign_op = " /= ";  break;
+                case TK_MOD_ASSIGN:         assign_op = " %= ";  break;
+                case TK_LEFT_SHIFT_ASSIGN:  assign_op = " <<= "; break;
+                case TK_RIGHT_SHIFT_ASSIGN: assign_op = " >>= "; break;
+                case TK_BIT_AND_ASSIGN:     assign_op = " &= ";  break;
+                case TK_BIT_OR_ASSIGN:      assign_op = " |= ";  break;
+                case TK_BOOLEAN_AND_ASSIGN: assign_op = " &&= "; break;
+                case TK_BOOLEAN_OR_ASSIGN:  assign_op = " ||= "; break;
                 default: {
                     assert(false);
                 }
             }
-            sb->print(rhs);
-            if (print_semicolon) {
-                sb->print(";\n");
+            assert(assign->lhs->exprs.count == assign->rhs->exprs.count);
+            Array<char *> temps;
+            temps.allocator = g_global_linear_allocator;
+            For (idx, assign->rhs->exprs) {
+                Ast_Expr *rhs_expr = assign->rhs->exprs[idx];
+                char *rhs = c_print_expr(sb, rhs_expr, indent_level, rhs_expr->operand.type);
+                char *t = c_temporary();
+                c_print_line_directive(sb, assign->location, "assign statement");
+                print_indents(sb, indent_level);
+                c_print_type(sb, rhs_expr->operand.type, t);
+                sb->printf(" = %s;\n", rhs);
+                temps.append(t);
+            }
+            assert(temps.count == assign->lhs->exprs.count);
+            For (idx, assign->lhs->exprs) {
+                Ast_Expr *lhs_expr = assign->lhs->exprs[idx];
+                char *lhs = c_print_expr(sb, lhs_expr, indent_level);
+                char *rhs = temps[idx];
+                c_print_line_directive(sb, assign->location, "assign statement");
+                print_indents(sb, indent_level);
+                sb->print(lhs);
+                sb->print(assign_op);
+                sb->print(rhs);
+                if (print_semicolon) {
+                    sb->print(";\n");
+                }
             }
             break;
         }
