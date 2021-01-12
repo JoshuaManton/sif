@@ -11,6 +11,7 @@
 enum Type_Kind {
     TYPE_INVALID,
     TYPE_PRIMITIVE,
+    TYPE_TUPLE,
     TYPE_STRUCT,
     TYPE_ENUM,
     TYPE_POINTER,
@@ -31,18 +32,10 @@ enum Type_Flags {
     TF_UNSIGNED     = 1 << 3,
     TF_UNTYPED      = 1 << 4,
     TF_NUMBER       = 1 << 5,
-    TF_POINTER      = 1 << 6,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_ARRAY        = 1 << 7,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_STRUCT       = 1 << 8,  // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_INCOMPLETE   = 1 << 9,
-    TF_PROCEDURE    = 1 << 10, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_SLICE        = 1 << 11, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_REFERENCE    = 1 << 12, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_POLYMORPHIC  = 1 << 13, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_VARARGS      = 1 << 14, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_ANY          = 1 << 15, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_ENUM         = 1 << 16, // todo(josh): probably don't need this as it's redundant with `TYPE_KIND`
-    TF_STRING       = 1 << 17,
+    TF_POINTER      = 1 << 6,
+    TF_INCOMPLETE   = 1 << 7,
+    TF_POLYMORPHIC  = 1 << 8,
+    TF_STRING       = 1 << 9,
 };
 
 enum Check_State {

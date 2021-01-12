@@ -38,8 +38,6 @@ SMALL
 -unknown directives don't stop compilation
 -figure out if I should allow shadowing (maybe with a keyword?)
 -procedure literal expression handling
--require an arg before #c_varargs
--cast untyped string to cstring
 -#no_bounds_checks
 -#print and #assert don't work in global scope right now
 -enum field @notes?

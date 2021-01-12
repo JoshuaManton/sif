@@ -128,7 +128,7 @@ void init_checker() {
     type_string  = NEW_TYPE(Type_Primitive(intern_string("string"), 16, 8)); type_string->flags = TF_STRING;
     type_rawptr  = NEW_TYPE(Type_Primitive(intern_string("rawptr"), 8, 8)); type_rawptr->flags = TF_POINTER;
 
-    type_any = NEW_TYPE(Type_Primitive(intern_string("any"), 16, 8)); type_any->flags = TF_ANY;
+    type_any = NEW_TYPE(Type_Primitive(intern_string("any"), 16, 8));
 
     type_untyped_integer = NEW_TYPE(Type_Primitive("untyped integer", -1, -1), false); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
     type_untyped_float   = NEW_TYPE(Type_Primitive("untyped float", -1, -1), false);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
@@ -182,7 +182,7 @@ void add_global_declarations(Ast_Block *block) {
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
     Type_Struct *incomplete_type = NEW_TYPE(Type_Struct(structure));
-    incomplete_type->flags |= (TF_STRUCT | TF_INCOMPLETE);
+    incomplete_type->flags |= TF_INCOMPLETE;
     incomplete_type->is_union = structure->is_union;
     structure->type = incomplete_type;
     return incomplete_type;
@@ -190,10 +190,10 @@ Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
 
 bool is_type_pointer    (Type *type) { return type->kind == TYPE_POINTER;   }
 bool is_type_polymorphic(Type *type) { return type->flags & TF_POLYMORPHIC; }
-bool is_type_reference  (Type *type) { return type->flags & TF_REFERENCE;   }
-bool is_type_procedure  (Type *type) { return type->flags & TF_PROCEDURE;   }
-bool is_type_array      (Type *type) { return type->flags & TF_ARRAY;       }
-bool is_type_slice      (Type *type) { return type->flags & TF_SLICE;       }
+bool is_type_reference  (Type *type) { return type->kind == TYPE_REFERENCE; }
+bool is_type_procedure  (Type *type) { return type->kind == TYPE_PROCEDURE; }
+bool is_type_array      (Type *type) { return type->kind == TYPE_ARRAY;     }
+bool is_type_slice      (Type *type) { return type->kind == TYPE_SLICE;     }
 bool is_type_number     (Type *type) { return type->flags & TF_NUMBER;      }
 bool is_type_integer    (Type *type) { return type->flags & TF_INTEGER;     }
 bool is_type_float      (Type *type) { return type->flags & TF_FLOAT;       }
@@ -201,12 +201,12 @@ bool is_type_bool       (Type *type) { return type == type_bool;            }
 bool is_type_untyped    (Type *type) { return type->flags & TF_UNTYPED;     }
 bool is_type_unsigned   (Type *type) { return type->flags & TF_UNSIGNED;    }
 bool is_type_signed     (Type *type) { return type->flags & TF_SIGNED;      }
-bool is_type_struct     (Type *type) { return type->flags & TF_STRUCT;      }
+bool is_type_struct     (Type *type) { return type->kind == TYPE_STRUCT;    }
 bool is_type_incomplete (Type *type) { return type->flags & TF_INCOMPLETE;  }
 bool is_type_typeid     (Type *type) { return type == type_typeid;          }
 bool is_type_string     (Type *type) { return type->flags & TF_STRING;      }
-bool is_type_varargs    (Type *type) { return type->flags & TF_VARARGS;     }
-bool is_type_enum       (Type *type) { return type->flags & TF_ENUM;        }
+bool is_type_varargs    (Type *type) { return type->kind == TYPE_VARARGS;   }
+bool is_type_enum       (Type *type) { return type->kind == TYPE_ENUM;      }
 
 Type *get_most_concrete_type(Type *a, Type *b) {
     if (a->flags & TF_UNTYPED) {
@@ -313,7 +313,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 enum_base_type = type_operand->type_value;
             }
             assert(is_type_integer(enum_base_type));
-            enum_type->flags = enum_base_type->flags | TF_ENUM;
+            enum_type->flags = enum_base_type->flags;
             enum_type->size = enum_base_type->size;
             enum_type->align = enum_base_type->align;
             enum_type->base_type = enum_base_type;
@@ -1105,7 +1105,7 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
         return reference_to->reference_to_this_type;
     }
     Type_Reference *new_type = NEW_TYPE(Type_Reference(reference_to));
-    new_type->flags = TF_REFERENCE | TF_INCOMPLETE;
+    new_type->flags = TF_INCOMPLETE;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     reference_to->reference_to_this_type = new_type;
@@ -1125,7 +1125,7 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
         }
     }
     Type_Array *new_type = NEW_TYPE(Type_Array(array_of, count));
-    new_type->flags = TF_ARRAY | TF_INCOMPLETE;
+    new_type->flags = TF_INCOMPLETE;
     assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {}));
     Operand operand = {};
     operand.type = type_int;
@@ -1142,7 +1142,6 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     }
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(slice_of);
     Type_Slice *new_type = NEW_TYPE(Type_Slice(slice_of, pointer_to_element_type));
-    new_type->flags = TF_SLICE;
     new_type->size  = 16;
     new_type->align = 8;
     assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
@@ -1166,7 +1165,6 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of, bool is_c_varargs)
     Type_Pointer *pointer_to_element_type = get_or_create_type_pointer_to(varargs_of);
     Type_Slice *slice_type = get_or_create_type_slice_of(varargs_of);
     Type_Varargs *new_type = NEW_TYPE(Type_Varargs(varargs_of, pointer_to_element_type, slice_type, is_c_varargs));
-    new_type->flags = TF_VARARGS;
     new_type->size  = 16;
     new_type->align = 8;
     assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
@@ -1205,7 +1203,7 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
         }
     }
     Type_Procedure *new_type = NEW_TYPE(Type_Procedure(parameter_types, return_type));
-    new_type->flags = TF_PROCEDURE | TF_POINTER;
+    new_type->flags = TF_POINTER;
     For (idx, parameter_types) {
         if (is_type_polymorphic(parameter_types[idx])) {
             new_type->flags |= TF_POLYMORPHIC;
@@ -1216,25 +1214,30 @@ Type_Procedure *get_or_create_type_procedure(Array<Type *> parameter_types, Type
     return new_type;
 }
 
-bool can_cast(Ast_Expr *expr, Type *type) {
+bool can_cast(Ast_Expr *expr, Type *target_type) {
     assert(expr != nullptr);
-    assert(type != nullptr);
-    if (expr->operand.type == type) {
+    assert(target_type != nullptr);
+    if (expr->operand.type == target_type) {
         // casting to the same type
         return true;
     }
     if (is_type_number(expr->operand.type)) {
-        if (is_type_enum(type)) {
+        if (is_type_enum(target_type)) {
             return true;
         }
-        if (is_type_number(type)) {
+        if (is_type_number(target_type)) {
             return true;
         }
-        if (type->flags & TF_POINTER) {
+        if (target_type->flags & TF_POINTER) {
             return true;
         }
     }
-    if ((expr->operand.type->flags & TF_POINTER) && (type->flags & TF_POINTER)) {
+    if (expr->operand.type == type_untyped_string) {
+        if (target_type == type_cstring || target_type == type_string) {
+            return true;
+        }
+    }
+    if ((expr->operand.type->flags & TF_POINTER) && (target_type->flags & TF_POINTER)) {
         return true;
     }
     return false;
