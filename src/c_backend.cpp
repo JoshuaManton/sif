@@ -305,29 +305,6 @@ void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_
     c_print_type_plain_postfix(sb, type);
 }
 
-void c_print_var(Chunked_String_Builder *sb, Ast_Var *var, int indent_level, bool do_line_directive) {
-    assert(!var->is_constant);
-    char *rhs = nullptr;
-    if (var->expr) {
-        rhs = c_print_expr(sb, var->expr, indent_level, var->type);
-    }
-    if (do_line_directive) {
-        c_print_line_directive(sb, var->location, "var decl");
-    }
-    print_indents(sb, indent_level);
-    const char *name_to_print = var->declaration->name;
-    if (is_type_varargs(var->type)) {
-        Type_Varargs *varargs = (Type_Varargs *)var->type;
-        if (varargs->is_c_varargs) {
-            name_to_print = "";
-        }
-    }
-    c_print_type(sb, var->type, name_to_print);
-    if (rhs) {
-        sb->printf(" = %s", rhs);
-    }
-}
-
 void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *header) {
     assert(header->declaration->name != nullptr);
     Chunked_String_Builder header_name_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
@@ -340,7 +317,14 @@ void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *heade
         if (idx != 0) {
             header_name_sb.print(", ");
         }
-        c_print_var(&header_name_sb, parameter, 0, false);
+        const char *name_to_print = parameter->declaration->link_name;
+        if (is_type_varargs(parameter->type)) {
+            Type_Varargs *varargs = (Type_Varargs *)parameter->type;
+            if (varargs->is_c_varargs) {
+                name_to_print = "";
+            }
+        }
+        c_print_type(&header_name_sb, parameter->type, name_to_print);
     }
     header_name_sb.print(")");
     c_print_type(sb, header->type->return_type, header_name_sb.make_string());
@@ -954,14 +938,20 @@ void print_indents(Chunked_String_Builder *sb, int indent_level) {
 
 void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level);
 
-void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_level, bool print_semicolon) {
+void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_level) {
     if (!var->is_constant) {
-        c_print_var(sb, var, indent_level, true);
-        if (var->expr == nullptr) {
-            sb->printf(" = {0}");
+        char *rhs = nullptr;
+        if (var->expr) {
+            rhs = c_print_expr(sb, var->expr, indent_level, var->type);
         }
-        if (print_semicolon) {
-            sb->print(";\n");
+        c_print_line_directive(sb, var->location, "var decl");
+        print_indents(sb, indent_level);
+        c_print_type(sb, var->type, var->declaration->name);
+        if (rhs) {
+            sb->printf(" = %s;\n", rhs);
+        }
+        else {
+            sb->printf(" = {0};\n");
         }
     }
     else {
@@ -969,7 +959,7 @@ void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_
     }
 }
 
-void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *node, int indent_level, bool print_semicolon);
+void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *node, int indent_level);
 
 void c_print_defers_from_block_to_block(Chunked_String_Builder *sb, int indent_level, Ast_Block *from, Ast_Block *to) {
     Ast_Block *current = from;
@@ -978,7 +968,7 @@ void c_print_defers_from_block_to_block(Chunked_String_Builder *sb, int indent_l
             Ast_Defer *ast_defer = (Ast_Defer *)current->c_gen_defer_stack[idx];
             print_indents(sb, indent_level);
             sb->printf("// defer %d\n", idx);
-            c_print_statement(sb, current, ast_defer->node_to_defer, indent_level, true);
+            c_print_statement(sb, current, ast_defer->node_to_defer, indent_level);
         }
         if (current == to) {
             break;
@@ -987,11 +977,11 @@ void c_print_defers_from_block_to_block(Chunked_String_Builder *sb, int indent_l
     }
 }
 
-void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *node, int indent_level, bool print_semicolon) {
+void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *node, int indent_level) {
     switch (node->ast_kind) {
         case AST_VAR: {
             Ast_Var *var = (Ast_Var *)node;
-            c_print_var_statement(sb, var, indent_level, print_semicolon);
+            c_print_var_statement(sb, var, indent_level);
             break;
         }
 
@@ -1044,9 +1034,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
                 sb->print(lhs);
                 sb->print(assign_op);
                 sb->print(rhs);
-                if (print_semicolon) {
-                    sb->print(";\n");
-                }
+                sb->print(";\n");
             }
             break;
         }
@@ -1077,7 +1065,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             sb->print("{\n");
             indent_level += 1;
             if (ast_if->pre_statement) {
-                c_print_statement(sb, ast_if->if_block, ast_if->pre_statement, indent_level, true);
+                c_print_statement(sb, ast_if->if_block, ast_if->pre_statement, indent_level);
             }
             // c_print_line_directive(sb, ast_if->location, "if statement expr");
             char *cond_name = c_print_expr(sb, ast_if->condition, indent_level);
@@ -1106,7 +1094,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             print_indents(sb, indent_level);
             sb->print("{\n");
             c_print_line_directive(sb, for_loop->location, "for loop pre");
-            c_print_statement(sb, block, for_loop->pre, indent_level+1, true);
+            c_print_statement(sb, block, for_loop->pre, indent_level+1);
             print_indents(sb, indent_level+1);
             c_print_line_directive(sb, for_loop->location, "for loop while");
             sb->print("while (true) {\n");
@@ -1118,7 +1106,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             c_print_line_directive(sb, for_loop->body->location, "for loop body");
             c_print_block(sb, for_loop->body, indent_level + 2);
             c_print_line_directive(sb, for_loop->location, "for loop post");
-            c_print_statement(sb, block, for_loop->post, indent_level+2, true);
+            c_print_statement(sb, block, for_loop->post, indent_level+2);
             print_indents(sb, indent_level+1);
             sb->print("}\n");
             print_indents(sb, indent_level);
@@ -1196,7 +1184,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             if (ast_continue->matching_loop->ast_kind == AST_FOR_LOOP) {
                 Ast_For_Loop *for_loop = (Ast_For_Loop *)ast_continue->matching_loop;
                 if (for_loop->post) {
-                    c_print_statement(sb, block, for_loop->post, indent_level, true);
+                    c_print_statement(sb, block, for_loop->post, indent_level);
                 }
                 loop_block = for_loop->body;
             }
@@ -1237,7 +1225,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
 void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level) {
     For (idx, block->nodes) {
         Ast_Node *node = block->nodes[idx];
-        c_print_statement(sb, block, node, indent_level, true);
+        c_print_statement(sb, block, node, indent_level);
     }
     c_print_defers_from_block_to_block(sb, indent_level, block, block);
 }
@@ -1609,7 +1597,8 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
                         continue;
                     }
                     did_print_at_least_one_member = true;
-                    c_print_var(&sb, var, 1, false);
+                    print_indents(&sb, 1);
+                    c_print_type(&sb, var->type, var->declaration->link_name);
                     sb.print(";\n");
                 }
                 if (!did_print_at_least_one_member) {
@@ -1633,7 +1622,8 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
                 if (!var->var->is_constant) {
-                    c_print_var(&sb, var->var, 0, true);
+                    c_print_type(&sb, var->var->type, var->link_name);
+                    // todo(josh): initialize globals at top of main
                     if (var->var->expr == nullptr) {
                         sb.printf(" = {0}");
                     }
