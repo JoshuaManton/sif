@@ -17,68 +17,65 @@
 /*
 TODO:
 
-SMALL
--put struct constants in Type_Info
--initialize global vars at top of main
-
-short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
--use a custom allocator in __init_sif_runtime
--deduplicate #foreign_import/#foreign_system_import
+HIGH PRIORITY
+-short circuiting
 -handle unary operators nicer, currently quick-and-dirty
--opt=N
--block comments
--add allocators to demo
--underscores in numbers
--prevent identifiers from being C keywords in the backend, like `signed`
--Expr_Change (var v2 = v1.{y=4};)
--allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
--declare distinct types
--cast(Type)value syntax in addition to the current cast(Type, value) maybe?
--add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
--unknown directives don't stop compilation
--figure out if I should allow shadowing (maybe with a keyword?)
--procedure literal expression handling
--#no_bounds_checks
 -#print and #assert don't work in global scope right now
--enum field @notes?
-
-MEDIUM
 -enum arrays @EnumArrays
 -locally scoped structs/procs/enums
 -allow operator overloads to be declared outside a struct
-
--investigate how to get perfect number literal translation
 -slicing
+-+=, -=, etc for operator overloading
+-investigate how to get perfect number literal translation
+
+MEDIUM PRIORITY
+-put struct constants in Type_Info
+-deduplicate #foreign_import/#foreign_system_import
+-add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
+-block comments
+-underscores in numbers
+-prevent identifiers from being C keywords in the backend, like `signed`
+-Expr_Change (var v2 = v1.{y=4};)
+-declare distinct types
+-allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
+-procedure literal expression handling
+-#no_bounds_checks
+-enum field @notes?
 -remove runtime's dependency on basic
 -runtime null checks
--@PointerArithmetic
 -@UnaryOperatorOverloading
 -switch statements
--build to dll
 -read command line parameters
--check for use-before-declaration of local vars
--make C output a bit prettier, whatever that means
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
--tagged unions?
--use microsoft_craziness.h
--allow custom entrypoints
--assigning to reference-to-reference doesn't work. I'm not sure what the behaviour should be
+-what should the semantics be for reference-to-reference?
 -foreach loops
--implicit polymorphism
--loop/block labels a la Odin
--<<< and >>> for shift rotate?
-
-BIG
 -control flow graph analysis
 -#if
--procedure overloading
--turn everything in the checker to tuples :(
--default procedure parameters?
--#caller_location
 -#location()
 -multiple return values
 -namespaced imports i.e. `#include Foo "foo.sif"`
+
+LOW PRIORITY
+-use a custom allocator in __init_sif_runtime
+-add allocators to demo
+-opt=N
+-cast(Type)value syntax in addition to the current cast(Type, value) maybe?
+-unknown directives don't stop compilation
+-figure out if I should allow shadowing (maybe with a keyword?)
+-@PointerArithmetic
+-build to dll
+-check for use-before-declaration of local vars
+-make C output a bit prettier, whatever that means
+-tagged unions?
+-use microsoft_craziness.h
+-allow custom entrypoints
+-implicit polymorphism
+-loop/block labels a la Odin
+-<<< and >>> for shift rotate?
+-procedure overloading
+-default procedure parameters?
+-#caller_location
 */
 
 void print_usage() {

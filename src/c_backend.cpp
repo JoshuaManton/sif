@@ -1443,6 +1443,19 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
         c_print_line_directive(sb, proc->header->location, "__init_sif_runtime()");
         print_indents(sb, 1);
         sb->print("__init_sif_runtime();\n");
+        For (idx, proc->parent_block->declarations) {
+            Declaration *decl = proc->parent_block->declarations[idx];
+            if (decl->kind != DECL_VAR) {
+                continue;
+            }
+            Var_Declaration *var = (Var_Declaration *)decl;
+            if (var->var->expr) {
+                char *rhs = c_print_expr(sb, var->var->expr, 1);
+                c_print_line_directive(sb, proc->header->location, "init global variable");
+                print_indents(sb, 1);
+                sb->printf("%s = %s;\n", var->link_name, rhs);
+            }
+        }
     }
     c_print_block(sb, proc->body, 1);
     if (proc == g_main_proc) {

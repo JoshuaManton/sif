@@ -1,6 +1,9 @@
 #include "core:basic.sif"
 #include "core:math.sif"
 
+var a = 123;
+
 proc main() : i32 {
+    printa(a);
     return 321;
 }

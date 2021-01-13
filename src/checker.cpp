@@ -488,6 +488,13 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 }
             }
 
+            if (var->parent_block->flags & BF_IS_FILE_SCOPE) {
+                if (var->expr != nullptr && (!(var->expr->operand.flags & OPERAND_CONSTANT))) {
+                    report_error(var->expr->location, "Initialization expression for global variable must be constant.");
+                    return false;
+                }
+            }
+
             break;
         }
         case DECL_PROC: {
