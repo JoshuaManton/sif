@@ -19,8 +19,9 @@ TODO:
 
 SMALL
 -put struct constants in Type_Info
+-initialize global vars at top of main
 
--short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
+short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
 -use a custom allocator in __init_sif_runtime
 -deduplicate #foreign_import/#foreign_system_import
 -handle unary operators nicer, currently quick-and-dirty

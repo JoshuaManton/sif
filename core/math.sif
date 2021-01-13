@@ -311,37 +311,7 @@ struct Quaternion {
         return result;
     }
 
-    proc axis_angle(axis: Vector3, angle_radians: float) : Quaternion {
-        var norm = Vector3.normalize(axis);
-        var s = cast(float, sin(cast(f64, angle_radians / 2.0)));
-
-        var vec = norm * s;
-
-        var result: Quaternion;
-        result.x = vec.x;
-        result.y = vec.y;
-        result.z = vec.z;
-        result.w = cast(float, cos(cast(f64, angle_radians / 2.0)));
-        return result;
-    }
-
-    proc slerp(a: Quaternion, b: Quaternion, t: float) : Quaternion {
-        var cos_theta = dot(a, b);
-        var angle = cast(float, cos(cast(f64, cos_theta)));
-
-        var s1 = cast(float, sin(cast(f64, (1.0 - t) * angle)));
-        var s2 = cast(float, sin(cast(f64, t * angle)));
-        var is = 1.0 / cast(float, sin(cast(f64, angle)));
-
-        var left  = a * s1;
-        var right = b * s2;
-
-        var result = left + right;
-        result = result * is;
-        return result;
-    }
-
-    proc quaternion_difference(a: Quaternion, b: Quaternion) : Quaternion {
+    proc difference(a: Quaternion, b: Quaternion) : Quaternion {
         if (dot(a, b) < 0) {
             return normalize(inverse(a) * negate(b));
         }
@@ -362,6 +332,36 @@ struct Quaternion {
     proc down   (q: Quaternion) : Vector3 { return Vector3.negate(up(q));      }
     proc back   (q: Quaternion) : Vector3 { return Vector3.negate(forward(q)); }
 };
+
+proc axis_angle(axis: Vector3, angle_radians: float) : Quaternion {
+    var norm = Vector3.normalize(axis);
+    var s = cast(float, sin(cast(f64, angle_radians / 2.0)));
+
+    var vec = norm * s;
+
+    var result: Quaternion;
+    result.x = vec.x;
+    result.y = vec.y;
+    result.z = vec.z;
+    result.w = cast(float, cos(cast(f64, angle_radians / 2.0)));
+    return result;
+}
+
+proc slerp(a: Quaternion, b: Quaternion, t: float) : Quaternion {
+    var cos_theta = Quaternion.dot(a, b);
+    var angle = cast(float, cos(cast(f64, cos_theta)));
+
+    var s1 = cast(float, sin(cast(f64, (1.0 - t) * angle)));
+    var s2 = cast(float, sin(cast(f64, t * angle)));
+    var is = 1.0 / cast(float, sin(cast(f64, angle)));
+
+    var left  = a * s1;
+    var right = b * s2;
+
+    var result = left + right;
+    result = result * is;
+    return result;
+}
 
 
 
