@@ -572,36 +572,83 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 }
                 case EXPR_BINARY: {
                     Expr_Binary *binary = (Expr_Binary *)expr;
-                    char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
-                    char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
                     if (binary->op == TK_EQUAL_TO && (binary->lhs->operand.type == type_string) && (binary->lhs->operand.type == type_string)) {
+                        char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                        char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
                         expr_sb.printf("string_eq(%s, %s);\n", lhs, rhs);
                     }
                     else {
-                        expr_sb.print(lhs);
-                        switch (binary->op) {
-                            case TK_PLUS:                     { expr_sb.print(" + ");  break; }
-                            case TK_MINUS:                    { expr_sb.print(" - ");  break; }
-                            case TK_MULTIPLY:                 { expr_sb.print(" * ");  break; }
-                            case TK_DIVIDE:                   { expr_sb.print(" / ");  break; }
-                            case TK_MOD:                      { expr_sb.print(" % ");  break; }
-                            case TK_LESS_THAN:                { expr_sb.print(" < ");  break; }
-                            case TK_LESS_THAN_OR_EQUAL:       { expr_sb.print(" <= "); break; }
-                            case TK_GREATER_THAN:             { expr_sb.print(" > ");  break; }
-                            case TK_GREATER_THAN_OR_EQUAL:    { expr_sb.print(" >= "); break; }
-                            case TK_EQUAL_TO:                 { expr_sb.print(" == "); break; }
-                            case TK_NOT_EQUAL_TO:             { expr_sb.print(" != "); break; }
-                            case TK_AMPERSAND:                { expr_sb.print(" & ");  break; }
-                            case TK_BIT_OR:                   { expr_sb.print(" | ");  break; }
-                            case TK_BOOLEAN_AND:              { expr_sb.print(" && "); break; }
-                            case TK_BOOLEAN_OR:               { expr_sb.print(" || "); break; }
-                            case TK_LEFT_SHIFT:               { expr_sb.print(" << "); break; }
-                            case TK_RIGHT_SHIFT:              { expr_sb.print(" >> "); break; }
-                            default: {
-                                assert(false);
-                            }
+                        static int num_short_circuit_labels = 0;
+                        if (binary->op == TK_BOOLEAN_AND) {
+                            // todo(josh): #line
+                            num_short_circuit_labels += 1;
+                            String_Builder label_sb = make_string_builder(g_global_linear_allocator, 16);
+                            label_sb.printf("__short_curcuit_AND_%d", num_short_circuit_labels);
+                            char *result = c_temporary();
+                            print_indents(_sb, indent_level);
+                            c_print_type(_sb, type_bool, result);
+                            _sb->printf(" = false;\n");
+                            char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                            print_indents(_sb, indent_level);
+                            _sb->printf("if (%s == false) { goto %s; }\n", lhs, label_sb.string());
+                            char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
+                            print_indents(_sb, indent_level);
+                            _sb->printf("if (%s == false) { goto %s; }\n", rhs, label_sb.string());
+                            print_indents(_sb, indent_level);
+                            _sb->printf("%s = true;\n", result);
+                            print_indents(_sb, indent_level);
+                            _sb->printf("%s:;\n", label_sb.string());
+                            expr_sb.print(result);
                         }
-                        expr_sb.printf("%s", rhs);
+                        else if (binary->op == TK_BOOLEAN_OR) {
+                            // todo(josh): #line
+                            num_short_circuit_labels += 1;
+                            String_Builder label_sb = make_string_builder(g_global_linear_allocator, 16);
+                            label_sb.printf("__short_curcuit_AND_%d", num_short_circuit_labels);
+                            char *result = c_temporary();
+                            print_indents(_sb, indent_level);
+                            c_print_type(_sb, type_bool, result);
+                            _sb->printf(" = true;\n");
+                            char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                            print_indents(_sb, indent_level);
+                            _sb->printf("if (%s == true) { goto %s; }\n", lhs, label_sb.string());
+                            char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
+                            print_indents(_sb, indent_level);
+                            _sb->printf("if (%s == true) { goto %s; }\n", rhs, label_sb.string());
+                            print_indents(_sb, indent_level);
+                            _sb->printf("%s = false;\n", result);
+                            print_indents(_sb, indent_level);
+                            _sb->printf("%s:;\n", label_sb.string());
+                            expr_sb.print(result);
+                        }
+                        else {
+                            char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                            char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
+                            expr_sb.print(lhs);
+                            switch (binary->op) {
+                                case TK_PLUS:                     { expr_sb.print(" + ");  break; }
+                                case TK_MINUS:                    { expr_sb.print(" - ");  break; }
+                                case TK_MULTIPLY:                 { expr_sb.print(" * ");  break; }
+                                case TK_DIVIDE:                   { expr_sb.print(" / ");  break; }
+                                case TK_MOD:                      { expr_sb.print(" % ");  break; }
+                                case TK_LESS_THAN:                { expr_sb.print(" < ");  break; }
+                                case TK_LESS_THAN_OR_EQUAL:       { expr_sb.print(" <= "); break; }
+                                case TK_GREATER_THAN:             { expr_sb.print(" > ");  break; }
+                                case TK_GREATER_THAN_OR_EQUAL:    { expr_sb.print(" >= "); break; }
+                                case TK_EQUAL_TO:                 { expr_sb.print(" == "); break; }
+                                case TK_NOT_EQUAL_TO:             { expr_sb.print(" != "); break; }
+                                case TK_AMPERSAND:                { expr_sb.print(" & ");  break; }
+                                case TK_BIT_OR:                   { expr_sb.print(" | ");  break; }
+                                case TK_BOOLEAN_AND:              { expr_sb.print(" && "); break; }
+                                case TK_BOOLEAN_OR:               { expr_sb.print(" || "); break; }
+                                case TK_LEFT_SHIFT:               { expr_sb.print(" << "); break; }
+                                case TK_RIGHT_SHIFT:              { expr_sb.print(" >> "); break; }
+                                default: {
+                                    assert(false);
+                                }
+                            }
+                            expr_sb.printf("%s", rhs);
+                        }
                     }
                     break;
                 }
