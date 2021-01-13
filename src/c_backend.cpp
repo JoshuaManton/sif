@@ -467,20 +467,20 @@ void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, Location
 char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
     char *t = nullptr;
 
-    if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
-        assert(expr->operand.type != nullptr);
-    }
-
     Chunked_String_Builder reference_prefix_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
 
-    if (expr->operand.reference_type != nullptr) {
-        assert(is_type_reference(expr->operand.reference_type));
-        reference_prefix_sb.print("(");
-        Type *type = expr->operand.reference_type;
-        while (is_type_reference(type)) {
-            reference_prefix_sb.print("*");
-            Type_Reference *reference = (Type_Reference *)type;
-            type = reference->reference_to;
+    if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
+        assert(expr->operand.type != nullptr);
+
+        if (expr->operand.reference_type != nullptr) {
+            assert(is_type_reference(expr->operand.reference_type));
+            reference_prefix_sb.print("(");
+            Type *type = expr->operand.reference_type;
+            while (is_type_reference(type)) {
+                reference_prefix_sb.print("*");
+                Type_Reference *reference = (Type_Reference *)type;
+                type = reference->reference_to;
+            }
         }
     }
 

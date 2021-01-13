@@ -24,7 +24,6 @@ HIGH PRIORITY
 -enum arrays @EnumArrays
 -locally scoped structs/procs/enums
 -allow operator overloads to be declared outside a struct
--slicing
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
 
@@ -36,11 +35,12 @@ MEDIUM PRIORITY
 -underscores in numbers
 -prevent identifiers from being C keywords in the backend, like `signed`
 -Expr_Change (var v2 = v1.{y=4};)
+-slicing
+-make [4]int{1, 2, 3, 4} work instead of having to paren the [4]int part
 -declare distinct types
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -procedure literal expression handling
 -#no_bounds_checks
--enum field @notes?
 -remove runtime's dependency on basic
 -runtime null checks
 -@UnaryOperatorOverloading
@@ -57,6 +57,7 @@ MEDIUM PRIORITY
 -namespaced imports i.e. `#include Foo "foo.sif"`
 
 LOW PRIORITY
+-enum field @notes?
 -use a custom allocator in __init_sif_runtime
 -add allocators to demo
 -opt=N

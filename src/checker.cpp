@@ -3108,14 +3108,16 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
             if (!complete_type(result_operand.type)) { // if an expressions yields a type, that type better be complete! I think.
                 return nullptr;
             }
+
             if (is_type_reference(result_operand.type)) {
                 result_operand.flags |= OPERAND_LVALUE;
                 result_operand.reference_type = result_operand.type;
-            }
-            while (result_operand.type->kind == TYPE_REFERENCE) {
-                Type_Reference *reference = (Type_Reference *)result_operand.type;
-                assert(reference->reference_to != nullptr);
-                result_operand.type = reference->reference_to;
+
+                while (is_type_reference(result_operand.type)) {
+                    Type_Reference *reference = (Type_Reference *)result_operand.type;
+                    assert(reference->reference_to != nullptr);
+                    result_operand.type = reference->reference_to;
+                }
             }
         }
         else {
