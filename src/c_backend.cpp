@@ -10,7 +10,7 @@ extern Array<Type *> all_types;
 
 void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name);
 void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name);
-char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type = nullptr);
+char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type = nullptr, bool is_reference_declaration = false);
 void print_indents(Chunked_String_Builder *sb, int indent_level);
 
 void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
@@ -464,243 +464,158 @@ void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, Location
     c_print_line_directive(sb, location, "bounds check after");
 }
 
-char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level, Type *target_type) {
-    char *t = nullptr;
-
-    Chunked_String_Builder reference_prefix_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-
-    if (!(expr->operand.flags & OPERAND_NO_VALUE)) {
-        assert(expr->operand.type != nullptr);
-
-        if (expr->operand.reference_type != nullptr) {
-            assert(is_type_reference(expr->operand.reference_type));
-            reference_prefix_sb.print("(");
-            Type *type = expr->operand.reference_type;
-            while (is_type_reference(type)) {
-                reference_prefix_sb.print("*");
-                Type_Reference *reference = (Type_Reference *)type;
-                type = reference->reference_to;
-            }
+char *c_print_procedure_call(Chunked_String_Builder *_sb, Ast_Expr *root_expr, const char *procedure_name, Array<Procedure_Call_Parameter> parameters, int indent_level, Type_Procedure *proc_type) {
+    Chunked_String_Builder call_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+    Array<char *> params;
+    params.allocator = g_global_linear_allocator;
+    c_print_procedure_call_parameters(_sb, root_expr, proc_type, parameters, indent_level, &params);
+    call_sb.printf("%s(", procedure_name);
+    For (idx, params) {
+        if (idx != 0) {
+            call_sb.print(", ");
         }
+        call_sb.print(params[idx]);
     }
+    call_sb.print(")");
+
+    if (proc_type->return_type) {
+        char *t = c_temporary();
+        print_indents(_sb, indent_level);
+        c_print_type(_sb, proc_type->return_type, t);
+        _sb->printf(" = %s;\n", call_sb.make_string());
+        return t;
+    }
+    else {
+        return call_sb.make_string();
+    }
+}
+
+char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level, Type *target_type, bool is_reference_declaration) {
+    Chunked_String_Builder expr_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
 
     if (expr->desugared_procedure_to_call != nullptr) {
-        assert(expr->desugared_procedure_to_call != nullptr);
-        assert(expr->desugared_procedure_to_call->header->declaration->link_name != nullptr);
-        Array<char *> params;
-        params.allocator = g_global_linear_allocator;
-        c_print_procedure_call_parameters(sb, expr, expr->desugared_procedure_to_call->header->type, expr->processed_procedure_call_parameters, indent_level, &params);
-        c_print_line_directive(sb, expr->location, "proc call desugared procedure");
-        print_indents(sb, indent_level);
-        if (expr->desugared_procedure_to_call->header->type->return_type) {
-            t = c_temporary();
-            c_print_type(sb, expr->desugared_procedure_to_call->header->type->return_type, t);
-            sb->print(" = ");
-        }
-        sb->printf("%s(", expr->desugared_procedure_to_call->header->declaration->link_name);
-        For (idx, params) {
-            if (idx != 0) {
-                sb->print(", ");
-            }
-            sb->print(params[idx]);
-        }
-        sb->print(");\n");
+        char *call_expr = c_print_procedure_call(_sb, expr, expr->desugared_procedure_to_call->header->declaration->link_name, expr->processed_procedure_call_parameters, indent_level, expr->desugared_procedure_to_call->header->type);
+        expr_sb.print(call_expr);
     }
     else {
         if (expr->operand.flags & OPERAND_CONSTANT) {
-            if (target_type == type_any) {
-                assert(!is_type_untyped(expr->operand.type));
-                t = c_temporary();
-                c_print_line_directive(sb, expr->location, "expr constant to any");
-                print_indents(sb, indent_level);
-                c_print_type(sb, expr->operand.type, t);
-                sb->print(" = ");
-                if (is_type_float(expr->operand.type)) {
-                    sb->printf("%f", expr->operand.float_value);
-                }
-                else if (is_type_integer(expr->operand.type)) {
-                    // todo(josh): handle uints
-                    sb->printf("%d", expr->operand.int_value);
-                }
-                else if (expr->operand.type == type_bool) {
-                    sb->print(expr->operand.bool_value ? "true" : "false");
-                }
-                else if (expr->operand.type == type_string) {
-                    sb->printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-                }
-                else if (expr->operand.type == type_cstring) {
-                    sb->printf("\"%s\"", expr->operand.scanned_string_value);
-                }
-                else if (is_type_procedure(expr->operand.type)) {
-                    sb->print(expr->operand.proc_value->declaration->link_name);
-                }
-                else if (is_type_typeid(expr->operand.type)) {
-                    sb->printf("%d", expr->operand.type_value->id);
-                }
-                else if (expr->operand.type->flags & TF_POINTER) {
-                    sb->printf("((");
-                    c_print_type(sb, expr->operand.type, "");
-                    sb->printf(")%d)", expr->operand.int_value);
-                }
-                else {
-                    assert(false);
-                }
-                sb->print(";\n");
+            assert(!is_type_untyped(expr->operand.type));
+            if (is_type_float(expr->operand.type)) {
+                expr_sb.printf("%f", expr->operand.float_value);
+            }
+            else if (is_type_integer(expr->operand.type)) {
+                // todo(josh): handle uints
+                expr_sb.printf("%d", expr->operand.int_value);
+            }
+            else if (expr->operand.type == type_bool) {
+                expr_sb.print(expr->operand.bool_value ? "true" : "false");
+            }
+            else if (expr->operand.type == type_string) {
+                expr_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+            }
+            else if (expr->operand.type == type_cstring) {
+                expr_sb.printf("\"%s\"", expr->operand.scanned_string_value);
+            }
+            else if (is_type_procedure(expr->operand.type)) {
+                expr_sb.print(expr->operand.proc_value->declaration->link_name);
+            }
+            else if (is_type_typeid(expr->operand.type)) {
+                expr_sb.printf("%d", expr->operand.type_value->id);
+            }
+            else if (expr->operand.type->flags & TF_POINTER) {
+                expr_sb.printf("((");
+                c_print_type(&expr_sb, expr->operand.type, "");
+                expr_sb.printf(")%d)", expr->operand.int_value);
             }
             else {
-                assert(!is_type_untyped(expr->operand.type));
-                Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
-                if (is_type_float(expr->operand.type)) {
-                    tsb.printf("%f", expr->operand.float_value);
-                }
-                else if (is_type_integer(expr->operand.type)) {
-                    // todo(josh): handle uints
-                    tsb.printf("%d", expr->operand.int_value);
-                }
-                else if (expr->operand.type == type_bool) {
-                    tsb.print(expr->operand.bool_value ? "true" : "false");
-                }
-                else if (expr->operand.type == type_string) {
-                    tsb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-                }
-                else if (expr->operand.type == type_cstring) {
-                    tsb.printf("\"%s\"", expr->operand.scanned_string_value);
-                }
-                else if (is_type_procedure(expr->operand.type)) {
-                    tsb.print(expr->operand.proc_value->declaration->link_name);
-                }
-                else if (is_type_typeid(expr->operand.type)) {
-                    tsb.printf("%d", expr->operand.type_value->id);
-                }
-                else if (expr->operand.type->flags & TF_POINTER) {
-                    tsb.printf("((");
-                    c_print_type(&tsb, expr->operand.type, "");
-                    tsb.printf(")%d)", expr->operand.int_value);
-                }
-                else {
-                    assert(false);
-                }
-                t = tsb.make_string();
+                assert(false);
             }
         }
         else if (is_type_typeid(expr->operand.type) && (expr->operand.flags & OPERAND_CONSTANT)) {
-            Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
-            tsb.printf("%d", expr->operand.type_value->id);
-            t = tsb.make_string();
+            expr_sb.printf("%d", expr->operand.type_value->id);
         }
         else {
             switch (expr->expr_kind) {
                 case EXPR_IDENTIFIER: {
                     Expr_Identifier *identifier = (Expr_Identifier *)expr;
                     Chunked_String_Builder ident_sb = make_chunked_string_builder(g_global_linear_allocator, 32);
-                    c_print_hidden_using_selectors(&ident_sb, identifier->resolved_declaration, indent_level);
-                    ident_sb.print(identifier->resolved_declaration->link_name);
-                    t = ident_sb.make_string();
+                    c_print_hidden_using_selectors(&expr_sb, identifier->resolved_declaration, indent_level);
+                    expr_sb.print(identifier->resolved_declaration->link_name);
                     break;
                 }
                 case EXPR_UNARY: {
                     Expr_Unary *unary = (Expr_Unary *)expr;
-                    t = c_temporary();
-                    char *rhs = c_print_expr(sb, unary->rhs, indent_level);
-                    c_print_line_directive(sb, unary->location, "expr unary");
-                    print_indents(sb, indent_level);
-                    c_print_type(sb, unary->operand.type, t);
-                    sb->print(" = ");
+                    char *rhs = c_print_expr(_sb, unary->rhs, indent_level);
                     switch (unary->op) {
                         case TK_PLUS: {
-                            sb->print("+");
+                            expr_sb.print("+");
                             break;
                         }
                         case TK_MINUS: {
-                            sb->print("-");
+                            expr_sb.print("-");
                             break;
                         }
                         case TK_NOT: {
-                            sb->print("!");
+                            expr_sb.print("!");
                             break;
                         }
                         case TK_BIT_NOT: {
-                            sb->print("~");
+                            expr_sb.print("~");
                             break;
                         }
                         default: {
                             assert(false);
                         }
                     }
-                    sb->printf("%s;\n", rhs);
+                    expr_sb.printf("%s", rhs);
                     break;
                 }
                 case EXPR_BINARY: {
                     Expr_Binary *binary = (Expr_Binary *)expr;
-                    t = c_temporary();
-                    char *lhs = c_print_expr(sb, binary->lhs, indent_level); assert(lhs);
-                    char *rhs = c_print_expr(sb, binary->rhs, indent_level); assert(rhs);
-                    c_print_line_directive(sb, binary->location, "expr binary");
-                    print_indents(sb, indent_level);
+                    char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                    char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
                     if (binary->op == TK_EQUAL_TO && (binary->lhs->operand.type == type_string) && (binary->lhs->operand.type == type_string)) {
-                        // todo(josh): this should probably be a desugared_procedure thing
-                        c_print_type(sb, type_bool, t);
-                        sb->printf(" = string_eq(%s, %s);\n", lhs, rhs);
-                        break;
+                        expr_sb.printf("string_eq(%s, %s);\n", lhs, rhs);
                     }
-                    c_print_type(sb, binary->operand.type, t);
-                    sb->print(" = ");
-                    sb->print(lhs);
-                    switch (binary->op) {
-                        case TK_PLUS:                     { sb->print(" + ");  break; }
-                        case TK_MINUS:                    { sb->print(" - ");  break; }
-                        case TK_MULTIPLY:                 { sb->print(" * ");  break; }
-                        case TK_DIVIDE:                   { sb->print(" / ");  break; }
-                        case TK_MOD:                      { sb->print(" % ");  break; }
-                        case TK_LESS_THAN:                { sb->print(" < ");  break; }
-                        case TK_LESS_THAN_OR_EQUAL:       { sb->print(" <= "); break; }
-                        case TK_GREATER_THAN:             { sb->print(" > ");  break; }
-                        case TK_GREATER_THAN_OR_EQUAL:    { sb->print(" >= "); break; }
-                        case TK_EQUAL_TO:                 { sb->print(" == "); break; }
-                        case TK_NOT_EQUAL_TO:             { sb->print(" != "); break; }
-                        case TK_AMPERSAND:                { sb->print(" & ");  break; }
-                        case TK_BIT_OR:                   { sb->print(" | ");  break; }
-                        case TK_BOOLEAN_AND:              { sb->print(" && "); break; }
-                        case TK_BOOLEAN_OR:               { sb->print(" || "); break; }
-                        case TK_LEFT_SHIFT:               { sb->print(" << "); break; }
-                        case TK_RIGHT_SHIFT:              { sb->print(" >> "); break; }
-                        default: {
-                            assert(false);
+                    else {
+                        expr_sb.print(lhs);
+                        switch (binary->op) {
+                            case TK_PLUS:                     { expr_sb.print(" + ");  break; }
+                            case TK_MINUS:                    { expr_sb.print(" - ");  break; }
+                            case TK_MULTIPLY:                 { expr_sb.print(" * ");  break; }
+                            case TK_DIVIDE:                   { expr_sb.print(" / ");  break; }
+                            case TK_MOD:                      { expr_sb.print(" % ");  break; }
+                            case TK_LESS_THAN:                { expr_sb.print(" < ");  break; }
+                            case TK_LESS_THAN_OR_EQUAL:       { expr_sb.print(" <= "); break; }
+                            case TK_GREATER_THAN:             { expr_sb.print(" > ");  break; }
+                            case TK_GREATER_THAN_OR_EQUAL:    { expr_sb.print(" >= "); break; }
+                            case TK_EQUAL_TO:                 { expr_sb.print(" == "); break; }
+                            case TK_NOT_EQUAL_TO:             { expr_sb.print(" != "); break; }
+                            case TK_AMPERSAND:                { expr_sb.print(" & ");  break; }
+                            case TK_BIT_OR:                   { expr_sb.print(" | ");  break; }
+                            case TK_BOOLEAN_AND:              { expr_sb.print(" && "); break; }
+                            case TK_BOOLEAN_OR:               { expr_sb.print(" || "); break; }
+                            case TK_LEFT_SHIFT:               { expr_sb.print(" << "); break; }
+                            case TK_RIGHT_SHIFT:              { expr_sb.print(" >> "); break; }
+                            default: {
+                                assert(false);
+                            }
                         }
+                        expr_sb.printf("%s", rhs);
                     }
-                    sb->printf("%s;\n", rhs);
                     break;
                 }
                 case EXPR_PROCEDURE_CALL: {
                     Expr_Procedure_Call *call = (Expr_Procedure_Call *)expr;
-                    assert(call->target_procedure_type != nullptr);
-                    assert(!is_type_polymorphic(call->target_procedure_type));
-                    c_print_line_directive(sb, call->location, "expr procedure call");
-                    char *procedure_name = c_print_expr(sb, call->lhs, indent_level);
-                    Array<char *> params;
-                    params.allocator = g_global_linear_allocator;
-                    c_print_procedure_call_parameters(sb, call, call->target_procedure_type, call->processed_procedure_call_parameters, indent_level, &params);
-                    if (call->target_procedure_type->return_type) {
-                        t = c_temporary();
-                        print_indents(sb, indent_level);
-                        c_print_type(sb, call->target_procedure_type->return_type, t);
-                        sb->print(" = ");
-                    }
-                    sb->printf("%s(", procedure_name);
-                    For (idx, params) {
-                        if (idx != 0) {
-                            sb->print(", ");
-                        }
-                        sb->print(params[idx]);
-                    }
-                    sb->print(");\n");
+                    char *procedure_name = c_print_expr(_sb, call->lhs, indent_level);
+                    char *call_expr = c_print_procedure_call(_sb, expr, procedure_name, call->processed_procedure_call_parameters, indent_level, call->target_procedure_type);
+                    expr_sb.print(call_expr);
                     break;
                 }
                 case EXPR_SUBSCRIPT: {
                     Expr_Subscript *subscript = (Expr_Subscript *)expr;
-                    char *lhs = c_print_expr(sb, subscript->lhs, indent_level);
-                    char *index = c_print_expr(sb, subscript->index, indent_level);
-                    Chunked_String_Builder subscript_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+                    char *lhs = c_print_expr(_sb, subscript->lhs, indent_level);
+                    char *index = c_print_expr(_sb, subscript->index, indent_level);
                     if (is_type_slice(subscript->lhs->operand.type) || is_type_varargs(subscript->lhs->operand.type)) {
                         Type_Slice *slice_type = nullptr;
                         if (is_type_slice(subscript->lhs->operand.type)) {
@@ -709,28 +624,27 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                         else if (is_type_varargs(subscript->lhs->operand.type)) {
                             slice_type = ((Type_Varargs *)subscript->lhs->operand.type)->slice_type;
                         }
-                        c_print_bounds_check(sb, indent_level, subscript->location, lhs, "count", index);
+                        c_print_bounds_check(_sb, indent_level, subscript->location, lhs, "count", index);
                         assert(slice_type != nullptr);
-                        subscript_sb.print("((");
-                        c_print_type(&subscript_sb, slice_type->data_pointer_type, "");
-                        subscript_sb.print(")");
-                        subscript_sb.print(lhs);
-                        subscript_sb.print(".data)[");
-                        subscript_sb.print(index);
-                        subscript_sb.print("]");
+                        expr_sb.print("((");
+                        c_print_type(&expr_sb, slice_type->data_pointer_type, "");
+                        expr_sb.print(")");
+                        expr_sb.print(lhs);
+                        expr_sb.print(".data)[");
+                        expr_sb.print(index);
+                        expr_sb.print("]");
                     }
                     else if (is_type_array(subscript->lhs->operand.type)) {
                         // todo(josh): assert not out of bounds
-                        subscript_sb.printf("%s.elements[%s]", lhs, index);
+                        expr_sb.printf("%s.elements[%s]", lhs, index);
                     }
                     else if (subscript->lhs->operand.type == type_string) {
-                        c_print_bounds_check(sb, indent_level, subscript->location, lhs, "count", index);
-                        subscript_sb.printf("%s.data[%s]", lhs, index);
+                        c_print_bounds_check(_sb, indent_level, subscript->location, lhs, "count", index);
+                        expr_sb.printf("%s.data[%s]", lhs, index);
                     }
                     else {
                         assert(false);
                     }
-                    t = subscript_sb.make_string();
                     break;
                 }
                 case EXPR_COMPOUND_LITERAL: {
@@ -738,129 +652,112 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                     Array<char *> expr_names;
                     expr_names.allocator = g_global_linear_allocator;
                     For (idx, compound_literal->exprs) {
-                        char *name = c_print_expr(sb, compound_literal->exprs[idx], indent_level);
+                        char *name = c_print_expr(_sb, compound_literal->exprs[idx], indent_level);
                         expr_names.append(name);
                     }
-                    t = c_temporary();
-                    c_print_line_directive(sb, compound_literal->location, "compound literal decl");
-                    print_indents(sb, indent_level);
-                    c_print_type(sb, compound_literal->operand.type, t);
-                    sb->print(" = {0};\n");
+                    char *t = c_temporary();
+                    c_print_line_directive(_sb, compound_literal->location, "compound literal decl");
+                    print_indents(_sb, indent_level);
+                    c_print_type(_sb, compound_literal->operand.type, t);
+                    _sb->print(" = {0};\n");
 
                     Type *compound_literal_type = compound_literal->operand.type;
                     if (is_type_array(compound_literal_type)) {
                         Type_Array *array_type = (Type_Array *)compound_literal_type;
                         For (idx, expr_names) {
-                            c_print_line_directive(sb, compound_literal->location, "compound literal assignment");
-                            print_indents(sb, indent_level);
-                            sb->printf("%s.elements[%d] = %s;\n", t, idx, expr_names[idx]);
+                            c_print_line_directive(_sb, compound_literal->location, "compound literal assignment");
+                            print_indents(_sb, indent_level);
+                            _sb->printf("%s.elements[%d] = %s;\n", t, idx, expr_names[idx]);
                         }
                     }
                     else {
                         For (idx, expr_names) {
-                            c_print_line_directive(sb, compound_literal->location, "compound literal assignment");
-                            print_indents(sb, indent_level);
+                            c_print_line_directive(_sb, compound_literal->location, "compound literal assignment");
+                            print_indents(_sb, indent_level);
                             Struct_Field target_field = compound_literal_type->variable_fields[idx];
                             assert(!(target_field.operand.flags & OPERAND_CONSTANT));
                             assert(target_field.operand.flags & OPERAND_LVALUE);
-                            sb->printf("%s.%s = %s;\n", t, target_field.name, expr_names[idx]);
+                            _sb->printf("%s.%s = %s;\n", t, target_field.name, expr_names[idx]);
                         }
                     }
+                    expr_sb.printf("%s", t);
                     break;
                 }
                 case EXPR_ADDRESS_OF: {
                     Expr_Address_Of *address_of = (Expr_Address_Of *)expr;
-                    t = c_temporary();
-                    char *rhs = c_print_expr(sb, address_of->rhs, indent_level);
-                    print_indents(sb, indent_level);
-                    c_print_type(sb, address_of->operand.type, t);
-                    sb->printf(" = &%s;\n", rhs);
+                    char *rhs = c_print_expr(_sb, address_of->rhs, indent_level);
+                    expr_sb.printf("&%s", rhs);
                     break;
                 }
                 case EXPR_DEREFERENCE: {
                     Expr_Dereference *dereference = (Expr_Dereference *)expr;
-                    char *lhs = c_print_expr(sb, dereference->lhs, indent_level);
-                    Chunked_String_Builder deref_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-                    deref_sb.printf("(*%s)", lhs);
-                    t = deref_sb.make_string();
+                    char *lhs = c_print_expr(_sb, dereference->lhs, indent_level);
+                    expr_sb.printf("(*%s)", lhs);
                     break;
                 }
                 case EXPR_SELECTOR: {
                     Expr_Selector *selector = (Expr_Selector *)expr;
-                    c_print_line_directive(sb, selector->location, "expr selector");
-                    char *lhs = c_print_expr(sb, selector->lhs, indent_level);
+                    c_print_line_directive(_sb, selector->location, "expr selector");
+                    char *lhs = c_print_expr(_sb, selector->lhs, indent_level);
                     assert(lhs);
-                    Chunked_String_Builder selector_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
                     bool is_accessing_slice_data_field = false;
-                    if ((selector->lookup.type_with_field->kind == TYPE_SLICE) && (selector->field_name == "data")) {
+                    if ((selector->lookup.type_with_field->kind == TYPE_SLICE) && (selector->field_name == g_interned_data_string)) {
                         is_accessing_slice_data_field = true;
                         Type_Slice *slice_type = (Type_Slice *)selector->lookup.type_with_field;
-                        selector_sb.print("*((");
-                        c_print_type(&selector_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
-                        selector_sb.print(")&");
+                        expr_sb.print("*((");
+                        c_print_type(&expr_sb, get_or_create_type_pointer_to(slice_type->data_pointer_type), "");
+                        expr_sb.print(")&");
                     }
-                    selector_sb.print(lhs);
+                    expr_sb.print(lhs);
                     if (is_type_pointer(selector->lhs->operand.type)) {
-                        selector_sb.print("->");
+                        expr_sb.print("->");
                     }
                     else {
-                        selector_sb.print(".");
+                        expr_sb.print(".");
                     }
                     Declaration *right_most_decl = selector->lookup.declaration;
-                    c_print_hidden_using_selectors(&selector_sb, right_most_decl, indent_level);
-                    selector_sb.printf("%s", right_most_decl->name);
+                    c_print_hidden_using_selectors(&expr_sb, right_most_decl, indent_level);
+                    expr_sb.printf("%s", right_most_decl->name);
                     if (is_accessing_slice_data_field) {
-                        selector_sb.print(")");
+                        expr_sb.print(")");
                     }
-                    t = selector_sb.make_string();
                     break;
                 }
                 case EXPR_CAST: {
                     Expr_Cast *expr_cast = (Expr_Cast *)expr;
-                    char *rhs = c_print_expr(sb, expr_cast->rhs, indent_level);
-                    c_print_line_directive(sb, expr_cast->location, "expr cast");
-                    t = c_temporary();
-                    print_indents(sb, indent_level);
-                    c_print_type(sb, expr_cast->type_expr->operand.type_value, t);
-                    sb->print(" = ((");
-                    c_print_type(sb, expr_cast->type_expr->operand.type_value, "");
-                    sb->printf(")%s);\n", rhs);
+                    char *rhs = c_print_expr(_sb, expr_cast->rhs, indent_level);
+                    expr_sb.print("((");
+                    c_print_type(&expr_sb, expr_cast->type_expr->operand.type_value, "");
+                    expr_sb.printf(")%s)", rhs);
                     break;
                 }
                 case EXPR_TRANSMUTE: {
                     Expr_Transmute *transmute = (Expr_Transmute *)expr;
-                    char *rhs = c_print_expr(sb, transmute->rhs, indent_level);
-                    c_print_line_directive(sb, transmute->location, "expr transmute");
-                    t = c_temporary();
-                    print_indents(sb, indent_level);
-                    c_print_type(sb, transmute->type_expr->operand.type_value, t);
-                    sb->print(" = *((");
-                    c_print_type(sb, get_or_create_type_pointer_to(transmute->type_expr->operand.type_value), "");
-                    sb->printf(")&%s);\n", rhs);
+                    char *rhs = c_print_expr(_sb, transmute->rhs, indent_level);
+                    expr_sb.print("*((");
+                    c_print_type(&expr_sb, get_or_create_type_pointer_to(transmute->type_expr->operand.type_value), "");
+                    expr_sb.printf(")&%s)", rhs);
                     break;
                 }
                 case EXPR_NUMBER_LITERAL: {
-                    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
+                    // todo(josh): why would we ever get in here?
                     if (is_type_float(expr->operand.type)) {
-                        tsb.printf("%f", expr->operand.float_value);
+                        expr_sb.printf("%f", expr->operand.float_value);
                     }
                     else if (is_type_integer(expr->operand.type)) {
-                        tsb.printf("%d", expr->operand.int_value);
+                        expr_sb.printf("%d", expr->operand.int_value);
                     }
-                    t = tsb.make_string();
                     break;
                 }
                 case EXPR_CHAR_LITERAL: {
+                    // todo(josh): why would we ever get in here?
                     assert(is_type_integer(expr->operand.type));
-                    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
-                    tsb.printf("%d", expr->operand.int_value);
-                    t = tsb.make_string();
+                    expr_sb.printf("%d", expr->operand.int_value);
                     break;
                 }
                 case EXPR_STRING_LITERAL: {
-                    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 128);
-                    tsb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-                    t = tsb.make_string();
+                    // todo(josh): why would we ever get in here?
+                    expr_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
                     break;
                 }
                 case EXPR_POINTER_TYPE: {
@@ -875,24 +772,20 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
                 }
                 case EXPR_PAREN: {
                     Expr_Paren *paren = (Expr_Paren *)expr;
-                    t = c_temporary();
-                    char *nested = c_print_expr(sb, paren->nested, indent_level, target_type);
-                    c_print_line_directive(sb, paren->location, "expr paren");
-                    print_indents(sb, indent_level);
-                    c_print_type(sb, expr->operand.type, t);
-                    sb->printf(" = %s;\n", nested);
+                    char *nested = c_print_expr(_sb, paren->nested, indent_level, target_type);
+                    expr_sb.printf("%s", nested);
                     break;
                 }
                 case EXPR_NULL: {
-                    t = "NULL";
+                    expr_sb.print("NULL");
                     break;
                 }
                 case EXPR_TRUE: {
-                    t = "true";
+                    expr_sb.print("true");
                     break;
                 }
                 case EXPR_FALSE: {
-                    t = "false";
+                    expr_sb.print("false");
                     break;
                 }
                 case EXPR_SIZEOF: {
@@ -911,28 +804,69 @@ char *c_print_expr(Chunked_String_Builder *sb, Ast_Expr *expr, int indent_level,
         }
     }
 
+    Chunked_String_Builder tsb = make_chunked_string_builder(g_global_linear_allocator, 32);
+
+    c_print_line_directive(_sb, expr->location);
+    print_indents(_sb, indent_level);
+    char *t = c_temporary();
+    tsb.printf("(");
+    if (expr->operand.flags & OPERAND_LVALUE) {
+        tsb.printf("*");
+        if (expr->operand.reference_type == nullptr) {
+            c_print_type(_sb, get_or_create_type_pointer_to(expr->operand.type), t);
+        }
+        else {
+            // todo(josh): do while loop to assign through reference-to-reference stuff
+            if (!is_reference_declaration) {
+                tsb.printf("*");
+            }
+            c_print_type(_sb, get_or_create_type_pointer_to(expr->operand.reference_type), t);
+        }
+        _sb->printf(" = &%s;\n", expr_sb.make_string());
+    }
+    else if (expr->operand.flags & OPERAND_RVALUE) {
+        c_print_type(_sb, expr->operand.type, t);
+        _sb->printf(" = %s;\n", expr_sb.make_string());
+    }
+    else {
+        assert(expr->operand.flags & OPERAND_NO_VALUE);
+        _sb->printf("%s", expr_sb.make_string());
+    }
+    tsb.printf("%s)", t);
+
     if (target_type) {
-        if (is_type_reference(target_type)) {
-            reference_prefix_sb.printf("&%s", t);
-            t = reference_prefix_sb.make_string();
+        if (target_type == type_any) {
+            if (expr->operand.type != type_any) {
+                Chunked_String_Builder any_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+                any_sb.printf("MAKE_ANY(&%s, %d)", tsb.make_string(), expr->operand.type->id);
+                tsb.clear();
+                tsb.print(any_sb.make_string());
+            }
+        }
+        else if (is_type_reference(target_type)) {
+            Chunked_String_Builder reference_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
+            reference_sb.printf("&%s", tsb.make_string());
+            tsb.clear();
+            tsb.print(reference_sb.make_string());
         }
     }
 
-    if (expr->operand.reference_type != nullptr) {
-        assert(is_type_reference(expr->operand.reference_type));
-        reference_prefix_sb.printf("%s)", t);
-        t = reference_prefix_sb.make_string();
-    }
+    return tsb.make_string();
 
-    if (target_type) {
-        if (target_type == type_any && (expr->operand.type != type_any)) {
-            Chunked_String_Builder any_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-            any_sb.printf("MAKE_ANY(&%s, %d)", t, expr->operand.type->id);
-            t = any_sb.make_string();
-        }
-    }
+    // if (target_type) {
+    //     if (is_type_reference(target_type)) {
+    //         temporary_dereference_sb.printf("&%s", t);
+    //         t = temporary_dereference_sb.make_string();
+    //     }
+    // }
 
-    return t;
+    // if (expr->operand.reference_type != nullptr) {
+    //     assert(is_type_reference(expr->operand.reference_type));
+    //     temporary_dereference_sb.printf("%s)", t);
+    //     t = temporary_dereference_sb.make_string();
+    // }
+
+    // return t;
 }
 
 void print_indents(Chunked_String_Builder *sb, int indent_level) {
@@ -952,11 +886,15 @@ void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_
         c_print_line_directive(sb, var->location, "var decl");
         print_indents(sb, indent_level);
         c_print_type(sb, var->type, var->declaration->name);
+        sb->print(";\n");
+        char *lhs = c_print_expr(sb, var->name_expr, indent_level, nullptr, var->name_expr->operand.reference_type != nullptr);
+        c_print_line_directive(sb, var->location, "var decl");
+        print_indents(sb, indent_level);
         if (rhs) {
-            sb->printf(" = %s;\n", rhs);
+            sb->printf("%s = %s;\n", lhs, rhs);
         }
         else {
-            sb->printf(" = {0};\n");
+            sb->printf("memset(&%s, 0, %d);\n", lhs, var->type->size);
         }
     }
     else {
@@ -1047,6 +985,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
         case AST_STATEMENT_EXPR: {
             Ast_Statement_Expr *statement = (Ast_Statement_Expr *)node;
             c_print_expr(sb, statement->expr, indent_level);
+            sb->print(";\n");
             break;
         }
 

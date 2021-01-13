@@ -3231,6 +3231,10 @@ bool typecheck_node(Ast_Node *node) {
             if (!check_declaration(var->declaration, var->location)) {
                 return false;
             }
+            assert(typecheck_expr(var->name_expr));
+            if (var->type_expr) {
+                assert(typecheck_expr(var->type_expr));
+            }
             break;
         }
 
