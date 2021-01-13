@@ -20,7 +20,6 @@ TODO:
 SMALL
 -put struct constants in Type_Info
 
--do entrypoint returning i32 implicitly in backend
 -short circuiting -- seems like we'll have to synthesize if's and loops with `goto` to get this. that sucks
 -use a custom allocator in __init_sif_runtime
 -deduplicate #foreign_import/#foreign_system_import

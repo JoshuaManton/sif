@@ -692,9 +692,8 @@ bool typecheck_global_scope(Ast_Block *block) {
         report_error({}, "main() must be defined.");
         return false;
     }
-    if (g_main_proc->header->type->return_type != type_i32) {
-        // todo(josh): we can handle this implicitly in the backend
-        report_error(g_main_proc->location, "main() must return i32.");
+    if (g_main_proc->header->type->return_type && g_main_proc->header->type->return_type != type_i32) {
+        report_error(g_main_proc->location, "main() must return nothing or i32.");
         return false;
     }
     if (g_main_proc->header->type->parameter_types.count != 0) {

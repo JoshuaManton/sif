@@ -327,7 +327,12 @@ void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *heade
         c_print_type(&header_name_sb, parameter->type, name_to_print);
     }
     header_name_sb.print(")");
-    c_print_type(sb, header->type->return_type, header_name_sb.make_string());
+    if (header->procedure == g_main_proc) {
+        sb->printf("i32 %s", header_name_sb.make_string());
+    }
+    else {
+        c_print_type(sb, header->type->return_type, header_name_sb.make_string());
+    }
 }
 
 int total_num_temporaries_emitted = 0;
@@ -1440,6 +1445,10 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
         sb->print("__init_sif_runtime();\n");
     }
     c_print_block(sb, proc->body, 1);
+    if (proc == g_main_proc) {
+        print_indents(sb, 1);
+        sb->print("return 0;\n");
+    }
     sb->print("}\n");
 }
 
