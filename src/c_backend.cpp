@@ -6,7 +6,6 @@ extern bool g_no_type_info;
 extern bool g_is_debug_build;
 
 extern Ast_Proc *g_main_proc;
-extern Array<Type *> all_types;
 
 void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name);
 void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name);
@@ -1522,12 +1521,6 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("}\n");
 
     sb.print("#define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(COND)?1:-1]\n");
-
-    // todo(josh): @Multithreading mutex
-    For (idx, g_all_c_code_directives) {
-        Ast_Directive_C_Code *directive = g_all_c_code_directives[idx];
-        sb.print(directive->text);
-    }
 
     // todo(josh): @Speed we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather

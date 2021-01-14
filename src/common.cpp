@@ -2,6 +2,8 @@
 
 Hashtable<u64, char *> g_interned_strings;
 
+Spinlock g_intern_strings_spinlock;
+
 char *intern_string(char *str, int length_override) {
     u64 hash = 0xcbf29ce484222325;
     int length = length_override;
@@ -17,6 +19,8 @@ char *intern_string(char *str, int length_override) {
             hash = (hash * 0x100000001b3) ^ u64(str[i]);
         }
     }
+    g_intern_strings_spinlock.lock();
+    defer(g_intern_strings_spinlock.unlock());
     char **interned = g_interned_strings.get(hash);
     if (interned) {
         return *interned;

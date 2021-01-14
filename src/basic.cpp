@@ -182,12 +182,15 @@ void init_dynamic_arena(Dynamic_Arena *dyn, int starting_chunk_size, Allocator b
     dyn->chunk_size = starting_chunk_size;
     dyn->backing_allocator = backing_allocator;
     dyn->arenas = make_array<Arena>(backing_allocator);
+    dyn->leaked_allocations = make_array<void *>(backing_allocator);
     Arena *arena = dyn->arenas.append();
     init_arena(arena, alloc(backing_allocator, starting_chunk_size, DEFAULT_ALIGNMENT, false), starting_chunk_size, false);
 }
 
 void *dynamic_arena_alloc(void *allocator, int size, int align) {
     Dynamic_Arena *dyn = (Dynamic_Arena *)allocator;
+    dyn->spinlock.lock();
+    defer(dyn->spinlock.unlock());
     Arena *current_arena = &dyn->arenas[dyn->current_arena_index];
     void *ptr = arena_alloc(current_arena, size, align);
     if (!ptr) {
@@ -222,6 +225,8 @@ void dynamic_arena_free(void *allocator, void *ptr) {
 }
 
 void dynamic_arena_clear(Dynamic_Arena *dyn) {
+    dyn->spinlock.lock();
+    defer(dyn->spinlock.unlock());
     For (idx, dyn->arenas) {
         arena_clear(&dyn->arenas[idx]);
     }
@@ -237,6 +242,8 @@ Allocator dynamic_arena_allocator(Dynamic_Arena *dyn) {
 }
 
 void destroy_dynamic_arena(Dynamic_Arena *dyn) {
+    dyn->spinlock.lock();
+    defer(dyn->spinlock.unlock());
     For (idx, dyn->arenas) {
         free(dyn->backing_allocator, dyn->arenas[idx].memory);
     }

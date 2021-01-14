@@ -48,7 +48,6 @@ enum Token_Kind {
     TK_DIRECTIVE_PRINT,
     TK_DIRECTIVE_ASSERT,
     TK_DIRECTIVE_FOREIGN,
-    TK_DIRECTIVE_C_CODE,
     TK_DIRECTIVE_INCLUDE,
     TK_DIRECTIVE_FOREIGN_IMPORT,
     TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT,
@@ -139,11 +138,19 @@ struct Lexer {
     bool allow_compound_literals = true;
     bool has_peeked_token = {};
     Token peeked_token = {};
-    Ast_Block *current_block;
-    Ast_Proc_Header *currently_parsing_proc;
-    Allocator allocator;
+    Ast_Block *current_block = {};
+    Ast_Proc_Header *currently_parsing_proc = {};
+    Allocator allocator = {};
+    int num_polymorphic_variables_parsed = 0;
     Lexer(const char *filepath, char *text)
     : text(text)
+    {
+        location.filepath = filepath;
+        location.line = 1;
+        location.character = 1;
+    }
+
+    Lexer(const char *filepath)
     {
         location.filepath = filepath;
         location.line = 1;

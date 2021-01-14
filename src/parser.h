@@ -30,7 +30,6 @@ enum Ast_Kind {
     AST_DIRECTIVE_INCLUDE,
     AST_DIRECTIVE_ASSERT,
     AST_DIRECTIVE_PRINT,
-    AST_DIRECTIVE_C_CODE,
     AST_DIRECTIVE_FOREIGN_IMPORT,
 };
 
@@ -214,14 +213,6 @@ struct Ast_Directive_Print : public Ast_Node {
     Ast_Directive_Print(Ast_Expr *expr, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_DIRECTIVE_PRINT, allocator, current_block, location)
     , expr(expr)
-    {}
-};
-
-struct Ast_Directive_C_Code : public Ast_Node {
-    char *text = {};
-    Ast_Directive_C_Code(char *text, Allocator allocator, Ast_Block *current_block, Location location)
-    : Ast_Node(AST_DIRECTIVE_C_CODE, allocator, current_block, location)
-    , text(text)
     {}
 };
 
@@ -869,8 +860,8 @@ struct Constant_Declaration : public Declaration {
     {}
 };
 
-extern Array<Ast_Directive_C_Code *>         g_all_c_code_directives;
 extern Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
+extern int g_total_lines_parsed;
 
 void init_parser();
 Ast_Block *push_ast_block(Lexer *lexer, Ast_Block *block);

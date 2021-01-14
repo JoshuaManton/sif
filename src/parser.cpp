@@ -5,21 +5,32 @@
 
 #include "parser.h"
 #include "os_windows.h"
+#include "spinlock.h"
 
-#define NUM_PARSER_THREADS 16
+#define NUM_PARSER_THREADS 4
 
-bool g_done_all_parsing;
+int g_files_done_parsing;
 
-Array<Ast_Directive_C_Code *> g_all_c_code_directives;
-Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
-Array<char *> g_all_included_files;
+Spinlock g_all_file_blocks_spinlock;
 Array<Ast_Block *> g_all_file_blocks;
+int g_total_lines_parsed;
+
+Spinlock g_all_foreign_imports_spinlock;
+Array<Ast_Directive_Foreign_Import *> g_all_foreign_import_directives;
+
+Spinlock g_lexers_to_process_spinlock;
+Array<Lexer> g_lexers_to_process;
+Array<char *> g_all_included_files;
+
+Thread g_parser_threads[NUM_PARSER_THREADS];
+
+u32 parser_worker_thread(void *);
 
 void init_parser() {
-    g_all_c_code_directives.allocator = g_global_linear_allocator;
     g_all_foreign_import_directives.allocator = g_global_linear_allocator;
     g_all_included_files.allocator = g_global_linear_allocator;
     g_all_file_blocks.allocator = g_global_linear_allocator;
+    g_lexers_to_process.allocator = g_global_linear_allocator;
 }
 
 Ast_Block *push_ast_block(Lexer *lexer, Ast_Block *block) {
@@ -33,6 +44,8 @@ void pop_ast_block(Lexer *lexer, Ast_Block *old_block) {
 }
 
 bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
+    // g_register_declaration_spinlock.lock();
+    // defer(g_register_declaration_spinlock.unlock());
     assert(new_declaration->parent_block != nullptr);
     Declaration **existing_declaration = block->declarations_lookup.get(new_declaration->name);
     if (existing_declaration) {
@@ -43,7 +56,6 @@ bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
     }
     block->declarations.append(new_declaration);
     block->declarations_lookup.insert(new_declaration->name, new_declaration);
-    // g_all_declarations.append(new_declaration);
     return true;
 }
 
@@ -89,8 +101,6 @@ Ast_Expr_List *parse_expr_list(Lexer *lexer) {
 
 
 
-int num_polymorphic_variables_parsed = 0;
-
 Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
@@ -125,12 +135,12 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
 
     bool is_constant = var_or_const_token.kind == TK_CONST;
 
-    int polymorph_count_before_name = num_polymorphic_variables_parsed;
+    int polymorph_count_before_name = lexer->num_polymorphic_variables_parsed;
     Ast_Expr *name_expr = parse_expr(lexer);
     if (name_expr == nullptr) {
         return nullptr;
     }
-    bool is_polymorphic_value = polymorph_count_before_name != num_polymorphic_variables_parsed;
+    bool is_polymorphic_value = polymorph_count_before_name != lexer->num_polymorphic_variables_parsed;
     char *var_name = nullptr;
     switch (name_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
@@ -155,7 +165,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
         report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
-    int polymorph_count_before_type = num_polymorphic_variables_parsed;
+    int polymorph_count_before_type = lexer->num_polymorphic_variables_parsed;
     Ast_Expr *type_expr = nullptr;
     if (colon.kind == TK_COLON) {
         eat_next_token(lexer);
@@ -164,7 +174,7 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
             return nullptr;
         }
     }
-    bool is_polymorphic_type = polymorph_count_before_type != num_polymorphic_variables_parsed;
+    bool is_polymorphic_type = polymorph_count_before_type != lexer->num_polymorphic_variables_parsed;
 
     Ast_Expr *expr = nullptr;
     Token assign;
@@ -759,14 +769,6 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             return print;
         }
 
-        case TK_DIRECTIVE_C_CODE: {
-            eat_next_token(lexer);
-            Token code;
-            EXPECT(lexer, TK_STRING, &code);
-            Ast_Directive_C_Code *c_code = SIF_NEW_CLONE(Ast_Directive_C_Code(code.text, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
-            return c_code;
-        }
-
         case TK_SEMICOLON: {
             if (eat_semicolon) {
                 eat_next_token(lexer);
@@ -1009,14 +1011,11 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
             return nullptr;
         }
         switch (node->ast_kind) {
-            case AST_DIRECTIVE_C_CODE: {
-                Ast_Directive_C_Code *directive = (Ast_Directive_C_Code *)node;
-                g_all_c_code_directives.append(directive);
-                break;
-            }
             case AST_DIRECTIVE_FOREIGN_IMPORT: {
                 Ast_Directive_Foreign_Import *directive = (Ast_Directive_Foreign_Import *)node;
+                g_all_foreign_imports_spinlock.lock();
                 g_all_foreign_import_directives.append(directive);
+                g_all_foreign_imports_spinlock.unlock();
                 break;
             }
             case AST_EMPTY_STATEMENT: {
@@ -1060,37 +1059,71 @@ void parse_file(const char *requested_filename, Location include_location) {
         }
     }
 
+    g_lexers_to_process_spinlock.lock();
+    defer(g_lexers_to_process_spinlock.unlock());
+
     For (idx, g_all_included_files) {
         if (g_all_included_files[idx] == absolute_path) {
             // we've already included this file, no need to do it again
             return;
         }
     }
+
     g_all_included_files.append(absolute_path);
 
-
-
-    int len = 0;
-    char *root_file_text = read_entire_file(absolute_path, &len);
-    if (root_file_text == nullptr) {
-        report_error(include_location, "Couldn't find file '%s'.", absolute_path);
-        return;
-    }
-    Lexer lexer(absolute_path, root_file_text);
+    Lexer lexer(absolute_path);
     Dynamic_Arena *arena = (Dynamic_Arena *)alloc(g_global_linear_allocator, sizeof(Dynamic_Arena), DEFAULT_ALIGNMENT);
     init_dynamic_arena(arena, 1 * 1024 * 1024, g_global_linear_allocator);
     lexer.allocator = dynamic_arena_allocator(arena);
-    Ast_Block *block = parse_block(&lexer, false);
-    if (!block) {
-        return;
+    g_lexers_to_process.append(lexer);
+}
+
+u32 parser_worker_thread(void *userdata) {
+    while (g_files_done_parsing < g_all_included_files.count) {
+        g_lexers_to_process_spinlock.lock();
+        if (g_lexers_to_process.count > 0) {
+            Lexer lexer = g_lexers_to_process.pop();
+            g_lexers_to_process_spinlock.unlock();
+
+            int len = 0;
+            char *root_file_text = read_entire_file(lexer.location.filepath, &len);
+            if (root_file_text == nullptr) {
+                report_error({}, "Couldn't find file '%s'.", lexer.location.filepath);
+                return 0;
+            }
+            lexer.text = root_file_text;
+
+            Ast_Block *block = parse_block(&lexer, false);
+            if (!block) {
+                return 0;
+            }
+            block->flags = BF_IS_FILE_SCOPE;
+
+            g_all_file_blocks_spinlock.lock();
+            g_all_file_blocks.append(block);
+            g_files_done_parsing += 1;
+            g_total_lines_parsed += lexer.location.line;
+            g_all_file_blocks_spinlock.unlock();
+        }
+        else {
+            g_lexers_to_process_spinlock.unlock();
+        }
+        // sleep(1);
     }
-    block->flags = BF_IS_FILE_SCOPE;
-    g_all_file_blocks.append(block);
+    return 0;
 }
 
 Ast_Block *begin_parsing(const char *filename) {
     parse_file("core:runtime.sif", {});
     parse_file(filename, {});
+
+    for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
+        g_parser_threads[i] = create_thread(parser_worker_thread, (void *)(i64)i);
+    }
+
+    for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
+        wait_for_thread(g_parser_threads[i]);
+    }
 
     Ast_Block *global_scope = SIF_NEW_CLONE(Ast_Block(g_global_linear_allocator, {}, {}), g_global_linear_allocator);
     global_scope->flags |= BF_IS_GLOBAL_SCOPE;
@@ -1702,7 +1735,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 return nullptr;
             }
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
-            num_polymorphic_variables_parsed += 1;
+            lexer->num_polymorphic_variables_parsed += 1;
             return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         case TK_LEFT_SQUARE: {

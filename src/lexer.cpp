@@ -11,9 +11,6 @@
 static char *token_string_map[TK_COUNT];
 static char *token_name_map[TK_COUNT];
 
-// todo(josh): @Multithreading
-int total_lexed_lines;
-
 void init_lexer_globals() {
     token_string_map[TK_INVALID]                         = "INVALID";
     token_string_map[TK_IDENTIFIER]                      = "IDENTIFIER";
@@ -50,7 +47,6 @@ void init_lexer_globals() {
     token_string_map[TK_DIRECTIVE_PRINT]                 = "#print";
     token_string_map[TK_DIRECTIVE_ASSERT]                = "#assert";
     token_string_map[TK_DIRECTIVE_FOREIGN]               = "#foreign";
-    token_string_map[TK_DIRECTIVE_C_CODE]                = "#c_code";
     token_string_map[TK_DIRECTIVE_INCLUDE]               = "#include";
     token_string_map[TK_DIRECTIVE_FOREIGN_IMPORT]        = "#foreign_import";
     token_string_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT] = "#foreign_system_import";
@@ -142,7 +138,6 @@ void init_lexer_globals() {
     token_name_map[TK_DIRECTIVE_PRINT]                   = "TK_DIRECTIVE_PRINT";
     token_name_map[TK_DIRECTIVE_ASSERT]                  = "TK_DIRECTIVE_ASSERT";
     token_name_map[TK_DIRECTIVE_FOREIGN]                 = "TK_DIRECTIVE_FOREIGN";
-    token_name_map[TK_DIRECTIVE_C_CODE]                  = "TK_DIRECTIVE_C_CODE";
     token_name_map[TK_DIRECTIVE_INCLUDE]                 = "TK_DIRECTIVE_INCLUDE";
     token_name_map[TK_DIRECTIVE_FOREIGN_IMPORT]          = "TK_DIRECTIVE_FOREIGN_IMPORT";
     token_name_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT]   = "TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT";
@@ -433,7 +428,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     while (is_whitespace(lexer->text[lexer->location.index])) {
         if (lexer->text[lexer->location.index] == '\n') {
             lexer->location.line += 1;
-            total_lexed_lines += 1;
             lexer->location.character = 0; // advance() directly below will make this 1
         }
         advance(lexer, 1);
@@ -506,7 +500,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int newlines = 0;
         char *string = scan_string('\'', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
         lexer->location.line += newlines;
-        total_lexed_lines += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_CHAR;
         out_token->text = string;
@@ -521,7 +514,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int newlines = 0;
         char *string = scan_string('`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
         lexer->location.line += newlines;
-        total_lexed_lines += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
         out_token->text = string;
@@ -536,7 +528,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int newlines = 0;
         char *string = scan_string('"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
         lexer->location.line += newlines;
-        total_lexed_lines += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
         out_token->text = string;
@@ -732,10 +723,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "foreign") == 0) {
             out_token->kind = TK_DIRECTIVE_FOREIGN;
             out_token->text = "#foreign";
-        }
-        else if (strcmp(identifier, "c_code") == 0) {
-            out_token->kind = TK_DIRECTIVE_C_CODE;
-            out_token->text = "#c_code";
         }
         else if (strcmp(identifier, "include") == 0) {
             out_token->kind = TK_DIRECTIVE_INCLUDE;

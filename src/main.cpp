@@ -97,7 +97,6 @@ char *sif_core_lib_path;
 
 Allocator g_global_linear_allocator;
 
-extern int total_lexed_lines;
 bool g_logged_error = {};
 
 Timer g_global_timer = {};
@@ -302,8 +301,8 @@ void main(int argc, char **argv) {
         printf("  Sif time: %fms\n", sif_time);
         printf("Total time: %fms\n", total_time);
         printf("\n");
-        printf("  Total lines: %d\n", total_lexed_lines);
-        printf("Sif lines/sec: %.0f\n", ((float)total_lexed_lines) / (sif_time / 1000));
+        printf("  Total lines: %d\n", g_total_lines_parsed);
+        printf("Sif lines/sec: %.0f\n", ((float)g_total_lines_parsed) / (sif_time / 1000));
     }
 
     if (is_run) {

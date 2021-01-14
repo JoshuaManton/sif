@@ -6,6 +6,8 @@
 #include <float.h>
 #include <string.h>
 
+#include "spinlock.h"
+
 typedef unsigned char      byte; static_assert(sizeof(byte) == 1, "byte size was not 1");
 typedef unsigned char      u8;   static_assert(sizeof(u8)   == 1, "u8 size was not 1");
 typedef unsigned short     u16;  static_assert(sizeof(u16)  == 2, "u16 size was not 2");
@@ -256,6 +258,7 @@ struct Dynamic_Arena {
     int current_arena_index = {};
     Allocator backing_allocator = {};
     int chunk_size = {};
+    Spinlock spinlock = {};
     Array<void *> leaked_allocations = {}; // if an allocation is bigger than the chunk size, we fall back to the backing allocator and save it here to be freed later
 };
 
