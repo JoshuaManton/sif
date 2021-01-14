@@ -149,6 +149,10 @@ void init_checker() {
     assert(try_add_variable_type_field(type_any, intern_string("type"), type_typeid, 8, {}));
 }
 
+void add_ordered_declaration(Declaration *declaration) {
+    ordered_declarations.append(declaration);
+}
+
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
@@ -573,7 +577,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
-            ordered_declarations.append(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
+            add_ordered_declaration(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
         }
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
@@ -583,14 +587,14 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!register_declaration(struct_decl->structure->type->constants_block, procedure->header->declaration)) {
                 return false;
             }
-            ordered_declarations.append(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
+            add_ordered_declaration(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
         }
     }
     else {
         assert(decl->parent_block);
         if (decl->parent_block->flags & BF_IS_FILE_SCOPE) {
             if (!decl->is_polymorphic) {
-                ordered_declarations.append(decl);
+                add_ordered_declaration(decl);
             }
         }
     }
@@ -980,7 +984,7 @@ bool complete_type(Type *type) {
 
                 assert(structure->name);
                 assert(structure->declaration);
-                ordered_declarations.append(structure->declaration);
+                add_ordered_declaration(structure->declaration);
                 break;
             }
             case TYPE_ARRAY: {
@@ -995,7 +999,7 @@ bool complete_type(Type *type) {
                 array_type->align = array_type->array_of->align;
                 assert(array_type->size > 0);
                 array_type->flags &= ~(TF_INCOMPLETE);
-                ordered_declarations.append(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr), g_global_linear_allocator));
+                add_ordered_declaration(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr), g_global_linear_allocator));
                 break;
             }
             case TYPE_REFERENCE: {

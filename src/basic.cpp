@@ -504,14 +504,14 @@ void Chunked_String_Builder::clear() {
 
 char *Chunked_String_Builder::make_string() {
     int required_length = 0;
-    for (int idx = 0; idx <= current_chunk_index; idx += 1) {
+    for (int idx = 0; idx <= current_chunk_index && idx < chunks.count; idx += 1) {
         Chunked_String_Builder_Chunk chunk = chunks[idx];
         required_length += chunk.cursor;
     }
     required_length += 1; // null term
     char *big_buffer = (char *)alloc(allocator, required_length, DEFAULT_ALIGNMENT, false);
     int current_cursor = 0;
-    for (int idx = 0; idx <= current_chunk_index; idx += 1) {
+    for (int idx = 0; idx <= current_chunk_index && idx < chunks.count; idx += 1) {
         Chunked_String_Builder_Chunk chunk = chunks[idx];
         memcpy(&big_buffer[current_cursor], chunk.buffer, chunk.cursor);
         current_cursor += chunk.cursor;

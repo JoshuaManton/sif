@@ -1,14 +1,6 @@
-struct Foo {
-    var a: int;
-}
-
 proc main() {
-    var foo: ^Foo;
-    // var foo = new(Foo, default_allocator());
-    if (foo != null && foo.a == 0) {
-        print("true\n");
-    }
-    else {
-        print("false\n");
-    }
+    var a = 1;
+    var b = 2;
+    a, b = b, a;
+    printa(a, b);
 }

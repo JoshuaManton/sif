@@ -200,6 +200,7 @@ void main(int argc, char **argv) {
     init_interned_strings();
     init_parser();
     init_checker();
+    init_c_backend();
 
     double parsing_start_time = query_timer(&g_global_timer);
 
@@ -222,7 +223,6 @@ void main(int argc, char **argv) {
     double codegen_start_time = query_timer(&g_global_timer);
 
     Chunked_String_Builder c_code = generate_c_main_file(global_scope);
-    // printf("Final C code size: %dKB\n", c_code.buf.count / 1024);
     write_entire_file("output.c", c_code.make_string());
 
     double c_compile_start_time = query_timer(&g_global_timer);
