@@ -1,13 +1,14 @@
-proc foo() : bool {
-    print("foo\n");
-    return true;
-}
-
-proc bar() : bool {
-    print("bar\n");
-    return true;
+struct Foo {
+    var a: int;
 }
 
 proc main() {
-    var a = foo() || bar();
+    var foo: ^Foo;
+    // var foo = new(Foo, default_allocator());
+    if (foo != null && foo.a == 0) {
+        print("true\n");
+    }
+    else {
+        print("false\n");
+    }
 }

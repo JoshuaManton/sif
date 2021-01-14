@@ -578,45 +578,54 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                         expr_sb.printf("string_eq(%s, %s);\n", lhs, rhs);
                     }
                     else {
+                        // todo(josh): compress short circuit AND and OR together
                         static int num_short_circuit_labels = 0;
                         if (binary->op == TK_BOOLEAN_AND) {
-                            // todo(josh): #line
                             num_short_circuit_labels += 1;
                             String_Builder label_sb = make_string_builder(g_global_linear_allocator, 16);
                             label_sb.printf("__short_curcuit_AND_%d", num_short_circuit_labels);
                             char *result = c_temporary();
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             c_print_type(_sb, type_bool, result);
                             _sb->printf(" = false;\n");
                             char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("if (%s == false) { goto %s; }\n", lhs, label_sb.string());
                             char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("if (%s == false) { goto %s; }\n", rhs, label_sb.string());
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("%s = true;\n", result);
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("%s:;\n", label_sb.string());
                             expr_sb.print(result);
                         }
                         else if (binary->op == TK_BOOLEAN_OR) {
-                            // todo(josh): #line
                             num_short_circuit_labels += 1;
                             String_Builder label_sb = make_string_builder(g_global_linear_allocator, 16);
-                            label_sb.printf("__short_curcuit_AND_%d", num_short_circuit_labels);
+                            label_sb.printf("__short_curcuit_OR_%d", num_short_circuit_labels);
                             char *result = c_temporary();
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             c_print_type(_sb, type_bool, result);
                             _sb->printf(" = true;\n");
                             char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("if (%s == true) { goto %s; }\n", lhs, label_sb.string());
                             char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("if (%s == true) { goto %s; }\n", rhs, label_sb.string());
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("%s = false;\n", result);
+                            c_print_line_directive(_sb, expr->location);
                             print_indents(_sb, indent_level);
                             _sb->printf("%s:;\n", label_sb.string());
                             expr_sb.print(result);

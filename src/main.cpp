@@ -18,7 +18,6 @@
 TODO:
 
 HIGH PRIORITY
--short circuiting
 -handle unary operators nicer, currently quick-and-dirty
 -#print and #assert don't work in global scope right now
 -enum arrays @EnumArrays
@@ -28,6 +27,7 @@ HIGH PRIORITY
 -investigate how to get perfect number literal translation
 
 MEDIUM PRIORITY
+-do proper nested selector expression elimination with 'using'
 -put struct constants in Type_Info
 -deduplicate #foreign_import/#foreign_system_import
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
