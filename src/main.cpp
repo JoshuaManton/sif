@@ -43,7 +43,6 @@ MEDIUM PRIORITY
 -#no_bounds_checks
 -#no_null_checks
 -remove runtime's dependency on basic
--runtime null checks
 -@UnaryOperatorOverloading
 -switch statements
 -read command line parameters

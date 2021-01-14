@@ -1272,6 +1272,9 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                 continue;
             }
             Var_Declaration *var = (Var_Declaration *)decl;
+            if (var->var->is_constant) {
+                continue;
+            }
             if (var->var->expr) {
                 char *rhs = c_print_expr(sb, var->var->expr, 1);
                 c_print_line_directive(sb, proc->header->location, "init global variable");

@@ -1,6 +1,6 @@
 #include "core:basic.sif"
 
-proc main() : i32 {
+proc main() {
     print("-------------------------\n");
     print("|   sif language demo   |\n");
     print("-------------------------\n");
@@ -25,7 +25,6 @@ proc main() : i32 {
     defer_statement();
     any_type();
     dynamic_arrays();
-    return 0;
 }
 
 

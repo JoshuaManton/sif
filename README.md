@@ -6,9 +6,8 @@ sif is a simple imperative procedural language made with the goal of being a sli
 ```odin
 #include "core:basic.sif"
 
-proc main() : i32 {
+proc main() {
     print("Hello, World!\n");
-    return 0;
 }
 ```
 
@@ -19,17 +18,10 @@ proc main() : i32 {
 - Order-independent declarations
 - Operator overloading
 - Procedural and structural polymorphism
-- `using` statement for compositional subtyping
+- `using` statement for composition
 - Runtime type information
 - `any` type
-
-## Features Planned
-
-- Tagged unions
-- defer statement
-- Runtime bounds checks
-- Other small things you'd expect like static #if, switch statements, etc
-- Currently the code-generator outputs C code, in the future I'd like to either try to use LLVM or write a custom x64 backend
+- `defer` statement
 
 ## Building and Running
 
@@ -40,9 +32,8 @@ proc main() : i32 {
 ```odin
 #include "core:basic.sif"
 
-proc main() : i32 {
+proc main() {
     print("Hello, World!\n");
-    return 0;
 }
 ```
 5. Run `bin/sif.exe run my_program.sif`
@@ -54,7 +45,7 @@ The following is a demo program showing off many of the features of sif.
 ```odin
 #include "core:basic.sif"
 
-proc main() : i32 {
+proc main() {
     print("-------------------------\n");
     print("|   sif language demo   |\n");
     print("-------------------------\n");
@@ -76,19 +67,13 @@ proc main() : i32 {
     structural_polymorphism();
     runtime_type_information();
     using_statement();
+    defer_statement();
     any_type();
     dynamic_arrays();
-    return 0;
 }
 
 
 
-proc factorial(var n: int) : int {
-    if (n == 1) {
-        return 1;
-    }
-    return n * factorial(n-1);
-}
 proc basic_stuff() {
     print("\n\n---- basic_stuff ----\n");
 
@@ -123,12 +108,17 @@ proc basic_stuff() {
     var g = 11.0 / 2;
     assert(g == 5.5);
 }
-
-
-
-proc arrays_by_value(arr: [4]int) {
-    arr[2] = 738;
+// the keyword 'var' can be omitted in procedure parameter lists, since
+// variables are the only thing allowed there
+proc factorial(n: int) : int {
+    if (n == 1) {
+        return 1;
+    }
+    return n * factorial(n-1);
 }
+
+
+
 proc arrays() {
     print("\n\n---- arrays ----\n");
     var my_array: [4]int;
@@ -136,17 +126,26 @@ proc arrays() {
     my_array[1] = 2;
     my_array[2] = 3;
     my_array[3] = 4;
-    print("%\n", my_array[0]);
-    print("%\n", my_array[1]);
-    print("%\n", my_array[2]);
-    print("%\n", my_array[3]);
-    assert(my_array[0] == 1);
-    assert(my_array[1] == 2);
-    assert(my_array[2] == 3);
-    assert(my_array[3] == 4);
+    print("%\n", my_array);
+
+    // As with structs, compound literals work with arrays
+    my_array = {4, 3, 2, 1};
+    print("%\n", my_array);
+
+    // Arrays are value types, so calling a function that changes the array
+    // parameter will not affect the array at the call-site
     arrays_by_value(my_array);
-    print("%\n", my_array[2]);
-    assert(my_array[2] == 3);
+    print("%\n", my_array);
+    assert(my_array[0] == 4);
+    assert(my_array[1] == 3);
+    assert(my_array[2] == 2);
+    assert(my_array[3] == 1);
+}
+proc arrays_by_value(arr: [4]int) {
+    arr[0] = 123;
+    arr[1] = 345;
+    arr[2] = 567;
+    arr[3] = 789;
 }
 
 
@@ -191,6 +190,8 @@ proc strings() {
     world.count = 5;
     assert(world == "World");
     print("%\n", world);
+
+    // todo(josh): cstrings
 }
 
 
@@ -209,15 +210,62 @@ proc structs() {
     f.str = "foozle";
     f.t = 120 == factorial(5);
 
-    // can also use compound literals to initialize
+    // Can also use compound literals to initialize
     f = Foo{149, "hellooo", false};
+
+    // The type of the compound literal can be inferred from context.
+    // Since the compiler knows the type of 'f', you don't have to specify
+    // it in the compound literal.
+    f = {149, "hellooo", false};
+
+    // using runtime type information, you can print whole structs, more on that below.
+    print("%\n", f);
+
+    // Type inference also works when calling procedures, since the target type is known
+    takes_a_foo({123, "wow", true});
+}
+proc takes_a_foo(foo: Foo) {
+    print("%\n", foo);
 }
 
 
 
+enum My_Enum {
+    FOO;
+    BAR;
+    BAZ;
+}
 proc enums() {
-    // todo(josh)
-    // print("\n\n---- enums ----\n");
+    print("\n\n---- enums ----\n");
+
+    var f = My_Enum.FOO;
+    print("%\n", f);
+
+    // If the enum type can be inferred from context, you don't have to
+    // specify it on the right-hand-side.
+    var b: My_Enum = .BAR; // implicit enum selection
+    print("%\n", b);
+
+    // Implicit enum selection also works in binary expressions
+    if (b == .BAR) {
+
+    }
+
+    // Note: the following will NOT work because the compiler can't
+    // figure out the enum type to search for the fields FOO and BAR.
+    // if (.FOO == .BAR) {
+    // }
+
+    // If at least one of them supplies the target enum, all good.
+    if (.FOO == My_Enum.BAR) {
+    }
+
+    // As with compound literals, the type can also be inferred from
+    // procedure parameters, allowing you to omit the enum name.
+    takes_my_enum(.BAZ);
+}
+proc takes_my_enum(e: My_Enum) {
+    print("%\n", e);
 }
 
 
@@ -402,6 +450,53 @@ struct My_Struct_With_Using {
 }
 struct My_Other_Struct {
     var some_field: int;
+}
+
+
+
+proc defer_statement() {
+    print("\n\n---- defer_statement ----\n");
+
+    // 'defer' executes a statement at the end of the current block
+    {
+        var a = 123;
+        {
+            defer a = 321;
+            assert(a == 123);
+        }
+        assert(a == 321);
+    }
+
+    // a good use-case for defer is memory management, keeping the
+    // freeing of resources nearby the acquision site
+    {
+        var some_allocated_memory = new_slice(int, 16, default_allocator());
+        defer delete_slice(some_allocated_memory, default_allocator());
+
+        // ... do a bunch of work with some_allocated_memory
+    }
+
+    // if there are multiple defers, they are executed in reverse order
+    {
+        defer print("Will print third\n");
+        defer print("Will print second\n");
+        defer print("Will print first\n");
+    }
+
+    // in addition to automatically running at the end of blocks, normal
+    // control flow statements like 'break', 'continue', and 'return' also
+    // invoke defers
+    {
+        var a = 123;
+        for (var i = 0; i < 10; i += 1) {
+            if (i == 7) {
+                defer a = 321;
+                break;
+            }
+            assert(a == 123);
+        }
+        assert(a == 321);
+    }
 }
 
 

@@ -126,7 +126,7 @@ proc main() : i32 {
     }
 
     // put the items in the chest
-    var array_of_items = ([3]^Entity){
+    var array_of_items = [3]^Entity{
         &sword.base,
         &bow.base,
         &helmet.base

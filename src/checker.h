@@ -209,6 +209,8 @@ extern Type *type_any;
 
 extern Array<Type *> all_types;
 
+extern Ast_Proc *g_main_proc;
+
 void init_checker();
 void add_global_declarations(Ast_Block *block);
 bool typecheck_global_scope(Ast_Block *block);
