@@ -26,6 +26,7 @@ HIGH PRIORITY
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
 -do proper nested selector expression elimination with 'using'
+    -do null checks for using
 
 MEDIUM PRIORITY
 -put struct constants in Type_Info
@@ -36,11 +37,11 @@ MEDIUM PRIORITY
 -prevent identifiers from being C keywords in the backend, like `signed`
 -Expr_Change (var v2 = v1.{y=4};)
 -slicing
--make [4]int{1, 2, 3, 4} work instead of having to paren the [4]int part
 -declare distinct types
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -procedure literal expression handling
 -#no_bounds_checks
+-#no_null_checks
 -remove runtime's dependency on basic
 -runtime null checks
 -@UnaryOperatorOverloading

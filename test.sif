@@ -1,6 +1,8 @@
+struct Foo {
+    var bar: int;
+}
+
 proc main() {
-    var a = 1;
-    var b = 2;
-    a, b = b, a;
-    printa(a, b);
+    var foo: ^Foo;
+    foo.bar = 321;
 }

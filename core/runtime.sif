@@ -35,6 +35,14 @@ struct Source_Code_Location {
     var character: int;
 } @sif_runtime
 
+proc sif_null_check(ptr: rawptr, location: Source_Code_Location) {
+    if (ptr == null) {
+        // todo(josh): remove this dependency on basic
+        print("%(%:%): Null check failed: Attempted to dereference a null pointer.\n", location.filepath, location.line, location.character);
+        assert(false);
+    }
+} @sif_runtime
+
 proc sif_bounds_check(count: int, index: int, location: Source_Code_Location) {
     if (index < 0 || index >= count) {
         // todo(josh): remove this dependency on basic

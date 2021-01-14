@@ -463,7 +463,15 @@ char *c_print_gen_location(Chunked_String_Builder *sb, int indent_level, Locatio
     return t;
 }
 
-void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, Location location, char *lhs_name, char *count_field, char *index_name) {
+void c_print_null_check(Chunked_String_Builder *sb, int indent_level, char *ptr_name, Location location) {
+    char *location_t = c_print_gen_location(sb, indent_level, location);
+    c_print_line_directive(sb, location, "null check");
+    print_indents(sb, indent_level);
+    sb->printf("sif_null_check(%s, %s);\n", ptr_name, location_t);
+    c_print_line_directive(sb, location, "null check after");
+}
+
+void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, char *lhs_name, char *count_field, char *index_name, Location location) {
     char *location_t = c_print_gen_location(sb, indent_level, location);
     c_print_line_directive(sb, location, "bounds check");
     print_indents(sb, indent_level);
@@ -686,7 +694,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                         else if (is_type_varargs(subscript->lhs->operand.type)) {
                             slice_type = ((Type_Varargs *)subscript->lhs->operand.type)->slice_type;
                         }
-                        c_print_bounds_check(_sb, indent_level, subscript->location, lhs, "count", index);
+                        c_print_bounds_check(_sb, indent_level, lhs, "count", index, subscript->location);
                         assert(slice_type != nullptr);
                         expr_sb.print("((");
                         c_print_type(&expr_sb, slice_type->data_pointer_type, "");
@@ -701,7 +709,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                         expr_sb.printf("%s.elements[%s]", lhs, index);
                     }
                     else if (subscript->lhs->operand.type == type_string) {
-                        c_print_bounds_check(_sb, indent_level, subscript->location, lhs, "count", index);
+                        c_print_bounds_check(_sb, indent_level, lhs, "count", index, subscript->location);
                         expr_sb.printf("%s.data[%s]", lhs, index);
                     }
                     else {
@@ -754,6 +762,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 case EXPR_DEREFERENCE: {
                     Expr_Dereference *dereference = (Expr_Dereference *)expr;
                     char *lhs = c_print_expr(_sb, dereference->lhs, indent_level);
+                    c_print_null_check(_sb, indent_level, lhs, dereference->lhs->location);
                     expr_sb.printf("(*%s)", lhs);
                     break;
                 }
@@ -772,6 +781,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                     }
                     expr_sb.print(lhs);
                     if (is_type_pointer(selector->lhs->operand.type)) {
+                        c_print_null_check(_sb, indent_level, lhs, selector->lhs->location);
                         expr_sb.print("->");
                     }
                     else {
@@ -1751,9 +1761,9 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     double type_info_wait_end_time = query_timer(&g_global_timer);
     sb.print("}\n");
 
-    printf("forward:   %f\n", forward_decl_wait_end_time - forward_decl_wait_start_time);
-    printf("actual:    %f\n", actual_decl_wait_end_time - actual_decl_wait_start_time);
-    printf("type info: %f\n", type_info_wait_end_time - type_info_wait_start_time);
+    // printf("forward:   %f\n", forward_decl_wait_end_time - forward_decl_wait_start_time);
+    // printf("actual:    %f\n", actual_decl_wait_end_time - actual_decl_wait_start_time);
+    // printf("type info: %f\n", type_info_wait_end_time - type_info_wait_start_time);
 
     c_print_procedure(&sb, g_main_proc);
 
