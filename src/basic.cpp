@@ -383,7 +383,7 @@ char *String_Builder::printf(const char *fmt, ...) {
 
     assert(length_would_have_written < buf.capacity - buf.count);
     char *copy = &buf.data[buf.count];
-    buf.data[buf.count+length_would_have_written+1] = '\0';
+    buf.data[buf.count+length_would_have_written+1] = 0;
     buf.count += length_would_have_written;
     BOUNDS_CHECK(buf.count, 0, buf.capacity);
     return copy;
@@ -420,7 +420,7 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
     if (chunks.count == 0) {
         current_chunk = chunks.append();
         current_chunk->buffer = (char *)alloc(allocator, max_chunk_size, DEFAULT_ALIGNMENT, false);
-        current_chunk->buffer[0] = '\0';
+        current_chunk->buffer[0] = 0;
         current_chunk->buffer_size = max_chunk_size;
     }
     else {
@@ -430,7 +430,7 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
         if (length >= max_chunk_size) { // this string is bigger than our max chunk size, copy the string as it's own chunk
             current_chunk = chunks.append();
             current_chunk->buffer = (char *)alloc(allocator, length+1, DEFAULT_ALIGNMENT, false);
-            current_chunk->buffer[0] = '\0';
+            current_chunk->buffer[0] = 0;
             current_chunk->buffer_size = length+1;
             current_chunk_index += 1;
             return current_chunk;
@@ -438,7 +438,7 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
         else {
             current_chunk = chunks.append();
             current_chunk->buffer = (char *)alloc(allocator, max_chunk_size, DEFAULT_ALIGNMENT, false);
-            current_chunk->buffer[0] = '\0';
+            current_chunk->buffer[0] = 0;
             current_chunk->buffer_size = max_chunk_size;
             current_chunk_index += 1;
             return current_chunk;
@@ -467,7 +467,7 @@ char *Chunked_String_Builder::printf(const char *fmt, ...) {
     va_end(args);
     assert(result == length_required);
     chunk->cursor += length_required;
-    chunk->buffer[chunk->cursor] = '\0';
+    chunk->buffer[chunk->cursor] = 0;
     return copy;
 }
 
@@ -476,36 +476,40 @@ char *Chunked_String_Builder::write_with_length(const char *str, int length) {
     char *copy = &chunk->buffer[chunk->cursor];
     memcpy(copy, str, length);
     chunk->cursor += length;
-    chunk->buffer[chunk->cursor] = '\0';
+    chunk->buffer[chunk->cursor] = 0;
     return copy;
 }
 
 void Chunked_String_Builder::append_null() {
     Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(1);
-    chunk->buffer[chunk->cursor] = '\0';
+    chunk->buffer[chunk->cursor] = 0;
     chunk->cursor += 1;
+    chunk->buffer[chunk->cursor] = 0;
 }
 
 void Chunked_String_Builder::clear() {
     For (idx, chunks) {
         chunks[idx].cursor = 0;
+        chunks[idx].buffer[0] = 0;
     }
     current_chunk_index = 0;
 }
 
 char *Chunked_String_Builder::make_string() {
     int required_length = 0;
-    For (idx, chunks) {
-        required_length += chunks[idx].buffer_size-1; // -1 because null term
+    for (int idx = 0; idx <= current_chunk_index; idx += 1) {
+        Chunked_String_Builder_Chunk chunk = chunks[idx];
+        required_length += chunk.cursor;
     }
     required_length += 1; // null term
     char *big_buffer = (char *)alloc(allocator, required_length, DEFAULT_ALIGNMENT, false);
     int current_cursor = 0;
-    For (idx, chunks) {
-        memcpy(&big_buffer[current_cursor], chunks[idx].buffer, chunks[idx].cursor);
-        current_cursor += chunks[idx].cursor;
+    for (int idx = 0; idx <= current_chunk_index; idx += 1) {
+        Chunked_String_Builder_Chunk chunk = chunks[idx];
+        memcpy(&big_buffer[current_cursor], chunk.buffer, chunk.cursor);
+        current_cursor += chunk.cursor;
     }
-    assert(current_cursor < required_length);
+    assert(current_cursor+1 == required_length);
     big_buffer[current_cursor] = 0;
     return big_buffer;
 }
@@ -520,7 +524,7 @@ void Chunked_String_Builder::destroy() {
 
 
 bool starts_with(const char *str, const char *start) {
-    for (int i = 0; start[i] != '\0'; i++) {
+    for (int i = 0; start[i] != 0; i++) {
         if (str[i] != start[i]) {
             return false;
         }
@@ -559,7 +563,7 @@ char *path_directory(const char *filepath, Allocator allocator) {
     int length_to_end = length - (length - slash_index);
     char *new_str = (char *)alloc(allocator, length_to_end+1, DEFAULT_ALIGNMENT, false);
     memcpy(new_str, filepath, length_to_end);
-    new_str[length_to_end] = '\0';
+    new_str[length_to_end] = 0;
     return new_str;
 }
 
@@ -593,7 +597,7 @@ char *path_filename(const char *filepath, Allocator allocator) {
     int length_to_end = end - start;
     char *new_str = (char *)alloc(allocator, length_to_end+1, DEFAULT_ALIGNMENT, false);
     memcpy(new_str, &filepath[start], length_to_end);
-    new_str[length_to_end] = '\0';
+    new_str[length_to_end] = 0;
     return new_str;
 }
 
@@ -618,6 +622,6 @@ char *path_filename_with_extension(const char *filepath, Allocator allocator) {
     int length_to_end = end - start;
     char *new_str = (char *)alloc(allocator, length_to_end+1, DEFAULT_ALIGNMENT, false);
     memcpy(new_str, &filepath[start], length_to_end);
-    new_str[length_to_end] = '\0';
+    new_str[length_to_end] = 0;
     return new_str;
 }

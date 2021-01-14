@@ -3,7 +3,7 @@
 
 extern Timer g_global_timer;
 extern bool g_no_type_info;
-extern bool g_no_line_directives;
+extern bool g_is_debug_build;
 
 extern Ast_Proc *g_main_proc;
 extern Array<Type *> all_types;
@@ -101,7 +101,7 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
 }
 
 void c_print_line_directive(Chunked_String_Builder *sb, Location location, char *comment = "") {
-    if (!g_no_line_directives) {
+    if (g_is_debug_build) {
         sb->printf("#line %d \"%s\"", location.line, location.filepath);
         if (comment != nullptr) {
             sb->printf(" // %s\n", comment);
@@ -795,37 +795,6 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                     expr_sb.printf(")&%s)", rhs);
                     break;
                 }
-                case EXPR_NUMBER_LITERAL: {
-                    // todo(josh): why would we ever get in here?
-                    if (is_type_float(expr->operand.type)) {
-                        expr_sb.printf("%f", expr->operand.float_value);
-                    }
-                    else if (is_type_integer(expr->operand.type)) {
-                        expr_sb.printf("%d", expr->operand.int_value);
-                    }
-                    break;
-                }
-                case EXPR_CHAR_LITERAL: {
-                    // todo(josh): why would we ever get in here?
-                    assert(is_type_integer(expr->operand.type));
-                    expr_sb.printf("%d", expr->operand.int_value);
-                    break;
-                }
-                case EXPR_STRING_LITERAL: {
-                    // todo(josh): why would we ever get in here?
-                    expr_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
-                    break;
-                }
-                case EXPR_POINTER_TYPE: {
-                    Expr_Pointer_Type *expr_pointer = (Expr_Pointer_Type *)expr;
-                    UNIMPLEMENTED(EXPR_STRING_LITERAL);
-                    break;
-                }
-                case EXPR_ARRAY_TYPE: {
-                    Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
-                    UNIMPLEMENTED(EXPR_STRING_LITERAL);
-                    break;
-                }
                 case EXPR_PAREN: {
                     Expr_Paren *paren = (Expr_Paren *)expr;
                     char *nested = c_print_expr(_sb, paren->nested, indent_level, target_type);
@@ -837,19 +806,39 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                     break;
                 }
                 case EXPR_TRUE: {
-                    expr_sb.print("true");
+                    assert(false);
                     break;
                 }
                 case EXPR_FALSE: {
-                    expr_sb.print("false");
+                    assert(false);
+                    break;
+                }
+                case EXPR_NUMBER_LITERAL: {
+                    assert(false);
+                    break;
+                }
+                case EXPR_CHAR_LITERAL: {
+                    assert(false);
+                    break;
+                }
+                case EXPR_STRING_LITERAL: {
+                    assert(false);
+                    break;
+                }
+                case EXPR_POINTER_TYPE: {
+                    assert(false);
+                    break;
+                }
+                case EXPR_ARRAY_TYPE: {
+                    assert(false);
                     break;
                 }
                 case EXPR_SIZEOF: {
-                    assert(false && "shouldn't ever get in here with a sizeof because of constant handling above");
+                    assert(false);
                     break;
                 }
                 case EXPR_TYPEOF: {
-                    assert(false && "shouldn't ever get in here with a typeof because of constant handling above");
+                    assert(false);
                     break;
                 }
                 default: {
@@ -908,21 +897,6 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
     }
 
     return tsb.make_string();
-
-    // if (target_type) {
-    //     if (is_type_reference(target_type)) {
-    //         temporary_dereference_sb.printf("&%s", t);
-    //         t = temporary_dereference_sb.make_string();
-    //     }
-    // }
-
-    // if (expr->operand.reference_type != nullptr) {
-    //     assert(is_type_reference(expr->operand.reference_type));
-    //     temporary_dereference_sb.printf("%s)", t);
-    //     t = temporary_dereference_sb.make_string();
-    // }
-
-    // return t;
 }
 
 void print_indents(Chunked_String_Builder *sb, int indent_level) {

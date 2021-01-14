@@ -25,9 +25,9 @@ HIGH PRIORITY
 -allow operator overloads to be declared outside a struct
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
+-do proper nested selector expression elimination with 'using'
 
 MEDIUM PRIORITY
--do proper nested selector expression elimination with 'using'
 -put struct constants in Type_Info
 -deduplicate #foreign_import/#foreign_system_import
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
@@ -91,7 +91,6 @@ void print_usage() {
     printf("  -show-timings               Print a log of times for different compilation stages.\n");
     printf("  -keep-temp-files            Don't delete intermediate files used for compilation.\n");
     printf("  -no-type-info               Don't generate runtime type information.\n");
-    printf("  -no-line-directives         Don't emit #line directives in C output.\n");
 }
 
 char *sif_core_lib_path;
@@ -103,7 +102,7 @@ bool g_logged_error = {};
 
 Timer g_global_timer = {};
 bool g_no_type_info = {};
-bool g_no_line_directives = {};
+bool g_is_debug_build = {};
 
 void main(int argc, char **argv) {
     init_timer(&g_global_timer);
@@ -151,7 +150,6 @@ void main(int argc, char **argv) {
 
     bool show_timings = false;
     bool keep_temp_files = false;
-    bool build_debug = false;
     bool log_cl_command = false;
 
     char *output_exe_name = nullptr;
@@ -165,16 +163,13 @@ void main(int argc, char **argv) {
             keep_temp_files = true;
         }
         else if (strcmp(arg, "-debug") == 0) {
-            build_debug = true;
+            g_is_debug_build = true;
         }
         else if (strcmp(arg, "-no-type-info") == 0) {
             g_no_type_info = true;
         }
         else if (strcmp(arg, "-log-cl-command") == 0) {
             log_cl_command = true;
-        }
-        else if (strcmp(arg, "-no-line-directives") == 0) {
-            g_no_line_directives = true;
         }
         else if (strcmp(arg, "-o") == 0) {
             if ((i+1) >= argc) {
@@ -249,7 +244,7 @@ void main(int argc, char **argv) {
 
         String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
         command_sb.printf("cmd.exe /c \"cl.exe ");
-        if (build_debug) {
+        if (g_is_debug_build) {
             command_sb.print("/Zi /Fd ");
         }
         command_sb.print("output.c /nologo /wd4028 ");
@@ -264,7 +259,7 @@ void main(int argc, char **argv) {
         // command_sb.printf("/libpath:\"%s\" ", ucrt_lib_path);
         // command_sb.printf("/libpath:\"%s\" ", um_lib_path);
         // command_sb.printf("-nodefaultlib ");
-        if (build_debug) {
+        if (g_is_debug_build) {
             command_sb.print("/DEBUG ");
         }
         command_sb.printf("\"", output_exe_name);

@@ -1715,7 +1715,10 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             if (maybe_right_square.kind == TK_RIGHT_SQUARE) {
                 // it's a slice
                 EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                bool old_allow_compound_literals = lexer->allow_compound_literals;
+                lexer->allow_compound_literals = false;
                 Ast_Expr *slice_of = parse_expr(lexer);
+                lexer->allow_compound_literals = old_allow_compound_literals;
                 if (!slice_of) {
                     return nullptr;
                 }
@@ -1728,7 +1731,10 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                     return nullptr;
                 }
                 EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                bool old_allow_compound_literals = lexer->allow_compound_literals;
+                lexer->allow_compound_literals = false;
                 Ast_Expr *array_of = parse_expr(lexer);
+                lexer->allow_compound_literals = old_allow_compound_literals;
                 if (!array_of) {
                     return nullptr;
                 }
@@ -1738,7 +1744,10 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_CARET: {
             eat_next_token(lexer);
+            bool old_allow_compound_literals = lexer->allow_compound_literals;
+            lexer->allow_compound_literals = false;
             Ast_Expr *pointer_to = parse_expr(lexer);
+            lexer->allow_compound_literals = old_allow_compound_literals;
             if (!pointer_to) {
                 return nullptr;
             }
@@ -1746,7 +1755,10 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_GREATER_THAN: {
             eat_next_token(lexer);
+            bool old_allow_compound_literals = lexer->allow_compound_literals;
+            lexer->allow_compound_literals = false;
             Ast_Expr *reference_to = parse_expr(lexer);
+            lexer->allow_compound_literals = old_allow_compound_literals;
             if (!reference_to) {
                 return nullptr;
             }

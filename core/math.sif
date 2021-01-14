@@ -459,7 +459,7 @@ struct Matrix4 {
 
         var fe = Vector3.dot(f, eye);
 
-        var columns = ([4]Vector4){
+        var columns = [4]Vector4{
             Vector4{+s.x, +u.x, -f.x, 0},
             Vector4{+s.y, +u.y, -f.y, 0},
             Vector4{+s.z, +u.z, -f.z, 0},
