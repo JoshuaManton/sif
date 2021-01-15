@@ -611,9 +611,21 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
         For (idx, struct_decl->structure->operator_overloads) {
             Ast_Proc *procedure = struct_decl->structure->operator_overloads[idx];
+
             assert(!procedure->header->is_foreign);
             assert(procedure->body != nullptr);
             assert(procedure->header->name == nullptr);
+            if (procedure->header->operator_to_overload != TK_INVALID) {
+                assert(procedure->header->name == nullptr);
+                String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
+                op_overload_name_sb.printf("__SIF__operator_overload_%s", token_name(procedure->header->operator_to_overload));
+                assert(procedure->header->parameters.count == 2);
+                procedure->header->name = intern_string(op_overload_name_sb.string());
+                assert(procedure->header->declaration != nullptr);
+                assert(procedure->header->declaration->name == nullptr);
+                procedure->header->declaration->name = procedure->header->name;
+            }
+
             if (!typecheck_procedure_header(procedure->header)) {
                 return false;
             }
@@ -1006,6 +1018,7 @@ bool complete_type(Type *type) {
                 assert(struct_type->ast_struct != nullptr);
                 Ast_Struct *structure = struct_type->ast_struct;
                 assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
+                assert(structure->declaration->link_name);
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
                     if (!check_declaration(var->declaration, var->location)) {
@@ -3111,6 +3124,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
             }
             case EXPR_PROCEDURE_TYPE: {
                 Expr_Procedure_Type *proc_type_expr = (Expr_Procedure_Type *)expr;
+                assert(proc_type_expr->header->operator_to_overload == TK_INVALID); // todo(josh): handle this case
                 Operand *proc_operand = typecheck_procedure_header(proc_type_expr->header);
                 if (!proc_operand) {
                     return nullptr;
@@ -3295,16 +3309,6 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         return_type = return_type_operand->type_value;
     }
     header->type = get_or_create_type_procedure(parameter_types, return_type);
-    if (header->operator_to_overload != TK_INVALID) {
-        assert(header->name == nullptr);
-        String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
-        op_overload_name_sb.printf("__SIF__operator_overload_%s", token_name(header->operator_to_overload));
-        assert(header->parameters.count == 2);
-        header->name = intern_string(op_overload_name_sb.string());
-        assert(header->declaration != nullptr);
-        assert(header->declaration->name == nullptr);
-        header->declaration->name = header->name;
-    }
 
     assert(header->declaration);
     Operand operand = {};
