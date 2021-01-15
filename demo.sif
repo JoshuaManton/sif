@@ -705,6 +705,7 @@ proc dynamic_arrays() {
     print("\n\n---- dynamic_arrays ----\n");
 
     var dyn: Dynamic_Array!(Vector3);
+    dyn.allocator = default_allocator();
     append(&dyn, Vector3{1, 2, 3});
     append(&dyn, Vector3{1, 4, 9});
     append(&dyn, Vector3{2, 8, 18});
