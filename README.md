@@ -702,26 +702,31 @@ proc function_pointers() {
 // structural and procedural polymorphism and operator overloading
 
 struct Dynamic_Array!($T: typeid) {
-    var array: []T;
+    var elements: []T;
     var count: int;
+    var allocator: Allocator;
     operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
-        return dyn.array[index];
+        return dyn.elements[index];
     }
 }
 
-proc append(dyn: ^Dynamic_Array!($T), value: T) {
-    if (dyn.count == dyn.array.count) {
-        var old_data = dyn.array;
-        var new_cap = 8 + dyn.array.count * 2;
-        dyn.array = new_slice(T, new_cap, default_allocator());
-        if (old_data.data != null) {
-            copy_slice(dyn.array, old_data);
-            delete_slice(old_data, default_allocator());
+proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
+    assert(dyn.allocator.alloc_proc != null);
+    if (dyn.count == dyn.elements.count) {
+        var old_data = dyn.elements.data;
+        var new_cap = 8 + dyn.elements.count * 2;
+        dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
+        dyn.elements.count = new_cap;
+        if (old_data != null) {
+            memcpy(dyn.elements.data, old_data, cast(u64, dyn.count * sizeof(T)));
+            sif_free(old_data, dyn.allocator);
         }
     }
-    assert(dyn.count < dyn.array.count);
-    dyn.array[dyn.count] = value;
+    assert(dyn.count < dyn.elements.count);
+    dyn.elements[dyn.count] = value;
+    var ptr = &dyn.elements[dyn.count];
     dyn.count += 1;
+    return ptr;
 }
 
 proc pop(dyn: ^Dynamic_Array!($T)) : T {
@@ -736,8 +741,8 @@ proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
 }
 
 proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
-    if (dyn.array.data != null) {
-        free(dyn.array.data);
+    if (dyn.elements.data != null) {
+        sif_free(dyn.elements.data, dyn.allocator);
     }
 }
 
