@@ -42,6 +42,7 @@ struct Ast_Struct;
 struct Ast_Statement_Expr;
 struct Ast_Defer;
 struct Ast_Proc_Header;
+struct Ast_Enum;
 
 struct Declaration;
 struct Type_Declaration;
@@ -150,11 +151,9 @@ struct Ast_Proc_Header : public Ast_Node {
     Ast_Expr *return_type_expr = {};
     Type_Procedure *type = nullptr;
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
-    Ast_Struct *lives_in_struct = {}; // null if proc doesn't live in a struct
     bool is_foreign = {};
     Operand operand = {};
     Token_Kind operator_to_overload = {};
-    Ast_Struct *struct_to_operator_overload = {};
     bool is_polymorphic = {};
     Array<int> polymorphic_parameter_indices = {};
     Ast_Proc *procedure = {};
@@ -279,6 +278,8 @@ struct Ast_Struct : public Ast_Node {
     Struct_Declaration *declaration = {};
     Array<Ast_Proc *> operator_overloads = {};
     Array<Ast_Proc *> procedures = {}; // todo(josh): maybe combine this with the operator_overloads above?
+    Array<Ast_Struct *> local_structs = {};
+    Array<Ast_Enum *> local_enums = {};
     Array<Ast_Var *> polymorphic_parameters = {};
     Ast_Struct(bool is_union, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_STRUCT, allocator, current_block, location)
@@ -288,6 +289,8 @@ struct Ast_Struct : public Ast_Node {
         operator_overloads.allocator = allocator;
         polymorphic_parameters.allocator = allocator;
         procedures.allocator = allocator;
+        local_structs.allocator = allocator;
+        local_enums.allocator = allocator;
     }
 };
 
@@ -782,6 +785,7 @@ struct Declaration {
     bool is_polymorphic = {};
     Array<char *> notes = {};
     Declaration *from_using = {};
+    Declaration *parent_declaration = {}; // for local structs and procs
     Declaration(const char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)

@@ -1,9 +1,12 @@
 proc main() : i32 {
-    print("---- defer\n"); defer_test();
+    print("---- defer\n");              defer_test();
+    print("---- local_declarations\n"); test_local_declarations();
 
     print("Done tests.");
     return 0;
 }
 
 #include "defer_test.sif"
+#include "local_declarations.sif"
+
 #include "core:basic.sif"

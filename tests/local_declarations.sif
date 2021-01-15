@@ -1,4 +1,4 @@
-proc main() {
+proc test_local_declarations() {
     assert(qwe1() == 123);
     assert(qwe2() == 321);
     assert(Baz.Qux.qwe3() == 456);

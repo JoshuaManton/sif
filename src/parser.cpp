@@ -474,10 +474,8 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                 }
                 case AST_PROC: {
                     Ast_Proc *proc = (Ast_Proc *)node;
-                    proc->header->lives_in_struct = structure;
                     if (proc->header->operator_to_overload != TK_INVALID) {
                         assert(proc->header->name == nullptr);
-                        proc->header->struct_to_operator_overload = structure;
                         structure->operator_overloads.append(proc);
                         break;
                     }
@@ -487,8 +485,18 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                         break;
                     }
                 }
+                case AST_STRUCT: {
+                    Ast_Struct *local_struct = (Ast_Struct *)node;
+                    structure->local_structs.append(local_struct);
+                    break;
+                }
+                case AST_ENUM: {
+                    Ast_Enum *local_enum = (Ast_Enum *)node;
+                    structure->local_enums.append(local_enum);
+                    break;
+                }
                 default: {
-                    report_error(node->location, "Only variables, constants, and procedures are allowed in structs.");
+                    report_error(node->location, "Only variables, constants, procedures, structs, and enums are allowed in structs.");
                     return nullptr;
                 }
             }

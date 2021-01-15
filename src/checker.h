@@ -211,6 +211,29 @@ extern Array<Type *> all_types;
 
 extern Ast_Proc *g_main_proc;
 
+extern Declaration *sif_runtime_bounds_check_proc;
+extern Declaration *sif_runtime_null_check_proc;
+extern Declaration *sif_runtime_string_eq_proc;
+extern Declaration *sif_runtime_zero_pointer_proc;
+extern Declaration *sif_runtime_source_code_location;
+extern Declaration *sif_runtime_union_all_type_infos;
+extern Declaration *sif_runtime_type_info;
+extern Declaration *sif_runtime_type_info_integer;
+extern Declaration *sif_runtime_type_info_float;
+extern Declaration *sif_runtime_type_info_bool;
+extern Declaration *sif_runtime_type_info_string;
+extern Declaration *sif_runtime_type_info_struct_field;
+extern Declaration *sif_runtime_type_info_struct;
+extern Declaration *sif_runtime_type_info_union;
+extern Declaration *sif_runtime_type_info_enum_field;
+extern Declaration *sif_runtime_type_info_enum;
+extern Declaration *sif_runtime_type_info_pointer;
+extern Declaration *sif_runtime_type_info_slice;
+extern Declaration *sif_runtime_type_info_array;
+extern Declaration *sif_runtime_type_info_reference;
+extern Declaration *sif_runtime_type_info_procedure;
+extern Declaration *sif_runtime_type_info_typeid;
+
 void init_checker();
 void add_global_declarations(Ast_Block *block);
 bool typecheck_global_scope(Ast_Block *block);

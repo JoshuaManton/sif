@@ -63,6 +63,30 @@ char *g_interned_typeid_string;
 char *g_interned_data_string;
 char *g_interned_count_string;
 
+char *g_interned_sif_runtime_bounds_check_proc_string;
+char *g_interned_sif_runtime_null_check_proc_string;
+char *g_interned_sif_runtime_string_eq_proc_string;
+char *g_interned_sif_runtime_zero_pointer_proc_string;
+char *g_interned_sif_runtime_source_code_location_string;
+
+char *g_interned_sif_runtime_union_all_type_infos_string;
+char *g_interned_sif_runtime_type_info_string;
+char *g_interned_sif_runtime_type_info_integer_string;
+char *g_interned_sif_runtime_type_info_float_string;
+char *g_interned_sif_runtime_type_info_bool_string;
+char *g_interned_sif_runtime_type_info_string_string;
+char *g_interned_sif_runtime_type_info_struct_field_string;
+char *g_interned_sif_runtime_type_info_struct_string;
+char *g_interned_sif_runtime_type_info_union_string;
+char *g_interned_sif_runtime_type_info_enum_field_string;
+char *g_interned_sif_runtime_type_info_enum_string;
+char *g_interned_sif_runtime_type_info_pointer_string;
+char *g_interned_sif_runtime_type_info_slice_string;
+char *g_interned_sif_runtime_type_info_array_string;
+char *g_interned_sif_runtime_type_info_reference_string;
+char *g_interned_sif_runtime_type_info_procedure_string;
+char *g_interned_sif_runtime_type_info_typeid_string;
+
 void init_interned_strings() {
     g_interned_strings = make_hashtable<u64, char *>(g_global_linear_allocator, 10 * 1024);
     g_interned_string_return     = intern_string("return");
@@ -98,4 +122,28 @@ void init_interned_strings() {
     g_interned_typeid_string      = intern_string("typeid");
     g_interned_data_string        = intern_string("data");
     g_interned_count_string       = intern_string("count");
+
+    g_interned_sif_runtime_bounds_check_proc_string    = intern_string("sif_bounds_check");
+    g_interned_sif_runtime_null_check_proc_string      = intern_string("sif_null_check");
+    g_interned_sif_runtime_string_eq_proc_string       = intern_string("string_eq");
+    g_interned_sif_runtime_zero_pointer_proc_string    = intern_string("zero_pointer");
+    g_interned_sif_runtime_source_code_location_string = intern_string("Source_Code_Location");
+
+    g_interned_sif_runtime_union_all_type_infos_string   = intern_string("Union_All_Type_Infos");
+    g_interned_sif_runtime_type_info_string              = intern_string("Type_Info");
+    g_interned_sif_runtime_type_info_integer_string      = intern_string("Type_Info_Integer");
+    g_interned_sif_runtime_type_info_float_string        = intern_string("Type_Info_Float");
+    g_interned_sif_runtime_type_info_bool_string         = intern_string("Type_Info_Bool");
+    g_interned_sif_runtime_type_info_string_string       = intern_string("Type_Info_String");
+    g_interned_sif_runtime_type_info_struct_field_string = intern_string("Type_Info_Struct_Field");
+    g_interned_sif_runtime_type_info_struct_string       = intern_string("Type_Info_Struct");
+    g_interned_sif_runtime_type_info_union_string        = intern_string("Type_Info_Union");
+    g_interned_sif_runtime_type_info_enum_field_string   = intern_string("Type_Info_Enum_Field");
+    g_interned_sif_runtime_type_info_enum_string         = intern_string("Type_Info_Enum");
+    g_interned_sif_runtime_type_info_pointer_string      = intern_string("Type_Info_Pointer");
+    g_interned_sif_runtime_type_info_slice_string        = intern_string("Type_Info_Slice");
+    g_interned_sif_runtime_type_info_array_string        = intern_string("Type_Info_Array");
+    g_interned_sif_runtime_type_info_reference_string    = intern_string("Type_Info_Reference");
+    g_interned_sif_runtime_type_info_procedure_string    = intern_string("Type_Info_Procedure");
+    g_interned_sif_runtime_type_info_typeid_string       = intern_string("Type_Info_Typeid");
 }

@@ -53,7 +53,7 @@ void c_print_type_prefix(Chunked_String_Builder *sb, Type *type) {
         }
         case TYPE_STRUCT: {
             Type_Struct *type_struct = (Type_Struct *)type;
-            sb->printf("%s %s ", (type_struct->is_union ? "union" : "struct"), type_struct->name);
+            sb->printf("%s %s ", (type_struct->is_union ? "union" : "struct"), type_struct->ast_struct->declaration->link_name);
             break;
         }
         case TYPE_ENUM: {
@@ -450,7 +450,7 @@ char *c_print_gen_location(Chunked_String_Builder *sb, int indent_level, Locatio
     char *t = c_temporary();
     c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
-    sb->printf("struct Source_Code_Location %s = {0};\n", t);
+    sb->printf("struct %s %s = {0};\n", sif_runtime_source_code_location->link_name, t);
     c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
     sb->printf("%s.filepath = MAKE_STRING(\"%s\", %d);\n", t, location.filepath, strlen(location.filepath));
@@ -467,7 +467,7 @@ void c_print_null_check(Chunked_String_Builder *sb, int indent_level, char *ptr_
     char *location_t = c_print_gen_location(sb, indent_level, location);
     c_print_line_directive(sb, location, "null check");
     print_indents(sb, indent_level);
-    sb->printf("sif_null_check(%s, %s);\n", ptr_name, location_t);
+    sb->printf("%s(%s, %s);\n", sif_runtime_null_check_proc->link_name, ptr_name, location_t);
     c_print_line_directive(sb, location, "null check after");
 }
 
@@ -475,7 +475,7 @@ void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, char *lh
     char *location_t = c_print_gen_location(sb, indent_level, location);
     c_print_line_directive(sb, location, "bounds check");
     print_indents(sb, indent_level);
-    sb->printf("sif_bounds_check(%s.%s, %s, %s);\n", lhs_name, count_field, index_name, location_t);
+    sb->printf("%s(%s.%s, %s, %s);\n", sif_runtime_bounds_check_proc->link_name, lhs_name, count_field, index_name, location_t);
     c_print_line_directive(sb, location, "bounds check after");
 }
 
@@ -590,7 +590,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                     if (binary->op == TK_EQUAL_TO && (binary->lhs->operand.type == type_string) && (binary->lhs->operand.type == type_string)) {
                         char *lhs = c_print_expr(_sb, binary->lhs, indent_level); assert(lhs);
                         char *rhs = c_print_expr(_sb, binary->rhs, indent_level); assert(rhs);
-                        expr_sb.printf("string_eq(%s, %s);\n", lhs, rhs);
+                        expr_sb.printf("%s(%s, %s);\n", sif_runtime_string_eq_proc->link_name, lhs, rhs);
                     }
                     else {
                         // todo(josh): compress short circuit AND and OR together
@@ -1207,6 +1207,18 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             break;
         }
 
+        case AST_STRUCT: {
+            break;
+        }
+
+        case AST_PROC: {
+            break;
+        }
+
+        case AST_ENUM: {
+            break;
+        }
+
         default: {
             assert(false);
             break;
@@ -1223,18 +1235,18 @@ void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_leve
 }
 
 void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Type *type) {
-    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Struct_Field));\n", ti_name, type->variable_fields.count);
+    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct %s));\n", ti_name, type->variable_fields.count, sif_runtime_type_info_struct_field->link_name);
     sb->printf("    %s->fields.count = %d;\n", ti_name, type->variable_fields.count);
     For (idx, type->variable_fields) {
         Struct_Field field = type->variable_fields[idx];
         sb->printf("    GTISF(%s, \"%s\", %d, %d, %d, %d);\n", ti_name, field.name, strlen(field.name), idx, field.operand.type->id, field.offset);
         if (field.notes.count > 0) {
             // todo(josh): make macros for these
-            sb->printf("    ((struct Type_Info_Struct_Field *)%s->fields.data)[%d].notes.data  = malloc(%d * sizeof(String));\n", ti_name, idx, field.notes.count);
-            sb->printf("    ((struct Type_Info_Struct_Field *)%s->fields.data)[%d].notes.count = %d;\n", ti_name, idx, field.notes.count);
+            sb->printf("    ((struct %s *)%s->fields.data)[%d].notes.data  = malloc(%d * sizeof(String));\n", sif_runtime_type_info_struct_field->link_name, ti_name, idx, field.notes.count);
+            sb->printf("    ((struct %s *)%s->fields.data)[%d].notes.count = %d;\n", ti_name, idx, field.notes.count);
             For (note_idx, field.notes) {
                 char *note = field.notes[note_idx];
-                sb->printf("    ((String *)((struct Type_Info_Struct_Field *)%s->fields.data)[%d].notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, idx, note_idx, note, strlen(note));
+                sb->printf("    ((String *)((struct %s *)%s->fields.data)[%d].notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", sif_runtime_type_info_struct_field->link_name, ti_name, idx, note_idx, note, strlen(note));
             }
         }
     }
@@ -1263,9 +1275,9 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     c_print_procedure_header(sb, proc->header);
     sb->print(" {\n");
     if (proc == g_main_proc) {
-        c_print_line_directive(sb, proc->header->location, "__init_sif_runtime()");
+        c_print_line_directive(sb, proc->header->location, "__SIF__init_sif_runtime()");
         print_indents(sb, 1);
-        sb->print("__init_sif_runtime();\n");
+        sb->print("__SIF__init_sif_runtime();\n");
         For (idx, proc->parent_block->declarations) {
             Declaration *decl = proc->parent_block->declarations[idx];
             if (decl->kind != DECL_VAR) {
@@ -1308,7 +1320,7 @@ u32 forward_declarations_worker_proc(void *userdata) {
         switch (decl->kind) {
             case DECL_STRUCT: {
                 Struct_Declaration *structure = (Struct_Declaration *)decl;
-                sb->printf("%s %s", (structure->structure->is_union ? "union" : "struct"), decl->name);
+                sb->printf("%s %s", (structure->structure->is_union ? "union" : "struct"), decl->link_name);
                 sb->print(";\n");
                 break;
             }
@@ -1362,7 +1374,7 @@ u32 actual_declarations_worker_proc(void *userdata) {
             case DECL_STRUCT: {
                 Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
                 Ast_Struct *structure = struct_decl->structure;
-                sb->printf("%s %s {\n", (structure->is_union ? "union" : "struct"), structure->declaration->name);
+                sb->printf("%s %s {\n", (structure->is_union ? "union" : "struct"), structure->declaration->link_name);
                 bool did_print_at_least_one_member = false;
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
@@ -1379,7 +1391,7 @@ u32 actual_declarations_worker_proc(void *userdata) {
                     sb->print("    bool __dummy;\n");
                 }
                 sb->print("};\n");
-                sb->printf("STATIC_ASSERT(sizeof(%s %s) == %d, %s);\n", (structure->is_union ? "union" : "struct"), structure->declaration->name, structure->type->size, structure->declaration->name);
+                sb->printf("STATIC_ASSERT(sizeof(%s %s) == %d, %s);\n", (structure->is_union ? "union" : "struct"), structure->declaration->link_name, structure->type->size, structure->declaration->link_name);
                 break;
             }
             case DECL_ENUM: {
@@ -1457,30 +1469,30 @@ u32 type_info_worker_proc(void *userdata) {
             switch (type->kind) {
                 case TYPE_PRIMITIVE: {
                     if (is_type_integer(type)) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Integer, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_INTEGER, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_integer->link_name, TYPE_INFO_KIND_INTEGER, type->id, type->size, type->align);
                         sb->printf("    %s->is_signed = %s;\n", ti_name, (type->flags & TF_SIGNED ? "true" : "false"));
                     }
                     else if (is_type_float(type)) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Float, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_FLOAT, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_float->link_name, TYPE_INFO_KIND_FLOAT, type->id, type->size, type->align);
                     }
                     else if (type == type_bool) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Bool, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_BOOL, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_bool->link_name, TYPE_INFO_KIND_BOOL, type->id, type->size, type->align);
                     }
                     else if (type == type_string) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_String, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
                     }
                     else if (type == type_rawptr) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Pointer, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
                     }
                     else if (type == type_typeid) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Typeid, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_TYPEID, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_typeid->link_name, TYPE_INFO_KIND_TYPEID, type->id, type->size, type->align);
                     }
                     else if (type == type_any) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, "Type_Info_Struct", TYPE_INFO_KIND_STRUCT, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_struct->link_name, TYPE_INFO_KIND_STRUCT, type->id, type->size, type->align);
                         c_print_gen_type_info_struct(sb, ti_name, type);
                     }
                     else if (type == type_cstring) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_String, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
                         sb->printf("    %s->is_cstring = true;\n", ti_name);
                     }
                     else {
@@ -1490,7 +1502,7 @@ u32 type_info_worker_proc(void *userdata) {
                 }
                 case TYPE_ARRAY: {
                     Type_Array *type_array = (Type_Array *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Array, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_ARRAY, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_array->link_name, TYPE_INFO_KIND_ARRAY, type->id, type->size, type->align);
                     sb->printf("    %s->array_of = GTIP(%d);\n", ti_name, type_array->array_of->id);
                     sb->printf("    %s->count = %d;\n", ti_name, type_array->count);
                     break;
@@ -1507,19 +1519,19 @@ u32 type_info_worker_proc(void *userdata) {
                         Type_Varargs *varargs = (Type_Varargs *)type;
                         slice_of = varargs->varargs_of;
                     }
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Slice, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_SLICE, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_slice->link_name, TYPE_INFO_KIND_SLICE, type->id, type->size, type->align);
                     sb->printf("    %s->slice_of = GTIP(%d);\n", ti_name, slice_of->id);
                     break;
                 }
                 case TYPE_REFERENCE: {
                     Type_Reference *type_reference = (Type_Reference *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Reference, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_REFERENCE, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_reference->link_name, TYPE_INFO_KIND_REFERENCE, type->id, type->size, type->align);
                     sb->printf("    %s->reference_to = GTIP(%d);\n", ti_name, type_reference->reference_to->id);
                     break;
                 }
                 case TYPE_STRUCT: {
                     Type_Struct *struct_type = (Type_Struct *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? "Type_Info_Union" : "Type_Info_Struct"), (struct_type->is_union ? TYPE_INFO_KIND_UNION : TYPE_INFO_KIND_STRUCT), type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? sif_runtime_type_info_union->link_name : sif_runtime_type_info_struct->link_name), (struct_type->is_union ? TYPE_INFO_KIND_UNION : TYPE_INFO_KIND_STRUCT), type->id, type->size, type->align);
                     // todo(josh): make macros for these
                     if (struct_type->notes.count > 0) {
                         sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, struct_type->notes.count);
@@ -1534,13 +1546,13 @@ u32 type_info_worker_proc(void *userdata) {
                 }
                 case TYPE_POINTER: {
                     Type_Pointer *pointer = (Type_Pointer *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Pointer, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
                     sb->printf("    %s->pointer_to = GTIP(%d);\n", ti_name, pointer->pointer_to->id);
                     break;
                 }
                 case TYPE_ENUM: {
                     Type_Enum *type_enum = (Type_Enum *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Enum, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_enum->link_name, TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
                     // todo(josh): make macros for these
                     if (type_enum->notes.count > 0) {
                         sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, type_enum->notes.count);
@@ -1551,7 +1563,7 @@ u32 type_info_worker_proc(void *userdata) {
                         }
                     }
                     sb->printf("    %s->base_type = GTIP(%d);\n", ti_name, type_enum->base_type->id);
-                    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct Type_Info_Enum_Field));\n", ti_name, type_enum->constant_fields.count);
+                    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct %s));\n", ti_name, type_enum->constant_fields.count, sif_runtime_type_info_enum_field->link_name);
                     sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->constant_fields.count);
                     For (idx, type_enum->constant_fields) {
                         Struct_Field field = type_enum->constant_fields[idx];
@@ -1563,9 +1575,9 @@ u32 type_info_worker_proc(void *userdata) {
                 }
                 case TYPE_PROCEDURE: {
                     Type_Procedure *procedure = (Type_Procedure *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), Type_Info_Procedure, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, TYPE_INFO_KIND_PROCEDURE, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_procedure->link_name, TYPE_INFO_KIND_PROCEDURE, type->id, type->size, type->align);
                     if (procedure->parameter_types.count) {
-                        sb->printf("    %s->parameter_types.data = malloc(%d * sizeof(struct Type_Info *));\n", ti_name, procedure->parameter_types.count);
+                        sb->printf("    %s->parameter_types.data = malloc(%d * sizeof(struct %s *));\n", ti_name, procedure->parameter_types.count, sif_runtime_type_info->link_name);
                         sb->printf("    %s->parameter_types.count = %d;\n", ti_name, procedure->parameter_types.count);
                         For (idx, procedure->parameter_types) {
                             Type *param_type = procedure->parameter_types[idx];
@@ -1741,21 +1753,21 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print(actual_declarations_payload2.sb.make_string());
     double actual_decl_wait_end_time = query_timer(&g_global_timer);
 
-    sb.print("void __init_sif_runtime() {\n");
-    sb.printf("    int type_info_table_size = %d * sizeof(union Union_All_Type_Infos);\n", all_types.count + 1);
+    sb.print("void __SIF__init_sif_runtime() {\n");
+    sb.printf("    int type_info_table_size = %d * sizeof(union %s);\n", all_types.count + 1, sif_runtime_union_all_type_infos->link_name);
     sb.printf("    _global_type_table.data = malloc(type_info_table_size);\n");
-    sb.printf("    zero_pointer(_global_type_table.data, type_info_table_size);\n");
+    sb.printf("    %s(_global_type_table.data, type_info_table_size);\n", sif_runtime_zero_pointer_proc->link_name);
     sb.printf("    _global_type_table.count = %d;\n", all_types.count + 1);
     sb.printf("    // Make Type Info\n");
-    sb.printf("    #define MTI(_varname, _printable_name, _type, _kind, _id, _size, _align) struct _type *_varname = ((struct _type *)GTIP(_id)); zero_pointer(_varname, sizeof(*_varname)); _varname->base.printable_name = _printable_name; _varname->base.id = _id; _varname->base.size = _size; _varname->base.align = _align; _varname->base.kind = _kind;\n");
+    sb.printf("    #define MTI(_varname, _printable_name, _type, _kind, _id, _size, _align) struct _type *_varname = ((struct _type *)GTIP(_id)); %s(_varname, sizeof(*_varname)); _varname->base.printable_name = _printable_name; _varname->base.id = _id; _varname->base.size = _size; _varname->base.align = _align; _varname->base.kind = _kind;\n", sif_runtime_zero_pointer_proc->link_name);
     sb.printf("    // Get Type Info Pointer\n");
-    sb.printf("    #define GTIP(_index) ((struct Type_Info *)&((union Union_All_Type_Infos *)_global_type_table.data)[_index])\n");
+    sb.printf("    #define GTIP(_index) ((struct %s *)&((union %s *)_global_type_table.data)[_index])\n", sif_runtime_type_info->link_name, sif_runtime_union_all_type_infos->link_name);
     sb.printf("    // Gen Type Info Struct Field\n");
-    sb.printf("    #define GTISF(_ti_name, _field_name, _field_name_len, _field_index, _field_type_index, _field_offset) ((struct Type_Info_Struct_Field *)_ti_name->fields.data)[_field_index] = (struct Type_Info_Struct_Field){MAKE_STRING(_field_name, _field_name_len), GTIP(_field_type_index), _field_offset}\n");
+    sb.printf("    #define GTISF(_ti_name, _field_name, _field_name_len, _field_index, _field_type_index, _field_offset) ((struct %s *)_ti_name->fields.data)[_field_index] = (struct %s){MAKE_STRING(_field_name, _field_name_len), GTIP(_field_type_index), _field_offset}\n", sif_runtime_type_info_struct_field->link_name, sif_runtime_type_info_struct_field->link_name);
     sb.printf("    // Gen Type Info Enum Field\n");
-    sb.printf("    #define GTIEF(_ti_name, _field_index, _field_name, _field_name_len, _field_value) ((struct Type_Info_Enum_Field *)_ti_name->fields.data)[_field_index] = (struct Type_Info_Enum_Field){MAKE_STRING(_field_name, _field_name_len), _field_value};\n");
+    sb.printf("    #define GTIEF(_ti_name, _field_index, _field_name, _field_name_len, _field_value) ((struct %s *)_ti_name->fields.data)[_field_index] = (struct %s){MAKE_STRING(_field_name, _field_name_len), _field_value};\n", sif_runtime_type_info_enum_field->link_name, sif_runtime_type_info_enum_field->link_name);
     sb.printf("    // Gen Procedure Parameter Type\n");
-    sb.printf("    #define GPPT(_varname, _param_index, _type_index) ((struct Type_Info **)_varname->parameter_types.data)[_param_index] = GTIP(_type_index);\n");
+    sb.printf("    #define GPPT(_varname, _param_index, _type_index) ((struct %s **)_varname->parameter_types.data)[_param_index] = GTIP(_type_index);\n", sif_runtime_type_info->link_name);
     double type_info_wait_start_time = query_timer(&g_global_timer);
     while (!type_info_generation_payload1.done) { sleep(1); }
     sb.print(type_info_generation_payload1.sb.make_string());

@@ -43,8 +43,33 @@ Array<Declaration *> ordered_declarations;
 
 Ast_Proc *g_main_proc;
 
+Declaration *g_current_parent_procedure_or_struct;
+
 Array<Ast_Directive_Assert *> g_all_assert_directives;
 Array<Ast_Directive_Print *>  g_all_print_directives;
+
+Declaration *sif_runtime_bounds_check_proc;
+Declaration *sif_runtime_null_check_proc;
+Declaration *sif_runtime_string_eq_proc;
+Declaration *sif_runtime_zero_pointer_proc;
+Declaration *sif_runtime_source_code_location;
+Declaration *sif_runtime_union_all_type_infos;
+Declaration *sif_runtime_type_info;
+Declaration *sif_runtime_type_info_integer;
+Declaration *sif_runtime_type_info_float;
+Declaration *sif_runtime_type_info_bool;
+Declaration *sif_runtime_type_info_string;
+Declaration *sif_runtime_type_info_struct_field;
+Declaration *sif_runtime_type_info_struct;
+Declaration *sif_runtime_type_info_union;
+Declaration *sif_runtime_type_info_enum_field;
+Declaration *sif_runtime_type_info_enum;
+Declaration *sif_runtime_type_info_pointer;
+Declaration *sif_runtime_type_info_slice;
+Declaration *sif_runtime_type_info_array;
+Declaration *sif_runtime_type_info_reference;
+Declaration *sif_runtime_type_info_procedure;
+Declaration *sif_runtime_type_info_typeid;
 
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
@@ -54,6 +79,7 @@ bool match_types(Operand operand, Type *expected_type, Operand *out_operand, boo
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr, bool require_value = true);
 bool typecheck_block(Ast_Block *block);
 Operand *typecheck_procedure_header(Ast_Proc_Header *header);
+char *type_to_string_plain(Type *type);
 
 template<typename T>
 T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
@@ -277,7 +303,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
     assert(decl->check_state == DCS_UNCHECKED);
     decl->check_state = DCS_CHECKING;
-
     decl->link_name = decl->name;
     assert(decl->link_name);
 
@@ -298,6 +323,13 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
             decl_operand.type_value = struct_decl->structure->type;
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+
+            String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
+            if (struct_decl->parent_declaration != nullptr) {
+                link_name_sb.print(struct_decl->parent_declaration->link_name);
+            }
+            link_name_sb.printf("__SIF__%s", struct_decl->name);
+            struct_decl->link_name = intern_string(link_name_sb.string());
             break;
         }
         case DECL_ENUM: {
@@ -511,8 +543,23 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
             if (proc_decl->name == g_interned_main_string) {
                 assert(g_main_proc == nullptr);
-                assert(proc_decl->header->procedure != nullptr); // todo(josh): @ErrorMessage
                 g_main_proc = proc_decl->header->procedure;
+            }
+            else if (!proc_decl->header->is_foreign) {
+                assert(proc_decl->header->name != nullptr);
+                String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
+                if (proc_decl->parent_declaration != nullptr) {
+                    link_name_sb.print(proc_decl->parent_declaration->link_name);
+                }
+                link_name_sb.printf("__SIF__%s", proc_decl->name);
+                For (idx, proc_decl->header->type->parameter_types) {
+                    assert(proc_decl->header->type->parameter_types[idx] != nullptr);
+                    link_name_sb.printf("_%s", type_to_string_plain(proc_decl->header->parameters[idx]->type));
+                }
+                if (proc_decl->header->type->return_type != nullptr) {
+                    link_name_sb.printf("_%s", type_to_string_plain(proc_decl->header->type->return_type));
+                }
+                decl->link_name = intern_string(link_name_sb.string());
             }
             break;
         }
@@ -543,11 +590,15 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
     decl->check_state = DCS_CHECKED;
 
 
+
     if (decl->kind == DECL_PROC) {
         Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
         if (!proc_decl->header->is_foreign) {
             assert(proc_decl->header->procedure->body != nullptr);
             if (!is_type_polymorphic(proc_decl->header->type)) {
+                Declaration *old_parent_procedure_or_struct = g_current_parent_procedure_or_struct;
+                g_current_parent_procedure_or_struct = decl;
+                defer(g_current_parent_procedure_or_struct = old_parent_procedure_or_struct);
                 if (!typecheck_block(proc_decl->header->procedure->body)) {
                     return false;
                 }
@@ -563,6 +614,9 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
     if (decl->kind == DECL_STRUCT) {
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
+        Declaration *old_parent_procedure_or_struct = g_current_parent_procedure_or_struct;
+        g_current_parent_procedure_or_struct = decl;
+        defer(g_current_parent_procedure_or_struct = old_parent_procedure_or_struct);
         For (idx, struct_decl->structure->operator_overloads) {
             Ast_Proc *procedure = struct_decl->structure->operator_overloads[idx];
             assert(!procedure->header->is_foreign);
@@ -574,25 +628,45 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
             assert(procedure->header->name != nullptr);
             assert(procedure->header->declaration != nullptr);
+            procedure->header->declaration->parent_declaration = decl;
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
-            add_ordered_declaration(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
         }
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
+            procedure->header->declaration->parent_declaration = decl;
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
             if (!register_declaration(struct_decl->structure->type->constants_block, procedure->header->declaration)) {
                 return false;
             }
-            add_ordered_declaration(procedure->header->declaration); // note(josh): this needs to be here because the declaration isn't in file scope
+        }
+        For (idx, struct_decl->structure->local_structs) {
+            Ast_Struct *local_struct = struct_decl->structure->local_structs[idx];
+            local_struct->declaration->parent_declaration = struct_decl;
+            if (!check_declaration(local_struct->declaration, usage_location)) {
+                return false;
+            }
+            if (!register_declaration(struct_decl->structure->type->constants_block, local_struct->declaration)) {
+                return false;
+            }
+        }
+        For (idx, struct_decl->structure->local_enums) {
+            Ast_Enum *local_enum = struct_decl->structure->local_enums[idx];
+            local_enum->declaration->parent_declaration = struct_decl;
+            if (!check_declaration(local_enum->declaration, usage_location)) {
+                return false;
+            }
+            if (!register_declaration(struct_decl->structure->type->constants_block, local_enum->declaration)) {
+                return false;
+            }
         }
     }
     else {
         assert(decl->parent_block);
-        if (decl->parent_block->flags & BF_IS_FILE_SCOPE) {
+        if (decl->parent_block->flags & BF_IS_FILE_SCOPE || decl->kind == DECL_PROC) {
             if (!decl->is_polymorphic) {
                 add_ordered_declaration(decl);
             }
@@ -616,6 +690,29 @@ bool typecheck_global_scope(Ast_Block *block) {
         For (note_idx, decl->notes) {
             char *note = decl->notes[note_idx];
             if (note == g_interned_sif_runtime_string) {
+                     if (decl->name == g_interned_sif_runtime_bounds_check_proc_string)       sif_runtime_bounds_check_proc      = decl;
+                else if (decl->name == g_interned_sif_runtime_null_check_proc_string)         sif_runtime_null_check_proc        = decl;
+                else if (decl->name == g_interned_sif_runtime_string_eq_proc_string)          sif_runtime_string_eq_proc         = decl;
+                else if (decl->name == g_interned_sif_runtime_zero_pointer_proc_string)       sif_runtime_zero_pointer_proc      = decl;
+                else if (decl->name == g_interned_sif_runtime_source_code_location_string)    sif_runtime_source_code_location   = decl;
+                else if (decl->name == g_interned_sif_runtime_union_all_type_infos_string)    sif_runtime_union_all_type_infos   = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_string)               sif_runtime_type_info              = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_integer_string)       sif_runtime_type_info_integer      = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_float_string)         sif_runtime_type_info_float        = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_bool_string)          sif_runtime_type_info_bool         = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_string_string)        sif_runtime_type_info_string       = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_struct_field_string)  sif_runtime_type_info_struct_field = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_struct_string)        sif_runtime_type_info_struct       = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_union_string)         sif_runtime_type_info_union        = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_enum_field_string)    sif_runtime_type_info_enum_field   = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_enum_string)          sif_runtime_type_info_enum         = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_pointer_string)       sif_runtime_type_info_pointer      = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_slice_string)         sif_runtime_type_info_slice        = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_array_string)         sif_runtime_type_info_array        = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_reference_string)     sif_runtime_type_info_reference    = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_procedure_string)     sif_runtime_type_info_procedure    = decl;
+                else if (decl->name == g_interned_sif_runtime_type_info_typeid_string)        sif_runtime_type_info_typeid       = decl;
+
                 if (!check_declaration(decl, decl->location)) {
                     report_error(decl->location, "Internal compiler error. check_declaration() failed.");
                     return false;
@@ -704,11 +801,19 @@ bool typecheck_global_scope(Ast_Block *block) {
         return false;
     }
     if (g_main_proc->header->type->return_type && g_main_proc->header->type->return_type != type_i32) {
-        report_error(g_main_proc->location, "main() must return nothing or i32.");
+        report_error(g_main_proc->header->location, "main() must return nothing or i32.");
         return false;
     }
     if (g_main_proc->header->type->parameter_types.count != 0) {
-        report_error(g_main_proc->location, "main() cannot have parameters.");
+        report_error(g_main_proc->header->location, "main() cannot have parameters.");
+        return false;
+    }
+    if (g_main_proc->header->procedure == nullptr) {
+        report_error(g_main_proc->header->location, "main() must have a body.");
+        return false;
+    }
+    if (g_main_proc->header->is_foreign) {
+        report_error(g_main_proc->header->location, "main() cannot be foreign.");
         return false;
     }
     return true;
@@ -860,27 +965,32 @@ char *type_to_string_plain(Type *type) {
         case TYPE_POINTER: {
             Type_Pointer *pointer = (Type_Pointer *)type;
             assert(pointer->pointer_to);
-            sb.printf("pointer_%s", type_to_string(pointer->pointer_to));
+            sb.printf("pointer_%s", type_to_string_plain(pointer->pointer_to));
             break;
         }
         case TYPE_REFERENCE: {
             Type_Reference *reference = (Type_Reference *)type;
-            sb.printf("reference_%s", type_to_string(reference->reference_to));
+            sb.printf("reference_%s", type_to_string_plain(reference->reference_to));
             break;
         }
         case TYPE_ARRAY: {
             Type_Array *array = (Type_Array *)type;
-            sb.printf("array_%d_%s", array->count, type_to_string(array->array_of));
+            sb.printf("array_%d_%s", array->count, type_to_string_plain(array->array_of));
             break;
         }
         case TYPE_SLICE: {
             Type_Slice *slice = (Type_Slice *)type;
-            sb.printf("slice_%s", type_to_string(slice->slice_of));
+            sb.printf("slice_%s", type_to_string_plain(slice->slice_of));
             break;
         }
         case TYPE_ENUM: {
             Type_Enum *enum_type = (Type_Enum *)type;
             sb.printf("enum_%s", enum_type->name);
+            break;
+        }
+        case TYPE_VARARGS: {
+            Type_Varargs *varargs_type = (Type_Varargs *)type;
+            sb.printf("varargs_%s", type_to_string_plain(varargs_type->varargs_of));
             break;
         }
         default: {
@@ -908,6 +1018,7 @@ bool complete_type(Type *type) {
                 Type_Struct *struct_type = (Type_Struct *)type;
                 assert(struct_type->ast_struct != nullptr);
                 Ast_Struct *structure = struct_type->ast_struct;
+                assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
                     if (!check_declaration(var->declaration, var->location)) {
@@ -3197,29 +3308,14 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         return_type = return_type_operand->type_value;
     }
     header->type = get_or_create_type_procedure(parameter_types, return_type);
-    if (header->lives_in_struct) {
-        if (header->operator_to_overload != TK_INVALID) {
-            assert(header->name == nullptr);
-            assert(header->struct_to_operator_overload != nullptr);
-            String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
-            op_overload_name_sb.printf("__operator_overload_%s_%s_", header->struct_to_operator_overload->name, token_name(header->operator_to_overload));
-            assert(header->parameters.count == 2);
-            op_overload_name_sb.printf("%s", type_to_string_plain(header->parameters[1]->type));
-            header->name = intern_string(op_overload_name_sb.string());
-            assert(header->declaration == nullptr);
-            header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block), g_global_linear_allocator);
-        }
-        else {
-            assert(header->name != nullptr);
-            assert(header->operator_to_overload == TK_INVALID);
-            String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
-            link_name_sb.printf("__%s_%s", header->lives_in_struct->name, header->name);
-            header->declaration->link_name = intern_string(link_name_sb.string());
-        }
-    }
-    else {
-        // todo(josh): allow operators to be defined outside of structs
-        assert(!header->operator_to_overload);
+    if (header->operator_to_overload != TK_INVALID) {
+        assert(header->name == nullptr);
+        String_Builder op_overload_name_sb = make_string_builder(g_global_linear_allocator, 128);
+        op_overload_name_sb.printf("__SIF__operator_overload_%s", token_name(header->operator_to_overload));
+        assert(header->parameters.count == 2);
+        header->name = intern_string(op_overload_name_sb.string());
+        assert(header->declaration == nullptr);
+        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block), g_global_linear_allocator);
     }
 
     Operand operand = {};
@@ -3470,6 +3566,33 @@ bool typecheck_node(Ast_Node *node) {
 
         case AST_DIRECTIVE_PRINT: {
             g_all_print_directives.append((Ast_Directive_Print *)node);
+            break;
+        }
+
+        case AST_PROC: {
+            Ast_Proc *procedure = (Ast_Proc *)node;
+            if (g_current_parent_procedure_or_struct) {
+                assert(procedure->header->declaration->parent_declaration == nullptr);
+                procedure->header->declaration->parent_declaration = g_current_parent_procedure_or_struct;
+            }
+            break;
+        }
+
+        case AST_STRUCT: {
+            Ast_Struct *structure = (Ast_Struct *)node;
+            if (g_current_parent_procedure_or_struct) {
+                assert(structure->declaration->parent_declaration == nullptr);
+                structure->declaration->parent_declaration = g_current_parent_procedure_or_struct;
+            }
+            break;
+        }
+
+        case AST_ENUM: {
+            Ast_Enum *ast_enum = (Ast_Enum *)node;
+            if (g_current_parent_procedure_or_struct) {
+                assert(ast_enum->declaration->parent_declaration == nullptr);
+                ast_enum->declaration->parent_declaration = g_current_parent_procedure_or_struct;
+            }
             break;
         }
 
