@@ -80,15 +80,32 @@ proc basic_stuff() {
     // declaration syntax:
     // var <variable name>: <type> = <expression>;
     var a: int = 123;
+    print("%\n", a);
 
     // type can be omitted if it can be inferred from the right-hand-side expression
-    var b1 = 123;
+    var b1 = 456;
     assert(typeof(b1) == int);
-    var b2 = 123.0;
+    print("%\n", b1);
+    var b2 = 456.0;
     assert(typeof(b2) == float);
+    print("%\n", b2);
+
+
+
+    // Local procedure, struct, and enum declarations are allowed.
+    //
+    // the keyword 'var' can be omitted in procedure parameter lists, since
+    // variables are the only thing allowed there
+    proc factorial(n: int) : int {
+        if (n == 1) {
+            return 1;
+        }
+        return n * factorial(n-1);
+    }
 
     // since factorial() returns an int, the type can be inferred here too
     var fact = factorial(5);
+    print("%\n", fact);
     assert(fact == 120);
     assert(typeof(fact) == int);
 
@@ -108,14 +125,6 @@ proc basic_stuff() {
     var g = 11.0 / 2;
     assert(g == 5.5);
 }
-// the keyword 'var' can be omitted in procedure parameter lists, since
-// variables are the only thing allowed there
-proc factorial(n: int) : int {
-    if (n == 1) {
-        return 1;
-    }
-    return n * factorial(n-1);
-}
 
 
 
@@ -134,18 +143,19 @@ proc arrays() {
 
     // Arrays are value types, so calling a function that changes the array
     // parameter will not affect the array at the call-site
+    proc arrays_by_value(arr: [4]int) {
+        arr[0] = 123;
+        arr[1] = 345;
+        arr[2] = 567;
+        arr[3] = 789;
+    }
+
     arrays_by_value(my_array);
     print("%\n", my_array);
     assert(my_array[0] == 4);
     assert(my_array[1] == 3);
     assert(my_array[2] == 2);
     assert(my_array[3] == 1);
-}
-proc arrays_by_value(arr: [4]int) {
-    arr[0] = 123;
-    arr[1] = 345;
-    arr[2] = 567;
-    arr[3] = 789;
 }
 
 
@@ -196,19 +206,20 @@ proc strings() {
 
 
 
-struct Foo {
-    var a: int;
-    var str: string;
-    var t: bool;
-}
 proc structs() {
     print("\n\n---- structs ----\n");
+
+    struct Foo {
+        var a: int;
+        var str: string;
+        var t: bool;
+    }
 
     var f: Foo;
     assert(f.a == 0); // everything is zero initialized by default
     f.a = 123;
     f.str = "foozle";
-    f.t = 120 == factorial(5);
+    f.t = f.a * 2 == 246;
 
     // Can also use compound literals to initialize
     f = Foo{149, "hellooo", false};
@@ -223,20 +234,22 @@ proc structs() {
 
     // Type inference also works when calling procedures, since the target type is known
     takes_a_foo({123, "wow", true});
-}
-proc takes_a_foo(foo: Foo) {
-    print("%\n", foo);
+
+    proc takes_a_foo(foo: Foo) {
+        print("%\n", foo);
+    }
 }
 
 
 
-enum My_Enum {
-    FOO;
-    BAR;
-    BAZ;
-}
 proc enums() {
     print("\n\n---- enums ----\n");
+
+    enum My_Enum {
+        FOO;
+        BAR;
+        BAZ;
+    }
 
     var f = My_Enum.FOO;
     print("%\n", f);
@@ -263,9 +276,10 @@ proc enums() {
     // As with compound literals, the type can also be inferred from
     // procedure parameters, allowing you to omit the enum name.
     takes_my_enum(.BAZ);
-}
-proc takes_my_enum(e: My_Enum) {
-    print("%\n", e);
+
+    proc takes_my_enum(e: My_Enum) {
+        print("%\n", e);
+    }
 }
 
 
@@ -288,14 +302,15 @@ struct Loopy {
 
 
 
-proc procedure_with_varargs(numbers: ..int) {
-    print("varargs count: %\n", numbers.count);
-    for (var i = 0; i < numbers.count; i += 1) {
-        print("  %\n", numbers[i]);
-    }
-}
 proc varargs() {
     print("\n\n---- varargs ----\n");
+
+    proc procedure_with_varargs(numbers: ..int) {
+        print("varargs count: %\n", numbers.count);
+        for (var i = 0; i < numbers.count; i += 1) {
+            print("  %\n", numbers[i]);
+        }
+    }
 
     procedure_with_varargs(1, 2, 3, 4);
     procedure_with_varargs(5, 6);
@@ -304,11 +319,6 @@ proc varargs() {
 
 
 
-proc change_by_reference(a: >int, value: int) {
-    // since `a` is a reference, it is implicitly a pointer
-    // and dereferences/indirections are inserted automatically
-    a = value;
-}
 proc references() {
     print("\n\n---- references ----\n");
 
@@ -325,6 +335,12 @@ proc references() {
     print("%\n", int_reference);
 
     // you can also define procedures that take (and return) references, of course
+    proc change_by_reference(a: >int, value: int) {
+        // since `a` is a reference, it is implicitly a pointer
+        // and dereferences/indirections are inserted automatically
+        a = value;
+    }
+
     assert(my_int == 789);
     change_by_reference(my_int, 456);
     assert(my_int == 456);
@@ -376,6 +392,16 @@ proc runtime_type_information() {
 
     // Type_Info_Struct is a lot more interesting. It contains a list of all the fields,
     // and their types, and their byte offsets
+
+    struct My_Cool_Struct {
+        var foo: int;
+        var bar: string;
+        var nested: Nested_Struct;
+    }
+    struct Nested_Struct {
+        var more_things: [4]Vector3;
+    }
+
     var my_cool_struct_ti = get_type_info(My_Cool_Struct);
     assert(my_cool_struct_ti.kind == Type_Info_Kind.STRUCT);
     var my_cool_struct_ti_kind = cast(^Type_Info_Struct, my_cool_struct_ti);
@@ -396,27 +422,20 @@ proc runtime_type_information() {
     //         kind = Type_Info_Kind.INTEGER, id = i64, size = 8, align = 8},
     //         is_signed = true}
 }
-struct My_Cool_Struct {
-    var foo: int;
-    var bar: string;
-    var nested: Nested_Struct;
-}
-struct Nested_Struct {
-    var more_things: [4]Vector3;
-}
 
 
 
-enum My_Enum_For_Using {
-    FOO;
-    BAR;
-    BAZ;
-}
 proc using_statement() {
     print("\n\n---- using_statement ----\n");
 
     // 'using' pulls a namespace's declarations into the namespace
     // of the using.
+
+    enum My_Enum_For_Using {
+        FOO;
+        BAR;
+        BAZ;
+    }
 
     // For example if we wanted to print the elements from My_Enum_For_Using
     // you would have to do it like this:
@@ -433,6 +452,14 @@ proc using_statement() {
 
     // You can use 'using' inside structs as well, to get a form of subtyping
     // that is more flexible than conventional inheritance.
+
+    struct My_Struct_With_Using {
+        using var other: My_Other_Struct;
+    }
+    struct My_Other_Struct {
+        var some_field: int;
+    }
+
     var my_struct: My_Struct_With_Using;
     my_struct.some_field = 321; // no need to write 'my_struct.other.some_field'
     print("%\n", my_struct.some_field);
@@ -444,12 +471,6 @@ proc using_statement() {
 
     // You can 'using' as many fields as you'd like, provided that the names
     // do not collide.
-}
-struct My_Struct_With_Using {
-    using var other: My_Other_Struct;
-}
-struct My_Other_Struct {
-    var some_field: int;
 }
 
 
@@ -539,34 +560,30 @@ proc operator_overloading() {
 
 
 
-// $ on the name of a parameter means this parameter MUST be constant
-// and a new polymorph of the procedure will be baked with that constant.
-// for example if you called `value_poly(4)` a new version of `value_poly`
-// would be generated that replaces each use of the parameter `a` with the
-// `4` that you passed. this means the return statement will constant fold
-// into a simple `return 16;`
-proc value_poly($a: int) : int {
-    return a * a;
-}
-// $ on the type of a parameter means that this parameter can be ANY
-// type, and a new version of this procedure will be generated for
-// that type. for example `type_poly(124)` would generate a version
-// of `type_poly` where `T` is `int`. `type_poly(Vector3{1, 4, 9})`
-// would generate a version where `T` is `Vector3`
-proc type_poly(a: $T) : T {
-    return a * a;
-}
-// $ on both the name and the type means that this procedure can accept
-// any type and it must be a constant. simply a combination of the two
-// cases above.
-proc value_and_type_poly($a: $T) : T {
-    return a * a;
-}
 proc procedural_polymorphism() {
     print("\n\n---- procedural_polymorphism ----\n");
 
+    // $ on the name of a parameter means this parameter MUST be constant
+    // and a new polymorph of the procedure will be baked with that constant.
+    // for example if you called `value_poly(4)` a new version of `value_poly`
+    // would be generated that replaces each use of the parameter `a` with the
+    // `4` that you passed. this means the return statement will constant fold
+    // into a simple `return 16;`
+    proc value_poly($a: int) : int {
+        return a * a;
+    }
+
     print("%\n", value_poly(2));
     assert(value_poly(2) == 4);
+
+    // $ on the type of a parameter means that this parameter can be ANY
+    // type, and a new version of this procedure will be generated for
+    // that type. for example `type_poly(124)` would generate a version
+    // of `type_poly` where `T` is `int`. `type_poly(Vector3{1, 4, 9})`
+    // would generate a version where `T` is `Vector3`
+    proc type_poly(a: $T) : T {
+        return a * a;
+    }
 
     print("%\n", type_poly(3));
     assert(type_poly(3) == 9);
@@ -580,6 +597,13 @@ proc procedural_polymorphism() {
     assert(type_poly(a) == 25);
     assert(type_poly(f) == 36);
 
+    // $ on both the name and the type means that this procedure can accept
+    // any type and it must be a constant. simply a combination of the two
+    // cases above.
+    proc value_and_type_poly($a: $T) : T {
+        return a * a;
+    }
+
     print("%\n", value_and_type_poly(7));
     print("%\n", value_and_type_poly(8.0));
     assert(value_and_type_poly(7) == 49);
@@ -588,21 +612,22 @@ proc procedural_polymorphism() {
 
 
 
-// same with procedural polymorphism, a new version of the struct
-// Custom_Array_Type will be generated for each set of parameters
-// that are passed, creating a brand new type.
-// for structs, unlike procedures, these values must all be constant
-// values in order to maintain compile-time typesafety
-struct Custom_Array_Type!($N: int, $T: typeid) {
-    var array: [N]T;
-    operator [](my_array: >Custom_Array_Type!(N, T), index: int) : >T {
-        // implicitly takes a pointer to `my_array.array[index]` since this
-        // procedure returns a reference
-        return my_array.array[index];
-    }
-}
 proc structural_polymorphism() {
     print("\n\n---- structural_polymorphism ----\n");
+
+    // same with procedural polymorphism, a new version of the struct
+    // Custom_Array_Type will be generated for each set of parameters
+    // that are passed, creating a brand new type.
+    // for structs, unlike procedures, these values must all be constant
+    // values in order to maintain compile-time typesafety
+    struct Custom_Array_Type!($N: int, $T: typeid) {
+        var array: [N]T;
+        operator [](my_array: >Custom_Array_Type!(N, T), index: int) : >T {
+            // implicitly takes a pointer to `my_array.array[index]` since this
+            // procedure returns a reference
+            return my_array.array[index];
+        }
+    }
 
     var array_of_ints: Custom_Array_Type!(8, int);
     array_of_ints[4] = 124; // calls [] operator overload
@@ -635,24 +660,25 @@ proc any_type() {
     // the most notable use of `any` is for a print routine. here is an
     // example using varargs
     print_things(true, 456, 78.9, "hello");
-}
-proc print_things(args: ..any) {
-    for (var i = 0; i < args.count; i += 1) {
-        var arg = args[i];
-        if (arg.type == int) {
-            print("%\n", cast(^int, arg.data)^);
-        }
-        else if (arg.type == string) {
-            print("%\n", cast(^string, arg.data)^);
-        }
-        else if (arg.type == bool) {
-            print("%\n", cast(^bool, arg.data)^);
-        }
-        else if (arg.type == float) {
-            print("%\n", cast(^float, arg.data)^);
-        }
-        else {
-            print("<unknown type>\n");
+
+    proc print_things(args: ..any) {
+        for (var i = 0; i < args.count; i += 1) {
+            var arg = args[i];
+            if (arg.type == int) {
+                print("%\n", cast(^int, arg.data)^);
+            }
+            else if (arg.type == string) {
+                print("%\n", cast(^string, arg.data)^);
+            }
+            else if (arg.type == bool) {
+                print("%\n", cast(^bool, arg.data)^);
+            }
+            else if (arg.type == float) {
+                print("%\n", cast(^float, arg.data)^);
+            }
+            else {
+                print("<unknown type>\n");
+            }
         }
     }
 }
