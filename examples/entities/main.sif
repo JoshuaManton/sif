@@ -83,7 +83,7 @@ proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
     return ptr;
 }
 
-proc main() : i32 {
+proc main() {
     var entities: Dynamic_Array!(^Entity); // a dynamic array of pointers is not a good way to store entities, but again, fine for this example
     entities.allocator = default_allocator();
 
@@ -144,6 +144,4 @@ proc main() : i32 {
     print("\nAfter player looted chest:\n");
     printa(chest^);
     printa(player^);
-
-    return 0;
 }

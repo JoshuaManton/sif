@@ -9,7 +9,7 @@ struct Vertex {
     var color:    Vector4;
 }
 
-proc main() : i32 {
+proc main() {
     //
     var window = create_window("My Cool Window", 1920, 1080);
     init_directx(&window);

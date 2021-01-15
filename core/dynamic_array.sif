@@ -52,7 +52,7 @@ proc ordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
     if (index != dyn.count-1) {
         var src: rawptr = &dyn^[index+1];
         var dst: rawptr = &dyn^[index];
-        memmove(dst, src, cast(u32, (dyn.count-index+1) * sizeof(T)));
+        memmove(dst, src, cast(u64, (dyn.count-index+1) * sizeof(T)));
     }
     dyn.count -= 1;
     return value;

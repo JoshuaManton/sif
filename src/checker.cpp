@@ -2015,6 +2015,9 @@ Ast_Proc *polymorph_procedure(Ast_Proc *proc_to_polymorph, Location polymorph_lo
     For (idx, parameters) {
         Ast_Expr *parameter = parameters[idx];
         Operand *param_operand = typecheck_expr(parameter);
+        if (!param_operand) {
+            return nullptr;
+        }
         parameter_operands.append(*param_operand);
     }
 
