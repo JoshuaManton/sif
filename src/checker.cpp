@@ -614,7 +614,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             assert(!procedure->header->is_foreign);
             assert(procedure->body != nullptr);
             assert(procedure->header->name == nullptr);
-            assert(procedure->header->declaration == nullptr);
             if (!typecheck_procedure_header(procedure->header)) {
                 return false;
             }
@@ -3302,13 +3301,12 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         op_overload_name_sb.printf("__SIF__operator_overload_%s", token_name(header->operator_to_overload));
         assert(header->parameters.count == 2);
         header->name = intern_string(op_overload_name_sb.string());
-        assert(header->declaration == nullptr);
-        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block), g_global_linear_allocator);
-    }
-    else {
-        assert(header->name != nullptr);
+        assert(header->declaration != nullptr);
+        assert(header->declaration->name == nullptr);
+        header->declaration->name = header->name;
     }
 
+    assert(header->declaration);
     Operand operand = {};
     operand.referenced_declaration = header->declaration;
     operand.type = header->type;

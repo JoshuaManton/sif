@@ -241,12 +241,6 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
                 EXPECT(lexer, TK_IDENTIFIER, &name_token);
                 proc_name = name_token.text;
             }
-            else {
-                g_num_anonymous_procedures += 1;
-                String_Builder name_sb = make_string_builder(lexer->allocator, 128);
-                name_sb.printf("anonymous_procedure_%d", g_num_anonymous_procedures);
-                proc_name = name_sb.string();
-            }
         }
         else if (root_token.kind == TK_OPERATOR) {
             is_operator_overload = true;
