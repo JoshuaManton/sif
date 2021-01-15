@@ -22,6 +22,12 @@ Spinlock g_lexers_to_process_spinlock;
 Array<Lexer> g_lexers_to_process;
 Array<char *> g_all_included_files;
 
+// todo(josh): @Multithreading this is a concern
+int g_num_anonymous_structs = 0;
+
+// todo(josh): @Multithreading this is a concern
+int g_num_anonymous_procedures = 0;
+
 Thread g_parser_threads[NUM_PARSER_THREADS];
 
 u32 parser_worker_thread(void *);
@@ -44,6 +50,7 @@ void pop_ast_block(Lexer *lexer, Ast_Block *old_block) {
 }
 
 bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
+    assert(new_declaration->name != nullptr);
     // g_register_declaration_spinlock.lock();
     // defer(g_register_declaration_spinlock.unlock());
     assert(new_declaration->parent_block != nullptr);
@@ -213,7 +220,8 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         return nullptr;
     }
 
-    Ast_Proc_Header *header = SIF_NEW_CLONE(Ast_Proc_Header(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    Ast_Proc_Header *header = SIF_NEW_CLONE(Ast_Proc_Header(lexer->current_toplevel_declaration, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, lexer->current_block), lexer->allocator);
     {
         header->procedure_block = SIF_NEW_CLONE(Ast_Block(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
         Ast_Block *old_block = push_ast_block(lexer, header->procedure_block);
@@ -232,6 +240,12 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             if (name_token.kind != TK_LEFT_PAREN) {
                 EXPECT(lexer, TK_IDENTIFIER, &name_token);
                 proc_name = name_token.text;
+            }
+            else {
+                g_num_anonymous_procedures += 1;
+                String_Builder name_sb = make_string_builder(lexer->allocator, 128);
+                name_sb.printf("anonymous_procedure_%d", g_num_anonymous_procedures);
+                proc_name = name_sb.string();
             }
         }
         else if (root_token.kind == TK_OPERATOR) {
@@ -339,6 +353,14 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         }
     }
 
+    header->declaration->name = header->name;
+    header->declaration->is_polymorphic = header->is_polymorphic;
+    if (header->declaration->name != nullptr) {
+        if (!register_declaration(lexer->current_block, header->declaration)) {
+            return nullptr;
+        }
+    }
+
     return header;
 }
 
@@ -352,12 +374,13 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
     if (!header->is_foreign) {
         EXPECT(lexer, TK_LEFT_CURLY, nullptr);
 
-        Ast_Proc_Header *old_current_proc = lexer->currently_parsing_proc;
-        lexer->currently_parsing_proc = header;
+        assert(header->declaration);
+        Declaration *old_toplevel_declaration = lexer->current_toplevel_declaration;
+        lexer->current_toplevel_declaration = header->declaration;
         Ast_Block *old_block = push_ast_block(lexer, header->procedure_block);
         body = parse_block(lexer);
         pop_ast_block(lexer, old_block);
-        lexer->currently_parsing_proc = old_current_proc;
+        lexer->current_toplevel_declaration = old_toplevel_declaration;
         if (body == nullptr) {
             return nullptr;
         }
@@ -365,18 +388,7 @@ Ast_Proc *parse_proc(Lexer *lexer, char *name_override) {
         EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
     }
 
-    if (header->operator_to_overload == TK_INVALID) {
-        assert(header->name != nullptr);
-        header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, lexer->current_block), lexer->allocator);
-        header->declaration->notes = parse_notes(lexer);
-        header->declaration->is_polymorphic = header->is_polymorphic;
-        if (!register_declaration(lexer->current_block, header->declaration)) {
-            return nullptr;
-        }
-    }
-    else {
-        assert(header->name == nullptr);
-    }
+    header->declaration->notes = parse_notes(lexer);
 
     Ast_Proc *proc = SIF_NEW_CLONE(Ast_Proc(header, body, lexer->allocator, lexer->current_block, header->location), lexer->allocator);
     header->procedure = proc;
@@ -398,7 +410,11 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
         EXPECT(lexer, TK_STRUCT, &token);
     }
 
-    Ast_Struct *structure = SIF_NEW_CLONE(Ast_Struct(is_union, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+    Ast_Struct *structure = SIF_NEW_CLONE(Ast_Struct(lexer->current_toplevel_declaration, is_union, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+    structure->declaration = SIF_NEW_CLONE(Struct_Declaration(structure, lexer->current_block), lexer->allocator);
+    Declaration *old_toplevel_declaration = lexer->current_toplevel_declaration;
+    lexer->current_toplevel_declaration = structure->declaration;
+    defer(lexer->current_toplevel_declaration = old_toplevel_declaration);
 
     bool is_polymorphic = false;
     {
@@ -422,10 +438,9 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
             }
         }
         else {
-            static int num_anonymous_structs = 0;
-            num_anonymous_structs += 1;
+            g_num_anonymous_structs += 1;
             String_Builder name_sb = make_string_builder(lexer->allocator, 128);
-            name_sb.printf("Anonymous_Struct_%d", num_anonymous_structs);
+            name_sb.printf("Anonymous_Struct_%d", g_num_anonymous_structs);
             structure->name = name_sb.string();
         }
 
@@ -502,8 +517,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
             }
         }
     }
-
-    structure->declaration = SIF_NEW_CLONE(Struct_Declaration(structure, lexer->current_block), lexer->allocator);
+    structure->declaration->name = structure->name;
     structure->declaration->notes = parse_notes(lexer);
     structure->declaration->is_polymorphic = is_polymorphic;
     if (!register_declaration(lexer->current_block, structure->declaration)) {
@@ -523,7 +537,11 @@ Ast_Enum *parse_enum(Lexer *lexer) {
     Token name_token;
     EXPECT(lexer, TK_IDENTIFIER, &name_token);
 
-    Ast_Enum *ast_enum = SIF_NEW_CLONE(Ast_Enum(name_token.text, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    Ast_Enum *ast_enum = SIF_NEW_CLONE(Ast_Enum(name_token.text, lexer->current_toplevel_declaration, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    ast_enum->declaration = SIF_NEW_CLONE(Enum_Declaration(ast_enum, lexer->current_block), lexer->allocator);
+    Declaration *old_toplevel_declaration = lexer->current_toplevel_declaration;
+    lexer->current_toplevel_declaration = ast_enum->declaration;
+    defer(lexer->current_toplevel_declaration = old_toplevel_declaration);
 
     Array<Enum_Field> enum_fields = {};
     enum_fields.allocator = lexer->allocator;
@@ -570,8 +588,8 @@ Ast_Enum *parse_enum(Lexer *lexer) {
     }
     EXPECT(lexer, TK_RIGHT_CURLY, nullptr);
 
+    ast_enum->declaration->name = ast_enum->name;
     ast_enum->fields = enum_fields;
-    ast_enum->declaration = SIF_NEW_CLONE(Enum_Declaration(ast_enum, lexer->current_block), lexer->allocator);
     ast_enum->declaration->notes = parse_notes(lexer);
     if (!register_declaration(lexer->current_block, ast_enum->declaration)) {
         return nullptr;
@@ -671,7 +689,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (!stmt) {
                 return nullptr;
             }
-            if (!lexer->currently_parsing_proc) {
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
                 report_error(defer_token.location, "defer statements must be inside a procedure.");
                 return nullptr;
             }
@@ -787,16 +805,18 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_FOR: {
             eat_next_token(lexer);
-            if (lexer->currently_parsing_proc == nullptr) {
-                report_error(root_token.location, "Cannot use `for` at file scope.");
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                report_error(root_token.location, "Can only use `for` in a procedure.");
                 return nullptr;
             }
 
             Ast_For_Loop *for_loop = SIF_NEW_CLONE(Ast_For_Loop(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
-            assert(lexer->currently_parsing_proc != nullptr);
-            Ast_Node *old_loop = lexer->currently_parsing_proc->current_parsing_loop;
-            lexer->currently_parsing_proc->current_parsing_loop = for_loop;
-            defer(lexer->currently_parsing_proc->current_parsing_loop = old_loop);
+            assert(lexer->current_toplevel_declaration->kind == DECL_PROC);
+            Ast_Proc_Header *current_procedure = ((Proc_Declaration *)lexer->current_toplevel_declaration)->header;
+            assert(current_procedure != nullptr);
+            Ast_Node *old_loop = current_procedure->current_parsing_loop;
+            current_procedure->current_parsing_loop = for_loop;
+            defer(current_procedure->current_parsing_loop = old_loop);
 
             {
                 Ast_Block *block = SIF_NEW_CLONE(Ast_Block(lexer->allocator, lexer->current_block, lexer->location), lexer->allocator);
@@ -829,14 +849,17 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_WHILE: {
             eat_next_token(lexer);
-            if (lexer->currently_parsing_proc == nullptr) {
-                report_error(root_token.location, "Cannot use `while` at file scope.");
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                report_error(root_token.location, "Can only use `while` in a procedure.");
                 return nullptr;
             }
             Ast_While_Loop *while_loop = SIF_NEW_CLONE(Ast_While_Loop(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
-            Ast_Node *old_loop = lexer->currently_parsing_proc->current_parsing_loop;
-            lexer->currently_parsing_proc->current_parsing_loop = while_loop;
-            defer(lexer->currently_parsing_proc->current_parsing_loop = old_loop);
+            assert(lexer->current_toplevel_declaration->kind == DECL_PROC);
+            Ast_Proc_Header *current_procedure = ((Proc_Declaration *)lexer->current_toplevel_declaration)->header;
+            assert(current_procedure != nullptr);
+            Ast_Node *old_loop = current_procedure->current_parsing_loop;
+            current_procedure->current_parsing_loop = while_loop;
+            defer(current_procedure->current_parsing_loop = old_loop);
 
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);
             while_loop->condition = parse_expr(lexer);
@@ -863,8 +886,8 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 defer(pop_ast_block(lexer, old_block));
 
                 eat_next_token(lexer);
-                if (lexer->currently_parsing_proc == nullptr) {
-                    report_error(root_token.location, "Cannot use `if` at file scope.");
+                if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                    report_error(root_token.location, "Can only use `if` inside a procedure.");
                     return nullptr;
                 }
                 Token maybe_left_paren;
@@ -903,8 +926,8 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
 
         case TK_RETURN: {
             eat_next_token(lexer);
-            if (lexer->currently_parsing_proc == nullptr) {
-                report_error(root_token.location, "Cannot use `return` at file scope.");
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                report_error(root_token.location, "Can only use `return` in a procedure.");
                 return nullptr;
             }
             Token semicolon;
@@ -923,36 +946,44 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 }
                 EXPECT(lexer, TK_SEMICOLON, nullptr);
             }
-            assert(lexer->currently_parsing_proc != nullptr);
-            return SIF_NEW_CLONE(Ast_Return(lexer->currently_parsing_proc, return_expr, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+            assert(lexer->current_toplevel_declaration->kind == DECL_PROC);
+            Ast_Proc_Header *current_procedure = ((Proc_Declaration *)lexer->current_toplevel_declaration)->header;
+            assert(current_procedure != nullptr);
+            return SIF_NEW_CLONE(Ast_Return(current_procedure, return_expr, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
         }
 
         case TK_CONTINUE: {
             eat_next_token(lexer);
-            if (lexer->currently_parsing_proc == nullptr) {
-                report_error(root_token.location, "Cannot use `continue` at file scope.");
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                report_error(root_token.location, "Can only use `continue` in a procedure.");
                 return nullptr;
             }
-            if (lexer->currently_parsing_proc->current_parsing_loop == nullptr) {
+            assert(lexer->current_toplevel_declaration->kind == DECL_PROC);
+            Ast_Proc_Header *current_procedure = ((Proc_Declaration *)lexer->current_toplevel_declaration)->header;
+            assert(current_procedure != nullptr);
+            if (current_procedure->current_parsing_loop == nullptr) {
                 report_error(root_token.location, "`continue` must be used from within a loop.");
                 return nullptr;
             }
             EXPECT(lexer, TK_SEMICOLON, nullptr);
-            return SIF_NEW_CLONE(Ast_Continue(lexer->currently_parsing_proc->current_parsing_loop, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+            return SIF_NEW_CLONE(Ast_Continue(current_procedure->current_parsing_loop, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
         }
 
         case TK_BREAK: {
             eat_next_token(lexer);
-            if (lexer->currently_parsing_proc == nullptr) {
-                report_error(root_token.location, "Cannot use `break` at file scope.");
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                report_error(root_token.location, "Can only use `break` in a procedure.");
                 return nullptr;
             }
-            if (lexer->currently_parsing_proc->current_parsing_loop == nullptr) {
+            assert(lexer->current_toplevel_declaration->kind == DECL_PROC);
+            Ast_Proc_Header *current_procedure = ((Proc_Declaration *)lexer->current_toplevel_declaration)->header;
+            assert(current_procedure != nullptr);
+            if (current_procedure->current_parsing_loop == nullptr) {
                 report_error(root_token.location, "`break` must be used from within a loop.");
                 return nullptr;
             }
             EXPECT(lexer, TK_SEMICOLON, nullptr);
-            return SIF_NEW_CLONE(Ast_Break(lexer->currently_parsing_proc->current_parsing_loop, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+            return SIF_NEW_CLONE(Ast_Break(current_procedure->current_parsing_loop, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
         }
 
         default: {

@@ -1,71 +1,9 @@
 proc main() {
-    assert(qwe1() == 123);
-    assert(qwe2() == 321);
-    assert(Baz.Qux.qwe3() == 456);
-    Foo.Qux.bar();
-    Baz.Qux.bar();
-    assert(Foo.Qux != Baz.Qux);
-    assert(Foo.Qux.bar != Baz.Qux.bar);
-}
 
-struct Foo {
-    struct Qux {
-        proc bar() { }
-    }
-    enum Foo_Enum {
-       A; B; C;
-    }
-}
+    var foo: Foo;
+    printa(foo);
 
-struct Baz {
-    struct Qux {
-        proc bar() { }
-        proc qwe3() : int {
-            enum Foo_Enum {
-                A; B; C;
-            }
-
-            assert(Foo_Enum != Foo.Foo_Enum);
-
-            struct Zxc {
-                var a: int;
-            }
-
-            proc asd() : int {
-                var z: Zxc;
-                z.a = 456;
-                return z.a;
-            }
-
-            return asd();
-        }
-    }
-}
-
-proc qwe1() : int {
-    struct Zxc {
+    struct Foo {
         var a: int;
     }
-
-    proc asd() : int {
-        var z: Zxc;
-        z.a = 123;
-        return z.a;
-    }
-
-    return asd();
-}
-
-proc qwe2() : int {
-    struct Zxc {
-        var a: int;
-    }
-
-    proc asd() : int {
-        var z: Zxc;
-        z.a = 321;
-        return z.a;
-    }
-
-    return asd();
 }

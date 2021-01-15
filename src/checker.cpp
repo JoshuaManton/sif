@@ -43,8 +43,6 @@ Array<Declaration *> ordered_declarations;
 
 Ast_Proc *g_main_proc;
 
-Declaration *g_current_parent_procedure_or_struct;
-
 Array<Ast_Directive_Assert *> g_all_assert_directives;
 Array<Ast_Directive_Print *>  g_all_print_directives;
 
@@ -325,8 +323,8 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             decl_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
 
             String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
-            if (struct_decl->parent_declaration != nullptr) {
-                link_name_sb.print(struct_decl->parent_declaration->link_name);
+            if (struct_decl->structure->parent_declaration != nullptr) {
+                link_name_sb.print(struct_decl->structure->parent_declaration->link_name);
             }
             link_name_sb.printf("__SIF__%s", struct_decl->name);
             struct_decl->link_name = intern_string(link_name_sb.string());
@@ -548,8 +546,8 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             else if (!proc_decl->header->is_foreign) {
                 assert(proc_decl->header->name != nullptr);
                 String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
-                if (proc_decl->parent_declaration != nullptr) {
-                    link_name_sb.print(proc_decl->parent_declaration->link_name);
+                if (proc_decl->header->parent_declaration != nullptr) {
+                    link_name_sb.print(proc_decl->header->parent_declaration->link_name);
                 }
                 link_name_sb.printf("__SIF__%s", proc_decl->name);
                 For (idx, proc_decl->header->type->parameter_types) {
@@ -596,9 +594,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         if (!proc_decl->header->is_foreign) {
             assert(proc_decl->header->procedure->body != nullptr);
             if (!is_type_polymorphic(proc_decl->header->type)) {
-                Declaration *old_parent_procedure_or_struct = g_current_parent_procedure_or_struct;
-                g_current_parent_procedure_or_struct = decl;
-                defer(g_current_parent_procedure_or_struct = old_parent_procedure_or_struct);
                 if (!typecheck_block(proc_decl->header->procedure->body)) {
                     return false;
                 }
@@ -614,9 +609,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
     if (decl->kind == DECL_STRUCT) {
         Struct_Declaration *struct_decl = (Struct_Declaration *)decl;
-        Declaration *old_parent_procedure_or_struct = g_current_parent_procedure_or_struct;
-        g_current_parent_procedure_or_struct = decl;
-        defer(g_current_parent_procedure_or_struct = old_parent_procedure_or_struct);
         For (idx, struct_decl->structure->operator_overloads) {
             Ast_Proc *procedure = struct_decl->structure->operator_overloads[idx];
             assert(!procedure->header->is_foreign);
@@ -628,14 +620,12 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
             assert(procedure->header->name != nullptr);
             assert(procedure->header->declaration != nullptr);
-            procedure->header->declaration->parent_declaration = decl;
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
         }
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
-            procedure->header->declaration->parent_declaration = decl;
             if (!check_declaration(procedure->header->declaration, usage_location)) {
                 return false;
             }
@@ -645,7 +635,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
         For (idx, struct_decl->structure->local_structs) {
             Ast_Struct *local_struct = struct_decl->structure->local_structs[idx];
-            local_struct->declaration->parent_declaration = struct_decl;
             if (!check_declaration(local_struct->declaration, usage_location)) {
                 return false;
             }
@@ -655,7 +644,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
         }
         For (idx, struct_decl->structure->local_enums) {
             Ast_Enum *local_enum = struct_decl->structure->local_enums[idx];
-            local_enum->declaration->parent_declaration = struct_decl;
             if (!check_declaration(local_enum->declaration, usage_location)) {
                 return false;
             }
@@ -3317,6 +3305,9 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         assert(header->declaration == nullptr);
         header->declaration = SIF_NEW_CLONE(Proc_Declaration(header, header->parent_block), g_global_linear_allocator);
     }
+    else {
+        assert(header->name != nullptr);
+    }
 
     Operand operand = {};
     operand.referenced_declaration = header->declaration;
@@ -3570,29 +3561,14 @@ bool typecheck_node(Ast_Node *node) {
         }
 
         case AST_PROC: {
-            Ast_Proc *procedure = (Ast_Proc *)node;
-            if (g_current_parent_procedure_or_struct) {
-                assert(procedure->header->declaration->parent_declaration == nullptr);
-                procedure->header->declaration->parent_declaration = g_current_parent_procedure_or_struct;
-            }
             break;
         }
 
         case AST_STRUCT: {
-            Ast_Struct *structure = (Ast_Struct *)node;
-            if (g_current_parent_procedure_or_struct) {
-                assert(structure->declaration->parent_declaration == nullptr);
-                structure->declaration->parent_declaration = g_current_parent_procedure_or_struct;
-            }
             break;
         }
 
         case AST_ENUM: {
-            Ast_Enum *ast_enum = (Ast_Enum *)node;
-            if (g_current_parent_procedure_or_struct) {
-                assert(ast_enum->declaration->parent_declaration == nullptr);
-                ast_enum->declaration->parent_declaration = g_current_parent_procedure_or_struct;
-            }
             break;
         }
 

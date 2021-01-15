@@ -131,6 +131,8 @@ struct Token {
 struct Ast_Block;
 struct Ast_Proc_Header;
 
+struct Declaration;
+
 struct Lexer {
     char *text = nullptr;
     Location location = {};
@@ -139,7 +141,7 @@ struct Lexer {
     bool has_peeked_token = {};
     Token peeked_token = {};
     Ast_Block *current_block = {};
-    Ast_Proc_Header *currently_parsing_proc = {};
+    Declaration *current_toplevel_declaration = {};
     Allocator allocator = {};
     int num_polymorphic_variables_parsed = 0;
     Lexer(const char *filepath, char *text)

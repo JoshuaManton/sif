@@ -160,8 +160,10 @@ struct Ast_Proc_Header : public Ast_Node {
     Proc_Declaration *declaration = {};
     Ast_Node *current_parsing_loop = {};
     Array<Ast_Defer *> defers = {};
-    Ast_Proc_Header(Allocator allocator, Ast_Block *current_block, Location location)
+    Declaration *parent_declaration = {};
+    Ast_Proc_Header(Declaration *parent_declaration, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_PROC_HEADER, allocator, current_block, location)
+    , parent_declaration(parent_declaration)
     {
         polymorphic_parameter_indices.allocator = allocator;
         parameters.allocator = allocator;
@@ -281,8 +283,10 @@ struct Ast_Struct : public Ast_Node {
     Array<Ast_Struct *> local_structs = {};
     Array<Ast_Enum *> local_enums = {};
     Array<Ast_Var *> polymorphic_parameters = {};
-    Ast_Struct(bool is_union, Allocator allocator, Ast_Block *current_block, Location location)
+    Declaration *parent_declaration = {};
+    Ast_Struct(Declaration *parent_declaration, bool is_union, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_STRUCT, allocator, current_block, location)
+    , parent_declaration(parent_declaration)
     , is_union(is_union)
     {
         fields.allocator = allocator;
@@ -341,9 +345,11 @@ struct Ast_Enum : public Ast_Node {
     Type_Enum *type = nullptr;
     Enum_Declaration *declaration = {};
     Ast_Expr *base_type_expr = {};
-    Ast_Enum(char *name, Allocator allocator, Ast_Block *current_block, Location location)
+    Declaration *parent_declaration = {};
+    Ast_Enum(char *name, Declaration *parent_declaration, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_ENUM, allocator, current_block, location)
     , name(name)
+    , parent_declaration(parent_declaration)
     {}
 };
 
@@ -785,7 +791,6 @@ struct Declaration {
     bool is_polymorphic = {};
     Array<char *> notes = {};
     Declaration *from_using = {};
-    Declaration *parent_declaration = {}; // for local structs and procs
     Declaration(const char *name, Declaration_Kind kind, Ast_Block *parent_block, Location location)
     : name(name)
     , kind(kind)
