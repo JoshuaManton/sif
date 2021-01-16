@@ -97,6 +97,21 @@ struct Operand {
 
 struct Ast_Node;
 
+struct Ast_Basic_Block {
+    Array<Ast_Basic_Block *> from = {};
+    Array<Ast_Basic_Block *> to = {};
+    Array<Ast_Node *> nodes = {};
+    bool has_return = {};
+    Location location = {};
+    Ast_Basic_Block(Allocator allocator, Location location)
+    : location(location)
+    {
+        from.allocator = allocator;
+        to.allocator = allocator;
+        nodes.allocator = allocator;
+    }
+};
+
 struct Node_Polymorph_Parameter {
     bool is_polymorphic_value = {};
     bool is_polymorphic_type = {};
@@ -161,6 +176,8 @@ struct Ast_Proc_Header : public Ast_Node {
     Ast_Node *current_parsing_loop = {};
     Array<Ast_Defer *> defers = {};
     Declaration *parent_declaration = {};
+    Ast_Basic_Block *root_basic_block = {};
+    Ast_Basic_Block *current_basic_block = {};
     Ast_Proc_Header(Declaration *parent_declaration, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_PROC_HEADER, allocator, current_block, location)
     , parent_declaration(parent_declaration)

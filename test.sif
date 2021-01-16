@@ -1,11 +1,12 @@
-proc main() {
-    proc foo(args: ..$T) {
-        printa(T);
-        printa(args);
+proc foo() : int {
+    if (1 < 2) {
+        return 23;
     }
+    else {
+        return 32;
+    }
+}
 
-    foo(1, 4, 9);
-    foo("foo", "bar", "baz");
-    foo(1);
-    foo("foo");
+proc main() {
+    foo();
 }

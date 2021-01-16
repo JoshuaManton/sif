@@ -285,6 +285,31 @@ void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Bl
     }
 }
 
+bool check_basic_block_for_return(Ast_Basic_Block *block) {
+    if (block->to.count == 0) {
+        if (!block->has_return) {
+            bool all_froms_have_return = true;
+            For (idx, block->from) {
+                if (block->from[idx]->has_return == false) {
+                    all_froms_have_return = false;
+                    break;
+                }
+            }
+            if (!all_froms_have_return) {
+                report_error(block->location, "Basic block starting here doesn't have a return statement.");
+                return false;
+            }
+        }
+        return true;
+    }
+    For (idx, block->to) {
+        if (!check_basic_block_for_return(block->to[idx])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool check_declaration(Declaration *decl, Location usage_location, Operand *out_operand = nullptr) {
     assert(!decl->is_polymorphic);
     if (decl->check_state == DCS_CHECKED) {
@@ -596,6 +621,12 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             if (!is_type_polymorphic(proc_decl->header->type)) {
                 if (!typecheck_block(proc_decl->header->procedure->body)) {
                     return false;
+                }
+                if (proc_decl->header->type->return_type) {
+                    if (!check_basic_block_for_return(proc_decl->header->root_basic_block)) {
+                        report_error(proc_decl->header->location, "Procedure doesn't return on all code paths."); // todo(josh): @ErrorMessage
+                        return false;
+                    }
                 }
             }
             else {

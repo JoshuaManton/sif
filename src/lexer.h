@@ -142,6 +142,7 @@ struct Lexer {
     Token peeked_token = {};
     Ast_Block *current_block = {};
     Declaration *current_toplevel_declaration = {};
+    Ast_Proc_Header *currently_parsing_proc_body = {};
     Allocator allocator = {};
     int num_polymorphic_variables_parsed = 0;
     Lexer(const char *filepath, char *text)
