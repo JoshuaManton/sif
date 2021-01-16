@@ -1,9 +1,11 @@
 proc main() {
-
-    var foo: Foo;
-    printa(foo);
-
-    struct Foo {
-        var a: int;
+    proc foo(args: ..$T) {
+        printa(T);
+        printa(args);
     }
+
+    foo(1, 4, 9);
+    foo("foo", "bar", "baz");
+    foo(1);
+    foo("foo");
 }

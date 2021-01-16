@@ -55,6 +55,7 @@ MEDIUM PRIORITY
 -#location()
 -multiple return values
 -namespaced imports i.e. `#include Foo "foo.sif"`
+-append(&dyn, {1, 4, 9}); doesn't work because we can't use expected types when initially checking a polymorphic procedure right now
 
 LOW PRIORITY
 -enum field @notes?

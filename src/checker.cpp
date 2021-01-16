@@ -1862,6 +1862,10 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             }
             return try_create_polymorph_type_declarations(array_type->array_of, parameter_array->array_of, parameter_location, block_to_insert_into, out_polymorphic_declarations);
         }
+        case EXPR_SPREAD: {
+            Expr_Spread *spread = (Expr_Spread *)type_expr;
+            return try_create_polymorph_type_declarations(spread->rhs, parameter_type, parameter_location, block_to_insert_into, out_polymorphic_declarations);
+        }
         case EXPR_PROCEDURE_TYPE: {
             Expr_Procedure_Type *proc_type = (Expr_Procedure_Type *)type_expr;
             if (!is_type_procedure(parameter_type)) {
@@ -1934,21 +1938,52 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
             }
         }
 
-        if (parameters.count != root_vars_to_polymorph->count) {
-            report_error(polymorph_location, "Expected %d parameter(s), got %d.", root_vars_to_polymorph->count, parameters.count);
-            return false;
+        assert(root_vars_to_polymorph->count > 0);
+        int num_mandatory_parameters = root_vars_to_polymorph->count;
+        Ast_Var *last_parameter = (*root_vars_to_polymorph)[root_vars_to_polymorph->count-1];
+        bool is_varargs = false;
+        bool is_polymorphic_varargs = false;
+        if (unparen_expr(last_parameter->type_expr)->expr_kind == EXPR_SPREAD) {
+            is_varargs = true;
+            if (last_parameter->is_polymorphic_type) {
+                is_polymorphic_varargs = true;
+            }
+            else {
+                num_mandatory_parameters -= 1;
+            }
+        }
+
+        if (parameters.count != num_mandatory_parameters) {
+            if (is_varargs) {
+                if (parameters.count < num_mandatory_parameters) {
+                    if (is_polymorphic_varargs) {
+                        report_error(polymorph_location, "Expected at least %d parameter(s), got %d.", root_vars_to_polymorph->count, parameters.count);
+                        report_info(polymorph_location, "The last parameter is polymorphic varargs which means you have to provide at least one vararg parameter for the compiler to figure out the type of the varargs.");
+                        return false;
+                    }
+                    else {
+                        report_error(polymorph_location, "Expected at least %d parameter(s), got %d.", root_vars_to_polymorph->count-1, parameters.count);
+                        return false;
+                    }
+                }
+            }
+            else {
+                report_error(polymorph_location, "Expected %d parameter(s), got %d.", root_vars_to_polymorph->count, parameters.count);
+                return false;
+            }
         }
 
         // deduplicate
         For (idx, *polymorphs_list) {
             Node_Polymorph polymorph = (*polymorphs_list)[idx];
             bool all_matched = true;
-            assert(polymorph.polymorph_values.count == parameters.count);
+            // assert(polymorph.polymorph_values.count == parameters.count);
             For (value_idx, polymorph.polymorph_values) {
                 Node_Polymorph_Parameter poly_parameter_value = polymorph.polymorph_values[value_idx];
+                Operand param_operand = parameters[value_idx];
                 Operand param_matched;
                 assert(poly_parameter_value.type);
-                if (!match_types(parameters[value_idx], poly_parameter_value.type, &param_matched, false)) {
+                if (!match_types(param_operand, poly_parameter_value.type, &param_matched, false)) {
                     all_matched = false;
                     break;
                 }
@@ -2022,7 +2057,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
 
     assert(block_to_insert_declarations_into != nullptr);
     assert(polymorph_vars != nullptr);
-    assert(parameters.count == polymorph_vars->count);
+    // assert(parameters.count == polymorph_vars->count);
 
     // go through the parameters and create polymorphic declarations
     Array<Declaration *> polymorphic_declarations;
@@ -2095,11 +2130,6 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
             assert(structure_polymorph->type != nullptr);
             structure_polymorph->type->polymorphic_parameter_values = parameters;
             structure_polymorph->type->is_polymorph_of = (Ast_Struct *)node_to_polymorph;
-            // todo(josh): I'm not sure if this should be here or if it should just happen with each usage like with every other time with call complete_type()
-            // if (!complete_type(structure_polymorph->type)) {
-            //     report_info(polymorph_location, "Error during polymorph triggered here.");
-            //     return nullptr;
-            // }
             break;
         }
         case AST_PROC: {
@@ -2394,13 +2424,13 @@ bool try_resolve_identifier(const char *name, Ast_Block *start_block, Operand *o
     assert(resolved_declaration != nullptr);
     if (resolved_declaration->is_polymorphic) {
         out_result_operand->type = type_polymorphic;
-        out_result_operand->referenced_declaration = resolved_declaration;
     }
     else {
         if (!check_declaration(resolved_declaration, usage_location, out_result_operand)) {
             return false;
         }
     }
+    out_result_operand->referenced_declaration = resolved_declaration;
     out_result_operand->location = usage_location;
     *out_resolved_declaration = resolved_declaration;
     return true;
