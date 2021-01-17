@@ -995,7 +995,14 @@ char *type_to_string_plain(Type *type) {
             break;
         }
         case TYPE_PROCEDURE: {
-            assert(false && "unimplemented");
+            Type_Procedure *procedure = (Type_Procedure *)type;
+            sb.printf("procedure");
+            For (idx, procedure->parameter_types) {
+                sb.printf("_param_%s", type_to_string_plain(procedure->parameter_types[idx]));
+            }
+            if (procedure->return_type) {
+                sb.printf("_return_%s", type_to_string_plain(procedure->return_type));
+            }
             break;
         }
         case TYPE_POINTER: {
