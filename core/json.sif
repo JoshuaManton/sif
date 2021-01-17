@@ -1,5 +1,6 @@
 #include "core:basic.sif"
 #include "core:dynamic_array.sif"
+#include "core:string_builder.sif"
 
 // todo(josh): custom serializer/deserializer callback
 
@@ -199,13 +200,17 @@ proc json_parse_value_lexer(lexer: ^JSON_Lexer) : ^JSON_Value {
         return null;
     }
 
-    if (token.kind == .NUMBER)            { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Number{{.NUMBER, token.location}, token.int_value, token.uint_value, token.float_value}, lexer.allocator)); }
-    else if (token.kind == .STRING)       { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_String{{.STRING, token.location}, token.text}, lexer.allocator)); }
-    else if (token.kind == .LEFT_CURLY)   { return cast(^JSON_Value, json_parse_object(lexer)); }
-    else if (token.kind == .LEFT_SQUARE)  { return cast(^JSON_Value, json_parse_array(lexer));  }
-    else if (token.kind == .TRUE)         { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Bool{{.BOOL, token.location}, true}, lexer.allocator)); }
-    else if (token.kind == .FALSE)        { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Bool{{.BOOL, token.location}, false}, lexer.allocator)); }
-    else if (token.kind == .NULL)         { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Null{{.NULL, token.location}, }, lexer.allocator)); }
+    if (token.kind == .LEFT_CURLY)       { return cast(^JSON_Value, json_parse_object(lexer)); }
+    else if (token.kind == .LEFT_SQUARE) { return cast(^JSON_Value, json_parse_array(lexer));  }
+    else if (token.kind == .NUMBER)      { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Number{{.NUMBER, token.location}, token.int_value, token.uint_value, token.float_value}, lexer.allocator)); }
+    else if (token.kind == .TRUE)        { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Bool{{.BOOL, token.location}, true}, lexer.allocator)); }
+    else if (token.kind == .FALSE)       { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Bool{{.BOOL, token.location}, false}, lexer.allocator)); }
+    else if (token.kind == .NULL)        { json_eat_next_token(lexer, null); return cast(^JSON_Value, new_clone(JSON_Value_Null{{.NULL, token.location}, }, lexer.allocator)); }
+    else if (token.kind == .STRING) {
+        json_eat_next_token(lexer, null);
+        assert(token.text[0] == '"' && token.text[token.text.count-1] == '"');
+        return cast(^JSON_Value, new_clone(JSON_Value_String{{.STRING, token.location}, string_ptr(&token.text[1], token.text.count-2)}, lexer.allocator));
+    }
     else if (token.kind == .COMMA)        { json_error(token.location, "Unexpected token: %.", token.kind); }
     else if (token.kind == .COLON)        { json_error(token.location, "Unexpected token: %.", token.kind); }
     else if (token.kind == .RIGHT_CURLY)  { json_error(token.location, "Unexpected token: %.", token.kind); }
