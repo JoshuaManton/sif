@@ -980,7 +980,13 @@ char *type_to_string_plain(Type *type) {
                         sb.print("_");
                     }
                     // todo(josh): this might add non-identifier characters. need to do something special here.
-                    sbprint_constant_operand(&sb, structure->polymorphic_parameter_values[idx]);
+                    Operand value = structure->polymorphic_parameter_values[idx];
+                    if (is_type_typeid(value.type)) {
+                        sb.print(type_to_string_plain(value.type_value));
+                    }
+                    else {
+                        sbprint_constant_operand(&sb, value);
+                    }
                 }
             }
             else {

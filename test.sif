@@ -1,12 +1,25 @@
-proc foo() : int {
-    if (1 < 2) {
-        return 23;
-    }
-    else {
-        return 32;
-    }
+#include "core:json.sif"
+
+struct My_Struct {
+    var foo: int;
+    var nested_struct: Other_Struct;
+}
+
+struct Other_Struct {
+    var a_string: string;
+    var a_float: float;
 }
 
 proc main() {
-    foo();
+    var json = "{ \"foo\": 123, \"nested_struct\": { \"a_string\": \"wow this is some json\", \"a_float\": 2.52 } }";
+
+    // Parse the JSON into a JSON_Value
+    var json_value = json_parse_value(json, default_allocator());
+
+    // Write the JSON_Value to an instance of My_Struct
+    var my_struct: My_Struct;
+    json_write_value(&my_struct, json_value, default_allocator());
+
+    // Print the struct
+    printa(my_struct);
 }

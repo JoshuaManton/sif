@@ -21,7 +21,6 @@ HIGH PRIORITY
 -handle unary operators nicer, currently quick-and-dirty
 -#print and #assert don't work in global scope right now
 -enum arrays @EnumArrays
--locally scoped structs/procs/enums
 -allow operator overloads to be declared outside a struct
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
@@ -50,7 +49,6 @@ MEDIUM PRIORITY
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
 -what should the semantics be for reference-to-reference?
 -foreach loops
--control flow graph analysis
 -#if
 -#location()
 -multiple return values
