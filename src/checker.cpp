@@ -288,7 +288,7 @@ void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Bl
 bool check_basic_block_for_return(Ast_Basic_Block *block) {
     if (block->to.count == 0) {
         if (!block->has_return) {
-            bool all_froms_have_return = true;
+            bool all_froms_have_return = block->from.count > 0; // if we don't have any froms, default to false
             For (idx, block->from) {
                 if (block->from[idx]->has_return == false) {
                     all_froms_have_return = false;
