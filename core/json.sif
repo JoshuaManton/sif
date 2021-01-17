@@ -2,21 +2,41 @@
 #include "core:dynamic_array.sif"
 #include "core:string_builder.sif"
 
+// Simple API:
+//
+// json_serialize(ptr: ^$T, allocator: Allocator) : string
+//     Takes a pointer to any type and returns a JSON string generated from that data.
+//
+// json_parse_value(json: string, allocator: Allocator) : ^JSON_Value
+//     Parses a JSON string and returns a ^JSON_Value for use with json_write_value().
+//
+// json_write_value(ptr: ^$T, value: ^JSON_Value, allocator: Allocator)
+//     Writes a ^JSON_Value to a pointer of any type.
+//
+//
+//
+// Extended API:
+//
+// json_serialize_ti(ptr: rawptr, ti: ^Type_Info, allocator: Allocator) : string
+//     Takes a pointer and a ^Type_Info and returns a JSON string generated from that data.
+//
+// json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, allocator: Allocator) {
+//     Writes a ^JSON_Value to a pointer using the supplied ^Type_Info.
+//
+
 // todo(josh): custom serializer/deserializer callback
 
 proc json_serialize(ptr: ^$T, allocator: Allocator) : string {
+    return json_serialize_ti(ptr, get_type_info(T), allocator);
+}
+
+proc json_serialize_ti(ptr: rawptr, ti: ^Type_Info, allocator: Allocator) : string {
     var sb = make_string_builder(1024, allocator);
-    json_serialize_ti(&sb, ptr, get_type_info(T), 0);
+    json_serialize_ti_sb(&sb, ptr, ti, 0);
     return string_builder_to_string(sb);
 }
 
-proc json_print_indents(sb: ^String_Builder, indent_level: int) {
-    for (var i = 0; i < indent_level; i += 1) {
-        sbprint(sb, "    ");
-    }
-}
-
-proc json_serialize_ti(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_level: int) : bool {
+proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_level: int) : bool {
     if (ti.kind == .INTEGER) {
         var dti = cast(^Type_Info_Integer, ti);
         if (dti.is_signed) {
@@ -84,7 +104,7 @@ proc json_serialize_ti(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_
             }
             json_print_indents(sb, indent_level);
             sbprint(sb, "\"%\": ", field.name);
-            json_serialize_ti(sb, ptr_offset(cast(^byte, ptr), field.offset), field.type, indent_level);
+            json_serialize_ti_sb(sb, ptr_offset(cast(^byte, ptr), field.offset), field.type, indent_level);
         }
         sbprinta(sb, "\n");
         indent_level -= 1;
@@ -100,7 +120,7 @@ proc json_serialize_ti(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_
                 sbprint(sb, ",\n");
             }
             json_print_indents(sb, indent_level);
-            json_serialize_ti(sb, ptr_offset(cast(^byte, ptr), i * dti.array_of.size), dti.array_of, indent_level);
+            json_serialize_ti_sb(sb, ptr_offset(cast(^byte, ptr), i * dti.array_of.size), dti.array_of, indent_level);
         }
         sbprint(sb, "\n");
         indent_level -= 1;
@@ -117,7 +137,7 @@ proc json_serialize_ti(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_
                 sbprint(sb, ",\n");
             }
             json_print_indents(sb, indent_level);
-            json_serialize_ti(sb, ptr_offset(cast(^byte, slice.data), i * dti.slice_of.size), dti.slice_of, indent_level);
+            json_serialize_ti_sb(sb, ptr_offset(cast(^byte, slice.data), i * dti.slice_of.size), dti.slice_of, indent_level);
         }
         sbprint(sb, "\n");
         indent_level -= 1;
@@ -126,14 +146,20 @@ proc json_serialize_ti(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_
     }
     else if (ti.kind == .POINTER) {
         var dti = cast(^Type_Info_Pointer, ti);
-        json_serialize_ti(sb, cast(^rawptr, ptr)^, dti.pointer_to, indent_level);
+        json_serialize_ti_sb(sb, cast(^rawptr, ptr)^, dti.pointer_to, indent_level);
     }
     else {
-        print("Unhandled Type_Info kind in json_serialize_ti(): '%'.\n", ti.kind);
+        print("Unhandled Type_Info kind in json_serialize_ti_sb(): '%'.\n", ti.kind);
         sbprinta(sb, "{}\n");
         return false;
     }
     return true;
+}
+
+proc json_print_indents(sb: ^String_Builder, indent_level: int) {
+    for (var i = 0; i < indent_level; i += 1) {
+        sbprint(sb, "    ");
+    }
 }
 
 
