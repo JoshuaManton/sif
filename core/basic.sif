@@ -1,3 +1,5 @@
+#include "core:string_builder.sif"
+
 #foreign_system_import "msvcrt.lib"
 #foreign_system_import "ucrt.lib"
 #foreign_system_import "libcmt.lib"
@@ -460,7 +462,7 @@ proc bprint(buf: []u8, fmt: string, args: ..any) : int {
             }
 
             var arg = args[arg_index];
-            cursor += bprint_arg(slice_ptr(&buf[min(cursor, buf.count-1)], cast(int, max(0, buf.count - cursor + 1))), arg);
+            cursor += bprint_arg(slice_ptr(ptr_offset(buf.data, cursor), cast(int, max(0, buf.count - cursor + 1))), arg);
             arg_index += 1;
         }
         else {
@@ -483,6 +485,20 @@ proc bprinta(buf: []u8, args: ..any) : int {
         cursor += bprint_arg(slice_ptr(ptr_offset(buf.data, cursor), max(0, buf.count - cursor)), arg);
     }
     return cursor;
+}
+
+
+
+proc aprint(allocator: Allocator, fmt: string, args: ..any) : string {
+    var sb = make_string_builder(32, allocator);
+    sbprint(&sb, fmt, ..args);
+    return string_builder_to_string(sb);
+}
+
+proc aprinta(allocator: Allocator, args: ..any) : string {
+    var sb = make_string_builder(32, allocator);
+    sbprinta(&sb, ..args);
+    return string_builder_to_string(sb);
 }
 
 
@@ -523,7 +539,13 @@ proc delete_slice(slice: []$T, allocator: Allocator) {
 }
 
 proc copy_slice(dst: []$T, src: []T) {
-    memcpy(&dst[0], &src[0], cast(u64, min(dst.count, src.count) * sizeof(T)));
+    if (dst.data == null) {
+        return;
+    }
+    if (src.data == null) {
+        return;
+    }
+    memcpy(dst.data, src.data, cast(u64, min(dst.count, src.count) * sizeof(T)));
 }
 
 

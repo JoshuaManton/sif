@@ -139,6 +139,7 @@ struct Lexer {
     bool errored = false;
     bool allow_compound_literals = true;
     bool has_peeked_token = {};
+    Location peeked_location = {};
     Token peeked_token = {};
     Ast_Block *current_block = {};
     Declaration *current_toplevel_declaration = {};

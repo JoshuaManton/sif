@@ -1,0 +1,52 @@
+#include "core:strings.sif"
+#include "core:math.sif"
+
+proc test_strings() {
+    var str = "Hello, World!";
+    var pieces = string_split(str, ',', default_allocator());
+    assert(pieces[0] == "Hello");
+    assert(pieces[1] == " World!");
+
+    assert(aprint(default_allocator(), "this % is a string %", 123, Vector3{1, 4, 9}) == "this 123 is a string Vector3{x = 1.000000, y = 4.000000, z = 9.000000}");
+
+    var index: int;
+    assert(index_of("foozlez", 'z', &index));
+    assert(index == 3);
+    assert(!index_of("foozlez", 'Z', &index));
+
+    assert(last_index_of("foozlez", 'z', &index));
+    assert(index == 6);
+    assert(!last_index_of("foozlez", 'Z', &index));
+
+    assert(string_ends_with("foozle", "zle"));
+    assert(!string_ends_with("foozle", "foo"));
+    assert(string_starts_with("foozle", "foo"));
+    assert(!string_starts_with("foozle", "zle"));
+    assert(!string_starts_with("foozle", ""));
+    assert(!string_ends_with("foozle", ""));
+
+    {
+        var strings = [4]string {
+            "foo", "bar", "baz", "qux"
+        };
+        var full_string = concatenate(to_slice(&strings), default_allocator());
+        assert(full_string == "foobarbazqux");
+    }
+
+    {
+        var strings = [4]string {
+            "", "", "", ""
+        };
+        var full_string = concatenate(to_slice(&strings), default_allocator());
+        assert(full_string == "");
+        assert(full_string.data == null);
+    }
+
+    {
+        var strings = [4]string {
+            "foo", "", "bar", ""
+        };
+        var full_string = concatenate(to_slice(&strings), default_allocator());
+        assert(full_string == "foobar");
+    }
+}

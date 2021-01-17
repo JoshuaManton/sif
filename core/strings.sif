@@ -1,0 +1,113 @@
+#include "core:dynamic_array.sif"
+
+proc string_split(str: string, delimiter: byte, allocator: Allocator) : []string {
+    var results: Dynamic_Array!(string);
+    results.allocator = allocator;
+    var start = 0;
+    for (var i = 0; i < str.count; i += 1) {
+        if (str[i] == delimiter) {
+            append(&results, string_ptr(&str[start], i - start));
+            start = i + 1;
+        }
+    }
+    if (str.count > 0) {
+        append(&results, string_ptr(&str[start], str.count - start));
+    }
+    if (results.count > 0) {
+        return slice_ptr(&results[0], results.count);
+    }
+    else {
+        return {};
+    }
+}
+
+proc index_of(str: string, c: byte, out_index: ^int) : bool {
+    for (var i = 0; i < str.count; i += 1) {
+        if (str[i] == c) {
+            out_index^ = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+proc last_index_of(str: string, c: byte, out_index: ^int) : bool {
+    for (var i = str.count-1; i >= 0; i -= 1) {
+        if (str[i] == c) {
+            out_index^ = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+proc string_starts_with(str: string, start: string) : bool {
+    if (str.count < start.count) {
+        return false;
+    }
+    if (start.count <= 0) {
+        return false;
+    }
+    for (var i = 0; i < start.count; i += 1) {
+        if (str[i] != start[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+proc string_ends_with(str: string, end: string) : bool {
+    if (str.count < end.count) {
+        return false;
+    }
+    if (end.count <= 0) {
+        return false;
+    }
+    var str_end = str.count-1;
+    var end_end = end.count-1;
+    for (; end_end >= 0; ;) {
+        if (str[str_end] != end[end_end]) {
+            return false;
+        }
+        str_end -= 1;
+        end_end -= 1;
+    }
+    return true;
+}
+
+proc concatenate(strings: []string, allocator: Allocator) : string {
+    var required_length = 0;
+    for (var i = 0; i < strings.count; i += 1) {
+        required_length += strings[i].count;
+    }
+    if (required_length == 0) {
+        return {};
+    }
+    var str = new_string(required_length, allocator);
+    var cursor = 0;
+    for (var i = 0; i < strings.count; i += 1) {
+        var elem = strings[i];
+        if (elem.count == 0) {
+            continue;
+        }
+        copy_slice(transmute([]byte, slice_ptr(&str[cursor], str.count-cursor)), transmute([]byte, elem));
+        cursor += elem.count;
+    }
+    return str;
+}
+
+proc string_replace_in_place(str: string, replace: byte, with: byte) : int {
+    var num_replacements = 0;
+    for (var i = 0; i < str.count; i += 1) {
+        if (str[i] == replace) {
+            str[i] = with;
+            num_replacements += 1;
+        }
+    }
+    return num_replacements;
+}
+
+proc string_replace_new(str: string, replace: byte, with: byte, allocator: Allocator) : int {
+    str = clone_string(str, allocator);
+    return string_replace_in_place(str, replace, with);
+}

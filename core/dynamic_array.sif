@@ -10,7 +10,10 @@ struct Dynamic_Array!($T: typeid) {
 }
 
 proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
-    assert(dyn.allocator.alloc_proc != null);
+    if (dyn.allocator.alloc_proc == null) {
+        print("Error: Allocator wasn't set on Dynamic_Array(%).\n", T);
+        assert(false);
+    }
     if (dyn.count == dyn.elements.count) {
         var old_data = dyn.elements.data;
         var new_cap = 8 + dyn.elements.count * 2;
@@ -34,7 +37,10 @@ proc append_empty(dyn: ^Dynamic_Array!($T)) : ^T {
 }
 
 proc pop(dyn: ^Dynamic_Array!($T)) : T {
-    assert(dyn.count > 0);
+    if (dyn.count > 0) {
+        print("pop() called with empty dynamic array");
+        assert(false);
+    }
     var value = dyn[dyn.count-1];
     dyn.count -= 1;
     return value;

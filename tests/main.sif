@@ -1,17 +1,17 @@
-proc main() : i32 {
+proc main() {
     run_test(test_defer,              "defer");
     run_test(test_local_declarations, "local_declarations");
     run_test(test_json,               "json");
+    run_test(test_strings,            "strings");
 
-    print("Done tests.");
-    return 0;
+    print("Done tests.\n");
 }
 
 const NUM_DOTS = 30;
 
 proc run_test(procedure: proc(), test_name: string) {
     print("% ", test_name);
-    var dots_to_print = NUM_DOTS - test_name.count;
+    var dots_to_print = max(NUM_DOTS - test_name.count, 0) + 5;
     for (var i = 0; i < dots_to_print; i += 1) {
         print(".");
     }
@@ -22,5 +22,6 @@ proc run_test(procedure: proc(), test_name: string) {
 #include "defer_test.sif"
 #include "local_declarations.sif"
 #include "json_test.sif"
+#include "strings_test.sif"
 
 #include "core:basic.sif"

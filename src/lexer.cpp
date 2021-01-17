@@ -420,6 +420,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     if (lexer->has_peeked_token) {
         lexer->has_peeked_token = false;
         *out_token = lexer->peeked_token;
+        lexer->location = lexer->peeked_location;
         return true;
     }
 
@@ -783,11 +784,14 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
 }
 
 bool peek_next_token(Lexer *lexer, Token *out_token) {
+    Location old_location = lexer->location;
     bool ok = get_next_token(lexer, out_token);
     if (ok) {
         lexer->has_peeked_token = true;
         lexer->peeked_token = *out_token;
+        lexer->peeked_location = lexer->location;
     }
+    lexer->location = old_location;
     return ok;
 }
 
