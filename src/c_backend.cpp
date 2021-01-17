@@ -7,11 +7,8 @@ extern bool g_is_debug_build;
 
 extern Ast_Proc *g_main_proc;
 
-// todo(josh): @Multithreading is this an issue?
-int g_total_num_temporaries_emitted = 0;
-
-// todo(josh): @Multithreading is this an issue?
-int g_num_short_circuit_labels = 0;
+thread_local int g_total_num_temporaries_emitted = 0;
+thread_local int g_num_short_circuit_labels = 0;
 
 void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name);
 void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_name);
@@ -1197,6 +1194,10 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             Ast_Defer *ast_defer = (Ast_Defer *)node;
             block->c_gen_defer_stack.append(ast_defer);
             break;
+        }
+
+        case AST_EMPTY_STATEMENT: {
+            sb->print(";\n");
         }
 
         case AST_DIRECTIVE_ASSERT: {
