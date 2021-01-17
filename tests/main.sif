@@ -1,12 +1,26 @@
 proc main() : i32 {
-    print("---- defer\n");              defer_test();
-    print("---- local_declarations\n"); test_local_declarations();
+    run_test(test_defer,              "defer");
+    run_test(test_local_declarations, "local_declarations");
+    run_test(test_json,               "json");
 
     print("Done tests.");
     return 0;
 }
 
+const NUM_DOTS = 30;
+
+proc run_test(procedure: proc(), test_name: string) {
+    print("% ", test_name);
+    var dots_to_print = NUM_DOTS - test_name.count;
+    for (var i = 0; i < dots_to_print; i += 1) {
+        print(".");
+    }
+    procedure();
+    print(" DONE\n");
+}
+
 #include "defer_test.sif"
 #include "local_declarations.sif"
+#include "json_test.sif"
 
 #include "core:basic.sif"

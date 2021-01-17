@@ -1,4 +1,4 @@
-proc defer_test() {
+proc test_defer() {
     var a = 123;
 
     //
