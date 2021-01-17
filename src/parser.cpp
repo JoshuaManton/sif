@@ -30,6 +30,8 @@ int g_num_anonymous_procedures = 0;
 
 Thread g_parser_threads[NUM_PARSER_THREADS];
 
+extern bool g_logged_error;
+
 u32 parser_worker_thread(void *);
 
 void init_parser() {
@@ -68,7 +70,26 @@ bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
 
 
 
+bool expect_semicolon(Lexer *lexer, Token *out_token = nullptr) {
+    Location semicolon_location = lexer->location;
+    Token dummy;
+    if (out_token == nullptr) {
+        out_token = &dummy;
+    }
+    if (!get_next_token(lexer, out_token)) {
+        report_error(semicolon_location, "Expected semicolon here, got end of file.");
+        return false;
+    }
+    if (out_token->kind != TK_SEMICOLON) {
+        report_error(semicolon_location, "Expected semicolon here, got '%s'.", token_string(out_token->kind));
+        return false;
+    }
+    return true;
+}
+
 #define EXPECT(_lexer, _token_kind, _token_ptr) if (!expect_token(_lexer, _token_kind, _token_ptr)) { return nullptr; }
+
+#define EXPECT_SEMICOLON(_lexer, _token_ptr) if (!expect_semicolon(_lexer, _token_ptr)) { return nullptr; }
 
 
 
@@ -382,7 +403,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
             eat_next_token(lexer);
             header->is_foreign = true;
-            EXPECT(lexer, TK_SEMICOLON, nullptr); // note(josh): this isn't really necessary but it looks nicer
+            EXPECT_SEMICOLON(lexer, nullptr); // note(josh): this isn't really necessary but it looks nicer
         }
     }
 
@@ -623,7 +644,7 @@ Ast_Enum *parse_enum(Lexer *lexer) {
                 eat_next_token(lexer);
                 expr = parse_expr(lexer);
             }
-            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            EXPECT_SEMICOLON(lexer, nullptr);
 
             Enum_Field field = {};
             field.name = ident_token.text;
@@ -684,7 +705,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 return nullptr;
             }
             if (eat_semicolon) {
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                EXPECT_SEMICOLON(lexer, nullptr);
             }
             if (var->expr && lexer->currently_parsing_proc_body) {
                 basic_block_add_node(lexer, var);
@@ -698,7 +719,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 return nullptr;
             }
             if (eat_semicolon) {
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                EXPECT_SEMICOLON(lexer, nullptr);
             }
             return var;
         }
@@ -722,7 +743,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 expr = parse_expr(lexer);
             }
             if (eat_semicolon) {
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                EXPECT_SEMICOLON(lexer, nullptr);
             }
 
             if (var) {
@@ -855,9 +876,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         case TK_SEMICOLON: {
-            if (eat_semicolon) {
-                eat_next_token(lexer);
-            }
+            eat_next_token(lexer);
             Ast_Empty_Statement *stmt = SIF_NEW_CLONE(Ast_Empty_Statement(lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
             if (lexer->currently_parsing_proc_body) {
                 basic_block_add_node(lexer, stmt);
@@ -893,15 +912,19 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 if (!for_loop->pre) {
                     return nullptr;
                 }
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                if (for_loop->pre->ast_kind != AST_EMPTY_STATEMENT) {
+                    EXPECT_SEMICOLON(lexer, nullptr);
+                }
                 for_loop->condition = parse_expr(lexer);
                 if (!for_loop->condition) {
                     return nullptr;
                 }
+                if (for_loop->condition->ast_kind != AST_EMPTY_STATEMENT) {
+                    EXPECT_SEMICOLON(lexer, nullptr);
+                }
 
                 for_basic_block = basic_block_new(lexer);
                 basic_block_set_current(lexer, for_basic_block); // :ForBasicBlockPostStatement
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
                 for_loop->post = parse_single_statement(lexer, false); // todo(josh): this is currently getting put into the beginning of the for_basic_block which isn't temporally correct :ForBasicBlockPostStatement
                 if (!for_loop->post) {
                     return nullptr;
@@ -992,6 +1015,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 }
                 if (maybe_left_paren.kind != TK_LEFT_PAREN) {
                     pre_statement = parse_single_statement(lexer);
+                    if (!pre_statement) {
+                        return nullptr;
+                    }
                 }
 
                 EXPECT(lexer, TK_LEFT_PAREN, nullptr);
@@ -1063,7 +1089,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 if (!return_expr) {
                     return nullptr;
                 }
-                EXPECT(lexer, TK_SEMICOLON, nullptr);
+                EXPECT_SEMICOLON(lexer, nullptr);
             }
             assert(lexer->current_toplevel_declaration->kind == DECL_PROC);
             Ast_Proc_Header *current_procedure = ((Proc_Declaration *)lexer->current_toplevel_declaration)->header;
@@ -1087,7 +1113,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 report_error(root_token.location, "`continue` must be used from within a loop.");
                 return nullptr;
             }
-            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            EXPECT_SEMICOLON(lexer, nullptr);
             Ast_Continue *continue_stmt = SIF_NEW_CLONE(Ast_Continue(current_procedure->current_parsing_loop, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
             // todo(josh): is there some extra basic block stuff we need to do here?
             basic_block_add_node(lexer, continue_stmt);
@@ -1107,7 +1133,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 report_error(root_token.location, "`break` must be used from within a loop.");
                 return nullptr;
             }
-            EXPECT(lexer, TK_SEMICOLON, nullptr);
+            EXPECT_SEMICOLON(lexer, nullptr);
             Ast_Break *break_stmt = SIF_NEW_CLONE(Ast_Break(current_procedure->current_parsing_loop, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
             // todo(josh): is there some extra basic block stuff we need to do here?
             basic_block_add_node(lexer, break_stmt);
@@ -1158,7 +1184,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                         return nullptr;
                     }
                     if (eat_semicolon) {
-                        EXPECT(lexer, TK_SEMICOLON, nullptr);
+                        EXPECT_SEMICOLON(lexer, nullptr);
                     }
                     Ast_Assign *assign = SIF_NEW_CLONE(Ast_Assign(op.kind, lhs_list, rhs_list, lexer->allocator, lexer->current_block, lhs_list->location), lexer->allocator);
                     basic_block_add_node(lexer, assign);
@@ -1255,7 +1281,7 @@ void parse_file(const char *requested_filename, Location include_location) {
 }
 
 u32 parser_worker_thread(void *userdata) {
-    while (g_files_done_parsing < g_all_included_files.count) {
+    while (g_files_done_parsing < g_all_included_files.count && !g_logged_error) {
         g_lexers_to_process_spinlock.lock();
         if (g_lexers_to_process.count > 0) {
             Lexer lexer = g_lexers_to_process.pop();
