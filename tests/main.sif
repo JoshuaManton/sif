@@ -1,4 +1,5 @@
 proc main() {
+    run_test(test_miscellanea,        "miscellanea");
     run_test(test_defer,              "defer");
     run_test(test_local_declarations, "local_declarations");
     run_test(test_json,               "json");
@@ -19,6 +20,7 @@ proc run_test(procedure: proc(), test_name: string) {
     print(" DONE\n");
 }
 
+#include "miscellaneous_tests.sif"
 #include "defer_test.sif"
 #include "local_declarations.sif"
 #include "json_test.sif"

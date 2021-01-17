@@ -422,41 +422,11 @@ void c_print_procedure_call_parameters(Chunked_String_Builder *sb, Ast_Expr *roo
     }
 }
 
-void c_print_hidden_using_selectors(Chunked_String_Builder *sb, Declaration *decl, int indent_level) {
-    Declaration *from_using = decl;
-    while (from_using->kind == DECL_USING) {
-        Using_Declaration *using_decl = (Using_Declaration *)from_using;
-        Type *lhs_type = nullptr;
-        assert(using_decl->from_using);
-        assert(using_decl->from_using->kind == DECL_VAR);
-        Var_Declaration *var_decl = (Var_Declaration *)using_decl->from_using;
-        sb->printf("%s", using_decl->from_using->name);
-        lhs_type = var_decl->var->type;
-        assert(lhs_type != nullptr);
-        if (is_type_pointer(lhs_type)) {
-            sb->print("->");
-        }
-        else {
-            sb->print(".");
-        }
-        from_using = using_decl->declaration;
-    }
-}
-
 char *c_print_gen_location(Chunked_String_Builder *sb, int indent_level, Location location) {
     char *t = c_temporary();
     c_print_line_directive(sb, location, "gen Source_Code_Location");
     print_indents(sb, indent_level);
-    sb->printf("struct %s %s = {0};\n", sif_runtime_source_code_location->link_name, t);
-    c_print_line_directive(sb, location, "gen Source_Code_Location");
-    print_indents(sb, indent_level);
-    sb->printf("%s.filepath = MAKE_STRING(\"%s\", %d);\n", t, location.filepath, strlen(location.filepath));
-    c_print_line_directive(sb, location, "gen Source_Code_Location");
-    print_indents(sb, indent_level);
-    sb->printf("%s.line = %d;\n", t, location.line);
-    c_print_line_directive(sb, location, "gen Source_Code_Location");
-    print_indents(sb, indent_level);
-    sb->printf("%s.character = %d;\n", t, location.character);
+    sb->printf("struct %s %s = %s(MAKE_STRING(\"%s\", %d), %d, %d);\n", sif_runtime_source_code_location->link_name, t, sif_runtime_make_source_code_location->link_name, location.filepath, strlen(location.filepath), location.line, location.character);
     return t;
 }
 
@@ -474,6 +444,32 @@ void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, char *lh
     print_indents(sb, indent_level);
     sb->printf("%s(%s.%s, %s, %s);\n", sif_runtime_bounds_check_proc->link_name, lhs_name, count_field, index_name, location_t);
     c_print_line_directive(sb, location, "bounds check after");
+}
+
+void c_print_selector(Chunked_String_Builder *sb, Chunked_String_Builder *expr_sb, char *lhs, Type *type, Location location, int indent_level) {
+    if (is_type_pointer(type)) {
+        c_print_null_check(sb, indent_level, lhs, location);
+        expr_sb->print("->");
+    }
+    else {
+        expr_sb->print(".");
+    }
+}
+
+void c_print_hidden_using_selectors(Chunked_String_Builder *sb, Chunked_String_Builder *expr_sb, Declaration *decl, Location location, int indent_level) {
+    Declaration *from_using = decl;
+    while (from_using->kind == DECL_USING) {
+        Using_Declaration *using_decl = (Using_Declaration *)from_using;
+        Type *lhs_type = nullptr;
+        assert(using_decl->from_using);
+        assert(using_decl->from_using->kind == DECL_VAR);
+        Var_Declaration *var_decl = (Var_Declaration *)using_decl->from_using;
+        expr_sb->printf("%s", using_decl->from_using->name);
+        lhs_type = var_decl->var->type;
+        assert(lhs_type != nullptr);
+        c_print_selector(sb, expr_sb, expr_sb->make_string(), lhs_type, location, indent_level);
+        from_using = using_decl->declaration;
+    }
 }
 
 char *c_print_procedure_call(Chunked_String_Builder *_sb, Ast_Expr *root_expr, const char *procedure_name, Array<Procedure_Call_Parameter> parameters, int indent_level, Type_Procedure *proc_type) {
@@ -551,7 +547,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 case EXPR_IDENTIFIER: {
                     Expr_Identifier *identifier = (Expr_Identifier *)expr;
                     Chunked_String_Builder ident_sb = make_chunked_string_builder(g_global_linear_allocator, 128);
-                    c_print_hidden_using_selectors(&expr_sb, identifier->resolved_declaration, indent_level);
+                    c_print_hidden_using_selectors(_sb, &expr_sb, identifier->resolved_declaration, identifier->location, indent_level);
                     expr_sb.print(identifier->resolved_declaration->link_name);
                     break;
                 }
@@ -777,15 +773,11 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                         expr_sb.print(")&");
                     }
                     expr_sb.print(lhs);
-                    if (is_type_pointer(selector->lhs->operand.type)) {
-                        c_print_null_check(_sb, indent_level, lhs, selector->lhs->location);
-                        expr_sb.print("->");
-                    }
-                    else {
-                        expr_sb.print(".");
-                    }
+
+                    c_print_selector(_sb, &expr_sb, lhs, selector->lhs->operand.type, selector->lhs->location, indent_level);
+
                     Declaration *right_most_decl = selector->lookup.declaration;
-                    c_print_hidden_using_selectors(&expr_sb, right_most_decl, indent_level);
+                    c_print_hidden_using_selectors(_sb, &expr_sb, right_most_decl, selector->lhs->location, indent_level);
                     expr_sb.printf("%s", right_most_decl->name);
                     if (is_accessing_slice_data_field) {
                         expr_sb.print(")");
@@ -1005,12 +997,17 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
             For (idx, assign->rhs->exprs) {
                 Ast_Expr *rhs_expr = assign->rhs->exprs[idx];
                 char *rhs = c_print_expr(sb, rhs_expr, indent_level, rhs_expr->operand.type);
-                char *t = c_temporary();
                 c_print_line_directive(sb, assign->location, "assign statement");
-                print_indents(sb, indent_level);
-                c_print_type(sb, rhs_expr->operand.type, t);
-                sb->printf(" = %s;\n", rhs);
-                temps.append(t);
+                if (assign->lhs->exprs.count == 1) {
+                    temps.append(rhs);
+                }
+                else {
+                    char *t = c_temporary();
+                    print_indents(sb, indent_level);
+                    c_print_type(sb, rhs_expr->operand.type, t);
+                    sb->printf(" = %s;\n", rhs);
+                    temps.append(t);
+                }
             }
             assert(temps.count == assign->lhs->exprs.count);
             For (idx, assign->lhs->exprs) {

@@ -216,6 +216,7 @@ extern Declaration *sif_runtime_null_check_proc;
 extern Declaration *sif_runtime_string_eq_proc;
 extern Declaration *sif_runtime_zero_pointer_proc;
 extern Declaration *sif_runtime_source_code_location;
+extern Declaration *sif_runtime_make_source_code_location;
 extern Declaration *sif_runtime_union_all_type_infos;
 extern Declaration *sif_runtime_type_info;
 extern Declaration *sif_runtime_type_info_integer;

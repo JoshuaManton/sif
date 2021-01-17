@@ -52,6 +52,7 @@ extern char *g_interned_sif_runtime_null_check_proc_string;
 extern char *g_interned_sif_runtime_string_eq_proc_string;
 extern char *g_interned_sif_runtime_zero_pointer_proc_string;
 extern char *g_interned_sif_runtime_source_code_location_string;
+extern char *g_interned_sif_runtime_make_source_code_location_string;
 
 extern char *g_interned_sif_runtime_union_all_type_infos_string;
 extern char *g_interned_sif_runtime_type_info_string;

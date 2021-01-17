@@ -68,6 +68,7 @@ char *g_interned_sif_runtime_null_check_proc_string;
 char *g_interned_sif_runtime_string_eq_proc_string;
 char *g_interned_sif_runtime_zero_pointer_proc_string;
 char *g_interned_sif_runtime_source_code_location_string;
+char *g_interned_sif_runtime_make_source_code_location_string;
 
 char *g_interned_sif_runtime_union_all_type_infos_string;
 char *g_interned_sif_runtime_type_info_string;
@@ -123,11 +124,12 @@ void init_interned_strings() {
     g_interned_data_string        = intern_string("data");
     g_interned_count_string       = intern_string("count");
 
-    g_interned_sif_runtime_bounds_check_proc_string    = intern_string("sif_bounds_check");
-    g_interned_sif_runtime_null_check_proc_string      = intern_string("sif_null_check");
-    g_interned_sif_runtime_string_eq_proc_string       = intern_string("string_eq");
-    g_interned_sif_runtime_zero_pointer_proc_string    = intern_string("zero_pointer");
-    g_interned_sif_runtime_source_code_location_string = intern_string("Source_Code_Location");
+    g_interned_sif_runtime_bounds_check_proc_string               = intern_string("sif_bounds_check");
+    g_interned_sif_runtime_null_check_proc_string                 = intern_string("sif_null_check");
+    g_interned_sif_runtime_string_eq_proc_string                  = intern_string("string_eq");
+    g_interned_sif_runtime_zero_pointer_proc_string               = intern_string("zero_pointer");
+    g_interned_sif_runtime_source_code_location_string            = intern_string("Source_Code_Location");
+    g_interned_sif_runtime_make_source_code_location_string       = intern_string("make_source_code_location");
 
     g_interned_sif_runtime_union_all_type_infos_string   = intern_string("Union_All_Type_Infos");
     g_interned_sif_runtime_type_info_string              = intern_string("Type_Info");

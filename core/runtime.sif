@@ -35,6 +35,14 @@ struct Source_Code_Location {
     var character: int;
 } @sif_runtime
 
+proc make_source_code_location(filepath: string, line: int, character: int) : Source_Code_Location {
+    var loc: Source_Code_Location;
+    loc.filepath = filepath;
+    loc.line = line;
+    loc.character = character;
+    return loc;
+} @sif_runtime
+
 proc sif_null_check(ptr: rawptr, location: Source_Code_Location) {
     if (ptr == null) {
         // todo(josh): remove this dependency on basic
