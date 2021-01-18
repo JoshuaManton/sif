@@ -1600,6 +1600,8 @@ u32 type_info_worker_proc(void *userdata) {
 
 
 
+extern bool g_is_debug_build;
+
 Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     Actual_Declarations_Payload actual_declarations_payload1 = {};
     actual_declarations_payload1.sb = make_chunked_string_builder(g_global_linear_allocator, 10 * 1024);
@@ -1725,7 +1727,12 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("void assert(bool condition) {\n");
     sb.print("    if (!condition) {\n");
     sb.print("        printf(\"Assertion failed.\\n\");\n");
-    sb.print("        *((int *)0) = 0;\n");
+    if (g_is_debug_build) {
+        sb.print("        __debugbreak();\n");
+    }
+    else {
+        sb.print("        exit(1);\n");
+    }
     sb.print("    }\n");
     sb.print("}\n");
 
