@@ -3,6 +3,7 @@
 struct Dynamic_Array!($T: typeid) {
     var elements: []T;
     var count: int;
+    var capacity: int;
     var allocator: Allocator;
     operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
         return dyn.elements[index];
@@ -14,17 +15,19 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
         print("Error: Allocator wasn't set on Dynamic_Array(%).\n", T);
         assert(false);
     }
-    if (dyn.count == dyn.elements.count) {
+    if (dyn.count == dyn.capacity) {
         var old_data = dyn.elements.data;
-        var new_cap = 8 + dyn.elements.count * 2;
+        var new_cap = 8 + dyn.capacity * 2;
         dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
-        dyn.elements.count = new_cap;
+        dyn.capacity = new_cap;
         if (old_data != null) {
             memcpy(dyn.elements.data, old_data, cast(u64, dyn.count * sizeof(T)));
             sif_free(old_data, dyn.allocator);
         }
     }
-    assert(dyn.count < dyn.elements.count);
+    assert(dyn.elements.count < dyn.capacity);
+    assert(dyn.elements.count == dyn.count);
+    dyn.elements.count += 1;
     dyn.elements[dyn.count] = value;
     var ptr = &dyn.elements[dyn.count];
     dyn.count += 1;
@@ -37,11 +40,12 @@ proc append_empty(dyn: ^Dynamic_Array!($T)) : ^T {
 }
 
 proc pop(dyn: ^Dynamic_Array!($T)) : T {
-    if (dyn.count > 0) {
-        print("pop() called with empty dynamic array");
+    if (dyn.count == 0) {
+        print("pop() called with empty dynamic array\n");
         assert(false);
     }
-    var value = dyn[dyn.count-1];
+    var value = dyn^[dyn.count-1];
+    dyn.elements.count -= 1;
     dyn.count -= 1;
     return value;
 }
@@ -49,6 +53,7 @@ proc pop(dyn: ^Dynamic_Array!($T)) : T {
 proc unordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
     var value = dyn^[index];
     dyn^[index] = dyn^[dyn.count-1];
+    dyn.elements.count -= 1;
     dyn.count -= 1;
     return value;
 }
@@ -60,11 +65,13 @@ proc ordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
         var dst: rawptr = &dyn^[index];
         memmove(dst, src, cast(u64, (dyn.count-index+1) * sizeof(T)));
     }
+    dyn.elements.count -= 1;
     dyn.count -= 1;
     return value;
 }
 
 proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
+    dyn.elements.count = 0;
     dyn.count = 0;
 }
 

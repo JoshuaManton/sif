@@ -39,6 +39,7 @@ MEDIUM PRIORITY
 -prevent identifiers from being C keywords in the backend, like `signed`
 -Expr_Change (var v2 = v1.{y=4};)
 -slicing
+-#link_name
 -declare distinct types
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -procedure literal expression handling
