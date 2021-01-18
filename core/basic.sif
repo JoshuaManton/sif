@@ -569,3 +569,32 @@ proc clone_string(str: string, allocator: Allocator) : string {
     copy_slice(transmute([]byte, new_str), transmute([]byte, str));
     return new_str;
 }
+
+proc clone_to_cstring(str: string, allocator: Allocator) : cstring {
+    if (str.count == 0) {
+        return null;
+    }
+    var cstr = sif_alloc(str.count+1, DEFAULT_ALIGNMENT, allocator);
+    memcpy(cstr, str.data, cast(u64, str.count));
+    ptr_offset(cast(^byte, cstr), str.count)^ = 0;
+    return cast(cstring, cstr);
+}
+
+proc clone_to_string(cstr: cstring, allocator: Allocator) : string {
+    if (cstr == null) {
+        return .{};
+    }
+    var length = strlen(cstr);
+    var str = new_string(cast(i64, length), allocator);
+    memcpy(str.data, cstr, length);
+    return str;
+}
+
+proc cstring_to_string(cstr: cstring) : string {
+    var length = strlen(cstr);
+    return string.{cast(^byte, cstr), cast(i64, length)};
+}
+
+proc unsafe_string_to_cstring(str: string) : cstring {
+    return cast(cstring, str.data);
+}

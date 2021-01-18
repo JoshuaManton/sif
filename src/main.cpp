@@ -35,6 +35,7 @@ MEDIUM PRIORITY
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 -block comments
 -underscores in numbers
+-uninitialized stack members
 -prevent identifiers from being C keywords in the backend, like `signed`
 -Expr_Change (var v2 = v1.{y=4};)
 -slicing
