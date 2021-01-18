@@ -32,12 +32,16 @@ proc main() {
 proc basic_stuff() {
     print("\n\n---- basic_stuff ----\n");
 
-    // declaration syntax:
+    // declaration syntax
     // <variable name>: <type> = <expression>;
-    a: int = 123;
-    print("%\n", a);
+    a1: int = 123;
+    print("%\n", a1);
 
-    // type can be omitted if it can be inferred from the right-hand-side expression
+    // either <type> or <expression> can be omitted, but not both
+    a2: int;
+    a3 := 2;
+
+    // if the type is omitted, it can be inferred from the right-hand-side expression
     b1 := 456;
     assert(typeof(b1) == int);
     print("%\n", b1);
@@ -45,12 +49,13 @@ proc basic_stuff() {
     assert(typeof(b2) == float);
     print("%\n", b2);
 
+    // if no value is given, the memory will be zeroed
+    b3: int;
+    assert(b3 == 0);
 
 
-    // Local procedure, struct, and enum declarations are allowed.
-    //
-    // the keyword 'var' can be omitted in procedure parameter lists, since
-    // variables are the only thing allowed there
+
+    // Local procedures, structs, and enums are allowed.
     proc factorial(n: int) : int {
         if (n == 1) {
             return 1;
