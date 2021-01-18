@@ -22,11 +22,8 @@ Spinlock g_lexers_to_process_spinlock;
 Array<Lexer> g_lexers_to_process;
 Array<char *> g_all_included_files;
 
-// todo(josh): @Multithreading this is a concern
-int g_num_anonymous_structs = 0;
-
-// todo(josh): @Multithreading this is a concern
-int g_num_anonymous_procedures = 0;
+thread_local int g_num_anonymous_structs = 0;
+thread_local int g_num_anonymous_procedures = 0;
 
 Thread g_parser_threads[NUM_PARSER_THREADS];
 

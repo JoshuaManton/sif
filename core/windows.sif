@@ -2795,16 +2795,16 @@ struct WIN32_FIND_DATAW {
     var cAlternateFileName: [14] u16;
 }
 
-var FILE_GENERIC_ALL     = 0x10000000;
-var FILE_GENERIC_READ    = 0x80000000;
-var FILE_GENERIC_WRITE   = 0x40000000;
-var FILE_GENERIC_EXECUTE = 0x20000000;
+const FILE_GENERIC_ALL     = 0x10000000;
+const FILE_GENERIC_READ    = 0x80000000;
+const FILE_GENERIC_WRITE   = 0x40000000;
+const FILE_GENERIC_EXECUTE = 0x20000000;
 
-var FILE_LIST_DIRECTORY  = 0x1;
-var FILE_EXECUTE         = 0x20;
-var FILE_READ_ATTRIBUTES = 0x80;
-var FILE_READ_DATA       = 0x1;
-var FILE_TRAVERSE        = 0x20;
+const FILE_LIST_DIRECTORY  = 0x1;
+const FILE_EXECUTE         = 0x20;
+const FILE_READ_ATTRIBUTES = 0x80;
+const FILE_READ_DATA       = 0x1;
+const FILE_TRAVERSE        = 0x20;
 
 enum SetFilePointer_MoveMethod u32 {
     FILE_BEGIN   = 0;
@@ -2954,7 +2954,7 @@ proc SetFilePointerEx(hFile: HANDLE, liDistanceToMove: LARGE_INTEGER_i64, lpNewF
 // Wow64EnableWow64FsRedirection
 // Wow64RevertWow64FsRedirection
 // WriteEncryptedFileRaw
-proc WriteFile(handle: HANDLE, buffer: rawptr, buffer_length: i32, written_result: ^i32, overlapped: rawptr) : BOOL #foreign; // kernel32
+proc WriteFile(handle: HANDLE, buffer: rawptr, buffer_length: DWORD, written_result: ^DWORD, overlapped: rawptr) : BOOL #foreign; // kernel32
 // WriteFileEx
 // WriteFileGather
 
@@ -4211,6 +4211,8 @@ proc uid(str: string) : GUID {
 }
 
 proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, out_result_length_in_bytes: ^i32) : ^u16 {
+    out_success^ = false;
+
     if (my_str.data == null) {
         return null;
     }

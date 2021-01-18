@@ -26,6 +26,7 @@ HIGH PRIORITY
 -investigate how to get perfect number literal translation
 -do proper nested selector expression elimination with 'using'
     -do null checks for using
+-transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
 
 MEDIUM PRIORITY
 -put struct constants in Type_Info
