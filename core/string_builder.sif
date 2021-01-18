@@ -48,5 +48,5 @@ proc sbprinta(sb: ^String_Builder, args: ..any) {
 }
 
 proc string_builder_to_string(sb: String_Builder) : string {
-    return string{sb.buffer, sb.cursor};
+    return string.{sb.buffer, sb.cursor};
 }

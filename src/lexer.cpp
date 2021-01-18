@@ -100,6 +100,7 @@ void init_lexer_globals() {
     token_string_map[TK_DOT_DOT]                         = "..";
     token_string_map[TK_COMMA]                           = ",";
     token_string_map[TK_CARET]                           = "^";
+    token_string_map[TK_COMPOUND_LITERAL]                = ".{";
 
     token_string_map[TK_COMMENT]                         = "COMMENT";
 
@@ -191,6 +192,7 @@ void init_lexer_globals() {
     token_name_map[TK_DOT_DOT]                           = "TK_DOT_DOT";
     token_name_map[TK_COMMA]                             = "TK_COMMA";
     token_name_map[TK_CARET]                             = "TK_CARET";
+    token_name_map[TK_COMPOUND_LITERAL]                = "TK_COMPOUND_LITERAL";
 
     token_name_map[TK_COMMENT]                           = "TK_COMMENT";
 
@@ -759,6 +761,11 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             advance(lexer, 1);
             out_token->kind = TK_DOT_DOT;
             out_token->text = "..";
+        }
+        else if (lexer->text[lexer->location.index] == '{') {
+            advance(lexer, 1);
+            out_token->kind = TK_COMPOUND_LITERAL;
+            out_token->text = ".{";
         }
     }
     else SIMPLE_TOKEN('(', TK_LEFT_PAREN)

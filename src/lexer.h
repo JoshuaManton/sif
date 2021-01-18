@@ -109,6 +109,7 @@ enum Token_Kind {
     TK_DOT_DOT,
     TK_COMMA,
     TK_CARET,
+    TK_COMPOUND_LITERAL, // note(josh): '.{''
 
     TK_COMMENT,
 
@@ -137,7 +138,6 @@ struct Lexer {
     char *text = nullptr;
     Location location = {};
     bool errored = false;
-    bool allow_compound_literals = true;
     bool has_peeked_token = {};
     Location peeked_location = {};
     Token peeked_token = {};

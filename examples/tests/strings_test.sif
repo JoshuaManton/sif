@@ -7,7 +7,7 @@ proc test_strings() {
     assert(pieces[0] == "Hello");
     assert(pieces[1] == " World!");
 
-    assert(aprint(default_allocator(), "this % is a string %", 123, Vector3{1, 4, 9}) == "this 123 is a string Vector3{x = 1.000000, y = 4.000000, z = 9.000000}");
+    assert(aprint(default_allocator(), "this % is a % string %", 123, [2]int.{4, 2}, Vector3.{1, 4, 9}) == "this 123 is a [4, 2] string Vector3.{x = 1.000000, y = 4.000000, z = 9.000000}");
 
     var index: int;
     assert(index_of("foozlez", 'z', &index));
@@ -26,7 +26,7 @@ proc test_strings() {
     assert(!string_ends_with("foozle", ""));
 
     {
-        var strings = [4]string {
+        var strings = [4]string.{
             "foo", "bar", "baz", "qux"
         };
         var full_string = concatenate(to_slice(&strings), default_allocator());
@@ -34,7 +34,7 @@ proc test_strings() {
     }
 
     {
-        var strings = [4]string {
+        var strings = [4]string.{
             "", "", "", ""
         };
         var full_string = concatenate(to_slice(&strings), default_allocator());
@@ -43,7 +43,7 @@ proc test_strings() {
     }
 
     {
-        var strings = [4]string {
+        var strings = [4]string.{
             "foo", "", "bar", ""
         };
         var full_string = concatenate(to_slice(&strings), default_allocator());

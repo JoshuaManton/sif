@@ -106,7 +106,7 @@ proc print_arg(arg: any) {
         if (dti.is_cstring) {
             var str = cast(^cstring, arg.data)^;
             // todo(josh): this strlen is kind of silly. could just have a print_cstring() routine
-            print_string(string{cast(^u8, str), cast(int, strlen(str))});
+            print_string(string.{cast(^u8, str), cast(int, strlen(str))});
         }
         else {
             var str = cast(^string, arg.data)^;
@@ -172,7 +172,7 @@ proc print_arg(arg: any) {
     else if (ti.kind == Type_Info_Kind.STRUCT) {
         var dti = cast(^Type_Info_Struct, ti);
         print_string(dti.base.printable_name);
-        print_string("{");
+        print_string(".{");
         for (var i = 0; i < dti.fields.count; i += 1) {
             var field = dti.fields[i];
             if (i != 0) {
@@ -184,7 +184,7 @@ proc print_arg(arg: any) {
             if (field.type.id == string) {
                 print_string("\"");
             }
-            print("%", any{elem, field.type.id});
+            print("%", any.{elem, field.type.id});
             if (field.type.id == string) {
                 print_string("\"");
             }
@@ -395,7 +395,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
         }
         else if (ti.kind == Type_Info_Kind.STRUCT) {
             var dti = cast(^Type_Info_Struct, ti);
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%{", dti.base.printable_name));
+            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%.{", dti.base.printable_name));
             for (var i = 0; i < dti.fields.count; i += 1) {
                 var field = dti.fields[i];
                 if (i != 0) {
@@ -406,7 +406,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                 if (field.type.id == string) {
                     arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
                 }
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", any{elem, field.type.id}));
+                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", any.{elem, field.type.id}));
                 if (field.type.id == string) {
                     arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
                 }

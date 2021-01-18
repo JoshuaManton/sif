@@ -78,7 +78,7 @@ proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
     var ptr = new(T, default_allocator()); // you shouldn't allocate entities individially in a real game of course but for this example it's fine
     ptr.id = g_last_entity_id;
     ptr.kind = T;
-    ptr.scale = Vector3{1, 1, 1};
+    ptr.scale = .{1, 1, 1};
     append(entities, &ptr.base);
     return ptr;
 }
@@ -89,13 +89,13 @@ proc main() {
 
     // make a player
     var player = make_entity(&entities, Player);
-    player.position = Vector3{5, 0, 5}; // we are able to access position through Player because of the 'using' in the Player struct
+    player.position = .{5, 0, 5}; // we are able to access position through Player because of the 'using' in the Player struct
     player.name = "John";
     player.health = 10;
 
     // make a chest
     var chest = make_entity(&entities, Chest);
-    chest.position = Vector3{6, 0, 5}; // right next to the player
+    chest.position = .{6, 0, 5}; // right next to the player
 
     // make some items
     var sword = make_entity(&entities, Weapon);
@@ -126,7 +126,7 @@ proc main() {
     }
 
     // put the items in the chest
-    var array_of_items = [3]^Entity{
+    var array_of_items = [3]^Entity.{
         &sword.base,
         &bow.base,
         &helmet.base

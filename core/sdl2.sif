@@ -493,8 +493,6 @@ proc SDL_WriteLE32                        (dst: ^Rw_Ops, value: u32) : u64      
 proc SDL_WriteLE64                        (dst: ^Rw_Ops, value: u64) : u64                                                                                                                  #foreign;
 proc SDL_WriteU8                          (dst: ^Rw_Ops, value: u8) : u64                                                                                                                   #foreign;
 
-const cstring = ^u8;
-
 enum Init_Flags i32 {
     Timer = 0x00000001;
     Audio = 0x00000010;

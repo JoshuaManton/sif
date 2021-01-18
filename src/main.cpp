@@ -259,7 +259,7 @@ void main(int argc, char **argv) {
         um_include_path_sb.write_with_length(um_lib_path+lib_index+4, strlen(um_lib_path)-lib_index-4-4); // -4 for "\Lib" and -4 for "\x64"
 
         String_Builder cl_exe_path = make_string_builder(g_global_linear_allocator, 128);
-        cl_exe_path.printf("%s\\cl.exe", exe_path);
+        cl_exe_path.printf("\"%s\\cl.exe\"", exe_path);
 
         String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
         command_sb.printf("cmd.exe /c \"%s ", cl_exe_path.string());
@@ -273,16 +273,16 @@ void main(int argc, char **argv) {
         command_sb.print("output.c /nologo /wd4028 ");
 
         For (idx, g_all_foreign_import_directives) {
-            command_sb.printf("%s ", g_all_foreign_import_directives[idx]->path);
+            command_sb.printf("\"%s\" ", g_all_foreign_import_directives[idx]->path);
         }
-        command_sb.printf("/link /OUT:%s ", output_exe_name);
+        command_sb.printf("/link /OUT:\"%s\" ", output_exe_name);
         command_sb.printf("/LIBPATH:\"%s\" ", lib_path);
         command_sb.printf("/LIBPATH:\"%s\" ", um_lib_path);
         command_sb.printf("/LIBPATH:\"%s\" ", ucrt_lib_path);
         if (g_is_debug_build) {
             command_sb.print("/DEBUG ");
         }
-        command_sb.printf("\"", output_exe_name);
+        command_sb.printf("\"");
 
         if (log_cl_command) {
             printf("%s\n", command_sb.string());

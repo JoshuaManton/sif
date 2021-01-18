@@ -3001,7 +3001,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     assert(array_type->count > 0);
                     if (compound_literal->exprs.count != 0) {
                         if ((compound_literal->exprs.count != array_type->count) && !compound_literal->is_partial) {
-                            report_error(compound_literal->location, "Expected %d expressions for compound literal, got %d. Use #partial if you don't want to specify all values.", array_type->count, compound_literal->exprs.count);
+                            report_error(compound_literal->location, "Expected %d expressions for compound literal, got %d.", array_type->count, compound_literal->exprs.count);
+                            if (compound_literal->exprs.count < array_type->count) {
+                                report_info(compound_literal->location, "Use #partial if you don't want to specify all values.");
+                            }
                             return nullptr;
                         }
                         Type *element_type = array_type->array_of;
@@ -3018,7 +3021,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     // note(josh): copy paste from above
                     if (compound_literal->exprs.count != 0) {
                         if ((compound_literal->exprs.count != target_type->variable_fields.count) && !compound_literal->is_partial) {
-                            report_error(compound_literal->location, "Expected %d expressions for compound literal, got %d. Use #partial if you don't want to specify all values.", target_type->variable_fields.count, compound_literal->exprs.count);
+                            report_error(compound_literal->location, "Expected %d expressions for compound literal, got %d.", target_type->variable_fields.count, compound_literal->exprs.count);
+                            if (compound_literal->exprs.count < target_type->variable_fields.count) {
+                                report_info(compound_literal->location, "Use #partial if you don't want to specify all values.");
+                            }
                             return nullptr;
                         }
                         For (idx, compound_literal->exprs) {

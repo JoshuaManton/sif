@@ -28,23 +28,23 @@ struct Vector2 {
     var x: float;
     var y: float;
     operator +(a: Vector2, b: Vector2) : Vector2 {
-        return Vector2{a.x + b.x, a.y + b.y};
+        return Vector2.{a.x + b.x, a.y + b.y};
     }
     operator -(a: Vector2, b: Vector2) : Vector2 {
-        return Vector2{a.x - b.x, a.y - b.y};
+        return Vector2.{a.x - b.x, a.y - b.y};
     }
     operator *(a: Vector2, b: Vector2) : Vector2 {
-        return Vector2{a.x * b.x, a.y * b.y};
+        return Vector2.{a.x * b.x, a.y * b.y};
     }
     operator /(a: Vector2, b: Vector2) : Vector2 {
-        return Vector2{a.x / b.x, a.y / b.y};
+        return Vector2.{a.x / b.x, a.y / b.y};
     }
 
     operator *(a: Vector2, f: float) : Vector2 {
-        return Vector2{a.x * f, a.y * f};
+        return Vector2.{a.x * f, a.y * f};
     }
     operator /(a: Vector2, f: float) : Vector2 {
-        return Vector2{a.x / f, a.y / f};
+        return Vector2.{a.x / f, a.y / f};
     }
 
     proc negate(a: Vector2) : Vector2 { // @UnaryOperatorOverloading
@@ -80,23 +80,23 @@ struct Vector3 {
     var y: float;
     var z: float;
     operator +(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+        return Vector3.{a.x + b.x, a.y + b.y, a.z + b.z};
     }
     operator -(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
+        return Vector3.{a.x - b.x, a.y - b.y, a.z - b.z};
     }
     operator *(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x * b.x, a.y * b.y, a.z * b.z};
+        return Vector3.{a.x * b.x, a.y * b.y, a.z * b.z};
     }
     operator /(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x / b.x, a.y / b.y, a.z / b.z};
+        return Vector3.{a.x / b.x, a.y / b.y, a.z / b.z};
     }
 
     operator *(a: Vector3, f: float) : Vector3 {
-        return Vector3{a.x * f, a.y * f, a.z * f};
+        return Vector3.{a.x * f, a.y * f, a.z * f};
     }
     operator /(a: Vector3, f: float) : Vector3 {
-        return Vector3{a.x / f, a.y / f, a.z / f};
+        return Vector3.{a.x / f, a.y / f, a.z / f};
     }
 
     proc lerp(a: Vector3, b: Vector3, t: float) : Vector3 {
@@ -133,9 +133,9 @@ struct Vector3 {
 
     proc arbitrary_perpendicular(a: Vector3) : Vector3 {
         assert(length(a) == 1);
-        var b = Vector3{1, 0, 0};
+        var b = Vector3.{1, 0, 0};
         if (fabsf(dot(a, b)) == 1) {
-            b = Vector3{0, 1, 0};
+            b = Vector3.{0, 1, 0};
         }
         var d = cross(a, b);
         return d;
@@ -153,23 +153,23 @@ struct Vector4 {
     var w: float;
 
     operator +(a: Vector4, b: Vector4) : Vector4 {
-        return Vector4{a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+        return Vector4.{a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
     }
     operator -(a: Vector4, b: Vector4) : Vector4 {
-        return Vector4{a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+        return Vector4.{a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
     }
     operator *(a: Vector4, b: Vector4) : Vector4 {
-        return Vector4{a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+        return Vector4.{a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
     }
     operator /(a: Vector4, b: Vector4) : Vector4 {
-        return Vector4{a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+        return Vector4.{a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
     }
 
     operator *(a: Vector4, f: float) : Vector4 {
-        return Vector4{a.x * f, a.y * f, a.z * f, a.w * f};
+        return Vector4.{a.x * f, a.y * f, a.z * f, a.w * f};
     }
     operator /(a: Vector4, f: float) : Vector4 {
-        return Vector4{a.x / f, a.y / f, a.z / f, a.w / f};
+        return Vector4.{a.x / f, a.y / f, a.z / f, a.w / f};
     }
 
     proc negate(a: Vector4) : Vector4 { // @UnaryOperatorOverloading
@@ -263,7 +263,7 @@ struct Quaternion {
     }
 
     operator *(q: Quaternion, v: Vector3) : Vector3 {
-        var qxyz = Vector3{q.x, q.y, q.z};
+        var qxyz = Vector3.{q.x, q.y, q.z};
         var t = Vector3.cross(qxyz * 2.0, v);
         return v + t*q.w + Vector3.cross(qxyz, t);
     }
@@ -329,9 +329,9 @@ struct Quaternion {
         return rads;
     }
 
-    proc right  (q: Quaternion) : Vector3 { return q * Vector3{1, 0, 0}; }
-    proc up     (q: Quaternion) : Vector3 { return q * Vector3{0, 1, 0}; }
-    proc forward(q: Quaternion) : Vector3 { return q * Vector3{0, 0, 1}; }
+    proc right  (q: Quaternion) : Vector3 { return q * Vector3.{1, 0, 0}; }
+    proc up     (q: Quaternion) : Vector3 { return q * Vector3.{0, 1, 0}; }
+    proc forward(q: Quaternion) : Vector3 { return q * Vector3.{0, 0, 1}; }
     proc left   (q: Quaternion) : Vector3 { return Vector3.negate(right(q));   }
     proc down   (q: Quaternion) : Vector3 { return Vector3.negate(up(q));      }
     proc back   (q: Quaternion) : Vector3 { return Vector3.negate(forward(q)); }
@@ -463,11 +463,11 @@ struct Matrix4 {
 
         var fe = Vector3.dot(f, eye);
 
-        var columns = [4]Vector4{
-            Vector4{+s.x, +u.x, -f.x, 0},
-            Vector4{+s.y, +u.y, -f.y, 0},
-            Vector4{+s.z, +u.z, -f.z, 0},
-            Vector4{-Vector3.dot(s, eye), -Vector3.dot(u, eye), -fe, 1},
+        var columns = [4]Vector4.{
+            Vector4.{+s.x, +u.x, -f.x, 0},
+            Vector4.{+s.y, +u.y, -f.y, 0},
+            Vector4.{+s.z, +u.z, -f.z, 0},
+            Vector4.{-Vector3.dot(s, eye), -Vector3.dot(u, eye), -fe, 1},
         };
 
         // note(josh): uncomment to support right-handed coords. right-handed would be flip_z_axis=true
@@ -715,7 +715,7 @@ proc matrix4_to_quaternion(m: Matrix4) : Quaternion {
     if (m[2][2] < 0.0) {
         if (m[0][0] > m[1][1]) {
             t = 1 + m[0][0] - m[1][1] - m[2][2];
-            result = Quaternion{
+            result = Quaternion.{
                 t,
                 m[0][1] + m[1][0],
                 m[2][0] + m[0][2],
@@ -724,7 +724,7 @@ proc matrix4_to_quaternion(m: Matrix4) : Quaternion {
         }
         else {
             t = 1 - m[0][0] + m[1][1] - m[2][2];
-            result = Quaternion{
+            result = Quaternion.{
                 m[0][1] + m[1][0],
                 t,
                 m[1][2] + m[2][1],
@@ -735,7 +735,7 @@ proc matrix4_to_quaternion(m: Matrix4) : Quaternion {
     else {
         if (m[0][0] < -m[1][1]) {
             t = 1 - m[0][0] - m[1][1] + m[2][2];
-            result = Quaternion{
+            result = Quaternion.{
                 m[2][0] + m[0][2],
                 m[1][2] + m[2][1],
                 t,
@@ -744,7 +744,7 @@ proc matrix4_to_quaternion(m: Matrix4) : Quaternion {
         }
         else {
             t = 1 + m[0][0] + m[1][1] + m[2][2];
-            result = Quaternion{
+            result = Quaternion.{
                 m[1][2] - m[2][1],
                 m[2][0] - m[0][2],
                 m[0][1] - m[1][0],

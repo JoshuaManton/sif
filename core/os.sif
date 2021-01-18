@@ -8,17 +8,17 @@ enum File_Open_Flags {
 proc read_entire_file(filepath: string, allocator: Allocator) : []byte {
     var file: File;
     if (!file_open(filepath, &file, .READ, allocator)) {
-        return {};
+        return .{};
     }
     defer file_close(file);
     var length: int;
     if (!file_length(file, &length)) {
-        return {};
+        return .{};
     }
     var data = new_slice(byte, length, allocator);
     if (!file_read(file, data)) {
         delete_slice(data, allocator);
-        return {};
+        return .{};
     }
     return data;
 }
@@ -26,7 +26,7 @@ proc read_entire_file(filepath: string, allocator: Allocator) : []byte {
 proc write_entire_file(filepath: string, data: []byte, allocator: Allocator) : bool {
     var file: File;
     if (!file_open(filepath, &file, .WRITE, allocator)) {
-        return {};
+        return .{};
     }
     defer file_close(file);
     if (!file_write(file, data)) {

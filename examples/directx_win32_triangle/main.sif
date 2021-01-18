@@ -18,10 +18,10 @@ proc main() {
     var pixel_shader  = compile_pixel_shader_from_file("basic_pixel.hlsl");
 
     //
-    var vertex_fields = [3]D3D11_INPUT_ELEMENT_DESC {
-        D3D11_INPUT_ELEMENT_DESC{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
-        D3D11_INPUT_ELEMENT_DESC{"TEXCOORD",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        D3D11_INPUT_ELEMENT_DESC{"COLOR",       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    var vertex_fields = [3]D3D11_INPUT_ELEMENT_DESC.{
+        .{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
+        .{"TEXCOORD",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        .{"COLOR",       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
     var vertex_format: ^ID3D11InputLayout;
     var result = directx_device.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), &vertex_format);
@@ -29,10 +29,10 @@ proc main() {
     vertex_shader_blob.Release(vertex_shader_blob);
 
     //
-    var vertices = [3]Vertex {
-        Vertex{Vector3{-0.5, -0.5, 0}, Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}},
-        Vertex{Vector3{0.5, -0.5, 0},  Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}},
-        Vertex{Vector3{0, 0.5, 0},     Vector3{0, 0, 0}, Vector4{0.25, 0.5, 1, 1}}
+    var vertices = [3]Vertex.{
+        .{.{-0.5, -0.5, 0}, .{0, 0, 0}, .{0.25, 0.5, 1, 1}},
+        .{.{0.5, -0.5, 0},  .{0, 0, 0}, .{0.25, 0.5, 1, 1}},
+        .{.{0, 0.5, 0},     .{0, 0, 0}, .{0.25, 0.5, 1, 1}}
     };
     var vertex_buffer = create_vertex_buffer(&vertices[0], sizeof(typeof(vertices)));
 
@@ -48,7 +48,7 @@ proc main() {
         directx_device_context.OMSetDepthStencilState(directx_device_context, depth_test_state, 0);
         directx_device_context.RSSetState(directx_device_context, no_cull_rasterizer);
         directx_device_context.PSSetSamplers(directx_device_context, 0, 1, &linear_wrap_sampler);
-        var blend_factor = [4]FLOAT{1, 1, 1, 1};
+        var blend_factor = [4]FLOAT.{1, 1, 1, 1};
         directx_device_context.OMSetBlendState(directx_device_context, alpha_blend_state, &blend_factor[0], 0xffffffff);
 
         var viewport: D3D11_VIEWPORT;
@@ -64,7 +64,7 @@ proc main() {
 
         directx_device_context.OMSetRenderTargets(directx_device_context, 1, &swap_chain_rtv, null);
 
-        var clear_color = [4]float{1, 0.5, 0.2, 1};
+        var clear_color = [4]float.{1, 0.5, 0.2, 1};
         directx_device_context.ClearRenderTargetView(directx_device_context, swap_chain_rtv, &clear_color[0]);
 
         var stride: u32 = sizeof(Vertex);
@@ -378,7 +378,7 @@ proc win32_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) : LRESULT {
         g_currently_processing_window.width  = cast(i64, width);
         g_currently_processing_window.height = cast(i64, height);
         g_currently_processing_window.aspect = cast(float, width) / cast(float, height);
-        g_currently_processing_window.size   = Vector2{cast(float, g_currently_processing_window.width), cast(float, g_currently_processing_window.height)};
+        g_currently_processing_window.size   = .{cast(float, g_currently_processing_window.width), cast(float, g_currently_processing_window.height)};
         return 0;
     }
 

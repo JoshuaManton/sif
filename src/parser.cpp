@@ -383,10 +383,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         }
         if (colon.kind == TK_COLON) {
             eat_next_token(lexer);
-            assert(lexer->allow_compound_literals);
-            lexer->allow_compound_literals = false;
             header->return_type_expr = parse_expr(lexer);
-            lexer->allow_compound_literals = true;
             if (!header->return_type_expr) {
                 return nullptr;
             }
@@ -591,10 +588,6 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
 }
 
 Ast_Enum *parse_enum(Lexer *lexer) {
-    bool old_allow_compound_literals = lexer->allow_compound_literals;
-    lexer->allow_compound_literals = false;
-    defer(lexer->allow_compound_literals = old_allow_compound_literals);
-
     Token root_token;
     EXPECT(lexer, TK_ENUM, &root_token);
 
@@ -1471,7 +1464,7 @@ bool is_postfix_op(Token_Kind kind) {
     switch (kind) {
         case TK_LEFT_PAREN:
         case TK_LEFT_SQUARE:
-        case TK_LEFT_CURLY:
+        case TK_COMPOUND_LITERAL:
         case TK_DOT:
         case TK_NOT:
         case TK_CARET: { // dereference
@@ -1498,6 +1491,8 @@ Ast_Expr *parse_add_expr(Lexer *lexer);
 Ast_Expr *parse_mul_expr(Lexer *lexer);
 Ast_Expr *parse_unary_expr(Lexer *lexer);
 Ast_Expr *parse_postfix_expr(Lexer *lexer);
+Ast_Expr *parse_type_expr(Lexer *lexer);
+Ast_Expr *parse_polymorphic_type_expr(Lexer *lexer);
 Ast_Expr *parse_base_expr(Lexer *lexer);
 
 Ast_Expr *parse_expr(Lexer *lexer) {
@@ -1664,10 +1659,9 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
 }
 
 Expr_Compound_Literal *parse_compound_literal(Lexer *lexer, Ast_Expr *type_expr) {
-    assert(lexer->allow_compound_literals);
-    Token left_curly_token;
-    EXPECT(lexer, TK_LEFT_CURLY, &left_curly_token);
-    Location start_location = left_curly_token.location;
+    Token compound_literal_token;
+    EXPECT(lexer, TK_COMPOUND_LITERAL, &compound_literal_token);
+    Location start_location = compound_literal_token.location;
     if (type_expr != nullptr) {
         start_location = type_expr->location;
     }
@@ -1704,7 +1698,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
         return nullptr;
     }
 
-    Ast_Expr *base_expr = parse_base_expr(lexer);
+    Ast_Expr *base_expr = parse_type_expr(lexer);
     if (!base_expr) {
         return nullptr;
     }
@@ -1735,10 +1729,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 base_expr = SIF_NEW_CLONE(Expr_Procedure_Call(base_expr, parameters, lexer->allocator, lexer->current_block, base_expr->location), lexer->allocator);
                 break;
             }
-            case TK_LEFT_CURLY: {
-                if (!lexer->allow_compound_literals) {
-                    return base_expr;
-                }
+            case TK_COMPOUND_LITERAL: {
                 base_expr = parse_compound_literal(lexer, base_expr);
                 if (!base_expr) {
                     return nullptr;
@@ -1794,6 +1785,100 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 unexpected_token(lexer, op);
                 return nullptr;
             }
+        }
+    }
+    return base_expr;
+}
+
+Ast_Expr *parse_type_expr(Lexer *lexer) {
+    Token token;
+    if (!peek_next_token(lexer, &token)) {
+        report_error(lexer->location, "Unexpected end of file.");
+        return nullptr;
+    }
+
+    switch (token.kind) {
+        case TK_LEFT_SQUARE: {
+            eat_next_token(lexer);
+            Token maybe_right_square;
+            if (!peek_next_token(lexer, &maybe_right_square)) {
+                report_error(lexer->location, "Unexpected end of file.");
+                return nullptr;
+            }
+            if (maybe_right_square.kind == TK_RIGHT_SQUARE) {
+                // it's a slice
+                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                Ast_Expr *slice_of = parse_type_expr(lexer);
+                if (!slice_of) {
+                    return nullptr;
+                }
+                return SIF_NEW_CLONE(Expr_Slice_Type(slice_of, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+            }
+            else {
+                // it's an array
+                Ast_Expr *length = parse_expr(lexer);
+                if (!length) {
+                    return nullptr;
+                }
+                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
+                Ast_Expr *array_of = parse_type_expr(lexer);
+                if (!array_of) {
+                    return nullptr;
+                }
+                return SIF_NEW_CLONE(Expr_Array_Type(array_of, length, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+            }
+            assert(false && "unreachable");
+        }
+        case TK_CARET: {
+            eat_next_token(lexer);
+            Ast_Expr *pointer_to = parse_type_expr(lexer);
+            if (!pointer_to) {
+                return nullptr;
+            }
+            return SIF_NEW_CLONE(Expr_Pointer_Type(pointer_to, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+        }
+        case TK_GREATER_THAN: {
+            eat_next_token(lexer);
+            Ast_Expr *reference_to = parse_type_expr(lexer);
+            if (!reference_to) {
+                return nullptr;
+            }
+            return SIF_NEW_CLONE(Expr_Reference_Type(reference_to, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+        }
+    }
+    return parse_polymorphic_type_expr(lexer);
+}
+
+Ast_Expr *parse_polymorphic_type_expr(Lexer *lexer) {
+    Ast_Expr *base_expr = parse_base_expr(lexer);
+    if (!base_expr) {
+        return nullptr;
+    }
+
+    Token token = {};
+    assert(peek_next_token(lexer, &token));
+    switch (token.kind) {
+        case TK_NOT: {
+            eat_next_token(lexer);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Array<Ast_Expr *> parameters;
+            parameters.allocator = lexer->allocator;
+            bool first = true;
+            while (peek_next_token(lexer, &token) && token.kind != TK_RIGHT_PAREN) {
+                if (!first) {
+                    EXPECT(lexer, TK_COMMA, nullptr);
+                }
+
+                Ast_Expr *expr = parse_expr(lexer);
+                if (!expr) {
+                    return nullptr;
+                }
+                parameters.append(expr);
+                first = false;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            base_expr = SIF_NEW_CLONE(Expr_Polymorphic_Type(base_expr, parameters, lexer->allocator, lexer->current_block, base_expr->location), lexer->allocator);
+            break;
         }
     }
     return base_expr;
@@ -1878,8 +1963,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             compound_literal->is_partial = true;
             return compound_literal;
         }
-        case TK_LEFT_CURLY: {
-            assert(lexer->allow_compound_literals);
+        case TK_COMPOUND_LITERAL: {
             Expr_Compound_Literal *compound_literal = parse_compound_literal(lexer, nullptr);
             if (!compound_literal) {
                 return nullptr;
@@ -1936,65 +2020,6 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             Expr_Identifier *ident = (Expr_Identifier *)ident_expr;
             lexer->num_polymorphic_variables_parsed += 1;
             return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
-        }
-        case TK_LEFT_SQUARE: {
-            eat_next_token(lexer);
-            Token maybe_right_square;
-            if (!peek_next_token(lexer, &maybe_right_square)) {
-                report_error(lexer->location, "Unexpected end of file.");
-                return nullptr;
-            }
-            if (maybe_right_square.kind == TK_RIGHT_SQUARE) {
-                // it's a slice
-                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
-                bool old_allow_compound_literals = lexer->allow_compound_literals;
-                lexer->allow_compound_literals = false;
-                Ast_Expr *slice_of = parse_expr(lexer);
-                lexer->allow_compound_literals = old_allow_compound_literals;
-                if (!slice_of) {
-                    return nullptr;
-                }
-                return SIF_NEW_CLONE(Expr_Slice_Type(slice_of, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
-            }
-            else {
-                // it's an array
-                Ast_Expr *length = parse_expr(lexer);
-                if (!length) {
-                    return nullptr;
-                }
-                EXPECT(lexer, TK_RIGHT_SQUARE, nullptr);
-                bool old_allow_compound_literals = lexer->allow_compound_literals;
-                lexer->allow_compound_literals = false;
-                Ast_Expr *array_of = parse_expr(lexer);
-                lexer->allow_compound_literals = old_allow_compound_literals;
-                if (!array_of) {
-                    return nullptr;
-                }
-                return SIF_NEW_CLONE(Expr_Array_Type(array_of, length, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
-            }
-            assert(false && "unreachable");
-        }
-        case TK_CARET: {
-            eat_next_token(lexer);
-            bool old_allow_compound_literals = lexer->allow_compound_literals;
-            lexer->allow_compound_literals = false;
-            Ast_Expr *pointer_to = parse_expr(lexer);
-            lexer->allow_compound_literals = old_allow_compound_literals;
-            if (!pointer_to) {
-                return nullptr;
-            }
-            return SIF_NEW_CLONE(Expr_Pointer_Type(pointer_to, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
-        }
-        case TK_GREATER_THAN: {
-            eat_next_token(lexer);
-            bool old_allow_compound_literals = lexer->allow_compound_literals;
-            lexer->allow_compound_literals = false;
-            Ast_Expr *reference_to = parse_expr(lexer);
-            lexer->allow_compound_literals = old_allow_compound_literals;
-            if (!reference_to) {
-                return nullptr;
-            }
-            return SIF_NEW_CLONE(Expr_Reference_Type(reference_to, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         default: {
             unexpected_token(lexer, token);
