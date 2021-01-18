@@ -396,6 +396,16 @@ char *String_Builder::printf(const char *fmt, ...) {
     return copy;
 }
 
+char *String_Builder::write_with_length(const char *str, int length) {
+    buf.reserve(buf.count + length + 8);
+    char *copy = &buf.data[buf.count];
+    memcpy(copy, str, length);
+    buf.count += length;
+    BOUNDS_CHECK(buf.count, 0, buf.capacity);
+    buf.data[buf.count] = 0;
+    return copy;
+}
+
 void String_Builder::clear() {
     buf.clear();
     BOUNDS_CHECK(buf.count, 0, buf.capacity);
@@ -551,6 +561,24 @@ bool ends_with(const char *str, const char *end) {
         }
     }
     return true;
+}
+
+int last_index_of(const char *str, const char *query) {
+    int end_of_str = strlen(str)-1;
+    int query_len = strlen(query)-1;
+    for (int i = end_of_str-query_len; i >= 0; i -= 1) {
+        const char *c = &str[i];
+        bool equal = true;
+        for (int q = 0; q < query_len; q += 1) {
+            if (str[i+q] != query[q]) {
+                equal = false;
+            }
+        }
+        if (equal) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 // path/to/file.txt -> path/to
