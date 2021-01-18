@@ -138,7 +138,7 @@ proc arrays() {
     print("%\n", my_array);
 
     // As with structs, compound literals work with arrays
-    my_array = {4, 3, 2, 1};
+    my_array = .{4, 3, 2, 1};
     print("%\n", my_array);
 
     // Arrays are value types, so calling a function that changes the array
@@ -222,18 +222,18 @@ proc structs() {
     f.t = f.a * 2 == 246;
 
     // Can also use compound literals to initialize
-    f = Foo{149, "hellooo", false};
+    f = Foo.{149, "hellooo", false};
 
     // The type of the compound literal can be inferred from context.
     // Since the compiler knows the type of 'f', you don't have to specify
     // it in the compound literal.
-    f = {149, "hellooo", false};
+    f = .{149, "hellooo", false};
 
     // using runtime type information, you can print whole structs, more on that below.
     print("%\n", f);
 
     // Type inference also works when calling procedures, since the target type is known
-    takes_a_foo({123, "wow", true});
+    takes_a_foo(.{123, "wow", true});
 
     proc takes_a_foo(foo: Foo) {
         print("%\n", foo);
@@ -527,27 +527,27 @@ struct Vector3 {
     var y: float;
     var z: float;
     operator +(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+        return Vector3.{a.x + b.x, a.y + b.y, a.z + b.z};
     }
     operator -(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
+        return Vector3.{a.x - b.x, a.y - b.y, a.z - b.z};
     }
     operator *(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x * b.x, a.y * b.y, a.z * b.z};
+        return Vector3.{a.x * b.x, a.y * b.y, a.z * b.z};
     }
     operator /(a: Vector3, b: Vector3) : Vector3 {
-        return Vector3{a.x / b.x, a.y / b.y, a.z / b.z};
+        return Vector3.{a.x / b.x, a.y / b.y, a.z / b.z};
     }
 
     operator *(a: Vector3, f: float) : Vector3 {
-        return Vector3{a.x * f, a.y * f, a.z * f};
+        return Vector3.{a.x * f, a.y * f, a.z * f};
     }
 }
 proc operator_overloading() {
     print("\n\n---- operator_overloading ----\n");
 
-    var v1 = Vector3{1, 2, 3};
-    var v2 = Vector3{1, 4, 9};
+    var v1 = Vector3.{1, 2, 3};
+    var v2 = Vector3.{1, 4, 9};
     var v3 = v1 + v2;
     var v4 = v3 * 5;
     print("%\n", v4.x);
@@ -751,9 +751,9 @@ proc dynamic_arrays() {
 
     var dyn: Dynamic_Array!(Vector3);
     dyn.allocator = default_allocator();
-    append(&dyn, Vector3{1, 2, 3});
-    append(&dyn, Vector3{1, 4, 9});
-    append(&dyn, Vector3{2, 8, 18});
+    append(&dyn, Vector3.{1, 2, 3});
+    append(&dyn, Vector3.{1, 4, 9});
+    append(&dyn, Vector3.{2, 8, 18});
     assert(dyn[1].x == 1);
     assert(dyn[1].y == 4);
     assert(dyn[1].z == 9);
