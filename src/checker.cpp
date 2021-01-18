@@ -2910,7 +2910,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 if (!lhs_operand) {
                     return nullptr;
                 }
-                assert(is_type_pointer(lhs_operand->type));
+                if (!is_type_pointer(lhs_operand->type)) {
+                    report_error(dereference->location, "You cannot dereference a non-pointer type.");
+                    return nullptr;
+                }
                 Type_Pointer *pointer_type = (Type_Pointer *)lhs_operand->type;
                 assert(pointer_type->pointer_to);
                 result_operand.type = pointer_type->pointer_to;
