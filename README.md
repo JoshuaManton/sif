@@ -36,11 +36,11 @@ proc main() {
     print("Hello, World!\n");
 }
 ```
-5. Run `bin/sif.exe run my_program.sif`
+5. Run `sif.exe run my_program.sif`
 
 ## Demo
 
-The following is a demo program showing off many of the features of sif.
+The following is a demo program showing off many of the features of sif. You can find the source file at `examples/demo/main.sif`.
 
 ```odin
 #include "core:basic.sif"
