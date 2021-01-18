@@ -86,17 +86,17 @@ proc basic_stuff() {
     a2: int;
     a3 := 2;
 
-    // if the type is omitted, it can be inferred from the right-hand-side expression
-    b1 := 456;
-    assert(typeof(b1) == int);
-    print("%\n", b1);
-    b2 := 456.0;
-    assert(typeof(b2) == float);
-    print("%\n", b2);
-
     // if no value is given, the memory will be zeroed
-    b3: int;
-    assert(b3 == 0);
+    b1: int;
+    assert(b1 == 0);
+
+    // if the type is omitted, it can be inferred from the right-hand-side expression
+    b2 := 456;
+    assert(typeof(b2) == int);
+    print("%\n", b2);
+    b3 := 456.0;
+    assert(typeof(b3) == float);
+    print("%\n", b3);
 
 
 
