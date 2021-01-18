@@ -5,53 +5,53 @@
 // #assert(OS == .WINDOWS); // todo(josh)
 
 // Not defining these to avoid polluting the global namespace.
-const CHAR  = i8;
-const WCHAR = u16;
-const SHORT = i16;
-const LONG  = i32;
-const INT   = i32;
-const UINT  = u32;
-const BYTE  = u8;
-const WORD  = u16;
-const DWORD = u32;
-const FLOAT = float;
+const CHAR  := i8;
+const WCHAR := u16;
+const SHORT := i16;
+const LONG  := i32;
+const INT   := i32;
+const UINT  := u32;
+const BYTE  := u8;
+const WORD  := u16;
+const DWORD := u32;
+const FLOAT := float;
 
 enum BOOL i32 { FALSE = 0; TRUE = 1; }
-const SIZE_T = u64;
+const SIZE_T    := u64;
 
-const LPSTR  = cstring;
-const LPCSTR = cstring;
-const LPCWSTR = ^u16;
+const LPSTR     := cstring;
+const LPCSTR    := cstring;
+const LPCWSTR   := ^u16;
 
-const WPARAM = u64;
-const LPARAM = i64;
-const LRESULT = i64;
+const WPARAM    := u64;
+const LPARAM    := i64;
+const LRESULT   := i64;
 
-const HANDLE = rawptr;
-const HKEY = HANDLE;
-const HMETAFILE = HANDLE;
-const HINSTANCE = HANDLE;
-const HMODULE = HINSTANCE;
-//const HRGN = HANDLE;
-//const HRSRC = HANDLE;
-//const HSPRITE = HANDLE;
-//const HLSURF = HANDLE;
-//const HSTR = HANDLE;
-//const HTASK = HANDLE;
-//const HWINSTA = HANDLE;
-//const HKL = HANDLE;
-const HWND = HANDLE;
-const HDC  = HANDLE;
-const HMONITOR = HANDLE;
-const HBRUSH = HANDLE;
-const HMENU = HANDLE;
-const HICON = HANDLE;
-const HCURSOR = HANDLE;
-const HRAWINPUT = HANDLE;
-const HBITMAP = HANDLE;
+const HANDLE    := rawptr;
+const HKEY      := HANDLE;
+const HMETAFILE := HANDLE;
+const HINSTANCE := HANDLE;
+const HMODULE   := HINSTANCE;
+//const HRGN    := HANDLE;
+//const HRSRC   := HANDLE;
+//const HSPRITE := HANDLE;
+//const HLSURF  := HANDLE;
+//const HSTR    := HANDLE;
+//const HTASK   := HANDLE;
+//const HWINSTA := HANDLE;
+//const HKL     := HANDLE;
+const HWND      := HANDLE;
+const HDC       := HANDLE;
+const HMONITOR  := HANDLE;
+const HBRUSH    := HANDLE;
+const HMENU     := HANDLE;
+const HICON     := HANDLE;
+const HCURSOR   := HANDLE;
+const HRAWINPUT := HANDLE;
+const HBITMAP   := HANDLE;
 
-const HFILE = i32;
-const HRESULT = i32; // LONG
+const HFILE     := i32;
+const HRESULT   := i32; // LONG
 
 // const INFINITE: u32 = 0xffff_ffff; // todo(josh): underscores in numbers
 const INFINITE: u32 = 0xffffffff;
@@ -64,50 +64,50 @@ proc LOWORDL(l: LPARAM) : i16 { return cast(i16, l); }
 // Structs:
 
 union LARGE_INTEGER {
-    var split: struct {
-        var LowPart : u32;
-        var HighPart : i32;
+    split: struct {
+        LowPart : u32;
+        HighPart : i32;
     };
-    var QuadPart : i64;
+    QuadPart : i64;
 }
 
 union ULARGE_INTEGER {
-    var split: struct {
-        var LowPart : u32;
-        var HighPart : u32;
+    split: struct {
+        LowPart : u32;
+        HighPart : u32;
     };
-    var QuadPart: u64;
+    QuadPart: u64;
 }
 
 struct RECT {
-    var left: i32;
-    var top: i32;
-    var right: i32;
-    var bottom: i32;
+    left: i32;
+    top: i32;
+    right: i32;
+    bottom: i32;
 }
 
 struct SMALL_RECT {
-    var left: i16;
-    var top: i16;
-    var right: i16;
-    var bottom: i16;
+    left: i16;
+    top: i16;
+    right: i16;
+    bottom: i16;
 }
 
 struct COORD {
-    var x: i16;
-    var y: i16;
+    x: i16;
+    y: i16;
 }
 
 struct POINT {
-    var x: i32;
-    var y: i32;
+    x: i32;
+    y: i32;
 }
 
 struct GUID {
-    var Data1: u32;
-    var Data2: u16;
-    var Data3: u16;
-    var Data4: [8]u8;
+    Data1: u32;
+    Data2: u16;
+    Data3: u16;
+    Data4: [8]u8;
     // todo(josh):
     // operator == (a: GUID, b: GUID) : bool {
     //     return memcmp(&a, &b, size_of(GUID)) == 0;
@@ -116,9 +116,9 @@ struct GUID {
 
 #assert(sizeof(GUID) == 16);
 
-const REFGUID = ^GUID;
-const IID     = GUID;
-const REFIID  = ^IID;
+const REFGUID := ^GUID;
+const IID     := GUID;
+const REFIID  := ^IID;
 
 
 
@@ -140,321 +140,321 @@ proc FAILED   (hr: HRESULT) : bool { return !SUCCEEDED(hr); }
 
 
 // Window messages:
-const WM_NULL    = 0x0000;
-const WM_CREATE  = 0x0001;
-const WM_DESTROY = 0x0002;
-const WM_MOVE    = 0x0003;
+const WM_NULL    := 0x0000;
+const WM_CREATE  := 0x0001;
+const WM_DESTROY := 0x0002;
+const WM_MOVE    := 0x0003;
 
-const WM_SIZE                         = 0x0005;
-const WM_SETFOCUS                     = 0x0007;
-const WM_KILLFOCUS                    = 0x0008;
-const WM_ENABLE                       = 0x000A;
-const WM_SETREDRAW                    = 0x000B;
-const WM_SETTEXT                      = 0x000C;
-const WM_GETTEXT                      = 0x000D;
-const WM_GETTEXTLENGTH                = 0x000E;
-const WM_PAINT                        = 0x000F;
-const WM_CLOSE                        = 0x0010;
-const WM_QUERYENDSESSION              = 0x0011;
-const WM_QUERYOPEN                    = 0x0013;
-const WM_ENDSESSION                   = 0x0016;
-const WM_QUIT                         = 0x0012;
-const WM_ERASEBKGND                   = 0x0014;
-const WM_SYSCOLORCHANGE               = 0x0015;
-const WM_SHOWWINDOW                   = 0x0018;
-const WM_WININICHANGE                 = 0x001A;
-const WM_SETTINGCHANGE                = WM_WININICHANGE;
-const WM_DEVMODECHANGE                = 0x001B;
-const WM_ACTIVATEAPP                  = 0x001C;
-const WM_FONTCHANGE                   = 0x001D;
-const WM_TIMECHANGE                   = 0x001E;
-const WM_CANCELMODE                   = 0x001F;
-const WM_SETCURSOR                    = 0x0020;
-const WM_MOUSEACTIVATE                = 0x0021;
-const WM_CHILDACTIVATE                = 0x0022;
-const WM_QUEUESYNC                    = 0x0023;
-const WM_GETMINMAXINFO                = 0x0024;
+const WM_SIZE                         := 0x0005;
+const WM_SETFOCUS                     := 0x0007;
+const WM_KILLFOCUS                    := 0x0008;
+const WM_ENABLE                       := 0x000A;
+const WM_SETREDRAW                    := 0x000B;
+const WM_SETTEXT                      := 0x000C;
+const WM_GETTEXT                      := 0x000D;
+const WM_GETTEXTLENGTH                := 0x000E;
+const WM_PAINT                        := 0x000F;
+const WM_CLOSE                        := 0x0010;
+const WM_QUERYENDSESSION              := 0x0011;
+const WM_QUERYOPEN                    := 0x0013;
+const WM_ENDSESSION                   := 0x0016;
+const WM_QUIT                         := 0x0012;
+const WM_ERASEBKGND                   := 0x0014;
+const WM_SYSCOLORCHANGE               := 0x0015;
+const WM_SHOWWINDOW                   := 0x0018;
+const WM_WININICHANGE                 := 0x001A;
+const WM_SETTINGCHANGE                := WM_WININICHANGE;
+const WM_DEVMODECHANGE                := 0x001B;
+const WM_ACTIVATEAPP                  := 0x001C;
+const WM_FONTCHANGE                   := 0x001D;
+const WM_TIMECHANGE                   := 0x001E;
+const WM_CANCELMODE                   := 0x001F;
+const WM_SETCURSOR                    := 0x0020;
+const WM_MOUSEACTIVATE                := 0x0021;
+const WM_CHILDACTIVATE                := 0x0022;
+const WM_QUEUESYNC                    := 0x0023;
+const WM_GETMINMAXINFO                := 0x0024;
 
-const WM_NOTIFY                       = 0x004E;
-const WM_INPUTLANGCHANGEREQUEST       = 0x0050;
-const WM_INPUTLANGCHANGE              = 0x0051;
-const WM_TCARD                        = 0x0052;
-const WM_HELP                         = 0x0053;
-const WM_USERCHANGED                  = 0x0054;
-const WM_NOTIFYFORMAT                 = 0x0055;
-const WM_CONTEXTMENU                  = 0x007B;
-const WM_STYLECHANGING                = 0x007C;
-const WM_STYLECHANGED                 = 0x007D;
-const WM_DISPLAYCHANGE                = 0x007E;
-const WM_GETICON                      = 0x007F;
-const WM_SETICON                      = 0x0080;
-const WM_NCCREATE                     = 0x0081;
-const WM_NCDESTROY                    = 0x0082;
-const WM_NCCALCSIZE                   = 0x0083;
-const WM_NCHITTEST                    = 0x0084;
-const WM_NCPAINT                      = 0x0085;
-const WM_NCACTIVATE                   = 0x0086;
-const WM_GETDLGCODE                   = 0x0087;
-const WM_SYNCPAINT                    = 0x0088;
-const WM_NCMOUSEMOVE                  = 0x00A0;
-const WM_NCLBUTTONDOWN                = 0x00A1;
-const WM_NCLBUTTONUP                  = 0x00A2;
-const WM_NCLBUTTONDBLCLK              = 0x00A3;
-const WM_NCRBUTTONDOWN                = 0x00A4;
-const WM_NCRBUTTONUP                  = 0x00A5;
-const WM_NCRBUTTONDBLCLK              = 0x00A6;
-const WM_NCMBUTTONDOWN                = 0x00A7;
-const WM_NCMBUTTONUP                  = 0x00A8;
-const WM_NCMBUTTONDBLCLK              = 0x00A9;
-const WM_NCXBUTTONDOWN                = 0x00AB;
-const WM_NCXBUTTONUP                  = 0x00AC;
-const WM_NCXBUTTONDBLCLK              = 0x00AD;
-const WM_INPUT_DEVICE_CHANGE          = 0x00FE;
-const WM_INPUT                        = 0x00FF;
-const WM_KEYFIRST                     = 0x0100;
-const WM_KEYDOWN                      = 0x0100;
-const WM_KEYUP                        = 0x0101;
-const WM_CHAR                         = 0x0102;
-const WM_DEADCHAR                     = 0x0103;
-const WM_SYSKEYDOWN                   = 0x0104;
-const WM_SYSKEYUP                     = 0x0105;
-const WM_SYSCHAR                      = 0x0106;
-const WM_SYSDEADCHAR                  = 0x0107;
-const WM_UNICHAR                      = 0x0109;
-const WM_KEYLAST                      = 0x0109;
-const UNICODE_NOCHAR                  = 0xFFFF;
-const WM_IME_STARTCOMPOSITION         = 0x010D;
-const WM_IME_ENDCOMPOSITION           = 0x010E;
-const WM_IME_COMPOSITION              = 0x010F;
-const WM_IME_KEYLAST                  = 0x010F;
-const WM_INITDIALOG                   = 0x0110;
-const WM_COMMAND                      = 0x0111;
-const WM_SYSCOMMAND                   = 0x0112;
-const WM_TIMER                        = 0x0113;
-const WM_HSCROLL                      = 0x0114;
-const WM_VSCROLL                      = 0x0115;
-const WM_INITMENU                     = 0x0116;
-const WM_INITMENUPOPUP                = 0x0117;
-const WM_GESTURE                      = 0x0119;
-const WM_GESTURENOTIFY                = 0x011A;
-const WM_MENUSELECT                   = 0x011F;
-const WM_MENUCHAR                     = 0x0120;
-const WM_ENTERIDLE                    = 0x0121;
-const WM_MENURBUTTONUP                = 0x0122;
-const WM_MENUDRAG                     = 0x0123;
-const WM_MENUGETOBJECT                = 0x0124;
-const WM_UNINITMENUPOPUP              = 0x0125;
-const WM_MENUCOMMAND                  = 0x0126;
-const WM_CHANGEUISTATE                = 0x0127;
-const WM_UPDATEUISTATE                = 0x0128;
-const WM_QUERYUISTATE                 = 0x0129;
+const WM_NOTIFY                       := 0x004E;
+const WM_INPUTLANGCHANGEREQUEST       := 0x0050;
+const WM_INPUTLANGCHANGE              := 0x0051;
+const WM_TCARD                        := 0x0052;
+const WM_HELP                         := 0x0053;
+const WM_USERCHANGED                  := 0x0054;
+const WM_NOTIFYFORMAT                 := 0x0055;
+const WM_CONTEXTMENU                  := 0x007B;
+const WM_STYLECHANGING                := 0x007C;
+const WM_STYLECHANGED                 := 0x007D;
+const WM_DISPLAYCHANGE                := 0x007E;
+const WM_GETICON                      := 0x007F;
+const WM_SETICON                      := 0x0080;
+const WM_NCCREATE                     := 0x0081;
+const WM_NCDESTROY                    := 0x0082;
+const WM_NCCALCSIZE                   := 0x0083;
+const WM_NCHITTEST                    := 0x0084;
+const WM_NCPAINT                      := 0x0085;
+const WM_NCACTIVATE                   := 0x0086;
+const WM_GETDLGCODE                   := 0x0087;
+const WM_SYNCPAINT                    := 0x0088;
+const WM_NCMOUSEMOVE                  := 0x00A0;
+const WM_NCLBUTTONDOWN                := 0x00A1;
+const WM_NCLBUTTONUP                  := 0x00A2;
+const WM_NCLBUTTONDBLCLK              := 0x00A3;
+const WM_NCRBUTTONDOWN                := 0x00A4;
+const WM_NCRBUTTONUP                  := 0x00A5;
+const WM_NCRBUTTONDBLCLK              := 0x00A6;
+const WM_NCMBUTTONDOWN                := 0x00A7;
+const WM_NCMBUTTONUP                  := 0x00A8;
+const WM_NCMBUTTONDBLCLK              := 0x00A9;
+const WM_NCXBUTTONDOWN                := 0x00AB;
+const WM_NCXBUTTONUP                  := 0x00AC;
+const WM_NCXBUTTONDBLCLK              := 0x00AD;
+const WM_INPUT_DEVICE_CHANGE          := 0x00FE;
+const WM_INPUT                        := 0x00FF;
+const WM_KEYFIRST                     := 0x0100;
+const WM_KEYDOWN                      := 0x0100;
+const WM_KEYUP                        := 0x0101;
+const WM_CHAR                         := 0x0102;
+const WM_DEADCHAR                     := 0x0103;
+const WM_SYSKEYDOWN                   := 0x0104;
+const WM_SYSKEYUP                     := 0x0105;
+const WM_SYSCHAR                      := 0x0106;
+const WM_SYSDEADCHAR                  := 0x0107;
+const WM_UNICHAR                      := 0x0109;
+const WM_KEYLAST                      := 0x0109;
+const UNICODE_NOCHAR                  := 0xFFFF;
+const WM_IME_STARTCOMPOSITION         := 0x010D;
+const WM_IME_ENDCOMPOSITION           := 0x010E;
+const WM_IME_COMPOSITION              := 0x010F;
+const WM_IME_KEYLAST                  := 0x010F;
+const WM_INITDIALOG                   := 0x0110;
+const WM_COMMAND                      := 0x0111;
+const WM_SYSCOMMAND                   := 0x0112;
+const WM_TIMER                        := 0x0113;
+const WM_HSCROLL                      := 0x0114;
+const WM_VSCROLL                      := 0x0115;
+const WM_INITMENU                     := 0x0116;
+const WM_INITMENUPOPUP                := 0x0117;
+const WM_GESTURE                      := 0x0119;
+const WM_GESTURENOTIFY                := 0x011A;
+const WM_MENUSELECT                   := 0x011F;
+const WM_MENUCHAR                     := 0x0120;
+const WM_ENTERIDLE                    := 0x0121;
+const WM_MENURBUTTONUP                := 0x0122;
+const WM_MENUDRAG                     := 0x0123;
+const WM_MENUGETOBJECT                := 0x0124;
+const WM_UNINITMENUPOPUP              := 0x0125;
+const WM_MENUCOMMAND                  := 0x0126;
+const WM_CHANGEUISTATE                := 0x0127;
+const WM_UPDATEUISTATE                := 0x0128;
+const WM_QUERYUISTATE                 := 0x0129;
 
-const WM_CTLCOLORMSGBOX               = 0x0132;
-const WM_CTLCOLOREDIT                 = 0x0133;
-const WM_CTLCOLORLISTBOX              = 0x0134;
-const WM_CTLCOLORBTN                  = 0x0135;
-const WM_CTLCOLORDLG                  = 0x0136;
-const WM_CTLCOLORSCROLLBAR            = 0x0137;
-const WM_CTLCOLORSTATIC               = 0x0138;
-const MN_GETHMENU                     = 0x01E1;
-const WM_MOUSEFIRST                   = 0x0200;
-const WM_MOUSEMOVE                    = 0x0200;
-const WM_LBUTTONDOWN                  = 0x0201;
-const WM_LBUTTONUP                    = 0x0202;
-const WM_LBUTTONDBLCLK                = 0x0203;
-const WM_RBUTTONDOWN                  = 0x0204;
-const WM_RBUTTONUP                    = 0x0205;
-const WM_RBUTTONDBLCLK                = 0x0206;
-const WM_MBUTTONDOWN                  = 0x0207;
-const WM_MBUTTONUP                    = 0x0208;
-const WM_MBUTTONDBLCLK                = 0x0209;
-const WM_MOUSEWHEEL                   = 0x020A;
-const WM_XBUTTONDOWN                  = 0x020B;
-const WM_XBUTTONUP                    = 0x020C;
-const WM_XBUTTONDBLCLK                = 0x020D;
-const WM_MOUSEHWHEEL                  = 0x020E;
-const WM_MOUSELAST                    = 0x020E;
+const WM_CTLCOLORMSGBOX               := 0x0132;
+const WM_CTLCOLOREDIT                 := 0x0133;
+const WM_CTLCOLORLISTBOX              := 0x0134;
+const WM_CTLCOLORBTN                  := 0x0135;
+const WM_CTLCOLORDLG                  := 0x0136;
+const WM_CTLCOLORSCROLLBAR            := 0x0137;
+const WM_CTLCOLORSTATIC               := 0x0138;
+const MN_GETHMENU                     := 0x01E1;
+const WM_MOUSEFIRST                   := 0x0200;
+const WM_MOUSEMOVE                    := 0x0200;
+const WM_LBUTTONDOWN                  := 0x0201;
+const WM_LBUTTONUP                    := 0x0202;
+const WM_LBUTTONDBLCLK                := 0x0203;
+const WM_RBUTTONDOWN                  := 0x0204;
+const WM_RBUTTONUP                    := 0x0205;
+const WM_RBUTTONDBLCLK                := 0x0206;
+const WM_MBUTTONDOWN                  := 0x0207;
+const WM_MBUTTONUP                    := 0x0208;
+const WM_MBUTTONDBLCLK                := 0x0209;
+const WM_MOUSEWHEEL                   := 0x020A;
+const WM_XBUTTONDOWN                  := 0x020B;
+const WM_XBUTTONUP                    := 0x020C;
+const WM_XBUTTONDBLCLK                := 0x020D;
+const WM_MOUSEHWHEEL                  := 0x020E;
+const WM_MOUSELAST                    := 0x020E;
 
-const WM_EXITSIZEMOVE                 = 0x0232;
-const WM_DPICHANGED                   = 0x02E0;
+const WM_EXITSIZEMOVE                 := 0x0232;
+const WM_DPICHANGED                   := 0x02E0;
 
 
 
 
 // WM_SYSCOMMAND parameters
-const SC_KEYMENU          = 0xF100;
+const SC_KEYMENU     := 0xF100;
 
-const HWND_TOP        = cast(HWND, 0);
-const HWND_BOTTOM     = cast(HWND, 1);
-const HWND_TOPMOST    = cast(HWND, -1);
-const HWND_NOTOPMOST  = cast(HWND, -2);
+const HWND_TOP       := cast(HWND, 0);
+const HWND_BOTTOM    := cast(HWND, 1);
+const HWND_TOPMOST   := cast(HWND, -1);
+const HWND_NOTOPMOST := cast(HWND, -2);
 
 
 // Stock Logical Objects
-const WHITE_BRUSH         = 0;
-const LTGRAY_BRUSH        = 1;
-const GRAY_BRUSH          = 2;
-const DKGRAY_BRUSH        = 3;
-const BLACK_BRUSH         = 4;
-const NULL_BRUSH          = 5;
-const HOLLOW_BRUSH        = NULL_BRUSH;
-const WHITE_PEN           = 6;
-const BLACK_PEN           = 7;
-const NULL_PEN            = 8;
-const OEM_FIXED_FONT      = 10;
-const ANSI_FIXED_FONT     = 11;
-const ANSI_VAR_FONT       = 12;
-const SYSTEM_FONT         = 13;
-const DEVICE_DEFAULT_FONT = 14;
-const DEFAULT_PALETTE     = 15;
-const SYSTEM_FIXED_FONT   = 16;
+const WHITE_BRUSH         := 0;
+const LTGRAY_BRUSH        := 1;
+const GRAY_BRUSH          := 2;
+const DKGRAY_BRUSH        := 3;
+const BLACK_BRUSH         := 4;
+const NULL_BRUSH          := 5;
+const HOLLOW_BRUSH        := NULL_BRUSH;
+const WHITE_PEN           := 6;
+const BLACK_PEN           := 7;
+const NULL_PEN            := 8;
+const OEM_FIXED_FONT      := 10;
+const ANSI_FIXED_FONT     := 11;
+const ANSI_VAR_FONT       := 12;
+const SYSTEM_FONT         := 13;
+const DEVICE_DEFAULT_FONT := 14;
+const DEFAULT_PALETTE     := 15;
+const SYSTEM_FIXED_FONT   := 16;
 
 
 
 // Windows Virtual Key codes.
 
-const VK_LBUTTON        = 0x01;
-const VK_RBUTTON        = 0x02;
-const VK_CANCEL         = 0x03;
-const VK_MBUTTON        = 0x04;    // NOT contiguous with L & RBUTTON
-const VK_XBUTTON1       = 0x05;    // NOT contiguous with L & RBUTTON
-const VK_XBUTTON2       = 0x06;    // NOT contiguous with L & RBUTTON
-const VK_BACK           = 0x08;
-const VK_TAB            = 0x09;
-const VK_CLEAR          = 0x0C;
-const VK_RETURN         = 0x0D;
-const VK_SHIFT          = 0x10;
-const VK_CONTROL        = 0x11;
-const VK_MENU           = 0x12;
-const VK_PAUSE          = 0x13;
-const VK_CAPITAL        = 0x14;
-const VK_KANA           = 0x15;
-const VK_HANGUL         = 0x15;
-const VK_JUNJA          = 0x17;
-const VK_FINAL          = 0x18;
-const VK_HANJA          = 0x19;
-const VK_KANJI          = 0x19;
-const VK_ESCAPE         = 0x1B;
-const VK_CONVERT        = 0x1C;
-const VK_NONCONVERT     = 0x1D;
-const VK_ACCEPT         = 0x1E;
-const VK_MODECHANGE     = 0x1F;
-const VK_SPACE          = 0x20;
-const VK_PRIOR          = 0x21;
-const VK_NEXT           = 0x22;
-const VK_END            = 0x23;
-const VK_HOME           = 0x24;
-const VK_LEFT           = 0x25;
-const VK_UP             = 0x26;
-const VK_RIGHT          = 0x27;
-const VK_DOWN           = 0x28;
-const VK_SELECT         = 0x29;
-const VK_PRINT          = 0x2A;
-const VK_EXECUTE        = 0x2B;
-const VK_SNAPSHOT       = 0x2C;
-const VK_INSERT         = 0x2D;
-const VK_DELETE         = 0x2E;
-const VK_HELP           = 0x2F;
+const VK_LBUTTON        := 0x01;
+const VK_RBUTTON        := 0x02;
+const VK_CANCEL         := 0x03;
+const VK_MBUTTON        := 0x04;    // NOT contiguous with L & RBUTTON
+const VK_XBUTTON1       := 0x05;    // NOT contiguous with L & RBUTTON
+const VK_XBUTTON2       := 0x06;    // NOT contiguous with L & RBUTTON
+const VK_BACK           := 0x08;
+const VK_TAB            := 0x09;
+const VK_CLEAR          := 0x0C;
+const VK_RETURN         := 0x0D;
+const VK_SHIFT          := 0x10;
+const VK_CONTROL        := 0x11;
+const VK_MENU           := 0x12;
+const VK_PAUSE          := 0x13;
+const VK_CAPITAL        := 0x14;
+const VK_KANA           := 0x15;
+const VK_HANGUL         := 0x15;
+const VK_JUNJA          := 0x17;
+const VK_FINAL          := 0x18;
+const VK_HANJA          := 0x19;
+const VK_KANJI          := 0x19;
+const VK_ESCAPE         := 0x1B;
+const VK_CONVERT        := 0x1C;
+const VK_NONCONVERT     := 0x1D;
+const VK_ACCEPT         := 0x1E;
+const VK_MODECHANGE     := 0x1F;
+const VK_SPACE          := 0x20;
+const VK_PRIOR          := 0x21;
+const VK_NEXT           := 0x22;
+const VK_END            := 0x23;
+const VK_HOME           := 0x24;
+const VK_LEFT           := 0x25;
+const VK_UP             := 0x26;
+const VK_RIGHT          := 0x27;
+const VK_DOWN           := 0x28;
+const VK_SELECT         := 0x29;
+const VK_PRINT          := 0x2A;
+const VK_EXECUTE        := 0x2B;
+const VK_SNAPSHOT       := 0x2C;
+const VK_INSERT         := 0x2D;
+const VK_DELETE         := 0x2E;
+const VK_HELP           := 0x2F;
 
 // VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39);
 // 0x40 unassigned;
 // VK_A - VK_Z are the same as ASCII 'A' - 'Z' (0x41 - 0x5A);
 
-const VK_LWIN           = 0x5B;
-const VK_RWIN           = 0x5C;
-const VK_APPS           = 0x5D;
-const VK_SLEEP          = 0x5F;
-const VK_NUMPAD0        = 0x60;
-const VK_NUMPAD1        = 0x61;
-const VK_NUMPAD2        = 0x62;
-const VK_NUMPAD3        = 0x63;
-const VK_NUMPAD4        = 0x64;
-const VK_NUMPAD5        = 0x65;
-const VK_NUMPAD6        = 0x66;
-const VK_NUMPAD7        = 0x67;
-const VK_NUMPAD8        = 0x68;
-const VK_NUMPAD9        = 0x69;
-const VK_MULTIPLY       = 0x6A;
-const VK_ADD            = 0x6B;
-const VK_SEPARATOR      = 0x6C;
-const VK_SUBTRACT       = 0x6D;
-const VK_DECIMAL        = 0x6E;
-const VK_DIVIDE         = 0x6F;
-const VK_F1             = 0x70;
-const VK_F2             = 0x71;
-const VK_F3             = 0x72;
-const VK_F4             = 0x73;
-const VK_F5             = 0x74;
-const VK_F6             = 0x75;
-const VK_F7             = 0x76;
-const VK_F8             = 0x77;
-const VK_F9             = 0x78;
-const VK_F10            = 0x79;
-const VK_F11            = 0x7A;
-const VK_F12            = 0x7B;
-const VK_F13            = 0x7C;
-const VK_F14            = 0x7D;
-const VK_F15            = 0x7E;
-const VK_F16            = 0x7F;
-const VK_F17            = 0x80;
-const VK_F18            = 0x81;
-const VK_F19            = 0x82;
-const VK_F20            = 0x83;
-const VK_F21            = 0x84;
-const VK_F22            = 0x85;
-const VK_F23            = 0x86;
-const VK_F24            = 0x87;
-const VK_NUMLOCK        = 0x90;
-const VK_SCROLL         = 0x91;
-const VK_OEM_NEC_EQUAL  = 0x92;   // '=' key on numpad;
-const VK_OEM_FJ_JISHO   = 0x92;   // 'Dictionary' key;
-const VK_OEM_FJ_MASSHOU = 0x93;   // 'Unregister word' key;
-const VK_OEM_FJ_TOUROKU = 0x94;   // 'Register word' key;
-const VK_OEM_FJ_LOYA    = 0x95;   // 'Left OYAYUBI' key;
-const VK_OEM_FJ_ROYA    = 0x96;   // 'Right OYAYUBI' key;
-const VK_LSHIFT         = 0xA0;
-const VK_RSHIFT         = 0xA1;
-const VK_LCONTROL       = 0xA2;
-const VK_RCONTROL       = 0xA3;
-const VK_LMENU          = 0xA4;
-const VK_RMENU          = 0xA5;
-const VK_BROWSER_BACK        = 0xA6;
-const VK_BROWSER_FORWARD     = 0xA7;
-const VK_BROWSER_REFRESH     = 0xA8;
-const VK_BROWSER_STOP        = 0xA9;
-const VK_BROWSER_SEARCH      = 0xAA;
-const VK_BROWSER_FAVORITES   = 0xAB;
-const VK_BROWSER_HOME        = 0xAC;
-const VK_VOLUME_MUTE         = 0xAD;
-const VK_VOLUME_DOWN         = 0xAE;
-const VK_VOLUME_UP           = 0xAF;
-const VK_MEDIA_NEXT_TRACK    = 0xB0;
-const VK_MEDIA_PREV_TRACK    = 0xB1;
-const VK_MEDIA_STOP          = 0xB2;
-const VK_MEDIA_PLAY_PAUSE    = 0xB3;
-const VK_LAUNCH_MAIL         = 0xB4;
-const VK_LAUNCH_MEDIA_SELECT = 0xB5;
-const VK_LAUNCH_APP1         = 0xB6;
-const VK_LAUNCH_APP2         = 0xB7;
-const VK_OEM_1          = 0xBA;   // ';:' for US;
-const VK_OEM_PLUS       = 0xBB;   // '+' any country;
-const VK_OEM_COMMA      = 0xBC;   // ',' any country;
-const VK_OEM_MINUS      = 0xBD;   // '-' any country;
-const VK_OEM_PERIOD     = 0xBE;   // '.' any country;
-const VK_OEM_2          = 0xBF;   // '/?' for US;
-const VK_OEM_3          = 0xC0;   // '`~' for US;
-const VK_OEM_4          = 0xDB;  //  '[{' for US;
-const VK_OEM_5          = 0xDC;  //  '\|' for US;
-const VK_OEM_6          = 0xDD;  //  ']}' for US;
-const VK_OEM_7          = 0xDE;  //  ''"' for US;
-const VK_OEM_8          = 0xDF;
-const VK_OEM_AX         = 0xE1;  //  'AX' key on Japanese AX kbd;
-const VK_OEM_102        = 0xE2;  //  "<>" or "\|" on RT 102-key kbd.;
-const VK_ICO_HELP       = 0xE3;  //  Help key on ICO;
-const VK_ICO_00         = 0xE4;  //  00 key on ICO;
-const VK_PROCESSKEY     = 0xE5;
-const VK_ICO_CLEAR      = 0xE6;
-const VK_PACKET         = 0xE7;
+const VK_LWIN           := 0x5B;
+const VK_RWIN           := 0x5C;
+const VK_APPS           := 0x5D;
+const VK_SLEEP          := 0x5F;
+const VK_NUMPAD0        := 0x60;
+const VK_NUMPAD1        := 0x61;
+const VK_NUMPAD2        := 0x62;
+const VK_NUMPAD3        := 0x63;
+const VK_NUMPAD4        := 0x64;
+const VK_NUMPAD5        := 0x65;
+const VK_NUMPAD6        := 0x66;
+const VK_NUMPAD7        := 0x67;
+const VK_NUMPAD8        := 0x68;
+const VK_NUMPAD9        := 0x69;
+const VK_MULTIPLY       := 0x6A;
+const VK_ADD            := 0x6B;
+const VK_SEPARATOR      := 0x6C;
+const VK_SUBTRACT       := 0x6D;
+const VK_DECIMAL        := 0x6E;
+const VK_DIVIDE         := 0x6F;
+const VK_F1             := 0x70;
+const VK_F2             := 0x71;
+const VK_F3             := 0x72;
+const VK_F4             := 0x73;
+const VK_F5             := 0x74;
+const VK_F6             := 0x75;
+const VK_F7             := 0x76;
+const VK_F8             := 0x77;
+const VK_F9             := 0x78;
+const VK_F10            := 0x79;
+const VK_F11            := 0x7A;
+const VK_F12            := 0x7B;
+const VK_F13            := 0x7C;
+const VK_F14            := 0x7D;
+const VK_F15            := 0x7E;
+const VK_F16            := 0x7F;
+const VK_F17            := 0x80;
+const VK_F18            := 0x81;
+const VK_F19            := 0x82;
+const VK_F20            := 0x83;
+const VK_F21            := 0x84;
+const VK_F22            := 0x85;
+const VK_F23            := 0x86;
+const VK_F24            := 0x87;
+const VK_NUMLOCK        := 0x90;
+const VK_SCROLL         := 0x91;
+const VK_OEM_NEC_EQUAL  := 0x92;   // '=' key on numpad;
+const VK_OEM_FJ_JISHO   := 0x92;   // 'Dictionary' key;
+const VK_OEM_FJ_MASSHOU := 0x93;   // 'Unregister word' key;
+const VK_OEM_FJ_TOUROKU := 0x94;   // 'Register word' key;
+const VK_OEM_FJ_LOYA    := 0x95;   // 'Left OYAYUBI' key;
+const VK_OEM_FJ_ROYA    := 0x96;   // 'Right OYAYUBI' key;
+const VK_LSHIFT         := 0xA0;
+const VK_RSHIFT         := 0xA1;
+const VK_LCONTROL       := 0xA2;
+const VK_RCONTROL       := 0xA3;
+const VK_LMENU          := 0xA4;
+const VK_RMENU          := 0xA5;
+const VK_BROWSER_BACK        := 0xA6;
+const VK_BROWSER_FORWARD     := 0xA7;
+const VK_BROWSER_REFRESH     := 0xA8;
+const VK_BROWSER_STOP        := 0xA9;
+const VK_BROWSER_SEARCH      := 0xAA;
+const VK_BROWSER_FAVORITES   := 0xAB;
+const VK_BROWSER_HOME        := 0xAC;
+const VK_VOLUME_MUTE         := 0xAD;
+const VK_VOLUME_DOWN         := 0xAE;
+const VK_VOLUME_UP           := 0xAF;
+const VK_MEDIA_NEXT_TRACK    := 0xB0;
+const VK_MEDIA_PREV_TRACK    := 0xB1;
+const VK_MEDIA_STOP          := 0xB2;
+const VK_MEDIA_PLAY_PAUSE    := 0xB3;
+const VK_LAUNCH_MAIL         := 0xB4;
+const VK_LAUNCH_MEDIA_SELECT := 0xB5;
+const VK_LAUNCH_APP1         := 0xB6;
+const VK_LAUNCH_APP2         := 0xB7;
+const VK_OEM_1          := 0xBA;   // ';:' for US;
+const VK_OEM_PLUS       := 0xBB;   // '+' any country;
+const VK_OEM_COMMA      := 0xBC;   // ',' any country;
+const VK_OEM_MINUS      := 0xBD;   // '-' any country;
+const VK_OEM_PERIOD     := 0xBE;   // '.' any country;
+const VK_OEM_2          := 0xBF;   // '/?' for US;
+const VK_OEM_3          := 0xC0;   // '`~' for US;
+const VK_OEM_4          := 0xDB;  //  '[{' for US;
+const VK_OEM_5          := 0xDC;  //  '\|' for US;
+const VK_OEM_6          := 0xDD;  //  ']}' for US;
+const VK_OEM_7          := 0xDE;  //  ''"' for US;
+const VK_OEM_8          := 0xDF;
+const VK_OEM_AX         := 0xE1;  //  'AX' key on Japanese AX kbd;
+const VK_OEM_102        := 0xE2;  //  "<>" or "\|" on RT 102-key kbd.;
+const VK_ICO_HELP       := 0xE3;  //  Help key on ICO;
+const VK_ICO_00         := 0xE4;  //  00 key on ICO;
+const VK_PROCESSKEY     := 0xE5;
+const VK_ICO_CLEAR      := 0xE6;
+const VK_PACKET         := 0xE7;
 
 
 
@@ -508,48 +508,48 @@ const VK_PACKET         = 0xE7;
 //WM_WINDOWPOSCHANGED
 //WM_WINDOWPOSCHANGING
 
-const SIZE_RESTORED  = 0;
-const SIZE_MINIMIZED = 1;
-const SIZE_MAXIMIZED = 2;
-const SIZE_MAXSHOW   = 3;
-const SIZE_MAXHIDE   = 4;
+const SIZE_RESTORED  := 0;
+const SIZE_MINIMIZED := 1;
+const SIZE_MAXIMIZED := 2;
+const SIZE_MAXSHOW   := 3;
+const SIZE_MAXHIDE   := 4;
 
 // SetWindowPos Flags
-const SWP_NOSIZE          = 0x0001;
-const SWP_NOMOVE          = 0x0002;
-const SWP_NOZORDER        = 0x0004;
-const SWP_NOREDRAW        = 0x0008;
-const SWP_NOACTIVATE      = 0x0010;
-const SWP_FRAMECHANGED    = 0x0020;  // The frame changed: send WM_NCCALCSIZE
-const SWP_SHOWWINDOW      = 0x0040;
-const SWP_HIDEWINDOW      = 0x0080;
-const SWP_NOCOPYBITS      = 0x0100;
-const SWP_NOOWNERZORDER   = 0x0200;  // Don't do owner Z ordering
-const SWP_NOSENDCHANGING  = 0x0400;  // Don't send WM_WINDOWPOSCHANGING
-const SWP_DRAWFRAME       = SWP_FRAMECHANGED;
-const SWP_NOREPOSITION    = SWP_NOOWNERZORDER;
-const SWP_DEFERERASE      = 0x2000;
-const SWP_ASYNCWINDOWPOS  = 0x4000;
+const SWP_NOSIZE          := 0x0001;
+const SWP_NOMOVE          := 0x0002;
+const SWP_NOZORDER        := 0x0004;
+const SWP_NOREDRAW        := 0x0008;
+const SWP_NOACTIVATE      := 0x0010;
+const SWP_FRAMECHANGED    := 0x0020;  // The frame changed: send WM_NCCALCSIZE
+const SWP_SHOWWINDOW      := 0x0040;
+const SWP_HIDEWINDOW      := 0x0080;
+const SWP_NOCOPYBITS      := 0x0100;
+const SWP_NOOWNERZORDER   := 0x0200;  // Don't do owner Z ordering
+const SWP_NOSENDCHANGING  := 0x0400;  // Don't send WM_WINDOWPOSCHANGING
+const SWP_DRAWFRAME       := SWP_FRAMECHANGED;
+const SWP_NOREPOSITION    := SWP_NOOWNERZORDER;
+const SWP_DEFERERASE      := 0x2000;
+const SWP_ASYNCWINDOWPOS  := 0x4000;
 
 // ShowWindow commands
-const SW_HIDE            = 0;
-const SW_SHOWNORMAL      = 1;
-const SW_NORMAL          = 1;
-const SW_SHOWMINIMIZED   = 2;
-const SW_SHOWMAXIMIZED   = 3;
-const SW_MAXIMIZE        = 3;
-const SW_SHOWNOACTIVATE  = 4;
-const SW_SHOW            = 5;
-const SW_MINIMIZE        = 6;
-const SW_SHOWMINNOACTIVE = 7;
-const SW_SHOWNA          = 8;
-const SW_RESTORE         = 9;
-const SW_SHOWDEFAULT     = 10;
-const SW_FORCEMINIMIZE   = 11;
-const SW_MAX             = 11;
+const SW_HIDE            := 0;
+const SW_SHOWNORMAL      := 1;
+const SW_NORMAL          := 1;
+const SW_SHOWMINIMIZED   := 2;
+const SW_SHOWMAXIMIZED   := 3;
+const SW_MAXIMIZE        := 3;
+const SW_SHOWNOACTIVATE  := 4;
+const SW_SHOW            := 5;
+const SW_MINIMIZE        := 6;
+const SW_SHOWMINNOACTIVE := 7;
+const SW_SHOWNA          := 8;
+const SW_RESTORE         := 9;
+const SW_SHOWDEFAULT     := 10;
+const SW_FORCEMINIMIZE   := 11;
+const SW_MAX             := 11;
 
 // Default window position for CreateWindow x,y parameters.
-const CW_USEDEFAULT = 0x80000000;
+const CW_USEDEFAULT := 0x80000000;
 
 proc AdjustWindowRect  (lpRect: ^RECT, dwStyle: u32, bMenu: BOOL)                 : BOOL #foreign; // user32
 proc AdjustWindowRectEx(lpRect: ^RECT, dwStyle: u32, bMenu: BOOL, dwExStyle: i32) : BOOL #foreign; // user32
@@ -652,86 +652,86 @@ proc WindowFromPoint(Point: POINT) : HWND #foreign; // user32
 
 // WNDCLASSEXA :: struct {};  // @Temporary, just so we can define deprecated procedures.
 struct WNDCLASSEXW {
-    var cbSize: u32;
-    var style: u32;
-    var lpfnWndProc: rawptr; // WNDPROC
-    var cbClsExtra: i32;
-    var cbWndExtra: i32;
-    var hInstance: HINSTANCE;
-    var hIcon: HICON;
-    var hCursor: HCURSOR;
-    var hbrBackground: HBRUSH;
-    var lpszMenuName: ^u16;
-    var lpszClassName: ^u16;
-    var hIconSm: HICON;
+    cbSize: u32;
+    style: u32;
+    lpfnWndProc: rawptr; // WNDPROC
+    cbClsExtra: i32;
+    cbWndExtra: i32;
+    hInstance: HINSTANCE;
+    hIcon: HICON;
+    hCursor: HCURSOR;
+    hbrBackground: HBRUSH;
+    lpszMenuName: ^u16;
+    lpszClassName: ^u16;
+    hIconSm: HICON;
 }
 
 // Window Class styles
-const CS_VREDRAW = 0x0001;
-const CS_HREDRAW = 0x0002;
-const CS_OWNDC   = 0x0020;
+const CS_VREDRAW := 0x0001;
+const CS_HREDRAW := 0x0002;
+const CS_OWNDC   := 0x0020;
 
 // Window styles
-const WS_OVERLAPPED       = 0x00000000;
-const WS_POPUP            = 0x80000000;
-const WS_CHILD            = 0x40000000;
-const WS_MINIMIZE         = 0x20000000;
-const WS_VISIBLE          = 0x10000000;
-const WS_DISABLED         = 0x08000000;
-const WS_CLIPSIBLINGS     = 0x04000000;
-const WS_CLIPCHILDREN     = 0x02000000;
-const WS_MAXIMIZE         = 0x01000000;
-const WS_CAPTION          = 0x00C00000; // WS_BORDER | WS_DLGFRAME
-const WS_BORDER           = 0x00800000;
-const WS_DLGFRAME         = 0x00400000;
-const WS_VSCROLL          = 0x00200000;
-const WS_HSCROLL          = 0x00100000;
-const WS_SYSMENU          = 0x00080000;
-const WS_THICKFRAME       = 0x00040000;
-const WS_GROUP            = 0x00020000;
-const WS_TABSTOP          = 0x00010000;
-const WS_MINIMIZEBOX      = 0x00020000;
-const WS_MAXIMIZEBOX      = 0x00010000;
-const WS_SIZEBOX          = WS_THICKFRAME;
-const WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+const WS_OVERLAPPED       := 0x00000000;
+const WS_POPUP            := 0x80000000;
+const WS_CHILD            := 0x40000000;
+const WS_MINIMIZE         := 0x20000000;
+const WS_VISIBLE          := 0x10000000;
+const WS_DISABLED         := 0x08000000;
+const WS_CLIPSIBLINGS     := 0x04000000;
+const WS_CLIPCHILDREN     := 0x02000000;
+const WS_MAXIMIZE         := 0x01000000;
+const WS_CAPTION          := 0x00C00000; // WS_BORDER | WS_DLGFRAME
+const WS_BORDER           := 0x00800000;
+const WS_DLGFRAME         := 0x00400000;
+const WS_VSCROLL          := 0x00200000;
+const WS_HSCROLL          := 0x00100000;
+const WS_SYSMENU          := 0x00080000;
+const WS_THICKFRAME       := 0x00040000;
+const WS_GROUP            := 0x00020000;
+const WS_TABSTOP          := 0x00010000;
+const WS_MINIMIZEBOX      := 0x00020000;
+const WS_MAXIMIZEBOX      := 0x00010000;
+const WS_SIZEBOX          := WS_THICKFRAME;
+const WS_OVERLAPPEDWINDOW := WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
 
 // Window Ex styles
-const WS_EX_DLGMODALFRAME     = 0x00000001;
-const WS_EX_NOPARENTNOTIFY    = 0x00000004;
-const WS_EX_TOPMOST           = 0x00000008;
-const WS_EX_ACCEPTFILES       = 0x00000010;
-const WS_EX_TRANSPARENT       = 0x00000020;
-const WS_EX_MDICHILD          = 0x00000040;
-const WS_EX_TOOLWINDOW        = 0x00000080;
-const WS_EX_WINDOWEDGE        = 0x00000100;
-const WS_EX_CLIENTEDGE        = 0x00000200;
-const WS_EX_CONTEXTHELP       = 0x00000400;
-const WS_EX_RIGHT             = 0x00001000;
-const WS_EX_LEFT              = 0x00000000;
-const WS_EX_RTLREADING        = 0x00002000;
-const WS_EX_LTRREADING        = 0x00000000;
-const WS_EX_LEFTSCROLLBAR     = 0x00004000;
-const WS_EX_RIGHTSCROLLBAR    = 0x00000000;
-const WS_EX_CONTROLPARENT     = 0x00010000;
-const WS_EX_STATICEDGE        = 0x00020000;
-const WS_EX_APPWINDOW         = 0x00040000;
-const WS_EX_OVERLAPPEDWINDOW  = (WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE);
-const WS_EX_PALETTEWINDOW     = (WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST);
-const WS_EX_LAYERED           = 0x00080000;
-const WS_EX_NOINHERITLAYOUT   = 0x00100000; // Disable inheritence of mirroring by children
-const WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
-const WS_EX_LAYOUTRTL         = 0x00400000; // Right to left mirroring
-const WS_EX_COMPOSITED        = 0x02000000;
-const WS_EX_NOACTIVATE        = 0x08000000;
+const WS_EX_DLGMODALFRAME     := 0x00000001;
+const WS_EX_NOPARENTNOTIFY    := 0x00000004;
+const WS_EX_TOPMOST           := 0x00000008;
+const WS_EX_ACCEPTFILES       := 0x00000010;
+const WS_EX_TRANSPARENT       := 0x00000020;
+const WS_EX_MDICHILD          := 0x00000040;
+const WS_EX_TOOLWINDOW        := 0x00000080;
+const WS_EX_WINDOWEDGE        := 0x00000100;
+const WS_EX_CLIENTEDGE        := 0x00000200;
+const WS_EX_CONTEXTHELP       := 0x00000400;
+const WS_EX_RIGHT             := 0x00001000;
+const WS_EX_LEFT              := 0x00000000;
+const WS_EX_RTLREADING        := 0x00002000;
+const WS_EX_LTRREADING        := 0x00000000;
+const WS_EX_LEFTSCROLLBAR     := 0x00004000;
+const WS_EX_RIGHTSCROLLBAR    := 0x00000000;
+const WS_EX_CONTROLPARENT     := 0x00010000;
+const WS_EX_STATICEDGE        := 0x00020000;
+const WS_EX_APPWINDOW         := 0x00040000;
+const WS_EX_OVERLAPPEDWINDOW  := (WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE);
+const WS_EX_PALETTEWINDOW     := (WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST);
+const WS_EX_LAYERED           := 0x00080000;
+const WS_EX_NOINHERITLAYOUT   := 0x00100000; // Disable inheritence of mirroring by children
+const WS_EX_NOREDIRECTIONBITMAP := 0x00200000;
+const WS_EX_LAYOUTRTL         := 0x00400000; // Right to left mirroring
+const WS_EX_COMPOSITED        := 0x02000000;
+const WS_EX_NOACTIVATE        := 0x08000000;
 
 // Window field offsets for GetWindowLong()
-const GWL_WNDPROC         = -4;
-const GWL_HINSTANCE       = -6;
-const GWL_HWNDPARENT      = -8;
-const GWL_STYLE           = -16;
-const GWL_EXSTYLE         = -20;
-const GWL_USERDATA        = -21;
-const GWL_ID              = -12;
+const GWL_WNDPROC         := -4;
+const GWL_HINSTANCE       := -6;
+const GWL_HWNDPARENT      := -8;
+const GWL_STYLE           := -16;
+const GWL_EXSTYLE         := -20;
+const GWL_USERDATA        := -21;
+const GWL_ID              := -12;
 
 // GetClassInfo
 // GetClassInfoEx
@@ -860,49 +860,49 @@ proc GetDC(hwnd: HWND) : HDC #foreign; // user32
 //GetDCOrgEx
 //GetDCPenColor
 
-const DRIVERVERSION = 0;
-const TECHNOLOGY    = 2;
-const HORZSIZE      = 4;
-const VERTSIZE      = 6;
-const HORZRES       = 8;
-const VERTRES       = 10;
-const BITSPIXEL     = 12;
-const PLANES        = 14;
-const NUMBRUSHES    = 16;
-const NUMPENS       = 18;
-const NUMMARKERS    = 20;
-const NUMFONTS      = 22;
-const NUMCOLORS     = 24;
-const PDEVICESIZE   = 26;
-const CURVECAPS     = 28;
-const LINECAPS      = 30;
-const POLYGONALCAPS = 32;
-const TEXTCAPS      = 34;
-const CLIPCAPS      = 36;
-const RASTERCAPS    = 38;
-const ASPECTX       = 40;
-const ASPECTY       = 42;
-const ASPECTXY      = 44;
-const LOGPIXELSX    = 88;
-const LOGPIXELSY    = 90;
-const SIZEPALETTE   = 104;
-const NUMRESERVED   = 106;
-const COLORRES      = 108;
-const PHYSICALWIDTH   = 110;
-const PHYSICALHEIGHT  = 111;
-const PHYSICALOFFSETX = 112;
-const PHYSICALOFFSETY = 113;
-const SCALINGFACTORX  = 114;
-const SCALINGFACTORY  = 115;
+const DRIVERVERSION := 0;
+const TECHNOLOGY    := 2;
+const HORZSIZE      := 4;
+const VERTSIZE      := 6;
+const HORZRES       := 8;
+const VERTRES       := 10;
+const BITSPIXEL     := 12;
+const PLANES        := 14;
+const NUMBRUSHES    := 16;
+const NUMPENS       := 18;
+const NUMMARKERS    := 20;
+const NUMFONTS      := 22;
+const NUMCOLORS     := 24;
+const PDEVICESIZE   := 26;
+const CURVECAPS     := 28;
+const LINECAPS      := 30;
+const POLYGONALCAPS := 32;
+const TEXTCAPS      := 34;
+const CLIPCAPS      := 36;
+const RASTERCAPS    := 38;
+const ASPECTX       := 40;
+const ASPECTY       := 42;
+const ASPECTXY      := 44;
+const LOGPIXELSX    := 88;
+const LOGPIXELSY    := 90;
+const SIZEPALETTE   := 104;
+const NUMRESERVED   := 106;
+const COLORRES      := 108;
+const PHYSICALWIDTH   := 110;
+const PHYSICALHEIGHT  := 111;
+const PHYSICALOFFSETX := 112;
+const PHYSICALOFFSETY := 113;
+const SCALINGFACTORX  := 114;
+const SCALINGFACTORY  := 115;
 
-const VREFRESH        = 116;
-const DESKTOPVERTRES  = 117;
-const DESKTOPHORZRES  = 118;
-const BLTALIGNMENT    = 119;
+const VREFRESH        := 116;
+const DESKTOPVERTRES  := 117;
+const DESKTOPHORZRES  := 118;
+const BLTALIGNMENT    := 119;
 
 // WINVER >= 0x0500
-const SHADEBLENDCAPS  = 120;
-const COLORMGMTCAPS   = 121;
+const SHADEBLENDCAPS  := 120;
+const COLORMGMTCAPS   := 121;
 
 proc GetDeviceCaps(hdc: HDC, index: i32) : i32 #foreign; // gdi
 //GetLayout
@@ -923,23 +923,23 @@ proc WindowFromDC(dc: HDC) : HWND #foreign; // user32
 // Icon API
 
 struct ICONINFO {
-    var fIcon: BOOL;
-    var xHotspot: u32;
-    var yHotspot: u32;
-    var hbmMask: HBITMAP;
-    var hbmColor: HBITMAP;
+    fIcon: BOOL;
+    xHotspot: u32;
+    yHotspot: u32;
+    hbmMask: HBITMAP;
+    hbmColor: HBITMAP;
 }
 
 struct ICONINFOEXW {
-    var cbSize: u32;
-    var fIcon: BOOL;
-    var xHotspot: u32;
-    var yHotspot: u32;
-    var hbmMask: HBITMAP;
-    var hbmColor: HBITMAP;
-    var wResID: u16;
-    var szModName: [MAX_PATH]u16;
-    var szResName: [MAX_PATH]u16;
+    cbSize: u32;
+    fIcon: BOOL;
+    xHotspot: u32;
+    yHotspot: u32;
+    hbmMask: HBITMAP;
+    hbmColor: HBITMAP;
+    wResID: u16;
+    szModName: [MAX_PATH]u16;
+    szResName: [MAX_PATH]u16;
 }
 
 // CopyIcon
@@ -968,8 +968,8 @@ proc LoadIconW(hInstance: HINSTANCE, lpIconName: LPCWSTR) : HICON #foreign; // u
 
 // Cursor API
 
-const IDC_ARROW = 32512;
-const IDC_HAND  = 32649;
+const IDC_ARROW := 32512;
+const IDC_HAND  := 32649;
 
 proc ClipCursor(lpRect: ^RECT) : i32 #foreign; // user32
 // CopyCursor
@@ -993,18 +993,18 @@ proc ShowCursor(bShow: i32) : i32 #foreign; // user32
 // Message.
 
 struct MSG {
-    var hwnd:    HWND;
-    var message: u32;
-    var wParam:  WPARAM;
-    var lParam:  LPARAM;
-    var time:    i32;
-    var pt:      POINT;
+    hwnd:    HWND;
+    message: u32;
+    wParam:  WPARAM;
+    lParam:  LPARAM;
+    time:    i32;
+    pt:      POINT;
 }
 
 // PeekMessage flags
-const PM_NOREMOVE         = 0x0000;
-const PM_REMOVE           = 0x0001;
-const PM_NOYIELD          = 0x0002;
+const PM_NOREMOVE         := 0x0000;
+const PM_REMOVE           := 0x0001;
+const PM_NOYIELD          := 0x0002;
 
 //BroadcastSystemMessage
 //BroadcastSystemMessageEx
@@ -1046,21 +1046,21 @@ proc DefWindowProcW(hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) : i64 
 
 // Multiple Display Monitors API:
 
-const MONITOR_DEFAULTTONULL       = 0x00000000;
-const MONITOR_DEFAULTTOPRIMARY    = 0x00000001;
-const MONITOR_DEFAULTTONEAREST    = 0x00000002;
+const MONITOR_DEFAULTTONULL       := 0x00000000;
+const MONITOR_DEFAULTTOPRIMARY    := 0x00000001;
+const MONITOR_DEFAULTTONEAREST    := 0x00000002;
 
 struct MONITORINFO {
-    var cbSize: i32;
-    var rcMonitor: RECT;
-    var rcWork: RECT;
-    var dwFlags: i32;
+    cbSize: i32;
+    rcMonitor: RECT;
+    rcWork: RECT;
+    dwFlags: i32;
 }
 
 proc EnumDisplayMonitors (hdc: HDC, lprcClip: ^RECT, lpfnEnum:MONITORENUMPROC, dwData:LPARAM) : BOOL #foreign; // user32
 // proc GetMonitorInfoA     (hMonitor: HMONITOR, lpmi: ^MONITORINFO) : BOOL #foreign user32 #deprecated "Use GetMonitorInfoW instead.";
 proc GetMonitorInfoW     (hMonitor: HMONITOR, lpmi: ^MONITORINFO) : BOOL #foreign; // user32
-const MONITORENUMPROC = proc(hMonitor: HMONITOR, hdcMonitor: HDC, lprcMonitor: ^RECT, dwData: LPARAM) : BOOL;
+const MONITORENUMPROC := proc(hMonitor: HMONITOR, hdcMonitor: HDC, lprcMonitor: ^RECT, dwData: LPARAM) : BOOL;
 proc MonitorFromPoint    (pt: POINT, dwFlags: u32) : HMONITOR #foreign; // user32
 proc MonitorFromRect     (lprc: ^RECT, dwFlags: u32) : HMONITOR #foreign; // user32
 proc MonitorFromWindow   (hwnd: HWND, dwFlags: u32) : HMONITOR #foreign; // user32
@@ -1158,103 +1158,103 @@ proc SetCapture    (hwnd: HWND) : HWND #foreign; // user32
 // Raw Input API.
 
 struct RAWINPUTHEADER {
-    var dwType:  u32;
-    var dwSize:  u32;
-    var hDevice: HANDLE;
-    var wParam:  WPARAM;
+    dwType:  u32;
+    dwSize:  u32;
+    hDevice: HANDLE;
+    wParam:  WPARAM;
 }
 
 struct RAWINPUT {
-    var header: RAWINPUTHEADER;
+    header: RAWINPUTHEADER;
 
-    var data: union {
-        var mouse: RAWMOUSE;
-        var keyboard: RAWKEYBOARD;
-        var hid: RAWHID;
+    data: union {
+        mouse: RAWMOUSE;
+        keyboard: RAWKEYBOARD;
+        hid: RAWHID;
     };
 }
 
 struct RAWMOUSE {
-    var usFlags: u16;
+    usFlags: u16;
 
-    var buttons: union {
-        var ulButtons: u32;
-        var split_buttons: struct {
-            var usButtonFlags: u16;
-            var usButtonData:  u16;
+    buttons: union {
+        ulButtons: u32;
+        split_buttons: struct {
+            usButtonFlags: u16;
+            usButtonData:  u16;
         };
     };
 
-    var ulRawButtons: u32;
-    var lLastX: i32;
-    var lLastY: i32;
-    var ulExtraInformation: u32;
+    ulRawButtons: u32;
+    lLastX: i32;
+    lLastY: i32;
+    ulExtraInformation: u32;
 }
 
 struct RAWHID {
-    var dwSizeHid: u32;
-    var dwCount: u32;
-    var bRawData: [1]u8;    // size = dwSizeHid *  dwCount
+    dwSizeHid: u32;
+    dwCount: u32;
+    bRawData: [1]u8;    // size = dwSizeHid *  dwCount
 }
 
 struct RAWKEYBOARD {
-    var MakeCode: u16;
-    var Flags: u16;
-    var Reserved: u16;
-    var VKey: u16;
-    var Message: u32;
-    var ExtraInformation: u32;
+    MakeCode: u16;
+    Flags: u16;
+    Reserved: u16;
+    VKey: u16;
+    Message: u32;
+    ExtraInformation: u32;
 }
 
 struct RAWINPUTDEVICE {
-    var usUsagePage: u16;
-    var usUsage: u16;
-    var dwFlags: i32;
-    var hwndTarget: HWND;
+    usUsagePage: u16;
+    usUsage: u16;
+    dwFlags: i32;
+    hwndTarget: HWND;
 }
 
-const RID_INPUT  = 0x10000003;
-const RID_HEADER = 0x10000005;
+const RID_INPUT  := 0x10000003;
+const RID_HEADER := 0x10000005;
 
-const RIM_INPUT        = 0x00000000;
-const RIM_INPUTSINK    = 0x00000001;
-const RIM_TYPEMOUSE    = 0x00000000;
-const RIM_TYPEKEYBOARD = 0x00000001;
-const RIM_TYPEHID      = 0x00000002;
+const RIM_INPUT        := 0x00000000;
+const RIM_INPUTSINK    := 0x00000001;
+const RIM_TYPEMOUSE    := 0x00000000;
+const RIM_TYPEKEYBOARD := 0x00000001;
+const RIM_TYPEHID      := 0x00000002;
 
 // RAWMOUSE::usFlags
-const MOUSE_MOVE_RELATIVE         = 0x00;
-const MOUSE_MOVE_ABSOLUTE         = 0x01;
-const MOUSE_VIRTUAL_DESKTOP       = 0x02;  // the coordinates are mapped to the virtual desktop
-const MOUSE_ATTRIBUTES_CHANGED    = 0x04;  // requery for mouse attributes
-const MOUSE_MOVE_NOCOALESCE       = 0x08;  // do not coalesce mouse moves
+const MOUSE_MOVE_RELATIVE         := 0x00;
+const MOUSE_MOVE_ABSOLUTE         := 0x01;
+const MOUSE_VIRTUAL_DESKTOP       := 0x02;  // the coordinates are mapped to the virtual desktop
+const MOUSE_ATTRIBUTES_CHANGED    := 0x04;  // requery for mouse attributes
+const MOUSE_MOVE_NOCOALESCE       := 0x08;  // do not coalesce mouse moves
 
-const RI_MOUSE_LEFT_BUTTON_DOWN   = 0x0001;  // Left Button changed to down.
-const RI_MOUSE_LEFT_BUTTON_UP     = 0x0002;  // Left Button changed to up.
-const RI_MOUSE_RIGHT_BUTTON_DOWN  = 0x0004;  // Right Button changed to down.
-const RI_MOUSE_RIGHT_BUTTON_UP    = 0x0008;  // Right Button changed to up.
-const RI_MOUSE_MIDDLE_BUTTON_DOWN = 0x0010;  // Middle Button changed to down.
-const RI_MOUSE_MIDDLE_BUTTON_UP   = 0x0020;  // Middle Button changed to up.
+const RI_MOUSE_LEFT_BUTTON_DOWN   := 0x0001;  // Left Button changed to down.
+const RI_MOUSE_LEFT_BUTTON_UP     := 0x0002;  // Left Button changed to up.
+const RI_MOUSE_RIGHT_BUTTON_DOWN  := 0x0004;  // Right Button changed to down.
+const RI_MOUSE_RIGHT_BUTTON_UP    := 0x0008;  // Right Button changed to up.
+const RI_MOUSE_MIDDLE_BUTTON_DOWN := 0x0010;  // Middle Button changed to down.
+const RI_MOUSE_MIDDLE_BUTTON_UP   := 0x0020;  // Middle Button changed to up.
 
-const RI_MOUSE_BUTTON_1_DOWN      = RI_MOUSE_LEFT_BUTTON_DOWN;
-const RI_MOUSE_BUTTON_1_UP        = RI_MOUSE_LEFT_BUTTON_UP;
-const RI_MOUSE_BUTTON_2_DOWN      = RI_MOUSE_RIGHT_BUTTON_DOWN;
-const RI_MOUSE_BUTTON_2_UP        = RI_MOUSE_RIGHT_BUTTON_UP;
-const RI_MOUSE_BUTTON_3_DOWN      = RI_MOUSE_MIDDLE_BUTTON_DOWN;
-const RI_MOUSE_BUTTON_3_UP        = RI_MOUSE_MIDDLE_BUTTON_UP;
+const RI_MOUSE_BUTTON_1_DOWN      := RI_MOUSE_LEFT_BUTTON_DOWN;
+const RI_MOUSE_BUTTON_1_UP        := RI_MOUSE_LEFT_BUTTON_UP;
+const RI_MOUSE_BUTTON_2_DOWN      := RI_MOUSE_RIGHT_BUTTON_DOWN;
+const RI_MOUSE_BUTTON_2_UP        := RI_MOUSE_RIGHT_BUTTON_UP;
+const RI_MOUSE_BUTTON_3_DOWN      := RI_MOUSE_MIDDLE_BUTTON_DOWN;
+const RI_MOUSE_BUTTON_3_UP        := RI_MOUSE_MIDDLE_BUTTON_UP;
 
-const RI_MOUSE_BUTTON_4_DOWN      = 0x0040;
-const RI_MOUSE_BUTTON_4_UP        = 0x0080;
-const RI_MOUSE_BUTTON_5_DOWN      = 0x0100;
-const RI_MOUSE_BUTTON_5_UP        = 0x0200;
+const RI_MOUSE_BUTTON_4_DOWN      := 0x0040;
+const RI_MOUSE_BUTTON_4_UP        := 0x0080;
+const RI_MOUSE_BUTTON_5_DOWN      := 0x0100;
+const RI_MOUSE_BUTTON_5_UP        := 0x0200;
 
-const RI_MOUSE_WHEEL              = 0x0400;  // If usButtonFlags has RI_MOUSE_WHEEL, the wheel delta is stored in usButtonData. Take it as a signed value.
+const RI_MOUSE_WHEEL              := 0x0400;  // If usButtonFlags has RI_MOUSE_WHEEL, the wheel delta is stored in usButtonData. Take it as a signed value.
 
 
-const RI_KEY_MAKE                 = 0;
-const RI_KEY_BREAK                = 1;
-const RI_KEY_E0                   = 2;
-const RI_KEY_E1                   = 4;
+const RI_KEY_MAKE                 := 0;
+const RI_KEY_BREAK                := 1;
+const RI_KEY_E0                   := 2;
+const RI_KEY_E1                   := 4;
 
 //DefRawInputProc
 //GetRawInputBuffer
@@ -1268,32 +1268,32 @@ proc RegisterRawInputDevices(pRawInputDevices: rawptr, uiNumDevices: u32, cbSize
 // WGL
 
 struct PIXELFORMATDESCRIPTOR {
-    var nSize:           i16;
-    var nVersion:        i16;
-    var dwFlags:         i32;
-    var iPixelType:      u8;
-    var cColorBits:      u8;
-    var cRedBits:        u8;
-    var cRedShift:       u8;
-    var cGreenBits:      u8;
-    var cGreenShift:     u8;
-    var cBlueBits:       u8;
-    var cBlueShift:      u8;
-    var cAlphaBits:      u8;
-    var cAlphaShift:     u8;
-    var cAccumBits:      u8;
-    var cAccumRedBits:   u8;
-    var cAccumGreenBits: u8;
-    var cAccumBlueBits:  u8;
-    var cAccumAlphaBits: u8;
-    var cDepthBits:      u8;
-    var cStencilBits:    u8;
-    var cAuxBuffers:     u8;
-    var iLayerType:      u8;
-    var bReserved:       u8;
-    var dwLayerMask:     i32;
-    var dwVisibleMask:   i32;
-    var dwDamageMask:    i32;
+    nSize:           i16;
+    nVersion:        i16;
+    dwFlags:         i32;
+    iPixelType:      u8;
+    cColorBits:      u8;
+    cRedBits:        u8;
+    cRedShift:       u8;
+    cGreenBits:      u8;
+    cGreenShift:     u8;
+    cBlueBits:       u8;
+    cBlueShift:      u8;
+    cAlphaBits:      u8;
+    cAlphaShift:     u8;
+    cAccumBits:      u8;
+    cAccumRedBits:   u8;
+    cAccumGreenBits: u8;
+    cAccumBlueBits:  u8;
+    cAccumAlphaBits: u8;
+    cDepthBits:      u8;
+    cStencilBits:    u8;
+    cAuxBuffers:     u8;
+    iLayerType:      u8;
+    bReserved:       u8;
+    dwLayerMask:     i32;
+    dwVisibleMask:   i32;
+    dwDamageMask:    i32;
 }
 
 //GLYPHMETRICSFLOAT
@@ -1301,66 +1301,66 @@ struct PIXELFORMATDESCRIPTOR {
 //POINTFLOAT
 
 // PIXELFORMATDESCRIPTOR flags
-const PFD_DOUBLEBUFFER            = 0x00000001;
-const PFD_STEREO                  = 0x00000002;
-const PFD_DRAW_TO_WINDOW          = 0x00000004;
-const PFD_DRAW_TO_BITMAP          = 0x00000008;
-const PFD_SUPPORT_GDI             = 0x00000010;
-const PFD_SUPPORT_OPENGL          = 0x00000020;
-const PFD_GENERIC_FORMAT          = 0x00000040;
-const PFD_NEED_PALETTE            = 0x00000080;
-const PFD_NEED_SYSTEM_PALETTE     = 0x00000100;
-const PFD_SWAP_EXCHANGE           = 0x00000200;
-const PFD_SWAP_COPY               = 0x00000400;
-const PFD_SWAP_LAYER_BUFFERS      = 0x00000800;
-const PFD_GENERIC_ACCELERATED     = 0x00001000;
-const PFD_SUPPORT_DIRECTDRAW      = 0x00002000;
-const PFD_DIRECT3D_ACCELERATED    = 0x00004000;
-const PFD_SUPPORT_COMPOSITION     = 0x00008000;
+const PFD_DOUBLEBUFFER            := 0x00000001;
+const PFD_STEREO                  := 0x00000002;
+const PFD_DRAW_TO_WINDOW          := 0x00000004;
+const PFD_DRAW_TO_BITMAP          := 0x00000008;
+const PFD_SUPPORT_GDI             := 0x00000010;
+const PFD_SUPPORT_OPENGL          := 0x00000020;
+const PFD_GENERIC_FORMAT          := 0x00000040;
+const PFD_NEED_PALETTE            := 0x00000080;
+const PFD_NEED_SYSTEM_PALETTE     := 0x00000100;
+const PFD_SWAP_EXCHANGE           := 0x00000200;
+const PFD_SWAP_COPY               := 0x00000400;
+const PFD_SWAP_LAYER_BUFFERS      := 0x00000800;
+const PFD_GENERIC_ACCELERATED     := 0x00001000;
+const PFD_SUPPORT_DIRECTDRAW      := 0x00002000;
+const PFD_DIRECT3D_ACCELERATED    := 0x00004000;
+const PFD_SUPPORT_COMPOSITION     := 0x00008000;
 
-const PFD_TYPE_RGBA        = 0;
-const PFD_TYPE_COLORINDEX  = 1;
+const PFD_TYPE_RGBA               := 0;
+const PFD_TYPE_COLORINDEX         := 1;
 
 // PFD layer types
-const PFD_MAIN_PLANE       = 0;
-const PFD_OVERLAY_PLANE    = 1;
-const PFD_UNDERLAY_PLANE   = -1;
+const PFD_MAIN_PLANE              := 0;
+const PFD_OVERLAY_PLANE           := 1;
+const PFD_UNDERLAY_PLANE          := -1;
 
-const WGL_FONT_LINES = 0;
-const WGL_FONT_POLYGONS = 1;
-const WGL_SWAP_MAIN_PLANE = 0x00000001;
-const WGL_SWAP_OVERLAY1 = 0x00000002;
-const WGL_SWAP_OVERLAY2 = 0x00000004;
-const WGL_SWAP_OVERLAY3 = 0x00000008;
-const WGL_SWAP_OVERLAY4 = 0x00000010;
-const WGL_SWAP_OVERLAY5 = 0x00000020;
-const WGL_SWAP_OVERLAY6 = 0x00000040;
-const WGL_SWAP_OVERLAY7 = 0x00000080;
-const WGL_SWAP_OVERLAY8 = 0x00000100;
-const WGL_SWAP_OVERLAY9 = 0x00000200;
-const WGL_SWAP_OVERLAY10 = 0x00000400;
-const WGL_SWAP_OVERLAY11 = 0x00000800;
-const WGL_SWAP_OVERLAY12 = 0x00001000;
-const WGL_SWAP_OVERLAY13 = 0x00002000;
-const WGL_SWAP_OVERLAY14 = 0x00004000;
-const WGL_SWAP_OVERLAY15 = 0x00008000;
-const WGL_SWAP_UNDERLAY1 = 0x00010000;
-const WGL_SWAP_UNDERLAY2 = 0x00020000;
-const WGL_SWAP_UNDERLAY3 = 0x00040000;
-const WGL_SWAP_UNDERLAY4 = 0x00080000;
-const WGL_SWAP_UNDERLAY5 = 0x00100000;
-const WGL_SWAP_UNDERLAY6 = 0x00200000;
-const WGL_SWAP_UNDERLAY7 = 0x00400000;
-const WGL_SWAP_UNDERLAY8 = 0x00800000;
-const WGL_SWAP_UNDERLAY9 = 0x01000000;
-const WGL_SWAP_UNDERLAY10 = 0x02000000;
-const WGL_SWAP_UNDERLAY11 = 0x04000000;
-const WGL_SWAP_UNDERLAY12 = 0x08000000;
-const WGL_SWAP_UNDERLAY13 = 0x10000000;
-const WGL_SWAP_UNDERLAY14 = 0x20000000;
-const WGL_SWAP_UNDERLAY15 = 0x40000000;
+const WGL_FONT_LINES              := 0;
+const WGL_FONT_POLYGONS           := 1;
+const WGL_SWAP_MAIN_PLANE         := 0x00000001;
+const WGL_SWAP_OVERLAY1           := 0x00000002;
+const WGL_SWAP_OVERLAY2           := 0x00000004;
+const WGL_SWAP_OVERLAY3           := 0x00000008;
+const WGL_SWAP_OVERLAY4           := 0x00000010;
+const WGL_SWAP_OVERLAY5           := 0x00000020;
+const WGL_SWAP_OVERLAY6           := 0x00000040;
+const WGL_SWAP_OVERLAY7           := 0x00000080;
+const WGL_SWAP_OVERLAY8           := 0x00000100;
+const WGL_SWAP_OVERLAY9           := 0x00000200;
+const WGL_SWAP_OVERLAY10          := 0x00000400;
+const WGL_SWAP_OVERLAY11          := 0x00000800;
+const WGL_SWAP_OVERLAY12          := 0x00001000;
+const WGL_SWAP_OVERLAY13          := 0x00002000;
+const WGL_SWAP_OVERLAY14          := 0x00004000;
+const WGL_SWAP_OVERLAY15          := 0x00008000;
+const WGL_SWAP_UNDERLAY1          := 0x00010000;
+const WGL_SWAP_UNDERLAY2          := 0x00020000;
+const WGL_SWAP_UNDERLAY3          := 0x00040000;
+const WGL_SWAP_UNDERLAY4          := 0x00080000;
+const WGL_SWAP_UNDERLAY5          := 0x00100000;
+const WGL_SWAP_UNDERLAY6          := 0x00200000;
+const WGL_SWAP_UNDERLAY7          := 0x00400000;
+const WGL_SWAP_UNDERLAY8          := 0x00800000;
+const WGL_SWAP_UNDERLAY9          := 0x01000000;
+const WGL_SWAP_UNDERLAY10         := 0x02000000;
+const WGL_SWAP_UNDERLAY11         := 0x04000000;
+const WGL_SWAP_UNDERLAY12         := 0x08000000;
+const WGL_SWAP_UNDERLAY13         := 0x10000000;
+const WGL_SWAP_UNDERLAY14         := 0x20000000;
+const WGL_SWAP_UNDERLAY15         := 0x40000000;
 
-const HGLRC = HANDLE;
+const HGLRC                       := HANDLE;
 
 proc ChoosePixelFormat(hdc: HDC, ppfd: ^PIXELFORMATDESCRIPTOR) : i32 #foreign; // gdi
 proc DescribePixelFormat(hdc: HDC, iPixelFormat: i32, nBytes: u32, ppfd: ^PIXELFORMATDESCRIPTOR) : i32 #foreign; // gdi
@@ -1413,59 +1413,50 @@ enum DPI_AWARENESS i32 {
 }
 
 // DPI_AWARENESS_CONTEXT :: #type *struct {};
-const DPI_AWARENESS_CONTEXT = rawptr;
+const DPI_AWARENESS_CONTEXT := rawptr;
 
-const DPI_AWARENESS_CONTEXT_UNAWARE              = cast(DPI_AWARENESS_CONTEXT, -1);
-const DPI_AWARENESS_CONTEXT_SYSTEM_AWARE         = cast(DPI_AWARENESS_CONTEXT, -2);
-const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    = cast(DPI_AWARENESS_CONTEXT, -3);
-const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = cast(DPI_AWARENESS_CONTEXT, -4);
-const DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED    = cast(DPI_AWARENESS_CONTEXT, -5);
-
-// shcore is Win 8+ only! Don't use for now!
-// shcore :: #foreign_system_library "Shcore";
-// SetProcessDpiAwareness :: (awareness: i32) -> BOOL #foreign shcore;
-
-// SetProcessDpiAwareness probably shouldn't be called from within an application anyway.
-// The Windows documentation says not to do it, and to use the Manifest stuff instead.
-// See Windows_Resources.jai for the routines to add a manifest to your program.
-
+const DPI_AWARENESS_CONTEXT_UNAWARE              := cast(DPI_AWARENESS_CONTEXT, -1);
+const DPI_AWARENESS_CONTEXT_SYSTEM_AWARE         := cast(DPI_AWARENESS_CONTEXT, -2);
+const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    := cast(DPI_AWARENESS_CONTEXT, -3);
+const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 := cast(DPI_AWARENESS_CONTEXT, -4);
+const DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED    := cast(DPI_AWARENESS_CONTEXT, -5);
 
 // System Information API
 
 struct OSVERSIONINFOA {
-    var dwOSVersionInfoSize: u32;
-    var dwMajorVersion: u32;
-    var dwMinorVersion: u32;
-    var dwBuildNumber: u32;
-    var dwPlatformId: u32;
-    var szCSDVersion: [128]u8;
+    dwOSVersionInfoSize: u32;
+    dwMajorVersion: u32;
+    dwMinorVersion: u32;
+    dwBuildNumber: u32;
+    dwPlatformId: u32;
+    szCSDVersion: [128]u8;
 }
 
 struct OSVERSIONINFOW {
-    var dwOSVersionInfoSize: u32;
-    var dwMajorVersion: u32;
-    var dwMinorVersion: u32;
-    var dwBuildNumber: u32;
-    var dwPlatformId: u32;
-    var szCSDVersion: [128]u16;
+    dwOSVersionInfoSize: u32;
+    dwMajorVersion: u32;
+    dwMinorVersion: u32;
+    dwBuildNumber: u32;
+    dwPlatformId: u32;
+    szCSDVersion: [128]u16;
 }
 
 struct OSVERSIONINFOEXA {
-    var osversioninfo: OSVERSIONINFOA;
-    var wServicePackMajor: u16;
-    var wServicePackMinor: u16;
-    var wSuiteMask: u16;
-    var wProductType: u8;
-    var wReserved: u8;
+    osversioninfo: OSVERSIONINFOA;
+    wServicePackMajor: u16;
+    wServicePackMinor: u16;
+    wSuiteMask: u16;
+    wProductType: u8;
+    wReserved: u8;
 }
 
 struct OSVERSIONINFOEXW {
-    var osversioninfo: OSVERSIONINFOW;
-    var wServicePackMajor: u16;
-    var wServicePackMinor: u16;
-    var wSuiteMask: u16;
-    var wProductType: u8;
-    var wReserved: u8;
+    osversioninfo: OSVERSIONINFOW;
+    wServicePackMajor: u16;
+    wServicePackMinor: u16;
+    wSuiteMask: u16;
+    wProductType: u8;
+    wReserved: u8;
 }
 
 struct SYSTEM_INFO {
@@ -1474,21 +1465,21 @@ struct SYSTEM_INFO {
     // or a field named dwOemID (DWORD-sized), but that's an
     // obsolete member not recommended by MSDN.
     // ---
-    var wProcessorArchitecture      : u16;
-    var wReserved                   : u16;
+    wProcessorArchitecture      : u16;
+    wReserved                   : u16;
     // ---
-    var dwPageSize                  : u32;
-    var lpMinimumApplicationAddress : rawptr;
-    var lpMaximumApplicationAddress : rawptr;
-    var dwActiveProcessorMask       : u64;
-    var dwNumberOfProcessors        : u32;
-    var dwProcessorType             : u32;
-    var dwAllocationGranularity     : u32;
-    var wProcessorLevel             : u16;
-    var wProcessorRevision          : u16;
+    dwPageSize                  : u32;
+    lpMinimumApplicationAddress : rawptr;
+    lpMaximumApplicationAddress : rawptr;
+    dwActiveProcessorMask       : u64;
+    dwNumberOfProcessors        : u32;
+    dwProcessorType             : u32;
+    dwAllocationGranularity     : u32;
+    wProcessorLevel             : u16;
+    wProcessorRevision          : u16;
 }
 
-const MAX_COMPUTERNAME_LENGTH = 31;
+const MAX_COMPUTERNAME_LENGTH := 31;
 
 //ApiSetQueryApiSetPresence
 //CeipIsOptedIn
@@ -1544,9 +1535,9 @@ proc QueryPerformanceCounter  (result: ^i64) : i32 #foreign; // kernel32
 // Version Information API
 //
 
-const VER_NT_WORKSTATION       = 0x0000001;
-const VER_NT_DOMAIN_CONTROLLER = 0x0000002;
-const VER_NT_SERVER            = 0x0000003;
+const VER_NT_WORKSTATION       := 0x0000001;
+const VER_NT_DOMAIN_CONTROLLER := 0x0000002;
+const VER_NT_SERVER            := 0x0000003;
 
 // @@ This is supposed to return NTSTATUS:
 // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/content/wdm/nf-wdm-rtlgetversion
@@ -1599,60 +1590,60 @@ proc RtlGetVersion(lpVersionInfo : ^OSVERSIONINFOW) #foreign; // ntdll
 // Synchronization API
 
 struct SECURITY_ATTRIBUTES {
-    var nLength: u32;
-    var lpSecurityDescriptor: rawptr;
-    var bInheritHandle: BOOL;
+    nLength: u32;
+    lpSecurityDescriptor: rawptr;
+    bInheritHandle: BOOL;
 }
 
 struct LIST_ENTRY {
-   var Flink: ^LIST_ENTRY;
-   var Blink: ^LIST_ENTRY;
+   Flink: ^LIST_ENTRY;
+   Blink: ^LIST_ENTRY;
 }
 
 struct RTL_CRITICAL_SECTION_DEBUG {
-    var Type: u16;
-    var CreatorBackTraceIndex: u16;
-    var CriticalSection: ^RTL_CRITICAL_SECTION;
-    var ProcessLocksList: LIST_ENTRY;
-    var EntryCount: u32;
-    var ContentionCount: u32;
-    var Flags: u32;
-    var CreatorBackTraceIndexHigh: u16;
-    var SpareWORD: u16;
+    Type: u16;
+    CreatorBackTraceIndex: u16;
+    CriticalSection: ^RTL_CRITICAL_SECTION;
+    ProcessLocksList: LIST_ENTRY;
+    EntryCount: u32;
+    ContentionCount: u32;
+    Flags: u32;
+    CreatorBackTraceIndexHigh: u16;
+    SpareWORD: u16;
 }
 
 struct RTL_CRITICAL_SECTION {
-    var DebugInfo : ^RTL_CRITICAL_SECTION_DEBUG;
-    var LockCount : u32;
-    var RecursionCount : u32;
-    var OwningThread : HANDLE;        // from the thread's ClientId->UniqueThread
-    var LockSemaphore : HANDLE;
-    var SpinCount : u64;        // force size on 64-bit systems when packed
+    DebugInfo : ^RTL_CRITICAL_SECTION_DEBUG;
+    LockCount : u32;
+    RecursionCount : u32;
+    OwningThread : HANDLE;        // from the thread's ClientId->UniqueThread
+    LockSemaphore : HANDLE;
+    SpinCount : u64;        // force size on 64-bit systems when packed
 }
 
-const CRITICAL_SECTION = RTL_CRITICAL_SECTION;
+const CRITICAL_SECTION := RTL_CRITICAL_SECTION;
 
 struct OVERLAPPED {
-    var Internal:     ^u32;
-    var InternalHigh: ^u32;
+    Internal:     ^u32;
+    InternalHigh: ^u32;
 
-    var Offset: union {
-        var Offset: struct {
-            var Low: i32;
-            var High: i32;
+    Offset: union {
+        Offset: struct {
+            Low: i32;
+            High: i32;
         };
-        var Pointer: rawptr;  // @Volatile: We'd better hope Pointer is the same size as two s32s...
+        Pointer: rawptr;  // @Volatile: We'd better hope Pointer is the same size as two s32s...
     };
 
-    var hEvent: HANDLE;
+    hEvent: HANDLE;
 }
 
 const STATUS_PENDING       : i32 = 0x00000103;
 
 // Okay, this is scary...
 
-const ERROR_ALREADY_EXISTS = 0xb7;
-const ERROR_IO_PENDING     = 0x3E5;
+const ERROR_ALREADY_EXISTS := 0xb7;
+const ERROR_IO_PENDING     := 0x3E5;
 
 // proc HasOverlappedIoCompleted(overlapped: OVERLAPPED) : bool {
 //     return (cast(i32, overlapped.Internal)) != STATUS_PENDING;
@@ -1891,74 +1882,74 @@ proc WaitForSingleObject(handle: HANDLE, milliseconds: DWORD) : i32 #foreign; //
 
 // Memory Management API
 
-const HGLOBAL = HANDLE;
+const HGLOBAL             := HANDLE;
 
 // Global memory flags.
-const GMEM_FIXED =          0x0000;
-const GMEM_MOVEABLE =       0x0002;
-const GMEM_NOCOMPACT =      0x0010;
-const GMEM_NODISCARD =      0x0020;
-const GMEM_ZEROINIT =       0x0040;
-const GMEM_MODIFY =         0x0080;
-const GMEM_DISCARDABLE =    0x0100;
-const GMEM_NOT_BANKED =     0x1000;
-const GMEM_SHARE =          0x2000;
-const GMEM_DDESHARE =       0x2000;
-const GMEM_NOTIFY =         0x4000;
-const GMEM_LOWER =          GMEM_NOT_BANKED;
-const GMEM_VALID_FLAGS =    0x7F72;
-const GMEM_INVALID_HANDLE = 0x8000;
+const GMEM_FIXED          := 0x0000;
+const GMEM_MOVEABLE       := 0x0002;
+const GMEM_NOCOMPACT      := 0x0010;
+const GMEM_NODISCARD      := 0x0020;
+const GMEM_ZEROINIT       := 0x0040;
+const GMEM_MODIFY         := 0x0080;
+const GMEM_DISCARDABLE    := 0x0100;
+const GMEM_NOT_BANKED     := 0x1000;
+const GMEM_SHARE          := 0x2000;
+const GMEM_DDESHARE       := 0x2000;
+const GMEM_NOTIFY         := 0x4000;
+const GMEM_LOWER          := GMEM_NOT_BANKED;
+const GMEM_VALID_FLAGS    := 0x7F72;
+const GMEM_INVALID_HANDLE := 0x8000;
 
-const GHND =                (GMEM_MOVEABLE | GMEM_ZEROINIT);
-const GPTR =                (GMEM_FIXED | GMEM_ZEROINIT);
+const GHND                := (GMEM_MOVEABLE | GMEM_ZEROINIT);
+const GPTR                := (GMEM_FIXED | GMEM_ZEROINIT);
 
 
 struct MEMORYSTATUSEX {
-    var dwLength               : u32;
-    var dwMemoryLoad           : u32;
-    var ullTotalPhys           : u64;
-    var ullAvailPhys           : u64;
-    var ullTotalPageFile       : u64;
-    var ullAvailPageFile       : u64;
-    var ullTotalVirtual        : u64;
-    var ullAvailVirtual        : u64;
-    var ullAvailExtendedVirtual: u64;
+    dwLength               : u32;
+    dwMemoryLoad           : u32;
+    ullTotalPhys           : u64;
+    ullAvailPhys           : u64;
+    ullTotalPageFile       : u64;
+    ullAvailPageFile       : u64;
+    ullTotalVirtual        : u64;
+    ullAvailVirtual        : u64;
+    ullAvailExtendedVirtual: u64;
 }
 
-const PAGE_NOACCESS =                0x01;
-const PAGE_READONLY =                0x02;
-const PAGE_READWRITE =               0x04;
-const PAGE_WRITECOPY =               0x08;
-const PAGE_EXECUTE =                 0x10;
-const PAGE_EXECUTE_READ =            0x20;
-const PAGE_EXECUTE_READWRITE =       0x40;
-const PAGE_EXECUTE_WRITECOPY =       0x80;
-const PAGE_GUARD =                   0x100;
-const PAGE_NOCACHE =                 0x200;
-const PAGE_WRITECOMBINE =            0x400;
-const PAGE_REVERT_TO_FILE_MAP =      0x80000000;
-const PAGE_ENCLAVE_THREAD_CONTROL =  0x80000000;
-const PAGE_TARGETS_NO_UPDATE =       0x40000000;
-const PAGE_TARGETS_INVALID =         0x40000000;
-const PAGE_ENCLAVE_UNVALIDATED =     0x20000000;
+const PAGE_NOACCESS               := 0x01;
+const PAGE_READONLY               := 0x02;
+const PAGE_READWRITE              := 0x04;
+const PAGE_WRITECOPY              := 0x08;
+const PAGE_EXECUTE                := 0x10;
+const PAGE_EXECUTE_READ           := 0x20;
+const PAGE_EXECUTE_READWRITE      := 0x40;
+const PAGE_EXECUTE_WRITECOPY      := 0x80;
+const PAGE_GUARD                  := 0x100;
+const PAGE_NOCACHE                := 0x200;
+const PAGE_WRITECOMBINE           := 0x400;
+const PAGE_REVERT_TO_FILE_MAP     := 0x80000000;
+const PAGE_ENCLAVE_THREAD_CONTROL := 0x80000000;
+const PAGE_TARGETS_NO_UPDATE      := 0x40000000;
+const PAGE_TARGETS_INVALID        := 0x40000000;
+const PAGE_ENCLAVE_UNVALIDATED    := 0x20000000;
 
-const MEM_COMMIT =                   0x00001000;
-const MEM_RESERVE =                  0x00002000;
-const MEM_DECOMMIT =                 0x00004000;
-const MEM_RELEASE =                  0x00008000;
-const MEM_FREE =                     0x00010000;
-const MEM_PRIVATE =                  0x00020000;
-const MEM_MAPPED =                   0x00040000;
-const MEM_RESET =                    0x00080000;
-const MEM_TOP_DOWN =                 0x00100000;
-const MEM_WRITE_WATCH =              0x00200000;
-const MEM_PHYSICAL =                 0x00400000;
-const MEM_ROTATE =                   0x00800000;
-const MEM_DIFFERENT_IMAGE_BASE_OK =  0x00800000;
-const MEM_RESET_UNDO =               0x01000000;
-const MEM_LARGE_PAGES =              0x20000000;
-const MEM_4MB_PAGES =                0x80000000;
-const MEM_64K_PAGES =                MEM_LARGE_PAGES | MEM_PHYSICAL;
+const MEM_COMMIT                  := 0x00001000;
+const MEM_RESERVE                 := 0x00002000;
+const MEM_DECOMMIT                := 0x00004000;
+const MEM_RELEASE                 := 0x00008000;
+const MEM_FREE                    := 0x00010000;
+const MEM_PRIVATE                 := 0x00020000;
+const MEM_MAPPED                  := 0x00040000;
+const MEM_RESET                   := 0x00080000;
+const MEM_TOP_DOWN                := 0x00100000;
+const MEM_WRITE_WATCH             := 0x00200000;
+const MEM_PHYSICAL                := 0x00400000;
+const MEM_ROTATE                  := 0x00800000;
+const MEM_DIFFERENT_IMAGE_BASE_OK := 0x00800000;
+const MEM_RESET_UNDO              := 0x01000000;
+const MEM_LARGE_PAGES             := 0x20000000;
+const MEM_4MB_PAGES               := 0x80000000;
+const MEM_64K_PAGES               := MEM_LARGE_PAGES | MEM_PHYSICAL;
 
 
 //AddSecureMemoryCacheCallback
@@ -2110,17 +2101,17 @@ proc LoadLibraryW(filename: ^u16) : HMODULE #foreign; // kernel32
 proc LoadLibraryExA(filename: ^byte, file: HANDLE, flags: DWORD) : HMODULE #foreign; // kernel32
 proc LoadLibraryExW(filename: ^u16, file: HANDLE, flags: DWORD) : HMODULE #foreign; // kernel32
 
-const DONT_RESOLVE_DLL_REFERENCES         = 0x00000001;
-const LOAD_IGNORE_CODE_AUTHZ_LEVEL        = 0x00000010;
-const LOAD_LIBRARY_AS_DATAFILE            = 0x00000002;
-const LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE  = 0x00000040;
-const LOAD_LIBRARY_AS_IMAGE_RESOURCE      = 0x00000020;
-const LOAD_LIBRARY_SEARCH_APPLICATION_DIR = 0x00000200;
-const LOAD_LIBRARY_SEARCH_DEFAULT_DIRS    = 0x00001000;
-const LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR    = 0x00000100;
-const LOAD_LIBRARY_SEARCH_SYSTEM32        = 0x00000800;
-const LOAD_LIBRARY_SEARCH_USER_DIRS       = 0x00000400;
-const LOAD_WITH_ALTERED_SEARCH_PATH       = 0x00000008;
+const DONT_RESOLVE_DLL_REFERENCES         := 0x00000001;
+const LOAD_IGNORE_CODE_AUTHZ_LEVEL        := 0x00000010;
+const LOAD_LIBRARY_AS_DATAFILE            := 0x00000002;
+const LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE  := 0x00000040;
+const LOAD_LIBRARY_AS_IMAGE_RESOURCE      := 0x00000020;
+const LOAD_LIBRARY_SEARCH_APPLICATION_DIR := 0x00000200;
+const LOAD_LIBRARY_SEARCH_DEFAULT_DIRS    := 0x00001000;
+const LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR    := 0x00000100;
+const LOAD_LIBRARY_SEARCH_SYSTEM32        := 0x00000800;
+const LOAD_LIBRARY_SEARCH_USER_DIRS       := 0x00000400;
+const LOAD_WITH_ALTERED_SEARCH_PATH       := 0x00000008;
 
 //LoadModule
 //LoadPackagedLibrary
@@ -2133,24 +2124,24 @@ const LOAD_WITH_ALTERED_SEARCH_PATH       = 0x00000008;
 // Directory Management API
 
 struct FILE_NOTIFY_INFORMATION {
-    var NextEntryOffset: i32;
-    var Action:          i32;
-    var FileNameLength:  i32;
-    var FileName: [1]    i16;    // This i16 is a WCHAR
+    NextEntryOffset: i32;
+    Action:          i32;
+    FileNameLength:  i32;
+    FileName: [1]    i16;    // This i16 is a WCHAR
 }
 
-const FILE_NOTIFY_CHANGE_FILE_NAME  = 0x00000001;
-const FILE_NOTIFY_CHANGE_DIR_NAME   = 0x00000002;
-const FILE_NOTIFY_CHANGE_ATTRIBUTES = 0x00000004;
-const FILE_NOTIFY_CHANGE_SIZE       = 0x00000008;
-const FILE_NOTIFY_CHANGE_LAST_WRITE = 0x00000010;
-const FILE_NOTIFY_CHANGE_SECURITY   = 0x00000100;
+const FILE_NOTIFY_CHANGE_FILE_NAME  := 0x00000001;
+const FILE_NOTIFY_CHANGE_DIR_NAME   := 0x00000002;
+const FILE_NOTIFY_CHANGE_ATTRIBUTES := 0x00000004;
+const FILE_NOTIFY_CHANGE_SIZE       := 0x00000008;
+const FILE_NOTIFY_CHANGE_LAST_WRITE := 0x00000010;
+const FILE_NOTIFY_CHANGE_SECURITY   := 0x00000100;
 
-const FILE_ACTION_ADDED            = 0x001;
-const FILE_ACTION_REMOVED          = 0x002;
-const FILE_ACTION_MODIFIED         = 0x003;
-const FILE_ACTION_RENAMED_OLD_NAME = 0x004;
-const FILE_ACTION_RENAMED_NEW_NAME = 0x005;
+const FILE_ACTION_ADDED            := 0x001;
+const FILE_ACTION_REMOVED          := 0x002;
+const FILE_ACTION_MODIFIED         := 0x003;
+const FILE_ACTION_RENAMED_OLD_NAME := 0x004;
+const FILE_ACTION_RENAMED_NEW_NAME := 0x005;
 
 // CreateDirectoryA :: (lpPathName: ^byte, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : i32 #foreign kernel32  #deprecated "Use CreateDirectoryW instead.";
 proc CreateDirectoryW(lpPathName: ^u16, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : i32 #foreign; // kernel32
@@ -2173,11 +2164,11 @@ proc SetCurrentDirectoryW(name: ^u16) : BOOL #foreign; // kernel32
 // @@ Console API
 
 struct CONSOLE_SCREEN_BUFFER_INFO {
-    var dwSize: COORD;
-    var dwCursorPosition: COORD;
-    var wAttributes: u16;
-    var srWindow: SMALL_RECT;
-    var dwMaximumWindowSize: COORD;
+    dwSize: COORD;
+    dwCursorPosition: COORD;
+    wAttributes: u16;
+    srWindow: SMALL_RECT;
+    dwMaximumWindowSize: COORD;
 }
 
 proc GetStdHandle(handle: i32) : HANDLE #foreign; // kernel32
@@ -2190,12 +2181,12 @@ proc SetConsoleMode(hConsoleHandle: HANDLE, lpMode:  DWORD) : BOOL #foreign; // 
 proc SetConsoleCP(wCodePageID: u32) : BOOL #foreign; // kernel32
 proc SetConsoleOutputCP(wCodePageID: u32) : BOOL #foreign; // kernel32
 
-const ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
+const ENABLE_VIRTUAL_TERMINAL_PROCESSING := 0x4;
 
 
 // @@ National Language Support API
 
-const LCID = i32;
+const LCID := i32;
 
 proc GetUserDefaultLCID() : LCID #foreign; // kernel32
 
@@ -2203,30 +2194,30 @@ proc GetUserDefaultLCID() : LCID #foreign; // kernel32
 
 // Clipboard API
 
-const CF_TEXT            = 1;
-const CF_BITMAP          = 2;
-const CF_METAFILEPICT    = 3;
-const CF_SYLK            = 4;
-const CF_DIF             = 5;
-const CF_TIFF            = 6;
-const CF_OEMTEXT         = 7;
-const CF_DIB             = 8;
-const CF_PALETTE         = 9;
-const CF_PENDATA         = 10;
-const CF_RIFF            = 11;
-const CF_WAVE            = 12;
-const CF_UNICODETEXT     = 13;
-const CF_ENHMETAFILE     = 14;
-const CF_HDROP           = 15;
-const CF_LOCALE          = 16;
-const CF_DIBV5           = 17;
-const CF_MAX             = 18;
+const CF_TEXT            := 1;
+const CF_BITMAP          := 2;
+const CF_METAFILEPICT    := 3;
+const CF_SYLK            := 4;
+const CF_DIF             := 5;
+const CF_TIFF            := 6;
+const CF_OEMTEXT         := 7;
+const CF_DIB             := 8;
+const CF_PALETTE         := 9;
+const CF_PENDATA         := 10;
+const CF_RIFF            := 11;
+const CF_WAVE            := 12;
+const CF_UNICODETEXT     := 13;
+const CF_ENHMETAFILE     := 14;
+const CF_HDROP           := 15;
+const CF_LOCALE          := 16;
+const CF_DIBV5           := 17;
+const CF_MAX             := 18;
 
-const CF_OWNERDISPLAY    = 0x0080;
-const CF_DSPTEXT         = 0x0081;
-const CF_DSPBITMAP       = 0x0082;
-const CF_DSPMETAFILEPICT = 0x0083;
-const CF_DSPENHMETAFILE  = 0x008E;
+const CF_OWNERDISPLAY    := 0x0080;
+const CF_DSPTEXT         := 0x0081;
+const CF_DSPBITMAP       := 0x0082;
+const CF_DSPMETAFILEPICT := 0x0083;
+const CF_DSPENHMETAFILE  := 0x008E;
 
 
 //AddClipboardFormatListener
@@ -2275,65 +2266,65 @@ proc SetClipboardData(uFormat: u32, hMem: HANDLE) : HANDLE #foreign; // user32
 //     hStdError: HANDLE;
 // }
 struct STARTUPINFOA {
-    var cb: i32;
-    var lpReserved: ^byte;
-    var lpDesktop: ^byte;
-    var lpTitle: ^byte;
-    var dwX: i32;
-    var dwY: i32;
-    var dwXSize: i32;
-    var dwYSize: i32;
-    var dwXCountChars: i32;
-    var dwYCountChars: i32;
-    var dwFillAttribute: i32;
-    var dwFlags: i32;
-    var wShowWindow: i16;
-    var cbReserved2: i16;
-    var lpReserved2: ^byte;
-    var hStdInput: HANDLE;
-    var hStdOutput: HANDLE;
-    var hStdError: HANDLE;
+    cb: i32;
+    lpReserved: ^byte;
+    lpDesktop: ^byte;
+    lpTitle: ^byte;
+    dwX: i32;
+    dwY: i32;
+    dwXSize: i32;
+    dwYSize: i32;
+    dwXCountChars: i32;
+    dwYCountChars: i32;
+    dwFillAttribute: i32;
+    dwFlags: i32;
+    wShowWindow: i16;
+    cbReserved2: i16;
+    lpReserved2: ^byte;
+    hStdInput: HANDLE;
+    hStdOutput: HANDLE;
+    hStdError: HANDLE;
 }
 struct STARTUPINFOW {
-    var cb: i32;
-    var lpReserved: ^u16;
-    var lpDesktop: ^u16;
-    var lpTitle: ^u16;
-    var dwX: i32;
-    var dwY: i32;
-    var dwXSize: i32;
-    var dwYSize: i32;
-    var dwXCountChars: i32;
-    var dwYCountChars: i32;
-    var dwFillAttribute: i32;
-    var dwFlags: i32;
-    var wShowWindow: i16;
-    var cbReserved2: i16;
-    var lpReserved2: ^byte;
-    var hStdInput: HANDLE;
-    var hStdOutput: HANDLE;
-    var hStdError: HANDLE;
+    cb: i32;
+    lpReserved: ^u16;
+    lpDesktop: ^u16;
+    lpTitle: ^u16;
+    dwX: i32;
+    dwY: i32;
+    dwXSize: i32;
+    dwYSize: i32;
+    dwXCountChars: i32;
+    dwYCountChars: i32;
+    dwFillAttribute: i32;
+    dwFlags: i32;
+    wShowWindow: i16;
+    cbReserved2: i16;
+    lpReserved2: ^byte;
+    hStdInput: HANDLE;
+    hStdOutput: HANDLE;
+    hStdError: HANDLE;
 }
 
-const CREATE_NO_WINDOW = 0x08000000;
-const STARTF_USESTDHANDLES = 0x00000100;
+const CREATE_NO_WINDOW := 0x08000000;
+const STARTF_USESTDHANDLES := 0x00000100;
 
 struct PROCESS_INFORMATION {
-    var hProcess: HANDLE;
-    var hThread:  HANDLE;
-    var dwProcessId: i32;
-    var dwThreadId:  i32;
+    hProcess: HANDLE;
+    hThread:  HANDLE;
+    dwProcessId: i32;
+    dwThreadId:  i32;
 }
 
-const CREATE_SUSPENDED = 0x4;
-const WAIT_TIMEOUT     = 0x102;
-const WAIT_FAILED      = 0xFFFFFFFF;
+const CREATE_SUSPENDED := 0x4;
+const WAIT_TIMEOUT     := 0x102;
+const WAIT_FAILED      := 0xFFFFFFFF;
 
-const WIN_TIMEOUT_INFINITE  = 0xFFFFFFFF;  // Note: Is just 'INFINITE' in winapi, temporarily making it longer-named to avoid name conflicts. -jblow, 27 September 2015
+const WIN_TIMEOUT_INFINITE  := 0xFFFFFFFF;  // Note: Is just 'INFINITE' in winapi, temporarily making it longer-named to avoid name conflicts. -jblow, 27 September 2015
 
-const THREAD_PRIORITY_NORMAL       = 0;
-const THREAD_PRIORITY_ABOVE_NORMAL = 1;
-const THREAD_PRIORITY_HIGHEST      = 2;
+const THREAD_PRIORITY_NORMAL       := 0;
+const THREAD_PRIORITY_ABOVE_NORMAL := 1;
+const THREAD_PRIORITY_HIGHEST      := 2;
 
 
 //AssignProcessToJobObject
@@ -2627,44 +2618,44 @@ proc OutputDebugStringW(s : ^u16) #foreign; // kernel32     // For this to work 
 
 // Multimedia API
 
-const MMSYSERR_BASE    = 0;
-const WAVERR_BASE      = 32;
-const MIDIERR_BASE     = 64;
-const TIMERR_BASE      = 96;
-const JOYERR_BASE      = 160;
-const MCIERR_BASE      = 256;
-const MIXERR_BASE      = 1024;
+const MMSYSERR_BASE    := 0;
+const WAVERR_BASE      := 32;
+const MIDIERR_BASE     := 64;
+const TIMERR_BASE      := 96;
+const JOYERR_BASE      := 160;
+const MCIERR_BASE      := 256;
+const MIXERR_BASE      := 1024;
 
-const TIMERR_NOERROR   = 0;                  // no error
-const TIMERR_NOCANDO   = TIMERR_BASE + 1;    // request not completed
-const TIMERR_STRUCT    = TIMERR_BASE + 33;   // time struct size
+const TIMERR_NOERROR   := 0;                  // no error
+const TIMERR_NOCANDO   := TIMERR_BASE + 1;    // request not completed
+const TIMERR_STRUCT    := TIMERR_BASE + 33;   // time struct size
 
-const MMSYSERR_NOERROR = 0;                  // no error
-const MMSYSERR_ERROR   = MMSYSERR_BASE + 1;  // unspecified error
+const MMSYSERR_NOERROR := 0;                  // no error
+const MMSYSERR_ERROR   := MMSYSERR_BASE + 1;  // unspecified error
 
 struct TIMECAPS {
-    var wPeriodMin: u32;
-    var wPeriodMax: u32;
+    wPeriodMin: u32;
+    wPeriodMax: u32;
 }
 
 struct MMTIME {
-    var wType: u32;
-    var u: union {
-        var ms: u32;
-        var sample: u32;
-        var cb: u32;
-        var ticks: u32;
-        var smpte: struct {
-            var hour: u8;
-            var min: u8;
-            var sec: u8;
-            var frame: u8;
-            var fps: u8;
-            var dummy: u8;
-            var pad: [2]u8;
+    wType: u32;
+    u: union {
+        ms: u32;
+        sample: u32;
+        cb: u32;
+        ticks: u32;
+        smpte: struct {
+            hour: u8;
+            min: u8;
+            sec: u8;
+            frame: u8;
+            fps: u8;
+            dummy: u8;
+            pad: [2]u8;
         };
-        var midi: struct {
-            var songptrpos: u32;
+        midi: struct {
+            songptrpos: u32;
         };
     };
 }
@@ -2680,62 +2671,62 @@ proc timeGetSystemTime(pmmt: ^MMTIME, cbmmt: u32) : u32 #foreign; // winmm
 // Dialog API
 
 // Message box flags.
-const MB_OK                     = 0x00000000;
-const MB_OKCANCEL               = 0x00000001;
-const MB_ABORTRETRYIGNORE       = 0x00000002;
-const MB_YESNOCANCEL            = 0x00000003;
-const MB_YESNO                  = 0x00000004;
-const MB_RETRYCANCEL            = 0x00000005;
-const MB_CANCELTRYCONTINUE      = 0x00000006;
+const MB_OK                     := 0x00000000;
+const MB_OKCANCEL               := 0x00000001;
+const MB_ABORTRETRYIGNORE       := 0x00000002;
+const MB_YESNOCANCEL            := 0x00000003;
+const MB_YESNO                  := 0x00000004;
+const MB_RETRYCANCEL            := 0x00000005;
+const MB_CANCELTRYCONTINUE      := 0x00000006;
 
-const MB_ICONHAND               = 0x00000010;
-const MB_ICONQUESTION           = 0x00000020;
-const MB_ICONEXCLAMATION        = 0x00000030;
-const MB_ICONASTERISK           = 0x00000040;
-const MB_USERICON               = 0x00000080;
-const MB_ICONWARNING            = MB_ICONEXCLAMATION;
-const MB_ICONERROR              = MB_ICONHAND;
-const MB_ICONINFORMATION        = MB_ICONASTERISK;
-const MB_ICONSTOP               = MB_ICONHAND;
+const MB_ICONHAND               := 0x00000010;
+const MB_ICONQUESTION           := 0x00000020;
+const MB_ICONEXCLAMATION        := 0x00000030;
+const MB_ICONASTERISK           := 0x00000040;
+const MB_USERICON               := 0x00000080;
+const MB_ICONWARNING            := MB_ICONEXCLAMATION;
+const MB_ICONERROR              := MB_ICONHAND;
+const MB_ICONINFORMATION        := MB_ICONASTERISK;
+const MB_ICONSTOP               := MB_ICONHAND;
 
-const MB_DEFBUTTON1             = 0x00000000;
-const MB_DEFBUTTON2             = 0x00000100;
-const MB_DEFBUTTON3             = 0x00000200;
-const MB_DEFBUTTON4             = 0x00000300;
+const MB_DEFBUTTON1             := 0x00000000;
+const MB_DEFBUTTON2             := 0x00000100;
+const MB_DEFBUTTON3             := 0x00000200;
+const MB_DEFBUTTON4             := 0x00000300;
 
-const MB_APPLMODAL              = 0x00000000;
-const MB_SYSTEMMODAL            = 0x00001000;
-const MB_TASKMODAL              = 0x00002000;
-const MB_HELP                   = 0x00004000;
+const MB_APPLMODAL              := 0x00000000;
+const MB_SYSTEMMODAL            := 0x00001000;
+const MB_TASKMODAL              := 0x00002000;
+const MB_HELP                   := 0x00004000;
 
-const MB_NOFOCUS                = 0x00008000;
-const MB_SETFOREGROUND          = 0x00010000;
-const MB_DEFAULT_DESKTOP_ONLY   = 0x00020000;
+const MB_NOFOCUS                := 0x00008000;
+const MB_SETFOREGROUND          := 0x00010000;
+const MB_DEFAULT_DESKTOP_ONLY   := 0x00020000;
 
-const MB_TOPMOST                = 0x00040000;
-const MB_RIGHT                  = 0x00080000;
-const MB_RTLREADING             = 0x00100000;
+const MB_TOPMOST                := 0x00040000;
+const MB_RIGHT                  := 0x00080000;
+const MB_RTLREADING             := 0x00100000;
 
-const MB_SERVICE_NOTIFICATION   = 0x00200000;
+const MB_SERVICE_NOTIFICATION   := 0x00200000;
 
-const MB_TYPEMASK               = 0x0000000F;
-const MB_ICONMASK               = 0x000000F0;
-const MB_DEFMASK                = 0x00000F00;
-const MB_MODEMASK               = 0x00003000;
-const MB_MISCMASK               = 0x0000C000;
+const MB_TYPEMASK               := 0x0000000F;
+const MB_ICONMASK               := 0x000000F0;
+const MB_DEFMASK                := 0x00000F00;
+const MB_MODEMASK               := 0x00003000;
+const MB_MISCMASK               := 0x0000C000;
 
 // Dialog box command ids.
-const IDOK                      = 1;
-const IDCANCEL                  = 2;
-const IDABORT                   = 3;
-const IDRETRY                   = 4;
-const IDIGNORE                  = 5;
-const IDYES                     = 6;
-const IDNO                      = 7;
-const IDCLOSE                   = 8;
-const IDHELP                    = 9;
-const IDTRYAGAIN                = 10;
-const IDCONTINUE                = 11;
+const IDOK                      := 1;
+const IDCANCEL                  := 2;
+const IDABORT                   := 3;
+const IDRETRY                   := 4;
+const IDIGNORE                  := 5;
+const IDYES                     := 6;
+const IDNO                      := 7;
+const IDCLOSE                   := 8;
+const IDHELP                    := 9;
+const IDTRYAGAIN                := 10;
+const IDCONTINUE                := 11;
 
 //CreateDialog
 //CreateDialogIndirect
@@ -2769,42 +2760,38 @@ proc MessageBoxW(hWnd: HWND, lpText: ^u16, lpCaption: ^u16, uType:u32) : i32 #fo
 
 // File Management API
 
-// @@ Move remaining declarations from File_Windows.jai
-
-// @Temporary maybe. We dont support passing structs by value so SetFilePointerEx fails unless we
-// do this hack to just pass in an i64
-const LARGE_INTEGER_i64 = i64;
+const LARGE_INTEGER_i64 := i64;
 
 const INVALID_FILE_ATTRIBUTES : u32 = 0xffffffff;
 
 struct WIN32_FIND_DATAW {
-    var dwFileAttributes: i32;
+    dwFileAttributes: i32;
 
-    var ftCreationTime:   FILETIME;
-    var ftLastAccessTime: FILETIME;
-    var ftLastWriteTime:  FILETIME;
+    ftCreationTime:   FILETIME;
+    ftLastAccessTime: FILETIME;
+    ftLastWriteTime:  FILETIME;
 
-    var nFileSizeHigh:    i32;
-    var nFileSizeLow:     i32;
+    nFileSizeHigh:    i32;
+    nFileSizeLow:     i32;
 
-    var dwReserved0:      i32;
-    var dwReserved1:      i32;
+    dwReserved0:      i32;
+    dwReserved1:      i32;
 
-    var cFileName:        [MAX_PATH] u16;
+    cFileName:        [MAX_PATH] u16;
 
-    var cAlternateFileName: [14] u16;
+    cAlternateFileName: [14] u16;
 }
 
-const FILE_GENERIC_ALL     = 0x10000000;
-const FILE_GENERIC_READ    = 0x80000000;
-const FILE_GENERIC_WRITE   = 0x40000000;
-const FILE_GENERIC_EXECUTE = 0x20000000;
+const FILE_GENERIC_ALL     := 0x10000000;
+const FILE_GENERIC_READ    := 0x80000000;
+const FILE_GENERIC_WRITE   := 0x40000000;
+const FILE_GENERIC_EXECUTE := 0x20000000;
 
-const FILE_LIST_DIRECTORY  = 0x1;
-const FILE_EXECUTE         = 0x20;
-const FILE_READ_ATTRIBUTES = 0x80;
-const FILE_READ_DATA       = 0x1;
-const FILE_TRAVERSE        = 0x20;
+const FILE_LIST_DIRECTORY  := 0x1;
+const FILE_EXECUTE         := 0x20;
+const FILE_READ_ATTRIBUTES := 0x80;
+const FILE_READ_DATA       := 0x1;
+const FILE_TRAVERSE        := 0x20;
 
 enum SetFilePointer_MoveMethod u32 {
     FILE_BEGIN   = 0;
@@ -3009,65 +2996,65 @@ enum ADDRESS_MODE i32 {
 }
 
 struct ADDRESi64 {
-    var Offset: u64;
-    var Segment: u16;
-    var Mode: ADDRESS_MODE;
+    Offset: u64;
+    Segment: u16;
+    Mode: ADDRESS_MODE;
 }
 
 struct KDHELP64 {
-    var Thread: u64;
-    var ThCallbackStack: u32;
-    var ThCallbackBStore: u32;
-    var NextCallback: u32;
-    var FramePointer: u32;
-    var KiCallUserMode: u64;
-    var KeUserCallbackDispatcher: u64;
-    var SystemRangeStart: u64;
-    var KiUserExceptionDispatcher: u64;
-    var StackBase: u64;
-    var StackLimit: u64;
-    var Reserved: [5]u64;
+    Thread: u64;
+    ThCallbackStack: u32;
+    ThCallbackBStore: u32;
+    NextCallback: u32;
+    FramePointer: u32;
+    KiCallUserMode: u64;
+    KeUserCallbackDispatcher: u64;
+    SystemRangeStart: u64;
+    KiUserExceptionDispatcher: u64;
+    StackBase: u64;
+    StackLimit: u64;
+    Reserved: [5]u64;
 }
 
 struct STACKFRAME64 {
-    var AddrPC: ADDRESi64;
-    var AddrReturn: ADDRESi64;
-    var AddrFrame: ADDRESi64;
-    var AddrStack: ADDRESi64;
-    var AddrBStore: ADDRESi64;
-    var FuncTableEntry: rawptr;
-    var Params: [4]u64;
-    var Far: BOOL;
-    var Virtual: BOOL;
-    var Reserved: [3]u64;
-    var KdHelp: KDHELP64;
+    AddrPC: ADDRESi64;
+    AddrReturn: ADDRESi64;
+    AddrFrame: ADDRESi64;
+    AddrStack: ADDRESi64;
+    AddrBStore: ADDRESi64;
+    FuncTableEntry: rawptr;
+    Params: [4]u64;
+    Far: BOOL;
+    Virtual: BOOL;
+    Reserved: [3]u64;
+    KdHelp: KDHELP64;
 }
 
 // DECLSPEC_ALIGN(16)
 struct M128A {
-    var Low: u64;
-    var High: i64;
+    Low: u64;
+    High: i64;
 }
 
 // DECLSPEC_ALIGN(16)
 struct XSAVE_FORMAT {
-    var ControlWord: u16;
-    var StatusWord: u16;
-    var TagWord: u8;
-    var Reserved1: u8;
-    var ErrorOpcode: u16;
-    var ErrorOffset: u32;
-    var ErrorSelector: u16;
-    var Reserved2: u16;
-    var DataOffset: u32;
-    var DataSelector: u16;
-    var Reserved3: u16;
-    var MxCsr: u32;
-    var MxCsr_Mask: u32;
-    var FloatRegisters: [8]M128A;
+    ControlWord: u16;
+    StatusWord: u16;
+    TagWord: u8;
+    Reserved1: u8;
+    ErrorOpcode: u16;
+    ErrorOffset: u32;
+    ErrorSelector: u16;
+    Reserved2: u16;
+    DataOffset: u32;
+    DataSelector: u16;
+    Reserved3: u16;
+    MxCsr: u32;
+    MxCsr_Mask: u32;
+    FloatRegisters: [8]M128A;
 
-    var XmmRegisters: [16]M128A;
-    var Reserved4: [96]u8;
+    XmmRegisters: [16]M128A;
+    Reserved4: [96]u8;
 
     // #if 1 /*_WIN64*/ {  // @@ Assume x64.
     // }
@@ -3077,137 +3064,137 @@ struct XSAVE_FORMAT {
     // }
 }
 
-const CONTEXT_i386    = 0x00010000;
-const CONTEXT_AMD64   = 0x00100000;
-const CONTEXT_CONTROL = (CONTEXT_AMD64 | 0x00000001);
+const CONTEXT_i386    := 0x00010000;
+const CONTEXT_AMD64   := 0x00100000;
+const CONTEXT_CONTROL := (CONTEXT_AMD64 | 0x00000001);
 
 
 // DECLSPEC_ALIGN(16)
 struct CONTEXT {
-    var P1Home: u64;
-    var P2Home: u64;
-    var P3Home: u64;
-    var P4Home: u64;
-    var P5Home: u64;
-    var P6Home: u64;
+    P1Home: u64;
+    P2Home: u64;
+    P3Home: u64;
+    P4Home: u64;
+    P5Home: u64;
+    P6Home: u64;
 
-    var ContextFlags: u32;
-    var MxCsr: u32;
+    ContextFlags: u32;
+    MxCsr: u32;
 
-    var SegCs: u16;
-    var SegDs: u16;
-    var SegEs: u16;
-    var SegFs: u16;
-    var SegGs: u16;
-    var SegSs: u16;
-    var EFlags: u32;
+    SegCs: u16;
+    SegDs: u16;
+    SegEs: u16;
+    SegFs: u16;
+    SegGs: u16;
+    SegSs: u16;
+    EFlags: u32;
 
-    var Dr0: u64;
-    var Dr1: u64;
-    var Dr2: u64;
-    var Dr3: u64;
-    var Dr6: u64;
-    var Dr7: u64;
+    Dr0: u64;
+    Dr1: u64;
+    Dr2: u64;
+    Dr3: u64;
+    Dr6: u64;
+    Dr7: u64;
 
-    var Rax: u64;
-    var Rcx: u64;
-    var Rdx: u64;
-    var Rbx: u64;
-    var Rsp: u64;
-    var Rbp: u64;
-    var Rsi: u64;
-    var Rdi: u64;
-    var R8: u64;
-    var R9: u64;
-    var R10: u64;
-    var R11: u64;
-    var R12: u64;
-    var R13: u64;
-    var R14: u64;
-    var R15: u64;
+    Rax: u64;
+    Rcx: u64;
+    Rdx: u64;
+    Rbx: u64;
+    Rsp: u64;
+    Rbp: u64;
+    Rsi: u64;
+    Rdi: u64;
+    R8: u64;
+    R9: u64;
+    R10: u64;
+    R11: u64;
+    R12: u64;
+    R13: u64;
+    R14: u64;
+    R15: u64;
 
-    var Rip: u64;
+    Rip: u64;
 
-    var FltSave: union {
-        var FltSave: XSAVE_FORMAT;
-        var Other: struct {
-            var Header: [2]M128A;
-            var Legacy: [8]M128A;
-            var Xmm0: M128A;
-            var Xmm1: M128A;
-            var Xmm2: M128A;
-            var Xmm3: M128A;
-            var Xmm4: M128A;
-            var Xmm5: M128A;
-            var Xmm6: M128A;
-            var Xmm7: M128A;
-            var Xmm8: M128A;
-            var Xmm9: M128A;
-            var Xmm10: M128A;
-            var Xmm11: M128A;
-            var Xmm12: M128A;
-            var Xmm13: M128A;
-            var Xmm14: M128A;
-            var Xmm15: M128A;
+    FltSave: union {
+        FltSave: XSAVE_FORMAT;
+        Other: struct {
+            Header: [2]M128A;
+            Legacy: [8]M128A;
+            Xmm0: M128A;
+            Xmm1: M128A;
+            Xmm2: M128A;
+            Xmm3: M128A;
+            Xmm4: M128A;
+            Xmm5: M128A;
+            Xmm6: M128A;
+            Xmm7: M128A;
+            Xmm8: M128A;
+            Xmm9: M128A;
+            Xmm10: M128A;
+            Xmm11: M128A;
+            Xmm12: M128A;
+            Xmm13: M128A;
+            Xmm14: M128A;
+            Xmm15: M128A;
         };
     };
 
-    var VectorRegister: [26]M128A;
-    var VectorControl: u64;
+    VectorRegister: [26]M128A;
+    VectorControl: u64;
 
-    var DebugControl: u64;
-    var LastBranchToRip: u64;
-    var LastBranchFromRip: u64;
-    var LastExceptionToRip: u64;
-    var LastExceptionFromRip: u64;
+    DebugControl: u64;
+    LastBranchToRip: u64;
+    LastBranchFromRip: u64;
+    LastExceptionToRip: u64;
+    LastExceptionFromRip: u64;
 }
 #assert(sizeof(CONTEXT) == 1232);
 
 
 //IMAGEHLP_SYMBOL64 :: struct(name_length:u32=0) {
 struct IMAGEHLP_SYMBOL64 {
-    var SizeOfStruct : u32;                 // set to sizeof(IMAGEHLP_SYMBOL64)
-    var Address: u64;                       // virtual address including dll base address
-    var Size : u32;                         // estimated size of symbol, can be zero
-    var Flags : u32;                        // info about the symbols, see the SYMF defines
+    SizeOfStruct : u32;                 // set to sizeof(IMAGEHLP_SYMBOL64)
+    Address: u64;                       // virtual address including dll base address
+    Size : u32;                         // estimated size of symbol, can be zero
+    Flags : u32;                        // info about the symbols, see the SYMF defines
     //MaxNameLength : u32 = name_length;  // maximum size of symbol name in 'Name'
     //Name: [name_length + 1]u8;          // symbol name (null terminated string)
-    var MaxNameLength : u32;                // maximum size of symbol name in 'Name'
-    var Name: [1]u8;                        // symbol name (null terminated string)
+    MaxNameLength : u32;                // maximum size of symbol name in 'Name'
+    Name: [1]u8;                        // symbol name (null terminated string)
 }
 
 struct IMAGEHLP_LINE64 {
-    var SizeOfStruct : u32;         // set to sizeof(IMAGEHLP_LINE64)
-    var Key : rawptr;                // internal
-    var LineNumber : u32;           // line number in file
-    var FileName : ^byte;             // full filename
-    var Address: u64;               // first instruction of line
+    SizeOfStruct : u32;         // set to sizeof(IMAGEHLP_LINE64)
+    Key : rawptr;                // internal
+    LineNumber : u32;           // line number in file
+    FileName : ^byte;             // full filename
+    Address: u64;               // first instruction of line
 }
 
 struct IMAGEHLP_LINEW64 {
-    var SizeOfStruct : u32;         // set to sizeof(IMAGEHLP_LINE64)
-    var Key : rawptr;                // internal
-    var LineNumber : u32;           // line number in file
-    var FileName : ^u16;            // full filename
-    var Address : u64;              // first instruction of line
+    SizeOfStruct : u32;         // set to sizeof(IMAGEHLP_LINE64)
+    Key : rawptr;                // internal
+    LineNumber : u32;           // line number in file
+    FileName : ^u16;            // full filename
+    Address : u64;              // first instruction of line
 }
 
 struct SYMBOL_INFO {
-    var SizeOfStruct : u32;
-    var TypeIndex : u32;            // Type Index of symbol
-    var Reserved : [2]u64;
-    var Index : u32;
-    var Size : u32;
-    var ModBase : u64;              // Base Address of module comtaining this symbol
-    var Flags : u32;
-    var Value : u64;                // Value of symbol, ValuePresent should be 1
-    var Address : u64;              // Address of symbol including base address of module
-    var Register : u32;             // register holding value or pointer to value
-    var Scope : u32;                // scope of the symbol
-    var Tag : u32;                  // pdb classification
-    var NameLen : u32;              // Actual length of name
-    var MaxNameLen : u32;
-    var Name : [1]u8;               // Name of symbol
+    SizeOfStruct : u32;
+    TypeIndex : u32;            // Type Index of symbol
+    Reserved : [2]u64;
+    Index : u32;
+    Size : u32;
+    ModBase : u64;              // Base Address of module comtaining this symbol
+    Flags : u32;
+    Value : u64;                // Value of symbol, ValuePresent should be 1
+    Address : u64;              // Address of symbol including base address of module
+    Register : u32;             // register holding value or pointer to value
+    Scope : u32;                // scope of the symbol
+    Tag : u32;                  // pdb classification
+    NameLen : u32;              // Actual length of name
+    MaxNameLen : u32;
+    Name : [1]u8;               // Name of symbol
 }
 
 
@@ -3248,10 +3235,10 @@ enum SYMOPT u32 {
 
 
 
-const ReadProcessMemoryProc64   = proc(hProcess: HANDLE, lpBaseAddress: u64, lpBuffer: rawptr, nSize: u32, lpNumberOfBytesRead: ^u32) : BOOL;
-const FunctionTableAccessProc64 = proc(hProcess: HANDLE, AddrBase:u64) : rawptr;
-const GetModuleBaseProc64       = proc(hProcess: HANDLE, dwAddr:u64) : u64;
-const TranslateAddressProc64    = proc(hProcess: HANDLE, hThread: HANDLE, lpaddr: ^ADDRESi64) : u64;
+const ReadProcessMemoryProc64   := proc(hProcess: HANDLE, lpBaseAddress: u64, lpBuffer: rawptr, nSize: u32, lpNumberOfBytesRead: ^u32) : BOOL;
+const FunctionTableAccessProc64 := proc(hProcess: HANDLE, AddrBase:u64) : rawptr;
+const GetModuleBaseProc64       := proc(hProcess: HANDLE, dwAddr:u64) : u64;
+const TranslateAddressProc64    := proc(hProcess: HANDLE, hThread: HANDLE, lpaddr: ^ADDRESi64) : u64;
 
 // EnumDirTree
 // EnumDirTreeProc
@@ -3383,31 +3370,31 @@ proc SymSetOptions(SymOptions: SYMOPT) : SYMOPT #foreign; // DbgHelp
 
 // Structured Exception Handling
 
-const EXCEPTION_MAXIMUM_PARAMETERS = 15; // maximum number of exception parameters
+const EXCEPTION_MAXIMUM_PARAMETERS := 15; // maximum number of exception parameters
 
 struct EXCEPTION_RECORD {
-    var ExceptionCode: u32;
-    var ExceptionFlags: u32;
-    var ExceptionRecord: ^EXCEPTION_RECORD;
-    var ExceptionAddress: rawptr;
-    var NumberParameters: u32;
-    var ExceptionInformation: [EXCEPTION_MAXIMUM_PARAMETERS]u64;
+    ExceptionCode: u32;
+    ExceptionFlags: u32;
+    ExceptionRecord: ^EXCEPTION_RECORD;
+    ExceptionAddress: rawptr;
+    NumberParameters: u32;
+    ExceptionInformation: [EXCEPTION_MAXIMUM_PARAMETERS]u64;
 }
 
 struct EXCEPTION_POINTERS {
-    var ExceptionRecord : ^EXCEPTION_RECORD;
-    var ContextRecord : ^CONTEXT;
+    ExceptionRecord : ^EXCEPTION_RECORD;
+    ContextRecord : ^CONTEXT;
 }
 
-const LPTOP_LEVEL_EXCEPTION_FILTER = proc(ExceptionInfo: ^EXCEPTION_POINTERS) : i32;
+const LPTOP_LEVEL_EXCEPTION_FILTER := proc(ExceptionInfo: ^EXCEPTION_POINTERS) : i32;
 
 //EXCEPTION_EXECUTE_HANDLER :: cast(LPTOP_LEVEL_EXCEPTION_FILTER) 0x1;
 //EXCEPTION_CONTINUE_EXECUTION :: cast(LPTOP_LEVEL_EXCEPTION_FILTER) -1;
 //EXCEPTION_CONTINUE_SEARCH :: cast(LPTOP_LEVEL_EXCEPTION_FILTER) 0x0;
 
-const EXCEPTION_EXECUTE_HANDLER    = 1;
-const EXCEPTION_CONTINUE_SEARCH    = 0;
-const EXCEPTION_CONTINUE_EXECUTION = -1;
+const EXCEPTION_EXECUTE_HANDLER    := 1;
+const EXCEPTION_CONTINUE_SEARCH    := 0;
+const EXCEPTION_CONTINUE_EXECUTION := -1;
 
 
 // AbnormalTermination
@@ -3441,9 +3428,9 @@ enum SEM u32 {
     SEM_NOOPENFILEERRORBOX = 0x8000;
 }
 
-const FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100;
-const FORMAT_MESSAGE_IGNORE_INSERTS  = 0x00000200;
-const FORMAT_MESSAGE_FROM_SYSTEM     = 0x00001000;
+const FORMAT_MESSAGE_ALLOCATE_BUFFER := 0x00000100;
+const FORMAT_MESSAGE_IGNORE_INSERTS  := 0x00000200;
+const FORMAT_MESSAGE_FROM_SYSTEM     := 0x00001000;
 
 enum FLASHW u32 {
     FLASHW_STOP = 0;
@@ -3455,11 +3442,11 @@ enum FLASHW u32 {
 }
 
 struct FLASHWINFO {
-    var cbSize : u32;
-    var hwnd : HWND;
-    var dwFlags : FLASHW;
-    var uCount : u32;
-    var dwTimeout : u32;
+    cbSize : u32;
+    hwnd : HWND;
+    dwFlags : FLASHW;
+    uCount : u32;
+    dwTimeout : u32;
 }
 
 // Beep
@@ -3490,19 +3477,19 @@ proc SetErrorMode(uMode : SEM) : SEM #foreign; // kernel32
 // Time API.
 
 struct SYSTEMTIME {
-    var wYear         : u16;
-    var wMonth        : u16;
-    var wDayOfWeek    : u16;
-    var wDay          : u16;
-    var wHour         : u16;
-    var wMinute       : u16;
-    var wSecond       : u16;
-    var uMilliseconds : u16;
+    wYear         : u16;
+    wMonth        : u16;
+    wDayOfWeek    : u16;
+    wDay          : u16;
+    wHour         : u16;
+    wMinute       : u16;
+    wSecond       : u16;
+    uMilliseconds : u16;
 }
 
 struct FILETIME {
-    var dwLowDateTime : u32;
-    var dwHighDateTime : u32;
+    dwLowDateTime : u32;
+    dwHighDateTime : u32;
 }
 
 struct TIME_ZONE_INFORMATION { // @@
@@ -3641,137 +3628,137 @@ proc PathFileExistsW(pszPath: ^u16) : i32 #foreign; // Shlwapi
 // Configuration API
 
 struct STICKYKEYS {
-    var cbSize: u32; // = 8; size_of(STICKYKEYS);
-    var dwFlags: STICKYKEY_FLAGS;
+    cbSize: u32; // = 8; size_of(STICKYKEYS);
+    dwFlags: STICKYKEY_FLAGS;
 }
 
 struct TOGGLEKEYS {
-    var cbSize: u32; // = 8; size_of(STICKYKEYS);
-    var dwFlags: TOGGLEKEY_FLAGS;
+    cbSize: u32; // = 8; size_of(STICKYKEYS);
+    dwFlags: TOGGLEKEY_FLAGS;
 }
 
 struct FILTERKEYS {
-    var cbSize: u32; // = 24; size_of(FILTERKEYS);
-    var dwFlags: FILTERKEY_FLAGS;
-    var iWaitMSec: u32;            // Acceptance Delay
-    var iDelayMSec: u32;           // Delay Until Repeat
-    var iRepeatMSec: u32;          // Repeat Rate
-    var iBounceMSec: u32;          // Debounce Time
+    cbSize: u32; // = 24; size_of(FILTERKEYS);
+    dwFlags: FILTERKEY_FLAGS;
+    iWaitMSec: u32;            // Acceptance Delay
+    iDelayMSec: u32;           // Delay Until Repeat
+    iRepeatMSec: u32;          // Repeat Rate
+    iBounceMSec: u32;          // Debounce Time
 }
 
 
-const SM_CXSCREEN =          0;
-const SM_CYSCREEN =          1;
-const SM_CXVSCROLL =         2;
-const SM_CYHSCROLL =         3;
-const SM_CYCAPTION =         4;
-const SM_CXBORDER =          5;
-const SM_CYBORDER =          6;
-const SM_CXDLGFRAME =        7;
-const SM_CYDLGFRAME =        8;
-const SM_CYVTHUMB =          9;
-const SM_CXHTHUMB =          10;
-const SM_CXICON =            11;
-const SM_CYICON =            12;
-const SM_CXCURSOR =          13;
-const SM_CYCURSOR =          14;
-const SM_CYMENU =            15;
-const SM_CXFULLSCREEN =      16;
-const SM_CYFULLSCREEN =      17;
-const SM_CYKANJIWINDOW =     18;
-const SM_MOUSEPRESENT =      19;
-const SM_CYVSCROLL =         20;
-const SM_CXHSCROLL =         21;
-const SM_DEBUG =             22;
-const SM_SWAPBUTTON =        23;
-const SM_RESERVED1 =         24;
-const SM_RESERVED2 =         25;
-const SM_RESERVED3 =         26;
-const SM_RESERVED4 =         27;
-const SM_CXMIN =             28;
-const SM_CYMIN =             29;
-const SM_CXSIZE =            30;
-const SM_CYSIZE =            31;
-const SM_CXFRAME =           32;
-const SM_CYFRAME =           33;
-const SM_CXMINTRACK =        34;
-const SM_CYMINTRACK =        35;
-const SM_CXDOUBLECLK =       36;
-const SM_CYDOUBLECLK =       37;
-const SM_CXICONSPACING =     38;
-const SM_CYICONSPACING =     39;
-const SM_MENUDROPALIGNMENT = 40;
-const SM_PENWINDOWS =        41;
-const SM_DBCSENABLED =       42;
-const SM_CMOUSEBUTTONS =     43;
+const SM_CXSCREEN                    := 0;
+const SM_CYSCREEN                    := 1;
+const SM_CXVSCROLL                   := 2;
+const SM_CYHSCROLL                   := 3;
+const SM_CYCAPTION                   := 4;
+const SM_CXBORDER                    := 5;
+const SM_CYBORDER                    := 6;
+const SM_CXDLGFRAME                  := 7;
+const SM_CYDLGFRAME                  := 8;
+const SM_CYVTHUMB                    := 9;
+const SM_CXHTHUMB                    := 10;
+const SM_CXICON                      := 11;
+const SM_CYICON                      := 12;
+const SM_CXCURSOR                    := 13;
+const SM_CYCURSOR                    := 14;
+const SM_CYMENU                      := 15;
+const SM_CXFULLSCREEN                := 16;
+const SM_CYFULLSCREEN                := 17;
+const SM_CYKANJIWINDOW               := 18;
+const SM_MOUSEPRESENT                := 19;
+const SM_CYVSCROLL                   := 20;
+const SM_CXHSCROLL                   := 21;
+const SM_DEBUG                       := 22;
+const SM_SWAPBUTTON                  := 23;
+const SM_RESERVED1                   := 24;
+const SM_RESERVED2                   := 25;
+const SM_RESERVED3                   := 26;
+const SM_RESERVED4                   := 27;
+const SM_CXMIN                       := 28;
+const SM_CYMIN                       := 29;
+const SM_CXSIZE                      := 30;
+const SM_CYSIZE                      := 31;
+const SM_CXFRAME                     := 32;
+const SM_CYFRAME                     := 33;
+const SM_CXMINTRACK                  := 34;
+const SM_CYMINTRACK                  := 35;
+const SM_CXDOUBLECLK                 := 36;
+const SM_CYDOUBLECLK                 := 37;
+const SM_CXICONSPACING               := 38;
+const SM_CYICONSPACING               := 39;
+const SM_MENUDROPALIGNMENT           := 40;
+const SM_PENWINDOWS                  := 41;
+const SM_DBCSENABLED                 := 42;
+const SM_CMOUSEBUTTONS               := 43;
 
-const SM_CXFIXEDFRAME =      SM_CXDLGFRAME;
-const SM_CYFIXEDFRAME =      SM_CYDLGFRAME;
-const SM_CXSIZEFRAME =       SM_CXFRAME;
-const SM_CYSIZEFRAME =       SM_CYFRAME;
+const SM_CXFIXEDFRAME                := SM_CXDLGFRAME;
+const SM_CYFIXEDFRAME                := SM_CYDLGFRAME;
+const SM_CXSIZEFRAME                 := SM_CXFRAME;
+const SM_CYSIZEFRAME                 := SM_CYFRAME;
 
-const SM_SECURE =            44;
-const SM_CXEDGE =            45;
-const SM_CYEDGE =            46;
-const SM_CXMINSPACING =      47;
-const SM_CYMINSPACING =      48;
-const SM_CXSMICON =          49;
-const SM_CYSMICON =          50;
-const SM_CYSMCAPTION =       51;
-const SM_CXSMSIZE =          52;
-const SM_CYSMSIZE =          53;
-const SM_CXMENUSIZE =        54;
-const SM_CYMENUSIZE =        55;
-const SM_ARRANGE =           56;
-const SM_CXMINIMIZED =       57;
-const SM_CYMINIMIZED =       58;
-const SM_CXMAXTRACK =        59;
-const SM_CYMAXTRACK =        60;
-const SM_CXMAXIMIZED =       61;
-const SM_CYMAXIMIZED =       62;
-const SM_NETWORK =           63;
-const SM_CLEANBOOT =         67;
-const SM_CXDRAG =            68;
-const SM_CYDRAG =            69;
+const SM_SECURE                      := 44;
+const SM_CXEDGE                      := 45;
+const SM_CYEDGE                      := 46;
+const SM_CXMINSPACING                := 47;
+const SM_CYMINSPACING                := 48;
+const SM_CXSMICON                    := 49;
+const SM_CYSMICON                    := 50;
+const SM_CYSMCAPTION                 := 51;
+const SM_CXSMSIZE                    := 52;
+const SM_CYSMSIZE                    := 53;
+const SM_CXMENUSIZE                  := 54;
+const SM_CYMENUSIZE                  := 55;
+const SM_ARRANGE                     := 56;
+const SM_CXMINIMIZED                 := 57;
+const SM_CYMINIMIZED                 := 58;
+const SM_CXMAXTRACK                  := 59;
+const SM_CYMAXTRACK                  := 60;
+const SM_CXMAXIMIZED                 := 61;
+const SM_CYMAXIMIZED                 := 62;
+const SM_NETWORK                     := 63;
+const SM_CLEANBOOT                   := 67;
+const SM_CXDRAG                      := 68;
+const SM_CYDRAG                      := 69;
 
-const SM_SHOWSOUNDS =           70;
-const SM_CXMENUCHECK =          71;
-const SM_CYMENUCHECK =          72;
-const SM_SLOWMACHINE =          73;
-const SM_MIDEASTENABLED =       74;
-const SM_MOUSEWHEELPRESENT =    75;
-const SM_XVIRTUALSCREEN =       76;
-const SM_YVIRTUALSCREEN =       77;
-const SM_CXVIRTUALSCREEN =      78;
-const SM_CYVIRTUALSCREEN =      79;
-const SM_CMONITORS =            80;
-const SM_SAMEDISPLAYFORMAT =    81;
-const SM_IMMENABLED =           82;
-const SM_CXFOCUSBORDER =        83;
-const SM_CYFOCUSBORDER =        84;
-const SM_TABLETPC =             86;
-const SM_MEDIACENTER =          87;
-const SM_STARTER =              88;
-const SM_SERVERR2 =             89;
-const SM_MOUSEHORIZONTALWHEELPRESENT =    91;
-const SM_CXPADDEDBORDER =       92;
-const SM_DIGITIZER =            94;
-const SM_MAXIMUMTOUCHES =       95;
-const SM_CMETRICS =             97;
-const SM_REMOTESESSION =        0x1000;
-const SM_SHUTTINGDOWN =           0x2000;
-const SM_REMOTECONTROL =          0x2001;
-const SM_CARETBLINKINGENABLED =   0x2002;
-const SM_CONVERTIBLESLATEMODE =   0x2003;
-const SM_SYSTEMDOCKED =           0x2004;
+const SM_SHOWSOUNDS                  := 70;
+const SM_CXMENUCHECK                 := 71;
+const SM_CYMENUCHECK                 := 72;
+const SM_SLOWMACHINE                 := 73;
+const SM_MIDEASTENABLED              := 74;
+const SM_MOUSEWHEELPRESENT           := 75;
+const SM_XVIRTUALSCREEN              := 76;
+const SM_YVIRTUALSCREEN              := 77;
+const SM_CXVIRTUALSCREEN             := 78;
+const SM_CYVIRTUALSCREEN             := 79;
+const SM_CMONITORS                   := 80;
+const SM_SAMEDISPLAYFORMAT           := 81;
+const SM_IMMENABLED                  := 82;
+const SM_CXFOCUSBORDER               := 83;
+const SM_CYFOCUSBORDER               := 84;
+const SM_TABLETPC                    := 86;
+const SM_MEDIACENTER                 := 87;
+const SM_STARTER                     := 88;
+const SM_SERVERR2                    := 89;
+const SM_MOUSEHORIZONTALWHEELPRESENT := 91;
+const SM_CXPADDEDBORDER              := 92;
+const SM_DIGITIZER                   := 94;
+const SM_MAXIMUMTOUCHES              := 95;
+const SM_CMETRICS                    := 97;
+const SM_REMOTESESSION               := 0x1000;
+const SM_SHUTTINGDOWN                := 0x2000;
+const SM_REMOTECONTROL               := 0x2001;
+const SM_CARETBLINKINGENABLED        := 0x2002;
+const SM_CONVERTIBLESLATEMODE        := 0x2003;
+const SM_SYSTEMDOCKED                := 0x2004;
 
-const SPI_GETWORKAREA = 0x0030;
-const SPI_GETFILTERKEYS = 0x0032;
-const SPI_SETFILTERKEYS = 0x0033;
-const SPI_GETTOGGLEKEYS = 0x0034;
-const SPI_SETTOGGLEKEYS = 0x0035;
-const SPI_GETSTICKYKEYS = 0x003A;
-const SPI_SETSTICKYKEYS = 0x003B;
+const SPI_GETWORKAREA                := 0x0030;
+const SPI_GETFILTERKEYS              := 0x0032;
+const SPI_SETFILTERKEYS              := 0x0033;
+const SPI_GETTOGGLEKEYS              := 0x0034;
+const SPI_SETTOGGLEKEYS              := 0x0035;
+const SPI_GETSTICKYKEYS              := 0x003A;
+const SPI_SETSTICKYKEYS              := 0x003B;
 
 enum STICKYKEY_FLAGS u32 {
     SKF_STICKYKEYSON =    0x00000001;
@@ -3812,26 +3799,26 @@ proc SystemParametersInfoW(uiAction: u32, uiParam: u32, pvParam: rawptr, fWinIni
 // Bitmap API
 
 struct BITMAPINFOHEADER {
-    var biSize: u32;
-    var biWidth: i32;
-    var biHeight: i32;
-    var biPlanes: u16;
-    var biBitCount: u16;
-    var biCompression: u32;
-    var biSizeImage: u32;
-    var biXPelsPerMeter: i32;
-    var biYPelsPerMeter: i32;
-    var biClrUsed: u32;
-    var biClrImportant: u32;
+    biSize: u32;
+    biWidth: i32;
+    biHeight: i32;
+    biPlanes: u16;
+    biBitCount: u16;
+    biCompression: u32;
+    biSizeImage: u32;
+    biXPelsPerMeter: i32;
+    biYPelsPerMeter: i32;
+    biClrUsed: u32;
+    biClrImportant: u32;
 }
 
 // Constants for biCompression field.
-const BI_RGB =        0;
-const BI_RLE8 =       1;
-const BI_RLE4 =       2;
-const BI_BITFIELDS =  3;
-const BI_JPEG =       4;
-const BI_PNG =        5;
+const BI_RGB       := 0;
+const BI_RLE8      := 1;
+const BI_RLE4      := 2;
+const BI_BITFIELDS := 3;
+const BI_JPEG      := 4;
+const BI_PNG       := 5;
 
 
 // AlphaBlend
@@ -3872,36 +3859,36 @@ const BI_PNG =        5;
 
 // Dialog Boxes API
 
-const OFN_NOCHANGEDIR = 0x00000008;
+const OFN_NOCHANGEDIR := 0x00000008;
 
 struct OPENFILENAME!($T: Type) {
-    var lStructSize : u32;
-    var hwndOwner : HWND;
-    var hInstance : HINSTANCE;
-    var lpstrFilter : ^T;
-    var lpstrCustomFilter : ^T;
-    var nMaxCustFilter : u32;
-    var nFilterIndex : u32;
-    var lpstrFile : ^T;
-    var nMaxFile : u32;
-    var lpstrFileTitle : ^T;
-    var nMaxFileTitle : u32;
-    var lpstrInitialDir : ^T;
-    var lpstrTitle : ^T;
-    var Flags : u32;
-    var nFileOffset : u16;
-    var nFileExtension : u16;
-    var lpstrDefExt : ^T;
-    var lCustData : LPARAM;
-    var lpfnHook : rawptr;// LPOFNHOOKPROC;
-    var lpTemplateName : ^T;
-    var pvReserved : rawptr;
-    var dwReserved : u32;
-    var FlagsEx : u32;
+    lStructSize : u32;
+    hwndOwner : HWND;
+    hInstance : HINSTANCE;
+    lpstrFilter : ^T;
+    lpstrCustomFilter : ^T;
+    nMaxCustFilter : u32;
+    nFilterIndex : u32;
+    lpstrFile : ^T;
+    nMaxFile : u32;
+    lpstrFileTitle : ^T;
+    nMaxFileTitle : u32;
+    lpstrInitialDir : ^T;
+    lpstrTitle : ^T;
+    Flags : u32;
+    nFileOffset : u16;
+    nFileExtension : u16;
+    lpstrDefExt : ^T;
+    lCustData : LPARAM;
+    lpfnHook : rawptr;// LPOFNHOOKPROC;
+    lpTemplateName : ^T;
+    pvReserved : rawptr;
+    dwReserved : u32;
+    FlagsEx : u32;
 }
 
-const OPENFILENAMEA = OPENFILENAME!(u8);
-const OPENFILENAMEW = OPENFILENAME!(u16);
+const OPENFILENAMEA := OPENFILENAME!(u8);
+const OPENFILENAMEW := OPENFILENAME!(u16);
 
 proc CommDlgExtendedError() : u32 #foreign; // comdlg32
 // FindTextA
@@ -3952,32 +3939,32 @@ enum FILEOP_FLAGS u32 {
 // SHFILEINFOA
 // SHFILEINFOW
 
-const FO_MOVE = 1;
-const FO_COPY = 2;
-const FO_DELETE = 3;
-const FO_RENAME = 4;
+const FO_MOVE := 1;
+const FO_COPY := 2;
+const FO_DELETE := 3;
+const FO_RENAME := 4;
 
 
 struct SHFILEOPSTRUCTA {
-    var hwnd: HWND;
-    var wFunc: u32;
-    var pFrom: ^byte;     // This string must be double-null terminated.
-    var pTo: ^byte;
-    var fFlags: FILEOP_FLAGS;
-    var fAnyOperationsAborted: BOOL;
-    var hNameMappings: rawptr;
-    var lpszProgressTitle: ^byte;
+    hwnd: HWND;
+    wFunc: u32;
+    pFrom: ^byte;     // This string must be double-null terminated.
+    pTo: ^byte;
+    fFlags: FILEOP_FLAGS;
+    fAnyOperationsAborted: BOOL;
+    hNameMappings: rawptr;
+    lpszProgressTitle: ^byte;
 }
 
 struct SHFILEOPSTRUCTW {
-    var hwnd: HWND;
-    var wFunc: u32;
-    var pFrom: ^u16;    // This string must be double-null terminated.
-    var pTo: ^u16;
-    var fFlags: FILEOP_FLAGS;
-    var fAnyOperationsAborted: BOOL;
-    var hNameMappings: rawptr;
-    var lpszProgressTitle: ^u16;
+    hwnd: HWND;
+    wFunc: u32;
+    pFrom: ^u16;    // This string must be double-null terminated.
+    pTo: ^u16;
+    fFlags: FILEOP_FLAGS;
+    fAnyOperationsAborted: BOOL;
+    hNameMappings: rawptr;
+    lpszProgressTitle: ^u16;
 }
 
 // SHNAMEMAPPINGA
@@ -4066,15 +4053,15 @@ proc SHFileOperationW(FileOp: ^SHFILEOPSTRUCTW) : i32 #foreign; // shell32
 
 // C Runtime Library
 
-const _CRT_WARN = 0;
-const _CRT_ERROR = 1;
-const _CRT_ASSERT = 2;
-const _CRT_ERRCNT = 3;
+const _CRT_WARN := 0;
+const _CRT_ERROR := 1;
+const _CRT_ASSERT := 2;
+const _CRT_ERRCNT := 3;
 
-const _CRTDBG_MODE_FILE = 0x1;
-const _CRTDBG_MODE_DEBUG = 0x2;
-const _CRTDBG_MODE_WNDW = 0x4;
-const _CRTDBG_REPORT_MODE = -1;
+const _CRTDBG_MODE_FILE := 0x1;
+const _CRTDBG_MODE_DEBUG := 0x2;
+const _CRTDBG_MODE_WNDW := 0x4;
+const _CRTDBG_REPORT_MODE := -1;
 
 //_CrtSetReportMode :: (reportType: i32, reportMode: i32) : i32 #foreign Crt;    // @@ Where is this defined?
 
@@ -4084,51 +4071,51 @@ proc _endthreadex(return_code: u32) #foreign; // Crt
 
 // @@ Still needs to be organized {
 
-const STD_INPUT_HANDLE  = -10;
-const STD_OUTPUT_HANDLE = -11;
-const STD_ERROR_HANDLE  = -12;
+const STD_INPUT_HANDLE  := -10;
+const STD_OUTPUT_HANDLE := -11;
+const STD_ERROR_HANDLE  := -12;
 
-const FILE_SHARE_READ   = 0x1;
-const FILE_SHARE_WRITE  = 0x2;
-const FILE_SHARE_DELETE = 0x4;
+const FILE_SHARE_READ   := 0x1;
+const FILE_SHARE_WRITE  := 0x2;
+const FILE_SHARE_DELETE := 0x4;
 
-const CREATE_NEW        = 1;
-const CREATE_ALWAYS     = 2;
-const OPEN_EXISTING     = 3;
-const OPEN_ALWAYS       = 4;
-const TRUNCATE_EXISTING = 5;
+const CREATE_NEW        := 1;
+const CREATE_ALWAYS     := 2;
+const OPEN_EXISTING     := 3;
+const OPEN_ALWAYS       := 4;
+const TRUNCATE_EXISTING := 5;
 
-const FILE_ATTRIBUTE_READONLY  = 0x01;
-const FILE_ATTRIBUTE_HIDDEN = 0x02;
-const FILE_ATTRIBUTE_SYSTEM = 0x04;
-const FILE_ATTRIBUTE_DIRECTORY = 0x10;
-const FILE_ATTRIBUTE_NORMAL = 0x80;
+const FILE_ATTRIBUTE_READONLY  := 0x01;
+const FILE_ATTRIBUTE_HIDDEN := 0x02;
+const FILE_ATTRIBUTE_SYSTEM := 0x04;
+const FILE_ATTRIBUTE_DIRECTORY := 0x10;
+const FILE_ATTRIBUTE_NORMAL := 0x80;
 
-const FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
-const FILE_FLAG_OVERLAPPED       = 0x40000000;
+const FILE_FLAG_BACKUP_SEMANTICS := 0x02000000;
+const FILE_FLAG_OVERLAPPED       := 0x40000000;
 
-const INVALID_HANDLE_VALUE = cast(HANDLE, -1);
+const INVALID_HANDLE_VALUE := cast(HANDLE, -1);
 
-const HANDLE_FLAG_INHERIT            = 1;
-const HANDLE_FLAG_PROTECT_FROM_CLOSE = 2;
+const HANDLE_FLAG_INHERIT            := 1;
+const HANDLE_FLAG_PROTECT_FROM_CLOSE := 2;
 
 proc MAKELANGID(usPrimaryLanguage: u16, usSubLanguage: u16) : u16 {
     return cast(u16, ((usSubLanguage << 10) | usPrimaryLanguage));
 }
 
-const LANG_NEUTRAL = 0;
-const LANG_ENGLISH = 0x09;
+const LANG_NEUTRAL := 0;
+const LANG_ENGLISH := 0x09;
 
-const SUBLANG_DEFAULT = 0x1;
+const SUBLANG_DEFAULT := 0x1;
 
 proc WideCharToMultiByte(CodePage: u32, dwFlags: i32, lpWideCharStr: ^u16, cchWideChar: i32, lpMultiByteStr: ^byte,
                         cbMultiByte: i32, lpDefaultChar: ^byte, lpUsedDefaultChar: ^i32) : i32 #foreign; // kernel32
 proc MultiByteToWideChar(CodePage: u32, dwFlags: i32, lpMultiByteStr: ^byte, cbMultiByte: i32,
                         lpWideCharStr: ^u16, cchWideChar: i32) : i32 #foreign; // kernel32
-const CP_ACP = 0;
-const CP_UTF8 = 65001;
-const WC_NO_BEST_FIT_CHARS = 0x00000400;
-const WC_COMPOSITECHECK    = 0x00000200;
+const CP_ACP := 0;
+const CP_UTF8 := 65001;
+const WC_NO_BEST_FIT_CHARS := 0x00000400;
+const WC_COMPOSITECHECK    := 0x00000200;
 
 
 
@@ -4145,14 +4132,14 @@ struct IUnknown_VTable {
     //AddRef : (this : *IUnknown) -> u32 #c_call;
     //Release : (this : *IUnknown) -> u32 #c_call;
 
-    var QueryInterface: proc(this : ^IUnknown, riid : REFIID, object : ^rawptr) : HRESULT;
-    var AddRef: proc(this : ^IUnknown) : u32;
-    var Release: proc(this : ^IUnknown) : u32;
+    QueryInterface: proc(this : ^IUnknown, riid : REFIID, object : ^rawptr) : HRESULT;
+    AddRef: proc(this : ^IUnknown) : u32;
+    Release: proc(this : ^IUnknown) : u32;
 }
 
 struct IUnknown {
-    var vtable : ^IUnknown_VTable;
-    const iunknown_uuid = "00000000-0000-0000-C000-000000000046";
+    vtable : ^IUnknown_VTable;
+    const iunknown_uuid := "00000000-0000-0000-C000-000000000046";
     //uuid :: uid("00000000-0000-0000-C000-000000000046");
     //uuid :: #run uid("00000000-0000-0000-C000-000000000046");
 }
@@ -4178,7 +4165,7 @@ proc uid_hex(c: u8) : u32 {
 }
 
 proc uid(str: string) : GUID {
-    var id: GUID;
+    id: GUID;
 
     id.Data1 = (uid_hex(str[0]) << 28) | (uid_hex(str[1]) << 24) | (uid_hex(str[2]) << 20) | (uid_hex(str[3]) << 16) |
                (uid_hex(str[4]) << 12) | (uid_hex(str[5]) <<  8) | (uid_hex(str[6]) <<  4) | (uid_hex(str[7]) <<  0);
@@ -4217,13 +4204,13 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
         return null;
     }
 
-    var query_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), null, 0);
+    query_num_chars := MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), null, 0);
     if (query_num_chars <= 0) {
         return null;
     }
 
-    var name_u16s = new_slice(u16, cast(int, query_num_chars+1), allocator);
-    var result_num_chars = MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), &name_u16s[0], query_num_chars);
+    name_u16s := new_slice(u16, cast(int, query_num_chars+1), allocator);
+    result_num_chars := MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), &name_u16s[0], query_num_chars);
 
     if (result_num_chars > 0) {
         assert(cast(int, result_num_chars) < name_u16s.count);
@@ -4238,7 +4225,7 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
 proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) : string {
     out_success^ = false;
 
-    var query_result = WideCharToMultiByte(CP_ACP, 0,
+    query_result := WideCharToMultiByte(CP_ACP, 0,
                                         data, -1,
                                         null, 0,
                                         null, null);
@@ -4247,8 +4234,8 @@ proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) 
         return "";
     }
 
-    var name_bytes = cast(^u8, sif_alloc(cast(i64, query_result), DEFAULT_ALIGNMENT, allocator));
-    var result = WideCharToMultiByte(CP_ACP, 0,
+    name_bytes := cast(^u8, sif_alloc(cast(i64, query_result), DEFAULT_ALIGNMENT, allocator));
+    result := WideCharToMultiByte(CP_ACP, 0,
                                           data, -1,
                                           name_bytes, query_result,
                                           null, null);
@@ -4256,7 +4243,7 @@ proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) 
     if (result > 0) {
         assert(result <= query_result);
 
-        var name: string;
+        name: string;
         name.data  = name_bytes;
         name.count = cast(i64, result)-1;  // Do not include the terminating zero.
         assert(name[name.count] == 0);
@@ -4269,17 +4256,17 @@ proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) 
 }
 
 
-const FILE_MAP_ALL_ACCESS = 0xf001f;
-const FILE_MAP_READ  = 4;
-const FILE_MAP_WRITE = 2;
-const FILE_MAP_COPY  = 1;
+const FILE_MAP_ALL_ACCESS := 0xf001f;
+const FILE_MAP_READ       := 4;
+const FILE_MAP_WRITE      := 2;
+const FILE_MAP_COPY       := 1;
 
 
-const ERROR_FILE_NOT_FOUND = 2;
-const REG_NONE = 0;
-const REG_SZ   = 1;
+const ERROR_FILE_NOT_FOUND := 2;
+const REG_NONE             := 0;
+const REG_SZ               := 1;
 
-const MAX_PATH = 260;
+const MAX_PATH             := 260;
 
 // #foreign_system_import ntdll    "Ntdll";
 // #foreign_system_import kernel32 "kernel32";

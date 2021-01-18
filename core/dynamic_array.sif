@@ -1,10 +1,10 @@
 #include "core:basic.sif"
 
 struct Dynamic_Array!($T: typeid) {
-    var elements: []T;
-    var count: int;
-    var capacity: int;
-    var allocator: Allocator;
+    elements: []T;
+    count: int;
+    capacity: int;
+    allocator: Allocator;
     operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
         return dyn.elements[index];
     }
@@ -16,8 +16,8 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
         assert(false);
     }
     if (dyn.count == dyn.capacity) {
-        var old_data = dyn.elements.data;
-        var new_cap = 8 + dyn.capacity * 2;
+        old_data := dyn.elements.data;
+        new_cap := 8 + dyn.capacity * 2;
         dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
         dyn.capacity = new_cap;
         if (old_data != null) {
@@ -29,13 +29,13 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
     assert(dyn.elements.count == dyn.count);
     dyn.elements.count += 1;
     dyn.elements[dyn.count] = value;
-    var ptr = &dyn.elements[dyn.count];
+    ptr := &dyn.elements[dyn.count];
     dyn.count += 1;
     return ptr;
 }
 
 proc append_empty(dyn: ^Dynamic_Array!($T)) : ^T {
-    var t: T;
+    t: T;
     return append(dyn, t);
 }
 
@@ -44,14 +44,14 @@ proc pop(dyn: ^Dynamic_Array!($T)) : T {
         print("pop() called with empty dynamic array\n");
         assert(false);
     }
-    var value = dyn^[dyn.count-1];
+    value := dyn^[dyn.count-1];
     dyn.elements.count -= 1;
     dyn.count -= 1;
     return value;
 }
 
 proc unordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
-    var value = dyn^[index];
+    value := dyn^[index];
     dyn^[index] = dyn^[dyn.count-1];
     dyn.elements.count -= 1;
     dyn.count -= 1;
@@ -59,10 +59,10 @@ proc unordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
 }
 
 proc ordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
-    var value = dyn^[index];
+    value := dyn^[index];
     if (index != dyn.count-1) {
-        var src: rawptr = &dyn^[index+1];
-        var dst: rawptr = &dyn^[index];
+        src: rawptr = &dyn^[index+1];
+        dst: rawptr = &dyn^[index];
         memmove(dst, src, cast(u64, (dyn.count-index+1) * sizeof(T)));
     }
     dyn.elements.count -= 1;

@@ -9,11 +9,11 @@ proc main() {
 }
 
 proc run_test(procedure: proc(), test_name: string) {
-    const NUM_DOTS = 30;
+    const NUM_DOTS := 30;
 
     print("% ", test_name);
-    var dots_to_print = max(NUM_DOTS - test_name.count, 0) + 5;
-    for (var i = 0; i < dots_to_print; i += 1) {
+    dots_to_print := max(NUM_DOTS - test_name.count, 0) + 5;
+    for (i := 0; i < dots_to_print; i += 1) {
         print(".");
     }
     procedure();

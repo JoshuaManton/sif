@@ -4,20 +4,20 @@
 
 proc test_json() {
     struct My_Struct {
-        var foo: int;
-        var nested_struct: Other_Struct;
+        foo: int;
+        nested_struct: Other_Struct;
     }
 
     struct Other_Struct {
-        var a_string: string;
-        var a_float: float;
+        a_string: string;
+        a_float: float;
     }
 
-    var json = "{ \"foo\": 123, \"nested_struct\": { \"a_string\": \"wow this is some json\", \"a_float\": 2.52 } }";
+    json := "{ \"foo\": 123, \"nested_struct\": { \"a_string\": \"wow this is some json\", \"a_float\": 2.52 } }";
 
-    var json_value = json_parse_value(json, default_allocator());
+    json_value := json_parse_value(json, default_allocator());
 
-    var my_struct: My_Struct;
+    my_struct: My_Struct;
     json_write_value(&my_struct, json_value, default_allocator());
 
     assert(my_struct.foo == 123);

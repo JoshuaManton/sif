@@ -1,5 +1,5 @@
 proc test_defer() {
-    var a = 123;
+    a := 123;
 
     //
     {
@@ -11,7 +11,7 @@ proc test_defer() {
     assert(a == 321);
 
     //
-    for (var i = 0; i < 10; i += 1) {
+    for (i := 0; i < 10; i += 1) {
         if (i > 5) {
             defer a = 149;
             break;
@@ -20,7 +20,7 @@ proc test_defer() {
     assert(a == 149);
 
     //
-    for (var i = 0; i < 10; i += 1) {
+    for (i := 0; i < 10; i += 1) {
         if (i > 15) {
             defer a = 941;
             break;
@@ -29,7 +29,7 @@ proc test_defer() {
     assert(a == 149);
 
     //
-    for (var i = 0; i < 10; i += 1) {
+    for (i := 0; i < 10; i += 1) {
         if (i > 5) {
             defer a = 378;
             continue;
@@ -38,7 +38,7 @@ proc test_defer() {
     assert(a == 378);
 
     //
-    for (var i = 0; i < 10; i += 1) {
+    for (i := 0; i < 10; i += 1) {
         if (i > 15) {
             defer a = 941;
             continue;
@@ -47,17 +47,17 @@ proc test_defer() {
     assert(a == 378);
 
     assert(defer_some_global == 0);
-    var val = proc_test();
+    val := proc_test();
     assert(defer_some_global == 531);
     assert(val == 123);
 }
 
-var defer_some_global: int;
+defer_some_global: int;
 
 proc proc_test() : int {
     defer_some_global = 123;
     defer defer_some_global = 531;
-    var a = 123;
+    a := 123;
     defer a = 321; // defers are executed _after_ return values are evaluated, so the 'return a;' below will return 123
     return a;
 }

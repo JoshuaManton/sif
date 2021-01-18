@@ -1,20 +1,20 @@
 #include "core:windows.sif"
 
 struct File {
-    var handle: HANDLE;
+    handle: HANDLE;
 }
 
 proc file_open(filepath: string, out_file: ^File, flags: File_Open_Flags, allocator: Allocator) : bool {
-    var success: bool;
-    var length: i32;
-    var filepath_wide = to_wide_string(filepath, allocator, &success, &length);
+    success: bool;
+    length: i32;
+    filepath_wide := to_wide_string(filepath, allocator, &success, &length);
     if (!success) {
         return false;
     }
     defer sif_free(filepath_wide, allocator);
-    var access_flags: i32;
-    var share_flags: i32;
-    var create_flags: i32;
+    access_flags: i32;
+    share_flags: i32;
+    create_flags: i32;
     if (flags & .READ > 0) {
         access_flags |= FILE_GENERIC_READ;
         share_flags |= FILE_SHARE_READ;
@@ -25,7 +25,7 @@ proc file_open(filepath: string, out_file: ^File, flags: File_Open_Flags, alloca
         create_flags |= CREATE_ALWAYS;
     }
 
-    var file: File;
+    file: File;
     file.handle = CreateFileW(filepath_wide, access_flags, share_flags, null, create_flags, FILE_ATTRIBUTE_NORMAL, null);
     if (file.handle == INVALID_HANDLE_VALUE) {
         return false;
@@ -42,7 +42,7 @@ proc file_close(file: File) : bool {
 }
 
 proc file_length(file: File, out_length: ^int) : bool {
-    var integer: LARGE_INTEGER;
+    integer: LARGE_INTEGER;
     if (GetFileSizeEx(file.handle, &integer) == 0) {
         return false;
     }
@@ -51,7 +51,7 @@ proc file_length(file: File, out_length: ^int) : bool {
 }
 
 proc file_read(file: File, data: []byte) : bool {
-    var num_read: u32;
+    num_read: u32;
     if (ReadFile(file.handle, data.data, cast(u32, data.count), &num_read, null) == 0) {
         return false;
     }
@@ -60,7 +60,7 @@ proc file_read(file: File, data: []byte) : bool {
 }
 
 proc file_write(file: File, data: []byte) : bool {
-    var num_written: u32;
+    num_written: u32;
     if (WriteFile(file.handle, data.data, cast(u32, data.count), &num_written, null) == 0) {
         return false;
     }

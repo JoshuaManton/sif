@@ -18,7 +18,6 @@ void init_lexer_globals() {
     token_string_map[TK_STRING]                          = "STRING";
     token_string_map[TK_CHAR]                            = "CHAR";
 
-    token_string_map[TK_VAR]                             = "var";
     token_string_map[TK_CONST]                           = "const";
     token_string_map[TK_PROC]                            = "proc";
     token_string_map[TK_OPERATOR]                        = "operator";
@@ -52,6 +51,8 @@ void init_lexer_globals() {
     token_string_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT] = "#foreign_system_import";
     token_string_map[TK_DIRECTIVE_PARTIAL]               = "#partial";
     token_string_map[TK_DIRECTIVE_C_VARARGS]             = "#c_varargs";
+    token_string_map[TK_DIRECTIVE_CALLER_LOCATION]       = "#caller_location";
+
 
     token_string_map[TK_ASSIGN]                          = "=";
     token_string_map[TK_PLUS]                            = "+";
@@ -110,7 +111,6 @@ void init_lexer_globals() {
     token_name_map[TK_STRING]                            = "TK_STRING";
     token_name_map[TK_CHAR]                              = "TK_CHAR";
 
-    token_name_map[TK_VAR]                               = "TK_VAR";
     token_name_map[TK_CONST]                             = "TK_CONST";
     token_name_map[TK_PROC]                              = "TK_PROC";
     token_name_map[TK_OPERATOR]                          = "TK_OPERATOR";
@@ -144,6 +144,7 @@ void init_lexer_globals() {
     token_name_map[TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT]   = "TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT";
     token_name_map[TK_DIRECTIVE_PARTIAL]                 = "TK_DIRECTIVE_PARTIAL";
     token_name_map[TK_DIRECTIVE_C_VARARGS]               = "TK_DIRECTIVE_C_VARARGS";
+    token_name_map[TK_DIRECTIVE_CALLER_LOCATION]         = "TK_DIRECTIVE_CALLER_LOCATION";
 
     token_name_map[TK_ASSIGN]                            = "TK_ASSIGN";
     token_name_map[TK_PLUS]                              = "TK_PLUS";
@@ -461,7 +462,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         }
 
         CHECK_KEYWORD(g_interned_string_return, TK_RETURN)
-        else CHECK_KEYWORD(g_interned_string_var, TK_VAR)
         else CHECK_KEYWORD(g_interned_string_const, TK_CONST)
         else CHECK_KEYWORD(g_interned_string_proc, TK_PROC)
         else CHECK_KEYWORD(g_interned_string_operator, TK_OPERATOR)
@@ -746,6 +746,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else if (strcmp(identifier, "c_varargs") == 0) {
             out_token->kind = TK_DIRECTIVE_C_VARARGS;
             out_token->text = "#c_varargs";
+        }
+        else if (strcmp(identifier, "caller_location") == 0) {
+            out_token->kind = TK_DIRECTIVE_CALLER_LOCATION;
+            out_token->text = "#caller_location";
         }
         else {
             lexer->errored = true;

@@ -4,37 +4,37 @@
 #include "core:directx/d3d11.sif"
 
 struct Vertex {
-    var position: Vector3;
-    var uv:       Vector3;
-    var color:    Vector4;
+    position: Vector3;
+    uv:       Vector3;
+    color:    Vector4;
 }
 
 proc main() {
     //
-    var window = create_window("My Cool Window", 1920, 1080);
+    window := create_window("My Cool Window", 1920, 1080);
     init_directx(&window);
-    var vertex_shader_blob: ^ID3D10Blob;
-    var vertex_shader = compile_vertex_shader_from_file("basic_vertex.hlsl", &vertex_shader_blob);
-    var pixel_shader  = compile_pixel_shader_from_file("basic_pixel.hlsl");
+    vertex_shader_blob: ^ID3D10Blob;
+    vertex_shader := compile_vertex_shader_from_file("basic_vertex.hlsl", &vertex_shader_blob);
+    pixel_shader  := compile_pixel_shader_from_file("basic_pixel.hlsl");
 
     //
-    var vertex_fields = [3]D3D11_INPUT_ELEMENT_DESC.{
+    vertex_fields := [3]D3D11_INPUT_ELEMENT_DESC.{
         .{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
         .{"TEXCOORD",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
         .{"COLOR",       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
-    var vertex_format: ^ID3D11InputLayout;
-    var result = directx_device.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), &vertex_format);
+    vertex_format: ^ID3D11InputLayout;
+    result := directx_device.CreateInputLayout(directx_device, &vertex_fields[0], 3, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), &vertex_format);
     assert(result == S_OK);
     vertex_shader_blob.Release(vertex_shader_blob);
 
     //
-    var vertices = [3]Vertex.{
+    vertices := [3]Vertex.{
         .{.{-0.5, -0.5, 0}, .{0, 0, 0}, .{0.25, 0.5, 1, 1}},
         .{.{0.5, -0.5, 0},  .{0, 0, 0}, .{0.25, 0.5, 1, 1}},
         .{.{0, 0.5, 0},     .{0, 0, 0}, .{0.25, 0.5, 1, 1}}
     };
-    var vertex_buffer = create_vertex_buffer(&vertices[0], sizeof(typeof(vertices)));
+    vertex_buffer := create_vertex_buffer(&vertices[0], sizeof(typeof(vertices)));
 
     //
     while (!window.should_close) {
@@ -48,10 +48,10 @@ proc main() {
         directx_device_context.OMSetDepthStencilState(directx_device_context, depth_test_state, 0);
         directx_device_context.RSSetState(directx_device_context, no_cull_rasterizer);
         directx_device_context.PSSetSamplers(directx_device_context, 0, 1, &linear_wrap_sampler);
-        var blend_factor = [4]FLOAT.{1, 1, 1, 1};
+        blend_factor := [4]FLOAT.{1, 1, 1, 1};
         directx_device_context.OMSetBlendState(directx_device_context, alpha_blend_state, &blend_factor[0], 0xffffffff);
 
-        var viewport: D3D11_VIEWPORT;
+        viewport: D3D11_VIEWPORT;
         viewport.TopLeftX = 0;
         viewport.TopLeftY = 0;
         viewport.Width = cast(f32, window.width);
@@ -64,11 +64,11 @@ proc main() {
 
         directx_device_context.OMSetRenderTargets(directx_device_context, 1, &swap_chain_rtv, null);
 
-        var clear_color = [4]float.{1, 0.5, 0.2, 1};
+        clear_color := [4]float.{1, 0.5, 0.2, 1};
         directx_device_context.ClearRenderTargetView(directx_device_context, swap_chain_rtv, &clear_color[0]);
 
-        var stride: u32 = sizeof(Vertex);
-        var offset: u32 = 0;
+        stride: u32 = sizeof(Vertex);
+        offset: u32 = 0;
         bind_vertex_buffers(&vertex_buffer, 1, 0, &stride, &offset);
 
         directx_device_context.Draw(directx_device_context, 3, 0);
@@ -79,23 +79,23 @@ proc main() {
 
 
 
-var directx_device: ^ID3D11Device;
-var directx_device_context: ^ID3D11DeviceContext;
-var swap_chain_handle: ^IDXGISwapChain;
-var swap_chain_rtv: ^ID3D11RenderTargetView;
-var swap_chain_width: int;
-var swap_chain_height: int;
-var no_cull_rasterizer: ^ID3D11RasterizerState;
-var depth_test_state: ^ID3D11DepthStencilState;
-var linear_wrap_sampler: ^ID3D11SamplerState;
-var alpha_blend_state: ^ID3D11BlendState;
+directx_device: ^ID3D11Device;
+directx_device_context: ^ID3D11DeviceContext;
+swap_chain_handle: ^IDXGISwapChain;
+swap_chain_rtv: ^ID3D11RenderTargetView;
+swap_chain_width: int;
+swap_chain_height: int;
+no_cull_rasterizer: ^ID3D11RasterizerState;
+depth_test_state: ^ID3D11DepthStencilState;
+linear_wrap_sampler: ^ID3D11SamplerState;
+alpha_blend_state: ^ID3D11BlendState;
 
-const SWAP_CHAIN_BUFFER_COUNT = 2;
-const SWAP_CHAIN_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
+const SWAP_CHAIN_BUFFER_COUNT := 2;
+const SWAP_CHAIN_FORMAT := DXGI_FORMAT_R8G8B8A8_UNORM;
 
 proc init_directx(window: ^Window) {
     // Create swap chain
-    var swap_chain_desc: DXGI_SWAP_CHAIN_DESC;
+    swap_chain_desc: DXGI_SWAP_CHAIN_DESC;
     swap_chain_desc.BufferCount                        = SWAP_CHAIN_BUFFER_COUNT;
     swap_chain_desc.SwapEffect                         = DXGI_SWAP_EFFECT_FLIP_DISCARD; // todo(josh): use DXGI_SWAP_EFFECT_DISCARD (or something else) on non-Windows 10
     swap_chain_desc.BufferDesc.Width                   = cast(u32, window.width);
@@ -109,9 +109,9 @@ proc init_directx(window: ^Window) {
     swap_chain_desc.SampleDesc.Quality                 = 0;
     swap_chain_desc.Windowed                           = .TRUE;
 
-    var requested_feature_level: D3D_FEATURE_LEVEL = D3D_FEATURE_LEVEL_11_0;
-    var actual_feature_level: D3D_FEATURE_LEVEL;
-    var result = D3D11CreateDeviceAndSwapChain(
+    requested_feature_level: D3D_FEATURE_LEVEL = D3D_FEATURE_LEVEL_11_0;
+    actual_feature_level: D3D_FEATURE_LEVEL;
+    result := D3D11CreateDeviceAndSwapChain(
         null,
         D3D_DRIVER_TYPE_HARDWARE,
         null,
@@ -129,14 +129,14 @@ proc init_directx(window: ^Window) {
     create_swap_chain_render_target_view();
 
     // create rasterizer
-    var no_cull_rasterizer_desc: D3D11_RASTERIZER_DESC;
+    no_cull_rasterizer_desc: D3D11_RASTERIZER_DESC;
     no_cull_rasterizer_desc.FillMode = D3D11_FILL_SOLID;
     no_cull_rasterizer_desc.CullMode = D3D11_CULL_NONE;
     result = directx_device.CreateRasterizerState(directx_device, &no_cull_rasterizer_desc, &no_cull_rasterizer);
     assert(result == S_OK);
 
     // create depth stencil state
-    var depth_test_stencil_desc: D3D11_DEPTH_STENCIL_DESC;
+    depth_test_stencil_desc: D3D11_DEPTH_STENCIL_DESC;
     depth_test_stencil_desc.DepthEnable                  = .TRUE;
     depth_test_stencil_desc.DepthWriteMask               = D3D11_DEPTH_WRITE_MASK_ALL;
     depth_test_stencil_desc.DepthFunc                    = D3D11_COMPARISON_LESS_EQUAL;
@@ -155,7 +155,7 @@ proc init_directx(window: ^Window) {
     assert(result == S_OK);
 
     // create linear wrap sampler
-    var linear_wrap_sampler_desc: D3D11_SAMPLER_DESC;
+    linear_wrap_sampler_desc: D3D11_SAMPLER_DESC;
     linear_wrap_sampler_desc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     linear_wrap_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
     linear_wrap_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -167,7 +167,7 @@ proc init_directx(window: ^Window) {
 
 
     // create alpha blend state
-    var alpha_blend_desc: D3D11_BLEND_DESC;
+    alpha_blend_desc: D3D11_BLEND_DESC;
     alpha_blend_desc.RenderTarget[0].BlendEnable    = .TRUE;
     alpha_blend_desc.RenderTarget[0].SrcBlend       = D3D11_BLEND_SRC_ALPHA;
     alpha_blend_desc.RenderTarget[0].DestBlend      = D3D11_BLEND_INV_SRC_ALPHA;
@@ -182,12 +182,12 @@ proc init_directx(window: ^Window) {
 
 proc create_swap_chain_render_target_view() {
     // create render target view from swap chain
-    var render_target_view_desc: D3D11_RENDER_TARGET_VIEW_DESC;
+    render_target_view_desc: D3D11_RENDER_TARGET_VIEW_DESC;
     render_target_view_desc.Format = SWAP_CHAIN_FORMAT;
     render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-    var backing_texture: ^ID3D11Texture2D;
-    var texture_2d_uid = uid(ID3D11Texture2D.uuid);
-    var result = swap_chain_handle.GetBuffer(swap_chain_handle, 0, &texture_2d_uid, cast(^rawptr, &backing_texture));
+    backing_texture: ^ID3D11Texture2D;
+    texture_2d_uid := uid(ID3D11Texture2D.uuid);
+    result := swap_chain_handle.GetBuffer(swap_chain_handle, 0, &texture_2d_uid, cast(^rawptr, &backing_texture));
     assert(result == S_OK);
     result = directx_device.CreateRenderTargetView(directx_device, cast(^ID3D11Resource, backing_texture), &render_target_view_desc, &swap_chain_rtv);
     assert(result == S_OK);
@@ -199,7 +199,7 @@ proc ensure_swap_chain_size(width: int, height: int) {
     assert(height > 0);
     if (swap_chain_width != width || swap_chain_height != height) {
         swap_chain_rtv.Release(swap_chain_rtv);
-        var result = swap_chain_handle.ResizeBuffers(swap_chain_handle, SWAP_CHAIN_BUFFER_COUNT, cast(u32, width), cast(u32, height), SWAP_CHAIN_FORMAT, 0);
+        result := swap_chain_handle.ResizeBuffers(swap_chain_handle, SWAP_CHAIN_BUFFER_COUNT, cast(u32, width), cast(u32, height), SWAP_CHAIN_FORMAT, 0);
         assert(result == S_OK);
         swap_chain_width  = width;
         swap_chain_height = height;
@@ -208,20 +208,20 @@ proc ensure_swap_chain_size(width: int, height: int) {
 }
 
 proc create_vertex_buffer(data: rawptr, len: int) : ^ID3D11Buffer {
-    var buffer_desc: D3D11_BUFFER_DESC;
+    buffer_desc: D3D11_BUFFER_DESC;
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
     buffer_desc.ByteWidth = cast(u32, len);
     buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-    var buffer_data: D3D11_SUBRESOURCE_DATA;
+    buffer_data: D3D11_SUBRESOURCE_DATA;
     buffer_data.pSysMem = data;
 
-    var ptr_buffer: ^D3D11_SUBRESOURCE_DATA;
+    ptr_buffer: ^D3D11_SUBRESOURCE_DATA;
     if (data != null) {
         ptr_buffer = &buffer_data;
     }
-    var buffer: ^ID3D11Buffer;
-    var result = directx_device.CreateBuffer(directx_device, &buffer_desc, ptr_buffer, &buffer);
+    buffer: ^ID3D11Buffer;
+    result := directx_device.CreateBuffer(directx_device, &buffer_desc, ptr_buffer, &buffer);
     assert(result == S_OK);
     return buffer;
 }
@@ -231,23 +231,23 @@ proc bind_vertex_buffers(buffers: ^^ID3D11Buffer, num_buffers: int, start_slot: 
 
 
 
-const D3D_SHADER_COMPILE_FLAGS = D3DCOMPILE_DEBUG | D3DCOMPILE_WARNINGS_ARE_ERRORS;
+const D3D_SHADER_COMPILE_FLAGS := D3DCOMPILE_DEBUG | D3DCOMPILE_WARNINGS_ARE_ERRORS;
 
 proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) : ^ID3D11VertexShader { // todo(josh): use a temp allocator to go from char * to wchar_t *
-    var errors: ^ID3D10Blob;
-    var vertex_shader_blob: ^ID3D10Blob;
-    var success: bool;
-    var result_length_in_bytes: i32;
-    var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
+    errors: ^ID3D10Blob;
+    vertex_shader_blob: ^ID3D10Blob;
+    success: bool;
+    result_length_in_bytes: i32;
+    filename_wide := to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
     defer sif_free(filename_wide, default_allocator());
-    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "vs_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
+    result := D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "vs_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
     if (errors != null) {
-        var str = cast(cstring, errors.GetBufferPointer(errors));
+        str := cast(cstring, errors.GetBufferPointer(errors));
         print(string_ptr(str, cast(i64, strlen(str))));
         assert(false);
     }
     assert(result == S_OK);
-    var vertex_shader_handle: ^ID3D11VertexShader;
+    vertex_shader_handle: ^ID3D11VertexShader;
     result = directx_device.CreateVertexShader(directx_device, vertex_shader_blob.GetBufferPointer(vertex_shader_blob), vertex_shader_blob.GetBufferSize(vertex_shader_blob), null, &vertex_shader_handle);
     assert(result == S_OK);
     if (errors != null) errors.Release(errors);
@@ -256,20 +256,20 @@ proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) :
 }
 
 proc compile_pixel_shader_from_file(filename: string) : ^ID3D11PixelShader {
-    var errors: ^ID3D10Blob;
-    var pixel_shader_blob: ^ID3D10Blob;
-    var success: bool;
-    var result_length_in_bytes: i32;
-    var filename_wide = to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
+    errors: ^ID3D10Blob;
+    pixel_shader_blob: ^ID3D10Blob;
+    success: bool;
+    result_length_in_bytes: i32;
+    filename_wide := to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
     defer sif_free(filename_wide, default_allocator());
-    var result = D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "ps_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
+    result := D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "ps_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
     if (errors != null) {
-        var str = cast(cstring, errors.GetBufferPointer(errors));
+        str := cast(cstring, errors.GetBufferPointer(errors));
         print(string_ptr(str, cast(i64, strlen(str))));
         assert(false);
     }
     assert(result == S_OK);
-    var pixel_shader: ^ID3D11PixelShader;
+    pixel_shader: ^ID3D11PixelShader;
     result = directx_device.CreatePixelShader(directx_device, pixel_shader_blob.GetBufferPointer(pixel_shader_blob), pixel_shader_blob.GetBufferSize(pixel_shader_blob), null, &pixel_shader);
     assert(result == S_OK);
     if (errors != null) errors.Release(errors);
@@ -285,40 +285,40 @@ proc bind_shaders(vertex: ^ID3D11VertexShader, pixel: ^ID3D11PixelShader) {
 
 
 struct Window {
-    var should_close: bool;
+    should_close: bool;
 
-    var width: int;
-    var height: int;
-    var aspect: float;
-    var size: Vector2;
+    width: int;
+    height: int;
+    aspect: float;
+    size: Vector2;
 
-    var is_focused: bool;
+    is_focused: bool;
 
-    var handle: HWND;
-    var dc: HDC;
+    handle: HWND;
+    dc: HDC;
 }
 
 proc create_window(name: string, width: int, height: int) : Window {
-    const CLASS_NAME = "my window class";
+    const CLASS_NAME := "my window class";
 
-    var wc: WNDCLASSEXW;
+    wc: WNDCLASSEXW;
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_OWNDC;
     wc.hCursor = LoadCursorW(null, cast(^u16, IDC_ARROW));
     wc.lpfnWndProc = win32_proc;
     wc.hInstance = GetModuleHandleW(null);
-    var success: bool;
-    var string_length: i32;
+    success: bool;
+    string_length: i32;
     wc.lpszClassName = to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length);
-    var class = RegisterClassExW(&wc);
+    class := RegisterClassExW(&wc);
     assert(class != 0);
 
-    var window: Window;
+    window: Window;
     window.width = width;
     window.height = height;
     assert(g_currently_processing_window == null);
     g_currently_processing_window = &window;
-    var window_handle = CreateWindowExW(
+    window_handle := CreateWindowExW(
         0,
         to_wide_string(CLASS_NAME, default_allocator(), &success, &string_length),
         to_wide_string("My Cool Window", default_allocator(), &success, &string_length),
@@ -331,7 +331,7 @@ proc create_window(name: string, width: int, height: int) : Window {
     );
 
     assert(window_handle != null);
-    var dc = GetDC(window_handle);
+    dc := GetDC(window_handle);
     window.handle = window_handle;
     window.dc = dc;
     g_currently_processing_window = null;
@@ -342,14 +342,14 @@ proc create_window(name: string, width: int, height: int) : Window {
 proc update_window(window: ^Window) {
     g_currently_processing_window = window;
     defer g_currently_processing_window = null;
-    var msg: MSG;
+    msg: MSG;
     while (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) != 0) {
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
 }
 
-var g_currently_processing_window: ^Window;
+g_currently_processing_window: ^Window;
 
 proc win32_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) : LRESULT {
     if (msg == WM_ACTIVATEAPP) {
@@ -369,8 +369,8 @@ proc win32_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) : LRESULT {
     else if (msg == WM_SIZE) {
         assert(g_currently_processing_window != null);
 
-        var width  = LOWORDL(l);
-        var height = HIWORDL(l);
+        width  := LOWORDL(l);
+        height := HIWORDL(l);
 
         if (width  <= 0) width  = 1;
         if (height <= 0) height = 1;

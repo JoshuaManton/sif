@@ -1,10 +1,10 @@
 struct Timer {
-    var start_time: f64;
-    var frequency: f64;
+    start_time: f64;
+    frequency: f64;
 }
 
 proc init_timer(t: ^Timer) {
-    var result: i64;
+    result: i64;
     assert(QueryPerformanceFrequency(&result) != 0);
     assert(result != 0);
     t.frequency = cast(f64, result);
@@ -13,9 +13,9 @@ proc init_timer(t: ^Timer) {
 }
 
 proc get_time(t: Timer) : f64 {
-    var ticks: i64;
-    var ok = QueryPerformanceCounter(&ticks);
+    ticks: i64;
+    ok := QueryPerformanceCounter(&ticks);
     assert(ok != 0);
-    var result = (cast(f64, ticks) / t.frequency) - t.start_time;
+    result := (cast(f64, ticks) / t.frequency) - t.start_time;
     return result;
 }

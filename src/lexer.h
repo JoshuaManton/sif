@@ -17,7 +17,6 @@ enum Token_Kind {
     TK_STRING,
     TK_CHAR,
 
-    TK_VAR,
     TK_CONST,
     TK_PROC,
     TK_OPERATOR,
@@ -53,6 +52,7 @@ enum Token_Kind {
     TK_DIRECTIVE_FOREIGN_SYSTEM_IMPORT,
     TK_DIRECTIVE_PARTIAL,
     TK_DIRECTIVE_C_VARARGS,
+    TK_DIRECTIVE_CALLER_LOCATION,
 
     TK_ASSIGN,
 

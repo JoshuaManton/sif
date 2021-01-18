@@ -165,46 +165,52 @@ Ast_Expr_List *parse_expr_list(Lexer *lexer) {
 
 
 
-Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
+Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
         report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
-    bool is_using = false;
-    if (root_token.kind == TK_USING) {
-        eat_next_token(lexer);
-        is_using = true;
-    }
-    Token var_or_const_token;
-    if (!peek_next_token(lexer, &var_or_const_token)) {
-        report_error(lexer->location, "Unexpected end of file.");
-        return nullptr;
-    }
-    bool had_var_or_const = true;
-    if (var_or_const_token.kind != TK_VAR) {
-        if (var_or_const_token.kind != TK_CONST) {
-            if (require_var) {
-                report_error(var_or_const_token.location, "Unexpected token %s, expected `var` or `const`.", token_string(var_or_const_token.kind));
-                return nullptr;
-            }
-            else {
-                had_var_or_const = false;
-            }
+
+    if (already_parsed_name) {
+        if (already_parsed_name->expr_kind != EXPR_IDENTIFIER) {
+            report_error(already_parsed_name->location, "Expected a variable name.");
+            return nullptr;
         }
     }
-    if (had_var_or_const) {
-        eat_next_token(lexer);
+
+    bool is_using = false;
+    bool is_constant = false;
+    bool is_polymorphic_value = false;
+    Ast_Expr *name_expr = nullptr;
+    if (already_parsed_name) {
+        name_expr = already_parsed_name;
+    }
+    else {
+        if (root_token.kind == TK_USING) {
+            eat_next_token(lexer);
+            is_using = true;
+        }
+        Token maybe_const;
+        if (!peek_next_token(lexer, &maybe_const)) {
+            report_error(lexer->location, "Unexpected end of file.");
+            return nullptr;
+        }
+        if (maybe_const.kind == TK_CONST) {
+            is_constant = true;
+            eat_next_token(lexer);
+        }
+
+        int polymorph_count_before_name = lexer->num_polymorphic_variables_parsed;
+        name_expr = parse_expr(lexer);
+        if (name_expr == nullptr) {
+            return nullptr;
+        }
+        is_polymorphic_value = polymorph_count_before_name != lexer->num_polymorphic_variables_parsed;
     }
 
-    bool is_constant = var_or_const_token.kind == TK_CONST;
+    assert(name_expr != nullptr);
 
-    int polymorph_count_before_name = lexer->num_polymorphic_variables_parsed;
-    Ast_Expr *name_expr = parse_expr(lexer);
-    if (name_expr == nullptr) {
-        return nullptr;
-    }
-    bool is_polymorphic_value = polymorph_count_before_name != lexer->num_polymorphic_variables_parsed;
     char *var_name = nullptr;
     switch (name_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
@@ -218,27 +224,30 @@ Ast_Var *parse_var(Lexer *lexer, bool require_var = true) {
             break;
         }
         default: {
-            report_error(name_expr->location, "Expected a variable name."); // todo(josh): @ErrorMessage
+            report_error(name_expr->location, "Expected a variable name."); // todo(josh): better @ErrorMessage?
             return nullptr;
         }
     }
     assert(var_name != nullptr);
 
-    Token colon;
-    if (!peek_next_token(lexer, &colon)) {
+    EXPECT(lexer, TK_COLON, nullptr);
+
+    Token maybe_assign;
+    if (!peek_next_token(lexer, &maybe_assign)) {
         report_error(lexer->location, "Unexpected end of file.");
         return nullptr;
     }
-    int polymorph_count_before_type = lexer->num_polymorphic_variables_parsed;
+
+    bool is_polymorphic_type = false;
     Ast_Expr *type_expr = nullptr;
-    if (colon.kind == TK_COLON) {
-        eat_next_token(lexer);
+    if (maybe_assign.kind != TK_ASSIGN) {
+        int polymorph_count_before_type = lexer->num_polymorphic_variables_parsed;
         type_expr = parse_expr(lexer);
         if (!type_expr) {
             return nullptr;
         }
+        is_polymorphic_type = polymorph_count_before_type != lexer->num_polymorphic_variables_parsed;
     }
-    bool is_polymorphic_type = polymorph_count_before_type != lexer->num_polymorphic_variables_parsed;
 
     Ast_Expr *expr = nullptr;
     Token assign;
@@ -360,7 +369,7 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
                 EXPECT(lexer, TK_COMMA, nullptr);
             }
 
-            Ast_Var *var = parse_var(lexer, false);
+            Ast_Var *var = parse_var(lexer, nullptr);
             if (!var) {
                 return nullptr;
             }
@@ -521,7 +530,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                     EXPECT(lexer, TK_COMMA, nullptr);
                 }
 
-                Ast_Var *var = parse_var(lexer, false);
+                Ast_Var *var = parse_var(lexer, nullptr);
                 if (!var) {
                     return nullptr;
                 }
@@ -689,22 +698,8 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
     }
 
     switch (root_token.kind) {
-        case TK_VAR: {
-            Ast_Var *var = parse_var(lexer, true);
-            if (!var) {
-                return nullptr;
-            }
-            if (eat_semicolon) {
-                EXPECT_SEMICOLON(lexer, nullptr);
-            }
-            if (var->expr && lexer->currently_parsing_proc_body) {
-                basic_block_add_node(lexer, var);
-            }
-            return var;
-        }
-
         case TK_CONST: {
-            Ast_Var *var = parse_var(lexer, true);
+            Ast_Var *var = parse_var(lexer, nullptr);
             if (!var) {
                 return nullptr;
             }
@@ -717,21 +712,21 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         case TK_USING: {
             Token using_token;
             eat_next_token(lexer, &using_token);
-            Token maybe_var;
-            if (!peek_next_token(lexer, &maybe_var)) {
+
+            Ast_Expr *expr = parse_expr(lexer);
+            Token maybe_colon;
+            if (!peek_next_token(lexer, &maybe_colon)) {
                 report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
 
             Ast_Var *var = nullptr;
-            Ast_Expr *expr = nullptr;
-            if (maybe_var.kind == TK_VAR) {
-                var = parse_var(lexer, false);
+            if (maybe_colon.kind == TK_COLON) {
+                var = parse_var(lexer, expr);
                 var->is_using = true;
+                expr = nullptr;
             }
-            else {
-                expr = parse_expr(lexer);
-            }
+
             if (eat_semicolon) {
                 EXPECT_SEMICOLON(lexer, nullptr);
             }
@@ -742,6 +737,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 }
                 return var;
             }
+            assert(expr != nullptr);
             return SIF_NEW_CLONE(Ast_Using(expr, lexer->allocator, lexer->current_block, using_token.location), lexer->allocator);
         }
 
@@ -1136,16 +1132,13 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 return nullptr;
             }
 
-            if (!lexer->currently_parsing_proc_body) {
-                report_error(lhs_list->location, "Statement must be inside a procedure.");
-                return nullptr;
-            }
-
             Token next_token;
             if (!peek_next_token(lexer, &next_token)) {
                 report_error(lexer->location, "Unexpected end of file.");
                 return nullptr;
             }
+
+            Ast_Node *node = nullptr;
             switch (next_token.kind) {
                 case TK_SEMICOLON: {
                     if (eat_semicolon) {
@@ -1157,9 +1150,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     }
                     Ast_Statement_Expr *stmt = SIF_NEW_CLONE(Ast_Statement_Expr(lhs_list->exprs[0], lexer->allocator, lexer->current_block, lhs_list->exprs[0]->location), lexer->allocator);
                     basic_block_add_node(lexer, stmt);
-                    return stmt;
+                    node = stmt;
+                    break;
                 }
-
                 case TK_PLUS_ASSIGN:     // fallthrough
                 case TK_MINUS_ASSIGN:    // fallthrough
                 case TK_MULTIPLY_ASSIGN: // fallthrough
@@ -1178,13 +1171,27 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     }
                     Ast_Assign *assign = SIF_NEW_CLONE(Ast_Assign(op.kind, lhs_list, rhs_list, lexer->allocator, lexer->current_block, lhs_list->location), lexer->allocator);
                     basic_block_add_node(lexer, assign);
-                    return assign;
+                    node = assign;
+                    break;
                 }
+                case TK_COLON: {
+                    // todo(josh): handle 'x, y, z: float;'
+                    assert(lhs_list->exprs.count == 1);
+                    node = parse_var(lexer, lhs_list->exprs[0]);
+                    break;
+               }
                 default: {
                     unexpected_token(lexer, next_token);
                     return nullptr;
                 }
             }
+
+            assert(node != nullptr);
+            if (node->ast_kind != AST_VAR && !lexer->currently_parsing_proc_body) {
+                report_error(lhs_list->location, "Statement must be inside a procedure.");
+                return nullptr;
+            }
+            return node;
         }
     }
     assert(false && "unreachable");

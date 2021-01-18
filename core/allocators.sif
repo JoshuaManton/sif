@@ -10,7 +10,7 @@ proc buffer_allocate(buffer: []byte, offset: ^int, size: int, alignment: int, pa
 
     // todo(josh): The `align_forward()` call and the `start + size` below
     // that could overflow if the `size` or `align` parameters are super huge
-    var start = align_forward(offset^, alignment);
+    start := align_forward(offset^, alignment);
 
     // Don't allow allocations that would extend past the end of the buffer.
     if ((start + size) > buffer.count) {
@@ -21,7 +21,7 @@ proc buffer_allocate(buffer: []byte, offset: ^int, size: int, alignment: int, pa
     }
 
     offset^ = start + size;
-    var ptr = &buffer[start];
+    ptr = &buffer[start];
     zero_memory(slice_ptr(ptr, size));
     return ptr;
 }
@@ -29,9 +29,9 @@ proc buffer_allocate(buffer: []byte, offset: ^int, size: int, alignment: int, pa
 
 
 struct Arena_Allocator {
-    var memory: []byte;
-    var cur_offset: int;
-    var panic_on_oom: bool;
+    memory: []byte;
+    cur_offset: int;
+    panic_on_oom: bool;
 }
 
 proc init_arena(arena: ^Arena_Allocator, backing: []byte, panic_on_oom: bool) {
@@ -41,7 +41,7 @@ proc init_arena(arena: ^Arena_Allocator, backing: []byte, panic_on_oom: bool) {
 }
 
 proc arena_alloc(allocator: rawptr, size: int, align: int) : rawptr {
-    var arena = cast(^Arena_Allocator, allocator);
+    arena := cast(^Arena_Allocator, allocator);
     return buffer_allocate(arena.memory, &arena.cur_offset, size, align, arena.panic_on_oom);
 }
 
@@ -54,7 +54,7 @@ proc arena_reset(arena: ^Arena_Allocator) {
 }
 
 proc arena_to_allocator(arena: ^Arena_Allocator) : Allocator {
-    var a: Allocator;
+    a: Allocator;
     a.data = arena;
     a.alloc_proc = arena_alloc;
     a.free_proc = arena_free;
@@ -64,12 +64,12 @@ proc arena_to_allocator(arena: ^Arena_Allocator) : Allocator {
 
 
 struct Dynamic_Arena {
-    var arenas: Dynamic_Array!(Arena_Allocator);
-    var chunk_size: int;
-    var growth_rate: float;
-    var current_arena_index: int;
-    var backing_allocator: Allocator;
-    var leaked_allocations: Dynamic_Array!(rawptr); // if an allocation is bigger than the chunk size, we fall back to the backing allocator and save it here to be freed in destroy_dynamic_arena()
+    arenas: Dynamic_Array!(Arena_Allocator);
+    chunk_size: int;
+    growth_rate: float;
+    current_arena_index: int;
+    backing_allocator: Allocator;
+    leaked_allocations: Dynamic_Array!(rawptr); // if an allocation is bigger than the chunk size, we fall back to the backing allocator and save it here to be freed in destroy_dynamic_arena()
 }
 
 proc init_dynamic_arena(dynamic_arena: ^Dynamic_Arena, chunk_size: int, backing_allocator: Allocator) {
@@ -79,16 +79,16 @@ proc init_dynamic_arena(dynamic_arena: ^Dynamic_Arena, chunk_size: int, backing_
     dynamic_arena.chunk_size = chunk_size;
     dynamic_arena.growth_rate = 2;
 
-    var arena: Arena_Allocator;
+    arena: Arena_Allocator;
     init_arena(&arena, new_slice(byte, chunk_size, dynamic_arena.backing_allocator), false);
     append(&dynamic_arena.arenas, arena);
 }
 
 proc dynamic_arena_alloc(allocator: rawptr, size: int, align: int) : rawptr {
-    var dyn = cast(^Dynamic_Arena, allocator);
+    dyn := cast(^Dynamic_Arena, allocator);
     assert(dyn != null);
-    var current_arena = &dyn.arenas[dyn.current_arena_index];
-    var ptr = arena_alloc(current_arena, size, align);
+    current_arena := &dyn.arenas[dyn.current_arena_index];
+    ptr := arena_alloc(current_arena, size, align);
 
     if (ptr == null) {
         // we've reached the end of the arena
@@ -122,14 +122,14 @@ proc dynamic_arena_free(allocator: rawptr, ptr: rawptr) {
 }
 
 proc dynamic_arena_reset(dynamic_arena: ^Dynamic_Arena) {
-    for (var idx = 0; idx < dynamic_arena.arenas.count; idx += 1) {
+    for (idx := 0; idx < dynamic_arena.arenas.count; idx += 1) {
         arena_reset(&dynamic_arena.arenas[idx]);
     }
     dynamic_arena.current_arena_index = 0;
 }
 
 proc dynamic_arena_to_allocator(dynamic_arena: ^Dynamic_Arena) : Allocator {
-    var a: Allocator;
+    a: Allocator;
     a.data = dynamic_arena;
     a.alloc_proc = dynamic_arena_alloc;
     a.free_proc = dynamic_arena_free;
@@ -137,11 +137,11 @@ proc dynamic_arena_to_allocator(dynamic_arena: ^Dynamic_Arena) : Allocator {
 }
 
 proc destroy_dynamic_arena(dynamic_arena: Dynamic_Arena) {
-    for (var idx = 0; idx < dynamic_arena.arenas.count; idx += 1) {
+    for (idx := 0; idx < dynamic_arena.arenas.count; idx += 1) {
         delete_slice(dynamic_arena.arenas[idx].memory, dynamic_arena.backing_allocator);
     }
     destroy_dynamic_array(dynamic_arena.arenas);
-    for (var idx = 0; idx < dynamic_arena.leaked_allocations.count; idx += 1) {
+    for (idx := 0; idx < dynamic_arena.leaked_allocations.count; idx += 1) {
         sif_free(dynamic_arena.leaked_allocations[idx], dynamic_arena.backing_allocator);
     }
     destroy_dynamic_array(dynamic_arena.leaked_allocations);

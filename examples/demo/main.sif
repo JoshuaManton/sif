@@ -33,15 +33,15 @@ proc basic_stuff() {
     print("\n\n---- basic_stuff ----\n");
 
     // declaration syntax:
-    // var <variable name>: <type> = <expression>;
-    var a: int = 123;
+    // <variable name>: <type> = <expression>;
+    a: int = 123;
     print("%\n", a);
 
     // type can be omitted if it can be inferred from the right-hand-side expression
-    var b1 = 456;
+    b1 := 456;
     assert(typeof(b1) == int);
     print("%\n", b1);
-    var b2 = 456.0;
+    b2 := 456.0;
     assert(typeof(b2) == float);
     print("%\n", b2);
 
@@ -59,25 +59,25 @@ proc basic_stuff() {
     }
 
     // since factorial() returns an int, the type can be inferred here too
-    var fact = factorial(5);
+    fact := factorial(5);
     print("%\n", fact);
     assert(fact == 120);
     assert(typeof(fact) == int);
 
     // number literals are "untyped" and can coerce when needed
-    var c: int = 12;
-    var d: float = 12;
+    c: int = 12;
+    d: float = 12;
 
     // even when nested under binary expressions
-    var e: float = 11 / 2;
+    e: float = 11 / 2;
     assert(e == 5.5);
 
     // without type inference the "untyped" numbers default to int, as above
-    var f = 11 / 2;
+    f := 11 / 2;
     assert(f == 5);
 
     // if a `.` is present, float will be assumed, as above
-    var g = 11.0 / 2;
+    g := 11.0 / 2;
     assert(g == 5.5);
 }
 
@@ -85,7 +85,7 @@ proc basic_stuff() {
 
 proc arrays() {
     print("\n\n---- arrays ----\n");
-    var my_array: [4]int;
+    my_array: [4]int;
     my_array[0] = 1;
     my_array[1] = 2;
     my_array[2] = 3;
@@ -118,10 +118,10 @@ proc arrays() {
 proc slices() {
     print("\n\n---- slices ----\n");
 
-    var array: [4]int;
+    array: [4]int;
     array[2] = 124;
     print("%\n", array[2]);
-    var slice = slice_ptr(&array[0], array.count);
+    slice := slice_ptr(&array[0], array.count);
     assert(slice[2] == 124);
     slice[2] = 421;
     print("%\n", slice[2]);
@@ -136,21 +136,21 @@ proc strings() {
     // strings in sif are length-delimited rather than null-terminated.
     // the string type is implemented as:
     // struct String {
-    //     var data: rawptr;
-    //     var count: int;
+    //     data: rawptr;
+    //     count: int;
     // }
     assert(sizeof(string) == 16);
 
     // since strings are length-delimited this means you can trivially
     // take a substring without allocating and copying
-    var a = "Hello, World!";
-    var hello: string;
+    a := "Hello, World!";
+    hello: string;
     hello.data = &a[0];
     hello.count = 5;
     assert(hello == "Hello");
     print("%\n", hello);
 
-    var world: string;
+    world: string;
     world.data = &a[7];
     world.count = 5;
     assert(world == "World");
@@ -165,12 +165,12 @@ proc structs() {
     print("\n\n---- structs ----\n");
 
     struct Foo {
-        var a: int;
-        var str: string;
-        var t: bool;
+        a: int;
+        str: string;
+        t: bool;
     }
 
-    var f: Foo;
+    f: Foo;
     assert(f.a == 0); // everything is zero initialized by default
     f.a = 123;
     f.str = "foozle";
@@ -206,12 +206,12 @@ proc enums() {
         BAZ;
     }
 
-    var f = My_Enum.FOO;
+    f := My_Enum.FOO;
     print("%\n", f);
 
     // If the enum type can be inferred from context, you don't have to
     // specify it on the right-hand-side.
-    var b: My_Enum = .BAR; // implicit enum selection
+    b: My_Enum = .BAR; // implicit enum selection
     print("%\n", b);
 
     // Implicit enum selection also works in binary expressions
@@ -245,14 +245,14 @@ proc order_independence() {
     // declaration order does not matter. the compiler figures
     // out what depends on what for you. delete all your .h files :)
 
-    var loopy: Loopy;
+    loopy: Loopy;
     assert(sizeof(typeof(loopy.a)) == 8);
     assert(sizeof(typeof(nesty)) == 64);
 }
-var nesty: [sizeof(typeof(ptr_to_loopy^))]int;
-var ptr_to_loopy: ^Loopy;
+nesty: [sizeof(typeof(ptr_to_loopy^))]int;
+ptr_to_loopy: ^Loopy;
 struct Loopy {
-    var a: [sizeof(typeof(ptr_to_loopy))]bool;
+    a: [sizeof(typeof(ptr_to_loopy))]bool;
 }
 
 
@@ -262,7 +262,7 @@ proc varargs() {
 
     proc procedure_with_varargs(numbers: ..int) {
         print("varargs count: %\n", numbers.count);
-        for (var i = 0; i < numbers.count; i += 1) {
+        for (i := 0; i < numbers.count; i += 1) {
             print("  %\n", numbers[i]);
         }
     }
@@ -277,13 +277,13 @@ proc varargs() {
 proc references() {
     print("\n\n---- references ----\n");
 
-    var my_int = 123;
+    my_int := 123;
     print("%\n", my_int);
     assert(my_int == 123);
 
     // reference implicitly take/dereference pointers depending on context
     // and are (currently, will likely change) denoted by a `>` before the type
-    var int_reference: >int = my_int; // implicit `&my_int` after `=`
+    int_reference: >int = my_int; // implicit `&my_int` after `=`
     int_reference = 789;              // implicit `int_reference^` before `=`
     assert(int_reference == 789);
     assert(my_int == 789);
@@ -333,14 +333,14 @@ proc runtime_type_information() {
     // Again, you can view all of the Type_Info structs in core/runtime.sif.
 
     // Type_Info_Integer just has a bool indicating whether it's signed or unsigned
-    var int_type_info: ^Type_Info = get_type_info(int);
+    int_type_info: ^Type_Info = get_type_info(int);
     assert(int_type_info.kind == Type_Info_Kind.INTEGER);
-    var int_type_info_kind = cast(^Type_Info_Integer, int_type_info);
+    int_type_info_kind := cast(^Type_Info_Integer, int_type_info);
     assert(int_type_info_kind.is_signed == true);
 
-    var uint_type_info: ^Type_Info = get_type_info(uint);
+    uint_type_info: ^Type_Info = get_type_info(uint);
     assert(uint_type_info.kind == Type_Info_Kind.INTEGER);
-    var uint_type_info_kind = cast(^Type_Info_Integer, uint_type_info);
+    uint_type_info_kind := cast(^Type_Info_Integer, uint_type_info);
     assert(uint_type_info_kind.is_signed == false);
 
 
@@ -349,20 +349,20 @@ proc runtime_type_information() {
     // and their types, and their byte offsets
 
     struct My_Cool_Struct {
-        var foo: int;
-        var bar: string;
-        var nested: Nested_Struct;
+        foo: int;
+        bar: string;
+        nested: Nested_Struct;
     }
     struct Nested_Struct {
-        var more_things: [4]Vector3;
+        more_things: [4]Vector3;
     }
 
-    var my_cool_struct_ti = get_type_info(My_Cool_Struct);
+    my_cool_struct_ti := get_type_info(My_Cool_Struct);
     assert(my_cool_struct_ti.kind == Type_Info_Kind.STRUCT);
-    var my_cool_struct_ti_kind = cast(^Type_Info_Struct, my_cool_struct_ti);
+    my_cool_struct_ti_kind := cast(^Type_Info_Struct, my_cool_struct_ti);
     print("My_Cool_Struct\n");
-    for (var i = 0; i < my_cool_struct_ti_kind.fields.count; i += 1) {
-        var field = my_cool_struct_ti_kind.fields[i];
+    for (i := 0; i < my_cool_struct_ti_kind.fields.count; i += 1) {
+        field := my_cool_struct_ti_kind.fields[i];
         print("  field: %, type: %, offset: %\n",
             field.name, field.type.printable_name, field.offset);
     }
@@ -409,13 +409,13 @@ proc using_statement() {
     // that is more flexible than conventional inheritance.
 
     struct My_Struct_With_Using {
-        using var other: My_Other_Struct;
+        using other: My_Other_Struct;
     }
     struct My_Other_Struct {
-        var some_field: int;
+        some_field: int;
     }
 
-    var my_struct: My_Struct_With_Using;
+    my_struct: My_Struct_With_Using;
     my_struct.some_field = 321; // no need to write 'my_struct.other.some_field'
     print("%\n", my_struct.some_field);
     assert(my_struct.some_field == my_struct.other.some_field);
@@ -435,7 +435,7 @@ proc defer_statement() {
 
     // 'defer' executes a statement at the end of the current block
     {
-        var a = 123;
+        a := 123;
         {
             defer a = 321;
             assert(a == 123);
@@ -446,7 +446,7 @@ proc defer_statement() {
     // a good use-case for defer is memory management, keeping the
     // freeing of resources nearby the acquision site
     {
-        var some_allocated_memory = new_slice(int, 16, default_allocator());
+        some_allocated_memory := new_slice(int, 16, default_allocator());
         defer delete_slice(some_allocated_memory, default_allocator());
 
         // ... do a bunch of work with some_allocated_memory
@@ -463,8 +463,8 @@ proc defer_statement() {
     // control flow statements like 'break', 'continue', and 'return' also
     // invoke defers
     {
-        var a = 123;
-        for (var i = 0; i < 10; i += 1) {
+        a := 123;
+        for (i := 0; i < 10; i += 1) {
             if (i == 7) {
                 defer a = 321;
                 break;
@@ -478,9 +478,9 @@ proc defer_statement() {
 
 
 struct Vector3 {
-    var x: float;
-    var y: float;
-    var z: float;
+    x: float;
+    y: float;
+    z: float;
     operator +(a: Vector3, b: Vector3) : Vector3 {
         return Vector3.{a.x + b.x, a.y + b.y, a.z + b.z};
     }
@@ -501,10 +501,10 @@ struct Vector3 {
 proc operator_overloading() {
     print("\n\n---- operator_overloading ----\n");
 
-    var v1 = Vector3.{1, 2, 3};
-    var v2 = Vector3.{1, 4, 9};
-    var v3 = v1 + v2;
-    var v4 = v3 * 5;
+    v1 := Vector3.{1, 2, 3};
+    v2 := Vector3.{1, 4, 9};
+    v3 := v1 + v2;
+    v4 := v3 * 5;
     print("%\n", v4.x);
     print("%\n", v4.y);
     print("%\n", v4.z);
@@ -545,8 +545,8 @@ proc procedural_polymorphism() {
     print_float(type_poly(4.0));
     assert(type_poly(4.0) == 16);
 
-    var a: int = 5;
-    var f: float = 6;
+    a: int = 5;
+    f: float = 6;
     print("%\n", type_poly(a));
     print("%\n", type_poly(f));
     assert(type_poly(a) == 25);
@@ -576,7 +576,7 @@ proc structural_polymorphism() {
     // for structs, unlike procedures, these values must all be constant
     // values in order to maintain compile-time typesafety
     struct Custom_Array_Type!($N: int, $T: typeid) {
-        var array: [N]T;
+        array: [N]T;
         operator [](my_array: >Custom_Array_Type!(N, T), index: int) : >T {
             // implicitly takes a pointer to `my_array.array[index]` since this
             // procedure returns a reference
@@ -584,7 +584,7 @@ proc structural_polymorphism() {
         }
     }
 
-    var array_of_ints: Custom_Array_Type!(8, int);
+    array_of_ints: Custom_Array_Type!(8, int);
     array_of_ints[4] = 124; // calls [] operator overload
     print("%\n", array_of_ints[4]);
     assert(array_of_ints[4] == 124);
@@ -597,19 +597,19 @@ proc any_type() {
 
     // an `any` is defined as the following:
     // struct Any {
-    //     var data: rawptr;
-    //     var type: typeid;
+    //     data: rawptr;
+    //     type: typeid;
     // }
     // any type will implicitly convert to an `any` by taking a pointer to
     // the data and setting the type field to the appropriate typeid
-    var some_int = 123;
-    var a: any = some_int;
+    some_int := 123;
+    a: any = some_int;
     assert(a.data == &some_int);
     assert(a.type == int);
 
     // you can access the data pointed to by an `any` by casting the data
     // pointer and dereferencing
-    var b: int = cast(^int, a.data)^;
+    b: int = cast(^int, a.data)^;
     print("%\n", b);
 
     // the most notable use of `any` is for a print routine. here is an
@@ -617,8 +617,8 @@ proc any_type() {
     print_things(true, 456, 78.9, "hello");
 
     proc print_things(args: ..any) {
-        for (var i = 0; i < args.count; i += 1) {
-            var arg = args[i];
+        for (i := 0; i < args.count; i += 1) {
+            arg := args[i];
             if (arg.type == int) {
                 print("%\n", cast(^int, arg.data)^);
             }
@@ -643,10 +643,10 @@ proc any_type() {
 proc function_pointers() {
     print("\n\n---- any ----\n");
 
-    var my_print1 = print; // uses type inference
+    my_print1 := print; // uses type inference
     my_print1("This is a function pointer! %\n", "cool");
 
-    var my_print2: proc(fmt: string, args: ..any) = print; // without type inference
+    my_print2: proc(fmt: string, args: ..any) = print; // without type inference
     my_print2("This is also % a function % pointer\n", 45.6, true);
 }
 
@@ -657,9 +657,9 @@ proc function_pointers() {
 // structural and procedural polymorphism and operator overloading
 
 struct Dynamic_Array!($T: typeid) {
-    var elements: []T;
-    var count: int;
-    var allocator: Allocator;
+    elements: []T;
+    count: int;
+    allocator: Allocator;
     operator [](dyn: >Dynamic_Array!(T), index: int) : >T {
         return dyn.elements[index];
     }
@@ -668,8 +668,8 @@ struct Dynamic_Array!($T: typeid) {
 proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
     assert(dyn.allocator.alloc_proc != null);
     if (dyn.count == dyn.elements.count) {
-        var old_data = dyn.elements.data;
-        var new_cap = 8 + dyn.elements.count * 2;
+        old_data := dyn.elements.data;
+        new_cap := 8 + dyn.elements.count * 2;
         dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
         dyn.elements.count = new_cap;
         if (old_data != null) {
@@ -679,14 +679,14 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
     }
     assert(dyn.count < dyn.elements.count);
     dyn.elements[dyn.count] = value;
-    var ptr = &dyn.elements[dyn.count];
+    ptr := &dyn.elements[dyn.count];
     dyn.count += 1;
     return ptr;
 }
 
 proc pop(dyn: ^Dynamic_Array!($T)) : T {
     assert(dyn.count > 0);
-    var value = dyn[dyn.count-1];
+    value := dyn[dyn.count-1];
     dyn.count -= 1;
     return value;
 }
@@ -704,7 +704,7 @@ proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
 proc dynamic_arrays() {
     print("\n\n---- dynamic_arrays ----\n");
 
-    var dyn: Dynamic_Array!(Vector3);
+    dyn: Dynamic_Array!(Vector3);
     dyn.allocator = default_allocator();
     append(&dyn, Vector3.{1, 2, 3});
     append(&dyn, Vector3.{1, 4, 9});
@@ -712,7 +712,7 @@ proc dynamic_arrays() {
     assert(dyn[1].x == 1);
     assert(dyn[1].y == 4);
     assert(dyn[1].z == 9);
-    for (var i = 0; i < dyn.count; i += 1) {
+    for (i := 0; i < dyn.count; i += 1) {
         print("index %\n", i);
         print("  %\n", dyn[i].x);
         print("  %\n", dyn[i].y);

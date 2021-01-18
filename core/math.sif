@@ -8,11 +8,11 @@ const F64_MAX:      f64 = 0x7FEFFFFFFFFFFFFF;
 const F64_INFINITY: f64 = 0x7FF0000000000000;
 const F64_NAN:      f64 = 0x7FF7FFFFFFFFFFFF;
 
-const TAU         = 6.28318530717958647692528676655900576;
-const PI          = 3.14159265358979323846264338327950288;
-const E           = 2.71828182845904523536;
-const RAD_PER_DEG = (TAU/360.0);
-const DEG_PER_RAD = (360.0/TAU);
+const TAU         := 6.28318530717958647692528676655900576;
+const PI          := 3.14159265358979323846264338327950288;
+const E           := 2.71828182845904523536;
+const RAD_PER_DEG := (TAU/360.0);
+const DEG_PER_RAD := (360.0/TAU);
 
 proc to_radians    (degrees: f32) : f32 { return degrees * RAD_PER_DEG; }
 proc to_radians_f64(degrees: f64) : f64 { return degrees * RAD_PER_DEG; }
@@ -25,8 +25,8 @@ proc lerp(a: float, b: float, t: float) : float { return a + ((b - a) * t); }
 
 
 struct Vector2 {
-    var x: float;
-    var y: float;
+    x: float;
+    y: float;
     operator +(a: Vector2, b: Vector2) : Vector2 {
         return Vector2.{a.x + b.x, a.y + b.y};
     }
@@ -48,7 +48,7 @@ struct Vector2 {
     }
 
     proc negate(a: Vector2) : Vector2 { // @UnaryOperatorOverloading
-        var result: Vector2;
+        result: Vector2;
         result.x = -a.x;
         result.y = -a.y;
         return result;
@@ -76,9 +76,9 @@ struct Vector2 {
 }
 
 struct Vector3 {
-    var x: float;
-    var y: float;
-    var z: float;
+    x: float;
+    y: float;
+    z: float;
     operator +(a: Vector3, b: Vector3) : Vector3 {
         return Vector3.{a.x + b.x, a.y + b.y, a.z + b.z};
     }
@@ -104,7 +104,7 @@ struct Vector3 {
     }
 
     proc negate(a: Vector3) : Vector3 { // @UnaryOperatorOverloading
-        var result: Vector3;
+        result: Vector3;
         result.x = -a.x;
         result.y = -a.y;
         result.z = -a.z;
@@ -124,7 +124,7 @@ struct Vector3 {
         return v / length(v);
     }
     proc cross(a: Vector3, b: Vector3) : Vector3 {
-        var result: Vector3;
+        result: Vector3;
         result.x = a.y*b.z - b.y*a.z;
         result.y = a.z*b.x - b.z*a.x;
         result.z = a.x*b.y - b.x*a.y;
@@ -133,11 +133,11 @@ struct Vector3 {
 
     proc arbitrary_perpendicular(a: Vector3) : Vector3 {
         assert(length(a) == 1);
-        var b = Vector3.{1, 0, 0};
+        b := Vector3.{1, 0, 0};
         if (fabsf(dot(a, b)) == 1) {
             b = Vector3.{0, 1, 0};
         }
-        var d = cross(a, b);
+        d := cross(a, b);
         return d;
     }
 
@@ -147,10 +147,10 @@ struct Vector3 {
 }
 
 struct Vector4 {
-    var x: float;
-    var y: float;
-    var z: float;
-    var w: float;
+    x: float;
+    y: float;
+    z: float;
+    w: float;
 
     operator +(a: Vector4, b: Vector4) : Vector4 {
         return Vector4.{a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
@@ -173,7 +173,7 @@ struct Vector4 {
     }
 
     proc negate(a: Vector4) : Vector4 { // @UnaryOperatorOverloading
-        var result: Vector4;
+        result: Vector4;
         result.x = -a.x;
         result.y = -a.y;
         result.z = -a.z;
@@ -202,17 +202,17 @@ struct Vector4 {
 
 
 struct Quaternion {
-    var x: float;
-    var y: float;
-    var z: float;
-    var w: float;
+    x: float;
+    y: float;
+    z: float;
+    w: float;
 
     operator [](q: >Quaternion, idx: int) : >float {
         return slice_ptr(&q.x, 4)[idx]; // @PointerArithmetic
     }
 
     proc identity() : Quaternion {
-        var result: Quaternion;
+        result: Quaternion;
         result.x = 0;
         result.y = 0;
         result.z = 0;
@@ -221,7 +221,7 @@ struct Quaternion {
     }
 
     proc negate(a: Quaternion) : Quaternion { // @UnaryOperatorOverloading
-        var result: Quaternion;
+        result: Quaternion;
         result.x = -a.x;
         result.y = -a.y;
         result.z = -a.z;
@@ -231,12 +231,12 @@ struct Quaternion {
 
     proc look_at(eye: Vector3, center: Vector3, up: Vector3) : Quaternion {
         // todo(josh): figure out why we have to swap center & eye, and why we need the inverse()
-        var m = Matrix4.look_at(center, eye, up);
+        m := Matrix4.look_at(center, eye, up);
         return normalize(inverse(matrix4_to_quaternion(m)));
     }
 
     operator +(a: Quaternion, b: Quaternion) : Quaternion {
-        var result: Quaternion;
+        result: Quaternion;
         result.x = a.x+b.x;
         result.y = a.y+b.y;
         result.z = a.z+b.z;
@@ -245,7 +245,7 @@ struct Quaternion {
     }
 
     operator -(a: Quaternion, b: Quaternion) : Quaternion {
-        var result: Quaternion;
+        result: Quaternion;
         result.x = a.x-b.x;
         result.y = a.y-b.y;
         result.z = a.z-b.z;
@@ -254,7 +254,7 @@ struct Quaternion {
     }
 
     operator *(a: Quaternion, b: Quaternion) : Quaternion {
-        var result: Quaternion;
+        result: Quaternion;
         result.x = ( a.x*b.w) + (a.y*b.z) - (a.z*b.y) + (a.w*b.x);
         result.y = (-a.x*b.z) + (a.y*b.w) + (a.z*b.x) + (a.w*b.y);
         result.z = ( a.x*b.y) - (a.y*b.x) + (a.z*b.w) + (a.w*b.z);
@@ -263,13 +263,13 @@ struct Quaternion {
     }
 
     operator *(q: Quaternion, v: Vector3) : Vector3 {
-        var qxyz = Vector3.{q.x, q.y, q.z};
-        var t = Vector3.cross(qxyz * 2.0, v);
+        qxyz := Vector3.{q.x, q.y, q.z};
+        t := Vector3.cross(qxyz * 2.0, v);
         return v + t*q.w + Vector3.cross(qxyz, t);
     }
 
     operator *(a: Quaternion, f: float) : Quaternion {
-        var result: Quaternion;
+        result: Quaternion;
         result.x = a.x*f;
         result.y = a.y*f;
         result.z = a.z*f;
@@ -278,7 +278,7 @@ struct Quaternion {
     }
 
     operator /(a: Quaternion, f: float) : Quaternion {
-        var result: Quaternion;
+        result: Quaternion;
         result.x = a.x/f;
         result.y = a.y/f;
         result.z = a.z/f;
@@ -303,14 +303,14 @@ struct Quaternion {
     }
 
     proc inverse(q: Quaternion) : Quaternion {
-        var conjugate: Quaternion;
+        conjugate: Quaternion;
         conjugate.x = -q.x;
         conjugate.y = -q.y;
         conjugate.z = -q.z;
         conjugate.w = q.w;
 
-        var len_sqr = dot(q, q);
-        var result: Quaternion;
+        len_sqr := dot(q, q);
+        result: Quaternion;
         result = conjugate / len_sqr;
         return result;
     }
@@ -325,7 +325,7 @@ struct Quaternion {
     }
 
     proc angle_between_quaternions(a: Quaternion, b: Quaternion) : float {
-        var rads = 2 * cast(float, acos(cast(f64, fabsf(dot(a, b)))));
+        rads := 2 * cast(float, acos(cast(f64, fabsf(dot(a, b)))));
         return rads;
     }
 
@@ -338,12 +338,12 @@ struct Quaternion {
 };
 
 proc axis_angle(axis: Vector3, angle_radians: float) : Quaternion {
-    var norm = Vector3.normalize(axis);
-    var s = cast(float, sin(cast(f64, angle_radians / 2.0)));
+    norm := Vector3.normalize(axis);
+    s := cast(float, sin(cast(f64, angle_radians / 2.0)));
 
-    var vec = norm * s;
+    vec := norm * s;
 
-    var result: Quaternion;
+    result: Quaternion;
     result.x = vec.x;
     result.y = vec.y;
     result.z = vec.z;
@@ -352,17 +352,17 @@ proc axis_angle(axis: Vector3, angle_radians: float) : Quaternion {
 }
 
 proc slerp(a: Quaternion, b: Quaternion, t: float) : Quaternion {
-    var cos_theta = Quaternion.dot(a, b);
-    var angle = cast(float, cos(cast(f64, cos_theta)));
+    cos_theta := Quaternion.dot(a, b);
+    angle := cast(float, cos(cast(f64, cos_theta)));
 
-    var s1 = cast(float, sin(cast(f64, (1.0 - t) * angle)));
-    var s2 = cast(float, sin(cast(f64, t * angle)));
-    var is = 1.0 / cast(float, sin(cast(f64, angle)));
+    s1 := cast(float, sin(cast(f64, (1.0 - t) * angle)));
+    s2 := cast(float, sin(cast(f64, t * angle)));
+    is := 1.0 / cast(float, sin(cast(f64, angle)));
 
-    var left  = a * s1;
-    var right = b * s2;
+    left := a * s1;
+    right := b * s2;
 
-    var result = left + right;
+    result := left + right;
     result = result * is;
     return result;
 }
@@ -370,14 +370,14 @@ proc slerp(a: Quaternion, b: Quaternion, t: float) : Quaternion {
 
 
 struct Matrix3 {
-    var elements: [3][3]float;
+    elements: [3][3]float;
 
     operator [](m: >Matrix3, idx: int) : >[3]float {
         return m.elements[idx];
     }
 
     proc identity() : Matrix3 {
-        var m: Matrix3;
+        m: Matrix3;
         m.elements[0][0] = 1.0;
         m.elements[1][1] = 1.0;
         m.elements[2][2] = 1.0;
@@ -385,11 +385,11 @@ struct Matrix3 {
     }
 
     operator *(a: Matrix3, b: Matrix3) : Matrix3 {
-        var result: Matrix3;
-        for (var column = 0; column < 3; column += 1) {
-            for (var row = 0; row < 3; row += 1) {
-                var sum: float = 0;
-                for (var v = 0; v < 3; v += 1) {
+        result: Matrix3;
+        for (column := 0; column < 3; column += 1) {
+            for (row := 0; row < 3; row += 1) {
+                sum: float = 0;
+                for (v := 0; v < 3; v += 1) {
                     sum += a[v][row] * b[column][v];
                 }
                 result[column][row] = sum;
@@ -399,10 +399,10 @@ struct Matrix3 {
     }
 
     operator *(a: Matrix3, v: Vector3) : Vector3 {
-        var result: Vector3;
-        for (var row = 0; row < 3; row += 1) {
-            var sum: float = 0;
-            for (var column = 0; column < 3; column += 1) {
+        result: Vector3;
+        for (row := 0; row < 3; row += 1) {
+            sum: float = 0;
+            for (column := 0; column < 3; column += 1) {
                 sum += a[column][row] * v[column];
             }
             result[row] = sum;
@@ -411,9 +411,9 @@ struct Matrix3 {
     }
 
     operator *(a: Matrix3, f: float) : Matrix3 {
-        var result: Matrix3;
-        for (var column = 0; column < 3; column += 1) {
-            for (var row = 0; row < 3; row += 1) {
+        result: Matrix3;
+        for (column := 0; column < 3; column += 1) {
+            for (row := 0; row < 3; row += 1) {
                 result[column][row] = a[column][row] * f;
             }
         }
@@ -421,9 +421,9 @@ struct Matrix3 {
     }
 
     proc determinant(m: Matrix3) : float {
-        var a = +m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]);
-        var b = -m[1][0] * (m[0][1] * m[2][2] - m[2][1] * m[0][2]);
-        var c = +m[2][0] * (m[0][1] * m[1][2] - m[1][1] * m[0][2]);
+        a := +m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]);
+        b := -m[1][0] * (m[0][1] * m[2][2] - m[2][1] * m[0][2]);
+        c := +m[2][0] * (m[0][1] * m[1][2] - m[1][1] * m[0][2]);
         return a + b + c;
     }
 }
@@ -431,14 +431,14 @@ struct Matrix3 {
 
 
 struct Matrix4 {
-    var elements: [4][4]float;
+    elements: [4][4]float;
 
     operator [](m: >Matrix4, idx: int) : >[4]float {
         return m.elements[idx];
     }
 
     proc identity() : Matrix4 {
-        var m: Matrix4;
+        m: Matrix4;
         m.elements[0][0] = 1.0;
         m.elements[1][1] = 1.0;
         m.elements[2][2] = 1.0;
@@ -447,9 +447,9 @@ struct Matrix4 {
     }
 
     proc transpose(a: Matrix4) : Matrix4 {
-        var result: Matrix4;
-        for (var j = 0; j < 4; j += 1) {
-            for (var i = 0; i < 4; i += 1) {
+        result: Matrix4;
+        for (j := 0; j < 4; j += 1) {
+            for (i := 0; i < 4; i += 1) {
                 result[j][i] = a[i][j];
             }
         }
@@ -457,13 +457,13 @@ struct Matrix4 {
     }
 
     proc look_at(eye: Vector3, center: Vector3, up: Vector3) : Matrix4 {
-        var f = Vector3.normalize(center - eye);
-        var s = Vector3.normalize(Vector3.cross(f, up));
-        var u = Vector3.cross(s, f);
+        f := Vector3.normalize(center - eye);
+        s := Vector3.normalize(Vector3.cross(f, up));
+        u := Vector3.cross(s, f);
 
-        var fe = Vector3.dot(f, eye);
+        fe := Vector3.dot(f, eye);
 
-        var columns = [4]Vector4.{
+        columns := [4]Vector4.{
             Vector4.{+s.x, +u.x, -f.x, 0},
             Vector4.{+s.y, +u.y, -f.y, 0},
             Vector4.{+s.z, +u.z, -f.z, 0},
@@ -475,7 +475,7 @@ struct Matrix4 {
         //     columns[3][2] = -columns[3][2];
         // }
 
-        var result = transmute(Matrix4, columns);
+        result := transmute(Matrix4, columns);
         return result;
     }
 
@@ -484,17 +484,17 @@ struct Matrix4 {
     }
 
     proc minor(m: Matrix4, c: int, r: int) : float {
-        var cut_down: Matrix3;
-        for (var i = 0; i < 3; i += 1) {
-            var col: int;
+        cut_down: Matrix3;
+        for (i := 0; i < 3; i += 1) {
+            col: int;
             if (i < c) {
                 col = i;
             }
             else {
                 col = i+1;
             }
-            for (var j = 0; j < 3; j += 1) {
-                var row: int;
+            for (j := 0; j < 3; j += 1) {
+                row: int;
                 if (j < r) {
                     row = j;
                 }
@@ -508,7 +508,7 @@ struct Matrix4 {
     }
 
     proc cofactor(m: Matrix4, c: int, r: int) : float {
-        var minor_val = minor(m, c, r);
+        minor_val := minor(m, c, r);
         if (((c + r) % 2) == 0) {
             return minor_val;
         }
@@ -518,9 +518,9 @@ struct Matrix4 {
     }
 
     proc adjoint(m: Matrix4) : Matrix4 {
-        var adj: Matrix4;
-        for (var i = 0; i < 4; i += 1) {
-            for (var j = 0; j < 4; j += 1) {
+        adj: Matrix4;
+        for (i := 0; i < 4; i += 1) {
+            for (j := 0; j < 4; j += 1) {
                 adj[i][j] = cofactor(m, i, j);
             }
         }
@@ -528,37 +528,37 @@ struct Matrix4 {
     }
 
     proc determinant(m: Matrix4) : float {
-        var adj = adjoint(m);
-        var determinant: float;
-        for (var i = 0; i < 4; i += 1) {
+        adj := adjoint(m);
+        determinant: float;
+        for (i := 0; i < 4; i += 1) {
             determinant += m[i][0] * adj[i][0];
         }
         return determinant;
     }
 
     proc inverse_transpose(m: Matrix4) : Matrix4 {
-        var adj = adjoint(m);
-        var determinant: float = 0;
-        for (var i = 0; i < 4; i += 1) {
+        adj := adjoint(m);
+        determinant: float = 0;
+        for (i := 0; i < 4; i += 1) {
             determinant += m[i][0] * adj[i][0];
         }
-        var inv_determinant: float = 1.0 / determinant;
-        var inverse_transpose: Matrix4;
-        for (var i = 0; i < 4; i += 1) {
-            for (var j = 0; j < 4; j += 1) {
+        inv_determinant: float = 1.0 / determinant;
+        inverse_transpose: Matrix4;
+        for (i := 0; i < 4; i += 1) {
+            for (j := 0; j < 4; j += 1) {
                 inverse_transpose[i][j] = adj[i][j] * inv_determinant;
             }
         }
         return inverse_transpose;
     }
 
-    operator *(var a: Matrix4, var b: Matrix4) : Matrix4 {
-        var result: Matrix4;
-        for (var column = 0; column < 4; column += 1) {
-            for (var row = 0; row < 4; row += 1) {
-                var sum: float = 0;
-                for (var vector = 0; vector < 4; vector += 1) {
-                    sum += a[vector][row] * b[column][vector];
+    operator *(a: Matrix4, b: Matrix4) : Matrix4 {
+        result: Matrix4;
+        for (column := 0; column < 4; column += 1) {
+            for (row := 0; row < 4; row += 1) {
+                sum: float = 0;
+                for (v := 0; v < 4; v += 1) {
+                    sum += a[v][row] * b[column][v];
                 }
                 result[column][row] = sum;
             }
@@ -567,10 +567,10 @@ struct Matrix4 {
     }
 
     operator *(a: Matrix4, v: Vector4) : Vector4 {
-        var result: Vector4;
-        for (var row = 0; row < 4; row += 1) {
-            var sum: float = 0;
-            for (var column = 0; column < 4; column += 1) {
+        result: Vector4;
+        for (row := 0; row < 4; row += 1) {
+            sum: float = 0;
+            for (column := 0; column < 4; column += 1) {
                 sum += a[column][row] * v[column];
             }
             result[row] = sum;
@@ -579,9 +579,9 @@ struct Matrix4 {
     }
 
     operator *(a: Matrix4, f: float) : Matrix4 {
-        var result: Matrix4;
-        for (var column = 0; column < 4; column += 1) {
-            for (var row = 0; row < 4; row += 1) {
+        result: Matrix4;
+        for (column := 0; column < 4; column += 1) {
+            for (row := 0; row < 4; row += 1) {
                 result[column][row] = a[column][row] * f;
             }
         }
@@ -590,7 +590,7 @@ struct Matrix4 {
 }
 
 proc construct_translation_matrix(v: Vector3) : Matrix4 {
-    var result = Matrix4.identity();
+    result := Matrix4.identity();
     result[3][0] = v[0];
     result[3][1] = v[1];
     result[3][2] = v[2];
@@ -598,13 +598,13 @@ proc construct_translation_matrix(v: Vector3) : Matrix4 {
 }
 
 proc construct_rotation_matrix(angle_radians: float, v: Vector3) : Matrix4 {
-    var c = cast(float, cos(cast(f64, angle_radians)));
-    var s = cast(float, sin(cast(f64, angle_radians)));
+    c := cast(float, cos(cast(f64, angle_radians)));
+    s := cast(float, sin(cast(f64, angle_radians)));
 
-    var a = Vector3.normalize(v);
-    var t = a * (1.0-c);
+    a := Vector3.normalize(v);
+    t := a * (1.0-c);
 
-    var result = Matrix4.identity();
+    result := Matrix4.identity();
 
     result[0][0] = c + t[0]*a[0];
     result[0][1] = 0 + t[0]*a[1] + s*a[2];
@@ -625,7 +625,7 @@ proc construct_rotation_matrix(angle_radians: float, v: Vector3) : Matrix4 {
 }
 
 proc construct_scale_matrix(v: Vector3) : Matrix4 {
-    var result: Matrix4;
+    result: Matrix4;
     result[0][0] = v[0];
     result[1][1] = v[1];
     result[2][2] = v[2];
@@ -635,8 +635,8 @@ proc construct_scale_matrix(v: Vector3) : Matrix4 {
 
 // note(josh): left-handed
 proc construct_perspective_matrix(fovy_radians: float, aspect: float, near: float, far: float) : Matrix4 {
-    var tan_half_fovy = cast(float, tan(cast(f64, 0.5 * fovy_radians)));
-    var result: Matrix4;
+    tan_half_fovy := cast(float, tan(cast(f64, 0.5 * fovy_radians)));
+    result: Matrix4;
     result[0][0] = 1.0 / (aspect*tan_half_fovy);
     result[1][1] = 1.0 / (tan_half_fovy);
     result[2][2] = +(far + near) / (far - near);
@@ -652,7 +652,7 @@ proc construct_perspective_matrix(fovy_radians: float, aspect: float, near: floa
 }
 
 proc construct_orthographic_matrix(left: float, right: float, bottom: float, top: float, near: float, far: float) : Matrix4 {
-    var result: Matrix4;
+    result: Matrix4;
     result[0][0] = 2.0 / (right - left);
     result[1][1] = 2.0 / (top - bottom);
     result[2][2] = 2.0 / (far - near);
@@ -672,19 +672,19 @@ proc construct_orthographic_matrix(left: float, right: float, bottom: float, top
 
 
 proc quaternion_to_matrix4(q: Quaternion) : Matrix4 {
-    var norm = Quaternion.normalize(q);
+    norm := Quaternion.normalize(q);
 
-    var xx = norm.x * norm.x;
-    var yy = norm.y * norm.y;
-    var zz = norm.z * norm.z;
-    var xy = norm.x * norm.y;
-    var xz = norm.x * norm.z;
-    var yz = norm.y * norm.z;
-    var wx = norm.w * norm.x;
-    var wy = norm.w * norm.y;
-    var wz = norm.w * norm.z;
+    xx := norm.x * norm.x;
+    yy := norm.y * norm.y;
+    zz := norm.z * norm.z;
+    xy := norm.x * norm.y;
+    xz := norm.x * norm.z;
+    yz := norm.y * norm.z;
+    wx := norm.w * norm.x;
+    wy := norm.w * norm.y;
+    wz := norm.w * norm.z;
 
-    var result: Matrix4;
+    result: Matrix4;
 
     result[0][0] = 1.0 - 2.0 * (yy + zz);
     result[0][1] = 2.0 * (xy + wz);
@@ -710,8 +710,8 @@ proc quaternion_to_matrix4(q: Quaternion) : Matrix4 {
 }
 
 proc matrix4_to_quaternion(m: Matrix4) : Quaternion {
-    var t: float;
-    var result: Quaternion;
+    t: float;
+    result: Quaternion;
     if (m[2][2] < 0.0) {
         if (m[0][0] > m[1][1]) {
             t = 1 + m[0][0] - m[1][1] - m[2][2];
@@ -757,24 +757,24 @@ proc matrix4_to_quaternion(m: Matrix4) : Quaternion {
 }
 
 proc construct_view_matrix(position: Vector3, orientation: Quaternion) : Matrix4 {
-    var translation = construct_translation_matrix(Vector3.negate(position));
-    var rotation = quaternion_to_matrix4(Quaternion.inverse(orientation));
-    var result = rotation * translation;
+    translation := construct_translation_matrix(Vector3.negate(position));
+    rotation := quaternion_to_matrix4(Quaternion.inverse(orientation));
+    result := rotation * translation;
     return result;
 }
 
 proc construct_model_matrix(position: Vector3, scale: Vector3, orientation: Quaternion) : Matrix4 {
-    var t = construct_translation_matrix(position);
-    var s = construct_scale_matrix(scale);
-    var r = quaternion_to_matrix4(orientation);
-    var model_matrix = (t * r) * s;
+    t := construct_translation_matrix(position);
+    s := construct_scale_matrix(scale);
+    r := quaternion_to_matrix4(orientation);
+    model_matrix := (t * r) * s;
     return model_matrix;
 }
 
 proc construct_trs_matrix(t: Vector3, r: Quaternion, s: Vector3) : Matrix4 {
-    var translation = construct_translation_matrix(t);
-    var rotation = quaternion_to_matrix4(r);
-    var scale = construct_scale_matrix(s);
+    translation := construct_translation_matrix(t);
+    rotation := quaternion_to_matrix4(r);
+    scale := construct_scale_matrix(s);
     return translation * (rotation * scale); // todo(josh): are these parens right?
 }
 

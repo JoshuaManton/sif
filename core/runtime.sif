@@ -11,32 +11,32 @@ proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreig
 
 
 union Union_All_Type_Infos {
-    var type_info:              Type_Info;
-    var type_info_integer:      Type_Info_Integer;
-    var type_info_float:        Type_Info_Float;
-    var type_info_bool:         Type_Info_Bool;
-    var type_info_string:       Type_Info_String;
-    var type_info_struct_field: Type_Info_Struct_Field;
-    var type_info_struct:       Type_Info_Struct;
-    var type_info_union:        Type_Info_Union;
-    var type_info_enum_field:   Type_Info_Enum_Field;
-    var type_info_enum:         Type_Info_Enum;
-    var type_info_pointer:      Type_Info_Pointer;
-    var type_info_slice:        Type_Info_Slice;
-    var type_info_array:        Type_Info_Array;
-    var type_info_reference:    Type_Info_Reference;
-    var type_info_procedure:    Type_Info_Procedure;
-    var type_info_typeid:       Type_Info_Typeid;
+    type_info:              Type_Info;
+    type_info_integer:      Type_Info_Integer;
+    type_info_float:        Type_Info_Float;
+    type_info_bool:         Type_Info_Bool;
+    type_info_string:       Type_Info_String;
+    type_info_struct_field: Type_Info_Struct_Field;
+    type_info_struct:       Type_Info_Struct;
+    type_info_union:        Type_Info_Union;
+    type_info_enum_field:   Type_Info_Enum_Field;
+    type_info_enum:         Type_Info_Enum;
+    type_info_pointer:      Type_Info_Pointer;
+    type_info_slice:        Type_Info_Slice;
+    type_info_array:        Type_Info_Array;
+    type_info_reference:    Type_Info_Reference;
+    type_info_procedure:    Type_Info_Procedure;
+    type_info_typeid:       Type_Info_Typeid;
 } @sif_runtime
 
 struct Source_Code_Location {
-    var filepath: string;
-    var line: int;
-    var character: int;
+    filepath: string;
+    line: int;
+    character: int;
 } @sif_runtime
 
 proc make_source_code_location(filepath: string, line: int, character: int) : Source_Code_Location {
-    var loc: Source_Code_Location;
+    loc: Source_Code_Location;
     loc.filepath = filepath;
     loc.line = line;
     loc.character = character;
@@ -72,7 +72,7 @@ proc zero_memory(memory: []byte) {
 
 
 proc ptr_offset(ptr: ^$T, offset_in_bytes: int) : ^T {
-    var ptr_int = transmute(u64, ptr);
+    ptr_int := transmute(u64, ptr);
     ptr_int += cast(u64, offset_in_bytes);
     return transmute(^T, ptr_int);
 } @sif_runtime
@@ -80,14 +80,14 @@ proc ptr_offset(ptr: ^$T, offset_in_bytes: int) : ^T {
 
 
 proc slice_ptr(ptr: ^$T, count: int) : []T {
-    var slice: []T;
+    slice: []T;
     slice.data = ptr;
     slice.count = count;
     return slice;
 } @sif_runtime
 
 proc string_ptr(ptr: rawptr, count: int) : string {
-    var str: string;
+    str: string;
     str.data = cast(^u8, ptr);
     str.count = count;
     return str;
@@ -96,7 +96,7 @@ proc string_ptr(ptr: rawptr, count: int) : string {
 
 
 proc to_slice(arr: ^[$N]$E) : []E {
-    var slice: []E;
+    slice: []E;
     slice.data = &arr^[0];
     slice.count = N;
     return slice;
@@ -105,21 +105,21 @@ proc to_slice(arr: ^[$N]$E) : []E {
 
 
 struct Raw_Slice {
-    var data: rawptr;
-    var count: int;
+    data: rawptr;
+    count: int;
 } @sif_runtime
 
 struct Raw_String {
-    var data: rawptr;
-    var count: int;
+    data: rawptr;
+    count: int;
 } @sif_runtime
 
 
 
 struct Allocator {
-    var data: rawptr;
-    var alloc_proc: proc(allocator: rawptr, size: int, align: int) : rawptr;
-    var free_proc:  proc(allocator: rawptr, ptr: rawptr);
+    data: rawptr;
+    alloc_proc: proc(allocator: rawptr, size: int, align: int) : rawptr;
+    free_proc:  proc(allocator: rawptr, ptr: rawptr);
 } @sif_runtime
 
 proc sif_alloc(size: int, align: int, allocator: Allocator) : rawptr {
@@ -141,7 +141,7 @@ proc default_allocator_free(allocator: rawptr, ptr: rawptr) {
     free(ptr);
 } @sif_runtime
 proc default_allocator() : Allocator {
-    var a: Allocator;
+    a: Allocator;
     a.alloc_proc = default_allocator_alloc;
     a.free_proc = default_allocator_free;
     return a;
@@ -149,11 +149,11 @@ proc default_allocator() : Allocator {
 
 
 
-proc string_eq(var a: string, var b: string) : bool {
+proc string_eq(a: string, b: string) : bool {
     if (a.count != b.count) {
         return false;
     }
-    for (var i = 0; i < a.count; i += 1) {
+    for (i := 0; i < a.count; i += 1) {
         if (a[i] != b[i]) {
             return false;
         }
@@ -163,10 +163,10 @@ proc string_eq(var a: string, var b: string) : bool {
 
 
 
-var _global_type_table: []Union_All_Type_Infos @sif_runtime;
+_global_type_table: []Union_All_Type_Infos @sif_runtime;
 
 proc get_type_info(type: typeid) : ^Type_Info {
-    var idx = transmute(u64, type);
+    idx := transmute(u64, type);
     assert(transmute(u64, type) > 0);
     assert(transmute(u64, type) < cast(u64, _global_type_table.count));
     return cast(^Type_Info, &_global_type_table[cast(int, idx)]);
@@ -190,89 +190,89 @@ enum Type_Info_Kind {
 } @sif_runtime
 
 struct Type_Info {
-    var printable_name: string;
-    var kind: Type_Info_Kind;
-    var id: typeid;
-    var size: int;
-    var align: int;
+    printable_name: string;
+    kind: Type_Info_Kind;
+    id: typeid;
+    size: int;
+    align: int;
 } @sif_runtime
 
 struct Type_Info_Integer {
-    var base: Type_Info;
-    var is_signed: bool;
+    base: Type_Info;
+    is_signed: bool;
 } @sif_runtime
 
 struct Type_Info_Float {
-    var base: Type_Info;
+    base: Type_Info;
 } @sif_runtime
 
 struct Type_Info_Bool {
-    var base: Type_Info;
+    base: Type_Info;
 } @sif_runtime
 
 struct Type_Info_String {
-    var base: Type_Info;
-    var is_cstring: bool;
+    base: Type_Info;
+    is_cstring: bool;
 } @sif_runtime
 
 struct Type_Info_Struct_Field {
-    var name: string;
-    var type: ^Type_Info;
-    var offset: int;
-    var notes: []string;
+    name: string;
+    type: ^Type_Info;
+    offset: int;
+    notes: []string;
 } @sif_runtime
 struct Type_Info_Struct {
-    var base: Type_Info;
-    var name: string;
-    var fields: []Type_Info_Struct_Field;
-    var notes: []string;
+    base: Type_Info;
+    name: string;
+    fields: []Type_Info_Struct_Field;
+    notes: []string;
 } @sif_runtime
 
 struct Type_Info_Union {
-    var base: Type_Info;
-    var name: string;
-    var fields: []Type_Info_Struct_Field;
-    var notes: []string;
+    base: Type_Info;
+    name: string;
+    fields: []Type_Info_Struct_Field;
+    notes: []string;
 } @sif_runtime
 
 struct Type_Info_Enum_Field {
-    var name: string;
-    var value: int;
+    name: string;
+    value: int;
 } @sif_runtime
 struct Type_Info_Enum {
-    var base: Type_Info;
-    var base_type: ^Type_Info;
-    var fields: []Type_Info_Enum_Field;
-    var notes: []string;
+    base: Type_Info;
+    base_type: ^Type_Info;
+    fields: []Type_Info_Enum_Field;
+    notes: []string;
 } @sif_runtime
 
 struct Type_Info_Pointer {
-    var base: Type_Info;
-    var pointer_to: ^Type_Info;
+    base: Type_Info;
+    pointer_to: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Slice {
-    var base: Type_Info;
-    var slice_of: ^Type_Info;
+    base: Type_Info;
+    slice_of: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Array {
-    var base: Type_Info;
-    var array_of: ^Type_Info;
-    var count: int;
+    base: Type_Info;
+    array_of: ^Type_Info;
+    count: int;
 } @sif_runtime
 
 struct Type_Info_Reference {
-    var base: Type_Info;
-    var reference_to: ^Type_Info;
+    base: Type_Info;
+    reference_to: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Procedure {
-    var base: Type_Info;
-    var parameter_types: []^Type_Info;
-    var return_type: ^Type_Info;
+    base: Type_Info;
+    parameter_types: []^Type_Info;
+    return_type: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Typeid {
-    var base: Type_Info;
+    base: Type_Info;
 } @sif_runtime

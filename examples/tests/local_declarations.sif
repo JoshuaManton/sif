@@ -28,11 +28,11 @@ struct Baz {
             assert(Foo_Enum != Foo.Foo_Enum);
 
             struct Zxc {
-                var a: int;
+                a: int;
             }
 
             proc asd() : int {
-                var z: Zxc;
+                z: Zxc;
                 z.a = 456;
                 return z.a;
             }
@@ -44,11 +44,11 @@ struct Baz {
 
 proc qwe1() : int {
     struct Zxc {
-        var a: int;
+        a: int;
     }
 
     proc asd() : int {
-        var z: Zxc;
+        z: Zxc;
         z.a = 123;
         return z.a;
     }
@@ -58,11 +58,11 @@ proc qwe1() : int {
 
 proc qwe2() : int {
     struct Zxc {
-        var a: int;
+        a: int;
     }
 
     proc asd() : int {
-        var z: Zxc;
+        z: Zxc;
         z.a = 321;
         return z.a;
     }

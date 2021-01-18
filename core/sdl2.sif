@@ -1056,257 +1056,257 @@ enum Scancode i32 {
     Num_Scancodes = 512;
 }
 
-const SDLK_UNKNOWN            = 0;
+const SDLK_UNKNOWN            := 0;
 
-const SDLK_RETURN             = '\r';
-// const SDLK_ESCAPE             = '\033'; // todo(josh)
-const SDLK_BACKSPACE          = '\b';
-const SDLK_TAB                = '\t';
-const SDLK_SPACE              = ' ';
-const SDLK_EXCLAIM            = '!';
-const SDLK_QUOTEDBL           = '"';
-const SDLK_HASH               = '#';
-const SDLK_PERCENT            = '%';
-const SDLK_DOLLAR             = '$';
-const SDLK_AMPERSAND          = '&';
-const SDLK_QUOTE              = '\'';
-const SDLK_LEFTPAREN          = '(';
-const SDLK_RIGHTPAREN         = ')';
-const SDLK_ASTERISK           = '*';
-const SDLK_PLUS               = '+';
-const SDLK_COMMA              = ',';
-const SDLK_MINUS              = '-';
-const SDLK_PERIOD             = '.';
-const SDLK_SLASH              = '/';
-const SDLK_0                  = '0';
-const SDLK_1                  = '1';
-const SDLK_2                  = '2';
-const SDLK_3                  = '3';
-const SDLK_4                  = '4';
-const SDLK_5                  = '5';
-const SDLK_6                  = '6';
-const SDLK_7                  = '7';
-const SDLK_8                  = '8';
-const SDLK_9                  = '9';
-const SDLK_COLON              = ':';
-const SDLK_SEMICOLON          = ';';
-const SDLK_LESS               = '<';
-const SDLK_EQUALS             = '=';
-const SDLK_GREATER            = '>';
-const SDLK_QUESTION           = '?';
-const SDLK_AT                 = '@';
+const SDLK_RETURN             := '\r';
+// const SDLK_ESCAPE             := '\033'; // todo(josh)
+const SDLK_BACKSPACE          := '\b';
+const SDLK_TAB                := '\t';
+const SDLK_SPACE              := ' ';
+const SDLK_EXCLAIM            := '!';
+const SDLK_QUOTEDBL           := '"';
+const SDLK_HASH               := '#';
+const SDLK_PERCENT            := '%';
+const SDLK_DOLLAR             := '$';
+const SDLK_AMPERSAND          := '&';
+const SDLK_QUOTE              := '\'';
+const SDLK_LEFTPAREN          := '(';
+const SDLK_RIGHTPAREN         := ')';
+const SDLK_ASTERISK           := '*';
+const SDLK_PLUS               := '+';
+const SDLK_COMMA              := ',';
+const SDLK_MINUS              := '-';
+const SDLK_PERIOD             := '.';
+const SDLK_SLASH              := '/';
+const SDLK_0                  := '0';
+const SDLK_1                  := '1';
+const SDLK_2                  := '2';
+const SDLK_3                  := '3';
+const SDLK_4                  := '4';
+const SDLK_5                  := '5';
+const SDLK_6                  := '6';
+const SDLK_7                  := '7';
+const SDLK_8                  := '8';
+const SDLK_9                  := '9';
+const SDLK_COLON              := ':';
+const SDLK_SEMICOLON          := ';';
+const SDLK_LESS               := '<';
+const SDLK_EQUALS             := '=';
+const SDLK_GREATER            := '>';
+const SDLK_QUESTION           := '?';
+const SDLK_AT                 := '@';
 
-const SDLK_LEFTBRACKET        = '[';
-const SDLK_BACKSLASH          = '\\';
-const SDLK_RIGHTBRACKET       = ']';
-const SDLK_CARET              = '^';
-const SDLK_UNDERSCORE         = '_';
-const SDLK_BACKQUOTE          = '`';
-const SDLK_a                  = 'a';
-const SDLK_b                  = 'b';
-const SDLK_c                  = 'c';
-const SDLK_d                  = 'd';
-const SDLK_e                  = 'e';
-const SDLK_f                  = 'f';
-const SDLK_g                  = 'g';
-const SDLK_h                  = 'h';
-const SDLK_i                  = 'i';
-const SDLK_j                  = 'j';
-const SDLK_k                  = 'k';
-const SDLK_l                  = 'l';
-const SDLK_m                  = 'm';
-const SDLK_n                  = 'n';
-const SDLK_o                  = 'o';
-const SDLK_p                  = 'p';
-const SDLK_q                  = 'q';
-const SDLK_r                  = 'r';
-const SDLK_s                  = 's';
-const SDLK_t                  = 't';
-const SDLK_u                  = 'u';
-const SDLK_v                  = 'v';
-const SDLK_w                  = 'w';
-const SDLK_x                  = 'x';
-const SDLK_y                  = 'y';
-const SDLK_z                  = 'z';
+const SDLK_LEFTBRACKET        := '[';
+const SDLK_BACKSLASH          := '\\';
+const SDLK_RIGHTBRACKET       := ']';
+const SDLK_CARET              := '^';
+const SDLK_UNDERSCORE         := '_';
+const SDLK_BACKQUOTE          := '`';
+const SDLK_a                  := 'a';
+const SDLK_b                  := 'b';
+const SDLK_c                  := 'c';
+const SDLK_d                  := 'd';
+const SDLK_e                  := 'e';
+const SDLK_f                  := 'f';
+const SDLK_g                  := 'g';
+const SDLK_h                  := 'h';
+const SDLK_i                  := 'i';
+const SDLK_j                  := 'j';
+const SDLK_k                  := 'k';
+const SDLK_l                  := 'l';
+const SDLK_m                  := 'm';
+const SDLK_n                  := 'n';
+const SDLK_o                  := 'o';
+const SDLK_p                  := 'p';
+const SDLK_q                  := 'q';
+const SDLK_r                  := 'r';
+const SDLK_s                  := 's';
+const SDLK_t                  := 't';
+const SDLK_u                  := 'u';
+const SDLK_v                  := 'v';
+const SDLK_w                  := 'w';
+const SDLK_x                  := 'x';
+const SDLK_y                  := 'y';
+const SDLK_z                  := 'z';
 
-const SDLK_CAPSLOCK           = Scancode.Caps_Lock | SDLK_SCANCODE_MASK;
+const SDLK_CAPSLOCK           := Scancode.Caps_Lock | SDLK_SCANCODE_MASK;
 
-const SDLK_F1                 = Scancode.F1 | SDLK_SCANCODE_MASK;
-const SDLK_F2                 = Scancode.F2 | SDLK_SCANCODE_MASK;
-const SDLK_F3                 = Scancode.F3 | SDLK_SCANCODE_MASK;
-const SDLK_F4                 = Scancode.F4 | SDLK_SCANCODE_MASK;
-const SDLK_F5                 = Scancode.F5 | SDLK_SCANCODE_MASK;
-const SDLK_F6                 = Scancode.F6 | SDLK_SCANCODE_MASK;
-const SDLK_F7                 = Scancode.F7 | SDLK_SCANCODE_MASK;
-const SDLK_F8                 = Scancode.F8 | SDLK_SCANCODE_MASK;
-const SDLK_F9                 = Scancode.F9 | SDLK_SCANCODE_MASK;
-const SDLK_F10                = Scancode.F10 | SDLK_SCANCODE_MASK;
-const SDLK_F11                = Scancode.F11 | SDLK_SCANCODE_MASK;
-const SDLK_F12                = Scancode.F12 | SDLK_SCANCODE_MASK;
+const SDLK_F1                 := Scancode.F1 | SDLK_SCANCODE_MASK;
+const SDLK_F2                 := Scancode.F2 | SDLK_SCANCODE_MASK;
+const SDLK_F3                 := Scancode.F3 | SDLK_SCANCODE_MASK;
+const SDLK_F4                 := Scancode.F4 | SDLK_SCANCODE_MASK;
+const SDLK_F5                 := Scancode.F5 | SDLK_SCANCODE_MASK;
+const SDLK_F6                 := Scancode.F6 | SDLK_SCANCODE_MASK;
+const SDLK_F7                 := Scancode.F7 | SDLK_SCANCODE_MASK;
+const SDLK_F8                 := Scancode.F8 | SDLK_SCANCODE_MASK;
+const SDLK_F9                 := Scancode.F9 | SDLK_SCANCODE_MASK;
+const SDLK_F10                := Scancode.F10 | SDLK_SCANCODE_MASK;
+const SDLK_F11                := Scancode.F11 | SDLK_SCANCODE_MASK;
+const SDLK_F12                := Scancode.F12 | SDLK_SCANCODE_MASK;
 
-const SDLK_PRINTSCREEN        = Scancode.Print_Screen | SDLK_SCANCODE_MASK;
-const SDLK_SCROLLLOCK         = Scancode.Scroll_Lock | SDLK_SCANCODE_MASK;
-const SDLK_PAUSE              = Scancode.Pause | SDLK_SCANCODE_MASK;
-const SDLK_INSERT             = Scancode.Insert | SDLK_SCANCODE_MASK;
-const SDLK_HOME               = Scancode.Home | SDLK_SCANCODE_MASK;
-const SDLK_PAGEUP             = Scancode.Page_Up | SDLK_SCANCODE_MASK;
-// const SDLK_DELETE             = '\177';  // todo(josh)
-const SDLK_END                = Scancode.End | SDLK_SCANCODE_MASK;
-const SDLK_PAGEDOWN           = Scancode.Page_Down | SDLK_SCANCODE_MASK;
-const SDLK_RIGHT              = Scancode.Right | SDLK_SCANCODE_MASK;
-const SDLK_LEFT               = Scancode.Left | SDLK_SCANCODE_MASK;
-const SDLK_DOWN               = Scancode.Down | SDLK_SCANCODE_MASK;
-const SDLK_UP                 = Scancode.Up | SDLK_SCANCODE_MASK;
+const SDLK_PRINTSCREEN        := Scancode.Print_Screen | SDLK_SCANCODE_MASK;
+const SDLK_SCROLLLOCK         := Scancode.Scroll_Lock | SDLK_SCANCODE_MASK;
+const SDLK_PAUSE              := Scancode.Pause | SDLK_SCANCODE_MASK;
+const SDLK_INSERT             := Scancode.Insert | SDLK_SCANCODE_MASK;
+const SDLK_HOME               := Scancode.Home | SDLK_SCANCODE_MASK;
+const SDLK_PAGEUP             := Scancode.Page_Up | SDLK_SCANCODE_MASK;
+// const SDLK_DELETE             := '\177';  // todo(josh)
+const SDLK_END                := Scancode.End | SDLK_SCANCODE_MASK;
+const SDLK_PAGEDOWN           := Scancode.Page_Down | SDLK_SCANCODE_MASK;
+const SDLK_RIGHT              := Scancode.Right | SDLK_SCANCODE_MASK;
+const SDLK_LEFT               := Scancode.Left | SDLK_SCANCODE_MASK;
+const SDLK_DOWN               := Scancode.Down | SDLK_SCANCODE_MASK;
+const SDLK_UP                 := Scancode.Up | SDLK_SCANCODE_MASK;
 
-const SDLK_NUMLOCKCLEAR       = Scancode.Num_Lock_Clear | SDLK_SCANCODE_MASK;
-const SDLK_KP_DIVIDE          = Scancode.Kp_Divide | SDLK_SCANCODE_MASK;
-const SDLK_KP_MULTIPLY        = Scancode.Kp_Multiply | SDLK_SCANCODE_MASK;
-const SDLK_KP_MINUS           = Scancode.Kp_Minus | SDLK_SCANCODE_MASK;
-const SDLK_KP_PLUS            = Scancode.Kp_Plus | SDLK_SCANCODE_MASK;
-const SDLK_KP_ENTER           = Scancode.Kp_Enter | SDLK_SCANCODE_MASK;
-const SDLK_KP_1               = Scancode.Kp_1 | SDLK_SCANCODE_MASK;
-const SDLK_KP_2               = Scancode.Kp_2 | SDLK_SCANCODE_MASK;
-const SDLK_KP_3               = Scancode.Kp_3 | SDLK_SCANCODE_MASK;
-const SDLK_KP_4               = Scancode.Kp_4 | SDLK_SCANCODE_MASK;
-const SDLK_KP_5               = Scancode.Kp_5 | SDLK_SCANCODE_MASK;
-const SDLK_KP_6               = Scancode.Kp_6 | SDLK_SCANCODE_MASK;
-const SDLK_KP_7               = Scancode.Kp_7 | SDLK_SCANCODE_MASK;
-const SDLK_KP_8               = Scancode.Kp_8 | SDLK_SCANCODE_MASK;
-const SDLK_KP_9               = Scancode.Kp_9 | SDLK_SCANCODE_MASK;
-const SDLK_KP_0               = Scancode.Kp_0 | SDLK_SCANCODE_MASK;
-const SDLK_KP_PERIOD          = Scancode.Kp_Period | SDLK_SCANCODE_MASK;
+const SDLK_NUMLOCKCLEAR       := Scancode.Num_Lock_Clear | SDLK_SCANCODE_MASK;
+const SDLK_KP_DIVIDE          := Scancode.Kp_Divide | SDLK_SCANCODE_MASK;
+const SDLK_KP_MULTIPLY        := Scancode.Kp_Multiply | SDLK_SCANCODE_MASK;
+const SDLK_KP_MINUS           := Scancode.Kp_Minus | SDLK_SCANCODE_MASK;
+const SDLK_KP_PLUS            := Scancode.Kp_Plus | SDLK_SCANCODE_MASK;
+const SDLK_KP_ENTER           := Scancode.Kp_Enter | SDLK_SCANCODE_MASK;
+const SDLK_KP_1               := Scancode.Kp_1 | SDLK_SCANCODE_MASK;
+const SDLK_KP_2               := Scancode.Kp_2 | SDLK_SCANCODE_MASK;
+const SDLK_KP_3               := Scancode.Kp_3 | SDLK_SCANCODE_MASK;
+const SDLK_KP_4               := Scancode.Kp_4 | SDLK_SCANCODE_MASK;
+const SDLK_KP_5               := Scancode.Kp_5 | SDLK_SCANCODE_MASK;
+const SDLK_KP_6               := Scancode.Kp_6 | SDLK_SCANCODE_MASK;
+const SDLK_KP_7               := Scancode.Kp_7 | SDLK_SCANCODE_MASK;
+const SDLK_KP_8               := Scancode.Kp_8 | SDLK_SCANCODE_MASK;
+const SDLK_KP_9               := Scancode.Kp_9 | SDLK_SCANCODE_MASK;
+const SDLK_KP_0               := Scancode.Kp_0 | SDLK_SCANCODE_MASK;
+const SDLK_KP_PERIOD          := Scancode.Kp_Period | SDLK_SCANCODE_MASK;
 
-const SDLK_APPLICATION        = Scancode.Application | SDLK_SCANCODE_MASK;
-const SDLK_POWER              = Scancode.Power | SDLK_SCANCODE_MASK;
-const SDLK_KP_EQUALS          = Scancode.Kp_Equals | SDLK_SCANCODE_MASK;
-const SDLK_F13                = Scancode.F13 | SDLK_SCANCODE_MASK;
-const SDLK_F14                = Scancode.F14 | SDLK_SCANCODE_MASK;
-const SDLK_F15                = Scancode.F15 | SDLK_SCANCODE_MASK;
-const SDLK_F16                = Scancode.F16 | SDLK_SCANCODE_MASK;
-const SDLK_F17                = Scancode.F17 | SDLK_SCANCODE_MASK;
-const SDLK_F18                = Scancode.F18 | SDLK_SCANCODE_MASK;
-const SDLK_F19                = Scancode.F19 | SDLK_SCANCODE_MASK;
-const SDLK_F20                = Scancode.F20 | SDLK_SCANCODE_MASK;
-const SDLK_F21                = Scancode.F21 | SDLK_SCANCODE_MASK;
-const SDLK_F22                = Scancode.F22 | SDLK_SCANCODE_MASK;
-const SDLK_F23                = Scancode.F23 | SDLK_SCANCODE_MASK;
-const SDLK_F24                = Scancode.F24 | SDLK_SCANCODE_MASK;
-const SDLK_EXECUTE            = Scancode.Execute | SDLK_SCANCODE_MASK;
-const SDLK_HELP               = Scancode.Help | SDLK_SCANCODE_MASK;
-const SDLK_MENU               = Scancode.Menu | SDLK_SCANCODE_MASK;
-const SDLK_SELECT             = Scancode.Select | SDLK_SCANCODE_MASK;
-const SDLK_STOP               = Scancode.Stop | SDLK_SCANCODE_MASK;
-const SDLK_AGAIN              = Scancode.Again | SDLK_SCANCODE_MASK;
-const SDLK_UNDO               = Scancode.Undo | SDLK_SCANCODE_MASK;
-const SDLK_CUT                = Scancode.Cut | SDLK_SCANCODE_MASK;
-const SDLK_COPY               = Scancode.Copy | SDLK_SCANCODE_MASK;
-const SDLK_PASTE              = Scancode.Paste | SDLK_SCANCODE_MASK;
-const SDLK_FIND               = Scancode.Find | SDLK_SCANCODE_MASK;
-const SDLK_MUTE               = Scancode.Mute | SDLK_SCANCODE_MASK;
-const SDLK_VOLUMEUP           = Scancode.Volume_Up | SDLK_SCANCODE_MASK;
-const SDLK_VOLUMEDOWN         = Scancode.Volume_Down | SDLK_SCANCODE_MASK;
-const SDLK_KP_COMMA           = Scancode.Kp_Comma | SDLK_SCANCODE_MASK;
-const SDLK_KP_EQUALSAS400     = Scancode.Kp_Equals_AS400 | SDLK_SCANCODE_MASK;
+const SDLK_APPLICATION        := Scancode.Application | SDLK_SCANCODE_MASK;
+const SDLK_POWER              := Scancode.Power | SDLK_SCANCODE_MASK;
+const SDLK_KP_EQUALS          := Scancode.Kp_Equals | SDLK_SCANCODE_MASK;
+const SDLK_F13                := Scancode.F13 | SDLK_SCANCODE_MASK;
+const SDLK_F14                := Scancode.F14 | SDLK_SCANCODE_MASK;
+const SDLK_F15                := Scancode.F15 | SDLK_SCANCODE_MASK;
+const SDLK_F16                := Scancode.F16 | SDLK_SCANCODE_MASK;
+const SDLK_F17                := Scancode.F17 | SDLK_SCANCODE_MASK;
+const SDLK_F18                := Scancode.F18 | SDLK_SCANCODE_MASK;
+const SDLK_F19                := Scancode.F19 | SDLK_SCANCODE_MASK;
+const SDLK_F20                := Scancode.F20 | SDLK_SCANCODE_MASK;
+const SDLK_F21                := Scancode.F21 | SDLK_SCANCODE_MASK;
+const SDLK_F22                := Scancode.F22 | SDLK_SCANCODE_MASK;
+const SDLK_F23                := Scancode.F23 | SDLK_SCANCODE_MASK;
+const SDLK_F24                := Scancode.F24 | SDLK_SCANCODE_MASK;
+const SDLK_EXECUTE            := Scancode.Execute | SDLK_SCANCODE_MASK;
+const SDLK_HELP               := Scancode.Help | SDLK_SCANCODE_MASK;
+const SDLK_MENU               := Scancode.Menu | SDLK_SCANCODE_MASK;
+const SDLK_SELECT             := Scancode.Select | SDLK_SCANCODE_MASK;
+const SDLK_STOP               := Scancode.Stop | SDLK_SCANCODE_MASK;
+const SDLK_AGAIN              := Scancode.Again | SDLK_SCANCODE_MASK;
+const SDLK_UNDO               := Scancode.Undo | SDLK_SCANCODE_MASK;
+const SDLK_CUT                := Scancode.Cut | SDLK_SCANCODE_MASK;
+const SDLK_COPY               := Scancode.Copy | SDLK_SCANCODE_MASK;
+const SDLK_PASTE              := Scancode.Paste | SDLK_SCANCODE_MASK;
+const SDLK_FIND               := Scancode.Find | SDLK_SCANCODE_MASK;
+const SDLK_MUTE               := Scancode.Mute | SDLK_SCANCODE_MASK;
+const SDLK_VOLUMEUP           := Scancode.Volume_Up | SDLK_SCANCODE_MASK;
+const SDLK_VOLUMEDOWN         := Scancode.Volume_Down | SDLK_SCANCODE_MASK;
+const SDLK_KP_COMMA           := Scancode.Kp_Comma | SDLK_SCANCODE_MASK;
+const SDLK_KP_EQUALSAS400     := Scancode.Kp_Equals_AS400 | SDLK_SCANCODE_MASK;
 
-const SDLK_ALTERASE           = Scancode.Alt_Erase | SDLK_SCANCODE_MASK;
-const SDLK_SYSREQ             = Scancode.Sys_Req | SDLK_SCANCODE_MASK;
-const SDLK_CANCEL             = Scancode.Cancel | SDLK_SCANCODE_MASK;
-const SDLK_CLEAR              = Scancode.Clear | SDLK_SCANCODE_MASK;
-const SDLK_PRIOR              = Scancode.Prior | SDLK_SCANCODE_MASK;
-const SDLK_RETURN2            = Scancode.Return2 | SDLK_SCANCODE_MASK;
-const SDLK_SEPARATOR          = Scancode.Separator | SDLK_SCANCODE_MASK;
-const SDLK_OUT                = Scancode.Out | SDLK_SCANCODE_MASK;
-const SDLK_OPER               = Scancode.Oper | SDLK_SCANCODE_MASK;
-const SDLK_CLEARAGAIN         = Scancode.Clear_Again | SDLK_SCANCODE_MASK;
-const SDLK_CRSEL              = Scancode.Cr_Sel | SDLK_SCANCODE_MASK;
-const SDLK_EXSEL              = Scancode.Ex_Sel | SDLK_SCANCODE_MASK;
+const SDLK_ALTERASE           := Scancode.Alt_Erase | SDLK_SCANCODE_MASK;
+const SDLK_SYSREQ             := Scancode.Sys_Req | SDLK_SCANCODE_MASK;
+const SDLK_CANCEL             := Scancode.Cancel | SDLK_SCANCODE_MASK;
+const SDLK_CLEAR              := Scancode.Clear | SDLK_SCANCODE_MASK;
+const SDLK_PRIOR              := Scancode.Prior | SDLK_SCANCODE_MASK;
+const SDLK_RETURN2            := Scancode.Return2 | SDLK_SCANCODE_MASK;
+const SDLK_SEPARATOR          := Scancode.Separator | SDLK_SCANCODE_MASK;
+const SDLK_OUT                := Scancode.Out | SDLK_SCANCODE_MASK;
+const SDLK_OPER               := Scancode.Oper | SDLK_SCANCODE_MASK;
+const SDLK_CLEARAGAIN         := Scancode.Clear_Again | SDLK_SCANCODE_MASK;
+const SDLK_CRSEL              := Scancode.Cr_Sel | SDLK_SCANCODE_MASK;
+const SDLK_EXSEL              := Scancode.Ex_Sel | SDLK_SCANCODE_MASK;
 
-const SDLK_KP_00              = Scancode.Kp_00 | SDLK_SCANCODE_MASK;
-const SDLK_KP_000             = Scancode.Kp_000 | SDLK_SCANCODE_MASK;
-const SDLK_THOUSANDSSEPARATOR = Scancode.Thousands_Separator | SDLK_SCANCODE_MASK;
-const SDLK_DECIMALSEPARATOR   = Scancode.Decimal_Separator | SDLK_SCANCODE_MASK;
-const SDLK_CURRENCYUNIT       = Scancode.Currency_Unit | SDLK_SCANCODE_MASK;
-const SDLK_CURRENCYSUBUNIT    = Scancode.Currency_Sub_Unit | SDLK_SCANCODE_MASK;
-const SDLK_KP_LEFTPAREN       = Scancode.Kp_Left_Paren | SDLK_SCANCODE_MASK;
-const SDLK_KP_RIGHTPAREN      = Scancode.Kp_Right_Paren | SDLK_SCANCODE_MASK;
-const SDLK_KP_LEFTBRACE       = Scancode.Kp_Left_Brace | SDLK_SCANCODE_MASK;
-const SDLK_KP_RIGHTBRACE      = Scancode.Kp_Right_Brace | SDLK_SCANCODE_MASK;
-const SDLK_KP_TAB             = Scancode.Kp_Tab | SDLK_SCANCODE_MASK;
-const SDLK_KP_BACKSPACE       = Scancode.Kp_Backspace | SDLK_SCANCODE_MASK;
-const SDLK_KP_A               = Scancode.Kp_A | SDLK_SCANCODE_MASK;
-const SDLK_KP_B               = Scancode.Kp_B | SDLK_SCANCODE_MASK;
-const SDLK_KP_C               = Scancode.Kp_C | SDLK_SCANCODE_MASK;
-const SDLK_KP_D               = Scancode.Kp_D | SDLK_SCANCODE_MASK;
-const SDLK_KP_E               = Scancode.Kp_E | SDLK_SCANCODE_MASK;
-const SDLK_KP_F               = Scancode.Kp_F | SDLK_SCANCODE_MASK;
-const SDLK_KP_XOR             = Scancode.Kp_Xor | SDLK_SCANCODE_MASK;
-const SDLK_KP_POWER           = Scancode.Kp_Power | SDLK_SCANCODE_MASK;
-const SDLK_KP_PERCENT         = Scancode.Kp_Percent | SDLK_SCANCODE_MASK;
-const SDLK_KP_LESS            = Scancode.Kp_Less | SDLK_SCANCODE_MASK;
-const SDLK_KP_GREATER         = Scancode.Kp_Greater | SDLK_SCANCODE_MASK;
-const SDLK_KP_AMPERSAND       = Scancode.Kp_Ampersand | SDLK_SCANCODE_MASK;
-const SDLK_KP_DBLAMPERSAND    = Scancode.Kp_Dbl_Ampersand | SDLK_SCANCODE_MASK;
-const SDLK_KP_VERTICALBAR     = Scancode.Kp_Vertical_Bar | SDLK_SCANCODE_MASK;
-const SDLK_KP_DBLVERTICALBAR  = Scancode.Kp_Dbl_Vertical_Bar | SDLK_SCANCODE_MASK;
-const SDLK_KP_COLON           = Scancode.Kp_Colon | SDLK_SCANCODE_MASK;
-const SDLK_KP_HASH            = Scancode.Kp_Hash | SDLK_SCANCODE_MASK;
-const SDLK_KP_SPACE           = Scancode.Kp_Space | SDLK_SCANCODE_MASK;
-const SDLK_KP_AT              = Scancode.Kp_At | SDLK_SCANCODE_MASK;
-const SDLK_KP_EXCLAM          = Scancode.Kp_Exclam | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMSTORE        = Scancode.Kp_Mem_Store | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMRECALL       = Scancode.Kp_Mem_Recall | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMCLEAR        = Scancode.Kp_Mem_Clear | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMADD          = Scancode.Kp_Mem_Add | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMSUBTRACT     = Scancode.Kp_Mem_Subtract | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMMULTIPLY     = Scancode.Kp_Mem_Multiply | SDLK_SCANCODE_MASK;
-const SDLK_KP_MEMDIVIDE       = Scancode.Kp_Mem_Divide | SDLK_SCANCODE_MASK;
-const SDLK_KP_PLUSMINUS       = Scancode.Kp_Plus_Minus | SDLK_SCANCODE_MASK;
-const SDLK_KP_CLEAR           = Scancode.Kp_Clear | SDLK_SCANCODE_MASK;
-const SDLK_KP_CLEARENTRY      = Scancode.Kp_Clear_Entry | SDLK_SCANCODE_MASK;
-const SDLK_KP_BINARY          = Scancode.Kp_Binary | SDLK_SCANCODE_MASK;
-const SDLK_KP_OCTAL           = Scancode.Kp_Octal | SDLK_SCANCODE_MASK;
-const SDLK_KP_DECIMAL         = Scancode.Kp_Decimal | SDLK_SCANCODE_MASK;
-const SDLK_KP_HEXADECIMAL     = Scancode.Kp_Hexadecimal | SDLK_SCANCODE_MASK;
+const SDLK_KP_00              := Scancode.Kp_00 | SDLK_SCANCODE_MASK;
+const SDLK_KP_000             := Scancode.Kp_000 | SDLK_SCANCODE_MASK;
+const SDLK_THOUSANDSSEPARATOR := Scancode.Thousands_Separator | SDLK_SCANCODE_MASK;
+const SDLK_DECIMALSEPARATOR   := Scancode.Decimal_Separator | SDLK_SCANCODE_MASK;
+const SDLK_CURRENCYUNIT       := Scancode.Currency_Unit | SDLK_SCANCODE_MASK;
+const SDLK_CURRENCYSUBUNIT    := Scancode.Currency_Sub_Unit | SDLK_SCANCODE_MASK;
+const SDLK_KP_LEFTPAREN       := Scancode.Kp_Left_Paren | SDLK_SCANCODE_MASK;
+const SDLK_KP_RIGHTPAREN      := Scancode.Kp_Right_Paren | SDLK_SCANCODE_MASK;
+const SDLK_KP_LEFTBRACE       := Scancode.Kp_Left_Brace | SDLK_SCANCODE_MASK;
+const SDLK_KP_RIGHTBRACE      := Scancode.Kp_Right_Brace | SDLK_SCANCODE_MASK;
+const SDLK_KP_TAB             := Scancode.Kp_Tab | SDLK_SCANCODE_MASK;
+const SDLK_KP_BACKSPACE       := Scancode.Kp_Backspace | SDLK_SCANCODE_MASK;
+const SDLK_KP_A               := Scancode.Kp_A | SDLK_SCANCODE_MASK;
+const SDLK_KP_B               := Scancode.Kp_B | SDLK_SCANCODE_MASK;
+const SDLK_KP_C               := Scancode.Kp_C | SDLK_SCANCODE_MASK;
+const SDLK_KP_D               := Scancode.Kp_D | SDLK_SCANCODE_MASK;
+const SDLK_KP_E               := Scancode.Kp_E | SDLK_SCANCODE_MASK;
+const SDLK_KP_F               := Scancode.Kp_F | SDLK_SCANCODE_MASK;
+const SDLK_KP_XOR             := Scancode.Kp_Xor | SDLK_SCANCODE_MASK;
+const SDLK_KP_POWER           := Scancode.Kp_Power | SDLK_SCANCODE_MASK;
+const SDLK_KP_PERCENT         := Scancode.Kp_Percent | SDLK_SCANCODE_MASK;
+const SDLK_KP_LESS            := Scancode.Kp_Less | SDLK_SCANCODE_MASK;
+const SDLK_KP_GREATER         := Scancode.Kp_Greater | SDLK_SCANCODE_MASK;
+const SDLK_KP_AMPERSAND       := Scancode.Kp_Ampersand | SDLK_SCANCODE_MASK;
+const SDLK_KP_DBLAMPERSAND    := Scancode.Kp_Dbl_Ampersand | SDLK_SCANCODE_MASK;
+const SDLK_KP_VERTICALBAR     := Scancode.Kp_Vertical_Bar | SDLK_SCANCODE_MASK;
+const SDLK_KP_DBLVERTICALBAR  := Scancode.Kp_Dbl_Vertical_Bar | SDLK_SCANCODE_MASK;
+const SDLK_KP_COLON           := Scancode.Kp_Colon | SDLK_SCANCODE_MASK;
+const SDLK_KP_HASH            := Scancode.Kp_Hash | SDLK_SCANCODE_MASK;
+const SDLK_KP_SPACE           := Scancode.Kp_Space | SDLK_SCANCODE_MASK;
+const SDLK_KP_AT              := Scancode.Kp_At | SDLK_SCANCODE_MASK;
+const SDLK_KP_EXCLAM          := Scancode.Kp_Exclam | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMSTORE        := Scancode.Kp_Mem_Store | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMRECALL       := Scancode.Kp_Mem_Recall | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMCLEAR        := Scancode.Kp_Mem_Clear | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMADD          := Scancode.Kp_Mem_Add | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMSUBTRACT     := Scancode.Kp_Mem_Subtract | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMMULTIPLY     := Scancode.Kp_Mem_Multiply | SDLK_SCANCODE_MASK;
+const SDLK_KP_MEMDIVIDE       := Scancode.Kp_Mem_Divide | SDLK_SCANCODE_MASK;
+const SDLK_KP_PLUSMINUS       := Scancode.Kp_Plus_Minus | SDLK_SCANCODE_MASK;
+const SDLK_KP_CLEAR           := Scancode.Kp_Clear | SDLK_SCANCODE_MASK;
+const SDLK_KP_CLEARENTRY      := Scancode.Kp_Clear_Entry | SDLK_SCANCODE_MASK;
+const SDLK_KP_BINARY          := Scancode.Kp_Binary | SDLK_SCANCODE_MASK;
+const SDLK_KP_OCTAL           := Scancode.Kp_Octal | SDLK_SCANCODE_MASK;
+const SDLK_KP_DECIMAL         := Scancode.Kp_Decimal | SDLK_SCANCODE_MASK;
+const SDLK_KP_HEXADECIMAL     := Scancode.Kp_Hexadecimal | SDLK_SCANCODE_MASK;
 
-const SDLK_LCTRL              = Scancode.LCtrl | SDLK_SCANCODE_MASK;
-const SDLK_LSHIFT             = Scancode.LShift | SDLK_SCANCODE_MASK;
-const SDLK_LALT               = Scancode.LAlt | SDLK_SCANCODE_MASK;
-const SDLK_LGUI               = Scancode.LGui | SDLK_SCANCODE_MASK;
-const SDLK_RCTRL              = Scancode.RCtrl | SDLK_SCANCODE_MASK;
-const SDLK_RSHIFT             = Scancode.RShift | SDLK_SCANCODE_MASK;
-const SDLK_RALT               = Scancode.RAlt | SDLK_SCANCODE_MASK;
-const SDLK_RGUI               = Scancode.RGui | SDLK_SCANCODE_MASK;
+const SDLK_LCTRL              := Scancode.LCtrl | SDLK_SCANCODE_MASK;
+const SDLK_LSHIFT             := Scancode.LShift | SDLK_SCANCODE_MASK;
+const SDLK_LALT               := Scancode.LAlt | SDLK_SCANCODE_MASK;
+const SDLK_LGUI               := Scancode.LGui | SDLK_SCANCODE_MASK;
+const SDLK_RCTRL              := Scancode.RCtrl | SDLK_SCANCODE_MASK;
+const SDLK_RSHIFT             := Scancode.RShift | SDLK_SCANCODE_MASK;
+const SDLK_RALT               := Scancode.RAlt | SDLK_SCANCODE_MASK;
+const SDLK_RGUI               := Scancode.RGui | SDLK_SCANCODE_MASK;
 
-const SDLK_MODE               = Scancode.Mode | SDLK_SCANCODE_MASK;
+const SDLK_MODE               := Scancode.Mode | SDLK_SCANCODE_MASK;
 
-const SDLK_AUDIONEXT          = Scancode.Audio_Next | SDLK_SCANCODE_MASK;
-const SDLK_AUDIOPREV          = Scancode.Audio_Prev | SDLK_SCANCODE_MASK;
-const SDLK_AUDIOSTOP          = Scancode.Audio_Stop | SDLK_SCANCODE_MASK;
-const SDLK_AUDIOPLAY          = Scancode.Audio_Play | SDLK_SCANCODE_MASK;
-const SDLK_AUDIOMUTE          = Scancode.Audio_Mute | SDLK_SCANCODE_MASK;
-const SDLK_MEDIASELECT        = Scancode.Media_Select | SDLK_SCANCODE_MASK;
-const SDLK_WWW                = Scancode.WWW | SDLK_SCANCODE_MASK;
-const SDLK_MAIL               = Scancode.Mail | SDLK_SCANCODE_MASK;
-const SDLK_CALCULATOR         = Scancode.Calculator | SDLK_SCANCODE_MASK;
-const SDLK_COMPUTER           = Scancode.Computer | SDLK_SCANCODE_MASK;
-const SDLK_AC_SEARCH          = Scancode.Ac_Search | SDLK_SCANCODE_MASK;
-const SDLK_AC_HOME            = Scancode.Ac_Home | SDLK_SCANCODE_MASK;
-const SDLK_AC_BACK            = Scancode.Ac_Back | SDLK_SCANCODE_MASK;
-const SDLK_AC_FORWARD         = Scancode.Ac_Forward | SDLK_SCANCODE_MASK;
-const SDLK_AC_STOP            = Scancode.Ac_Stop | SDLK_SCANCODE_MASK;
-const SDLK_AC_REFRESH         = Scancode.Ac_Refresh | SDLK_SCANCODE_MASK;
-const SDLK_AC_BOOKMARKS       = Scancode.Ac_Bookmarks | SDLK_SCANCODE_MASK;
+const SDLK_AUDIONEXT          := Scancode.Audio_Next | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOPREV          := Scancode.Audio_Prev | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOSTOP          := Scancode.Audio_Stop | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOPLAY          := Scancode.Audio_Play | SDLK_SCANCODE_MASK;
+const SDLK_AUDIOMUTE          := Scancode.Audio_Mute | SDLK_SCANCODE_MASK;
+const SDLK_MEDIASELECT        := Scancode.Media_Select | SDLK_SCANCODE_MASK;
+const SDLK_WWW                := Scancode.WWW | SDLK_SCANCODE_MASK;
+const SDLK_MAIL               := Scancode.Mail | SDLK_SCANCODE_MASK;
+const SDLK_CALCULATOR         := Scancode.Calculator | SDLK_SCANCODE_MASK;
+const SDLK_COMPUTER           := Scancode.Computer | SDLK_SCANCODE_MASK;
+const SDLK_AC_SEARCH          := Scancode.Ac_Search | SDLK_SCANCODE_MASK;
+const SDLK_AC_HOME            := Scancode.Ac_Home | SDLK_SCANCODE_MASK;
+const SDLK_AC_BACK            := Scancode.Ac_Back | SDLK_SCANCODE_MASK;
+const SDLK_AC_FORWARD         := Scancode.Ac_Forward | SDLK_SCANCODE_MASK;
+const SDLK_AC_STOP            := Scancode.Ac_Stop | SDLK_SCANCODE_MASK;
+const SDLK_AC_REFRESH         := Scancode.Ac_Refresh | SDLK_SCANCODE_MASK;
+const SDLK_AC_BOOKMARKS       := Scancode.Ac_Bookmarks | SDLK_SCANCODE_MASK;
 
-const SDLK_BRIGHTNESSDOWN     = Scancode.Brightness_Down | SDLK_SCANCODE_MASK;
-const SDLK_BRIGHTNESSUP       = Scancode.Brightness_Up | SDLK_SCANCODE_MASK;
-const SDLK_DISPLAYSWITCH      = Scancode.Display_Switch | SDLK_SCANCODE_MASK;
-const SDLK_KBDILLUMTOGGLE     = Scancode.Kb_Dillum_Toggle | SDLK_SCANCODE_MASK;
-const SDLK_KBDILLUMDOWN       = Scancode.Kb_Dillum_Down | SDLK_SCANCODE_MASK;
-const SDLK_KBDILLUMUP         = Scancode.Kb_Dillum_Up | SDLK_SCANCODE_MASK;
-const SDLK_EJECT              = Scancode.Eject | SDLK_SCANCODE_MASK;
-const SDLK_SLEEP              = Scancode.Sleep | SDLK_SCANCODE_MASK;
+const SDLK_BRIGHTNESSDOWN     := Scancode.Brightness_Down | SDLK_SCANCODE_MASK;
+const SDLK_BRIGHTNESSUP       := Scancode.Brightness_Up | SDLK_SCANCODE_MASK;
+const SDLK_DISPLAYSWITCH      := Scancode.Display_Switch | SDLK_SCANCODE_MASK;
+const SDLK_KBDILLUMTOGGLE     := Scancode.Kb_Dillum_Toggle | SDLK_SCANCODE_MASK;
+const SDLK_KBDILLUMDOWN       := Scancode.Kb_Dillum_Down | SDLK_SCANCODE_MASK;
+const SDLK_KBDILLUMUP         := Scancode.Kb_Dillum_Up | SDLK_SCANCODE_MASK;
+const SDLK_EJECT              := Scancode.Eject | SDLK_SCANCODE_MASK;
+const SDLK_SLEEP              := Scancode.Sleep | SDLK_SCANCODE_MASK;
 
-const SDLK_SCANCODE_MASK      = cast(Scancode, 1<<30);
+const SDLK_SCANCODE_MASK      := cast(Scancode, 1<<30);
 
 enum Mousecode i32 {
     Left   = 1 << 0;
@@ -1416,7 +1416,7 @@ enum Window_Event_ID u8 {
     Hit_Test;
 }
 
-const GL_Context = rawptr;
+const GL_Context := rawptr;
 
 struct Blit_Map          {};
 struct Window            {};
@@ -1437,612 +1437,612 @@ struct Rw_Ops            {};
 struct Sys_Wm_Info       {};
 struct Sys_Wm_Msg        {};
 
-const Joystick_Id     = i32;
-const Timer_Id        = i32;
-const Spin_Lock       = i32;
-const Tls_Id          = u32;
-const Audio_Device_Id = u32;
-const Audio_Device    = u32;
-const Audio_Format    = u16;
-const Keycode         = i32;
-const Thread_Id       = u64;
-const Touch_Id        = i64;
-const Gesture_Id      = i64;
-const Finger_Id       = i64;
+const Joystick_Id     := i32;
+const Timer_Id        := i32;
+const Spin_Lock       := i32;
+const Tls_Id          := u32;
+const Audio_Device_Id := u32;
+const Audio_Device    := u32;
+const Audio_Format    := u16;
+const Keycode         := i32;
+const Thread_Id       := u64;
+const Touch_Id        := i64;
+const Gesture_Id      := i64;
+const Finger_Id       := i64;
 
-const Hint_Callback        = proc(interval: u32, param: rawptr) : u32;
-const Event_Filter         = proc(userdata: rawptr, param: ^SDL_Event) : i32;
-const Timer_Callback       = proc(interval: u32, param: rawptr) : u32;
-const Audio_Callback       = proc(userdata: rawptr, stream: ^u8, len: i32);
-const Assertion_Handler    = proc(data: ^Assert_Data, userdata: rawptr) : Assert_State;
-const Audio_Filter         = proc(cvt: ^Audio_Cvt, format: Audio_Format);
-const Thread_Function      = proc(data: rawptr) : i32;
-const Hit_Test             = proc(window: ^Window, area: ^Point, data: rawptr) : Hit_Test_Result;
-const Windows_Message_Hook = proc(userdata: rawptr, hwnd: rawptr, message: u32, wparam: u64, lparam: i64);
-const Log_Output_Function  = proc(userdata: rawptr, category: Log_Category, priority: Log_Priority, message: cstring);
+const Hint_Callback        := proc(interval: u32, param: rawptr) : u32;
+const Event_Filter         := proc(userdata: rawptr, param: ^SDL_Event) : i32;
+const Timer_Callback       := proc(interval: u32, param: rawptr) : u32;
+const Audio_Callback       := proc(userdata: rawptr, stream: ^u8, len: i32);
+const Assertion_Handler    := proc(data: ^Assert_Data, userdata: rawptr) : Assert_State;
+const Audio_Filter         := proc(cvt: ^Audio_Cvt, format: Audio_Format);
+const Thread_Function      := proc(data: rawptr) : i32;
+const Hit_Test             := proc(window: ^Window, area: ^Point, data: rawptr) : Hit_Test_Result;
+const Windows_Message_Hook := proc(userdata: rawptr, hwnd: rawptr, message: u32, wparam: u64, lparam: i64);
+const Log_Output_Function  := proc(userdata: rawptr, category: Log_Category, priority: Log_Priority, message: cstring);
 
 struct Game_Controller_Button_Bind {
-    var bind_type: Game_Controller_Bind_Type;
-    var value: union {
-        var button: i32;
-        var axis:   i32;
-        var hat_mask: struct {
-            var hat: i32;
-            var mask: i32;
+    bind_type: Game_Controller_Bind_Type;
+    value: union {
+        button: i32;
+        axis:   i32;
+        hat_mask: struct {
+            hat: i32;
+            mask: i32;
         };
     };
 }
 
 struct Message_Box_Data {
-    var flags: u32;
-    var window: ^Window;
-    var title: cstring;
-    var message: cstring;
+    flags: u32;
+    window: ^Window;
+    title: cstring;
+    message: cstring;
 
-    var num_buttons: i32;
-    var buttons: ^Message_Box_Button_Data;
+    num_buttons: i32;
+    buttons: ^Message_Box_Button_Data;
 
-    var color_scheme: ^Message_Box_Color_Scheme;
+    color_scheme: ^Message_Box_Color_Scheme;
 }
 
 struct Message_Box_Button_Data {
-    var flags: u32;
-    var button_id: i32;
-    var text: cstring;
+    flags: u32;
+    button_id: i32;
+    text: cstring;
 }
 
 struct Message_Box_Color_Scheme {
-    var colors: [cast(int, Message_Box_Color_Type.Max)]Message_Box_Color;
+    colors: [cast(int, Message_Box_Color_Type.Max)]Message_Box_Color;
 }
 
 struct Message_Box_Color {
-    var r: u8;
-    var g: u8;
-    var b: u8;
+    r: u8;
+    g: u8;
+    b: u8;
 }
 
 struct Assert_Data {
-    var always_ignore: i32;
-    var trigger_count: u32;
-    var condition: cstring;
-    var filename: cstring;
-    var linenum: i32;
-    var function: cstring;
-    var next: ^Assert_Data;
+    always_ignore: i32;
+    trigger_count: u32;
+    condition: cstring;
+    filename: cstring;
+    linenum: i32;
+    function: cstring;
+    next: ^Assert_Data;
 }
 
 union Window_Shape_Params {
-    var binarization_cutoff: u8;
-    var color_key: Color;
+    binarization_cutoff: u8;
+    color_key: Color;
 }
 
 struct Window_Shape_Mode {
-    var mode: Window_Shape_Modes;
-    var parameters: Window_Shape_Params;
+    mode: Window_Shape_Modes;
+    parameters: Window_Shape_Params;
 }
 
 struct Point {
-    var x: i32;
-    var y: i32;
+    x: i32;
+    y: i32;
 }
 
 struct Renderer_Info {
-    var name: cstring;
-    var flags: u32;
-    var num_texture_formats: u32;
-    var texture_formats: [16]u32;
-    var max_texture_width: i32;
-    var max_texture_height: i32;
+    name: cstring;
+    flags: u32;
+    num_texture_formats: u32;
+    texture_formats: [16]u32;
+    max_texture_width: i32;
+    max_texture_height: i32;
 }
 
 struct Version {
-    var major: u8;
-    var minor: u8;
-    var patch: u8;
+    major: u8;
+    minor: u8;
+    patch: u8;
 }
 
 struct Display_Mode {
-    var format: u32;
-    var w: i32;
-    var h: i32;
-    var refresh_rate: i32;
-    var driver_data: rawptr;
+    format: u32;
+    w: i32;
+    h: i32;
+    refresh_rate: i32;
+    driver_data: rawptr;
 }
 
 struct Finger {
-    var id: Finger_Id;
-    var x: f32;
-    var y: f32;
-    var pressure: f32;
+    id: Finger_Id;
+    x: f32;
+    y: f32;
+    pressure: f32;
 }
 
 struct Audio_Spec {
-    var freq: i32;
-    var format: Audio_Format;
-    var channels: u8;
-    var silence: u8;
-    var samples: u16;
-    var padding: u16;
-    var size: u32;
-    var callback: Audio_Callback;
-    var userdata: rawptr;
+    freq: i32;
+    format: Audio_Format;
+    channels: u8;
+    silence: u8;
+    samples: u16;
+    padding: u16;
+    size: u32;
+    callback: Audio_Callback;
+    userdata: rawptr;
 }
 
 struct Joystick_Guid {
-    var data: [16]u8;
+    data: [16]u8;
 }
 
 struct Audio_Cvt {
-    var needed: i32;
-    var src_format: Audio_Format;
-    var dst_format: Audio_Format;
-    var rate_incr: i64;
-    var buf: ^u8;
-    var len: i32;
-    var len_cvt: i32;
-    var len_mult: i32;
-    var len_ratio: i64;
-    var filters: [10]Audio_Filter;
-    var filter_index: i32;
+    needed: i32;
+    src_format: Audio_Format;
+    dst_format: Audio_Format;
+    rate_incr: i64;
+    buf: ^u8;
+    len: i32;
+    len_cvt: i32;
+    len_mult: i32;
+    len_ratio: i64;
+    filters: [10]Audio_Filter;
+    filter_index: i32;
 }
 
 struct Surface {
-    var flags: u32;
-    var format: ^Pixel_Format;
-    var w: i32;
-    var h: i32;
-    var pitch: i32;
-    var pixels: rawptr;
+    flags: u32;
+    format: ^Pixel_Format;
+    w: i32;
+    h: i32;
+    pitch: i32;
+    pixels: rawptr;
 
-    var userdata: rawptr;
+    userdata: rawptr;
 
-    var locked: i32;
-    var lock_data: rawptr;
+    locked: i32;
+    lock_data: rawptr;
 
-    var clip_rect: Rect;
-    var blip_map: ^Blit_Map;
+    clip_rect: Rect;
+    blip_map: ^Blit_Map;
 
-    var refcount: i32;
+    refcount: i32;
 }
 
 struct Color {
-    var r: u8;
-    var g: u8;
-    var b: u8;
-    var a: u8;
+    r: u8;
+    g: u8;
+    b: u8;
+    a: u8;
 }
 
 struct Palette {
-    var num_colors: i32;
-    var colors: ^Color;
-    var version: u32;
-    var ref_count: i32;
+    num_colors: i32;
+    colors: ^Color;
+    version: u32;
+    ref_count: i32;
 }
 
 struct Pixel_Format {
-    var format: u32;
-    var palette: ^Palette;
-    var bits_per_pixel: u8;
-    var bytes_per_pixel: u8;
-    var padding: [2]u8;
-    var r_mask: u32;
-    var g_mask: u32;
-    var b_mask: u32;
-    var a_mask: u32;
-    var r_loss: u8;
-    var g_loss: u8;
-    var b_loss: u8;
-    var a_loss: u8;
-    var r_shift: u8;
-    var g_shift: u8;
-    var b_shift: u8;
-    var a_shift: u8;
-    var ref_count: i32;
-    var next: ^Pixel_Format;
+    format: u32;
+    palette: ^Palette;
+    bits_per_pixel: u8;
+    bytes_per_pixel: u8;
+    padding: [2]u8;
+    r_mask: u32;
+    g_mask: u32;
+    b_mask: u32;
+    a_mask: u32;
+    r_loss: u8;
+    g_loss: u8;
+    b_loss: u8;
+    a_loss: u8;
+    r_shift: u8;
+    g_shift: u8;
+    b_shift: u8;
+    a_shift: u8;
+    ref_count: i32;
+    next: ^Pixel_Format;
 }
 
 struct Rect {
-    var x: i32;
-    var y: i32;
-    var w: i32;
-    var h: i32;
+    x: i32;
+    y: i32;
+    w: i32;
+    h: i32;
 }
 
 struct Atomic {
-    var value: i32;
+    value: i32;
 }
 
 struct Keysym {
-    var scancode: Scancode;
-    var sym: i32;
-    var mod: u16;
-    var unused: u32;
+    scancode: Scancode;
+    sym: i32;
+    mod: u16;
+    unused: u32;
 }
 
 union Haptic_Effect {
-    var haptic_type: u16;
-    var constant: Haptic_Constant;
-    var periodic: Haptic_Periodic;
-    var condition: Haptic_Condition;
-    var ramp: Haptic_Ramp;
-    var left_right: Haptic_Left_Right;
-    var custom: Haptic_Custom;
+    haptic_type: u16;
+    constant: Haptic_Constant;
+    periodic: Haptic_Periodic;
+    condition: Haptic_Condition;
+    ramp: Haptic_Ramp;
+    left_right: Haptic_Left_Right;
+    custom: Haptic_Custom;
 }
 
 struct Haptic_Constant {
-    var haptic_type: u16;
-    var direction: Haptic_Direction;
+    haptic_type: u16;
+    direction: Haptic_Direction;
 
-    var length: u32;
-    var delay: u16;
+    length: u32;
+    delay: u16;
 
-    var button: u16;
-    var interval: u16;
+    button: u16;
+    interval: u16;
 
-    var level: i16;
+    level: i16;
 
-    var attack_length: u16;
-    var attack_level: u16;
-    var fade_length: u16;
-    var fade_level: u16;
+    attack_length: u16;
+    attack_level: u16;
+    fade_length: u16;
+    fade_level: u16;
 }
 
 struct Haptic_Periodic {
-    var haptic_type: u16;
-    var direction: Haptic_Direction;
+    haptic_type: u16;
+    direction: Haptic_Direction;
 
-    var length: u32;
-    var delay: u16;
+    length: u32;
+    delay: u16;
 
-    var button: u16;
-    var interval: u16;
+    button: u16;
+    interval: u16;
 
-    var period: u16;
-    var magnitude: i16;
-    var offset: i16;
-    var phase: u16;
+    period: u16;
+    magnitude: i16;
+    offset: i16;
+    phase: u16;
 
-    var attack_length: u16;
-    var attack_level: u16;
-    var fade_length: u16;
-    var fade_level: u16;
+    attack_length: u16;
+    attack_level: u16;
+    fade_length: u16;
+    fade_level: u16;
 }
 
 struct Haptic_Direction {
-    var haptic_type: u8;
-    var dir: [3]i32;
+    haptic_type: u8;
+    dir: [3]i32;
 }
 
 struct Haptic_Condition {
-    var haptic_type: u16;
-    var direction: Haptic_Direction;
+    haptic_type: u16;
+    direction: Haptic_Direction;
 
-    var length: u32;
-    var delay: u16;
+    length: u32;
+    delay: u16;
 
-    var button: u16;
-    var interval: u16;
+    button: u16;
+    interval: u16;
 
-    var right_sat: [3]u16;
-    var left_sat: [3]u16;
-    var right_coeff: [3]i16;
-    var left_coeff: [3]i16;
-    var dead_band: [3]u16;
-    var center: [3]i16;
+    right_sat: [3]u16;
+    left_sat: [3]u16;
+    right_coeff: [3]i16;
+    left_coeff: [3]i16;
+    dead_band: [3]u16;
+    center: [3]i16;
 }
 
 struct Haptic_Ramp {
-    var haptic_type: u16;
-    var direction: Haptic_Direction;
+    haptic_type: u16;
+    direction: Haptic_Direction;
 
-    var length: u32;
-    var delay: u16;
+    length: u32;
+    delay: u16;
 
-    var button: u16;
-    var interval: u16;
+    button: u16;
+    interval: u16;
 
-    var start: i16;
-    var end: i16;
+    start: i16;
+    end: i16;
 
-    var attack_length: u16;
-    var attack_level: u16;
-    var fade_length: u16;
-    var fade_level: u16;
+    attack_length: u16;
+    attack_level: u16;
+    fade_length: u16;
+    fade_level: u16;
 }
 
 struct Haptic_Left_Right {
-    var haptic_type: u16;
+    haptic_type: u16;
 
-    var length: u32;
+    length: u32;
 
-    var large_magnitude: u16;
-    var small_magnitude: u16;
+    large_magnitude: u16;
+    small_magnitude: u16;
 }
 
 struct Haptic_Custom {
-    var haptic_type: u16;
-    var direction: Haptic_Direction;
+    haptic_type: u16;
+    direction: Haptic_Direction;
 
-    var length: u32;
-    var delay: u16;
+    length: u32;
+    delay: u16;
 
-    var button: u16;
-    var interval: u16;
+    button: u16;
+    interval: u16;
 
-    var channels: u8;
-    var period: u16;
-    var samples: u16;
-    var data: ^u16;
+    channels: u8;
+    period: u16;
+    samples: u16;
+    data: ^u16;
 
-    var attack_length: u16;
-    var attack_level: u16;
-    var fade_length: u16;
-    var fade_level: u16;
+    attack_length: u16;
+    attack_level: u16;
+    fade_length: u16;
+    fade_level: u16;
 }
 
 union SDL_Event {
-    var type: Event_Type;
-    var common: Common_Event;
-    var window: Window_Event;
-    var key: Keyboard_Event;
-    var edit: Text_Editing_Event;
-    var text: Text_Input_Event;
-    var motion: Mouse_Motion_Event;
-    var button: Mouse_Button_Event;
-    var wheel: Mouse_Wheel_Event;
-    var jaxis: Joy_Axis_Event;
-    var jball: Joy_Ball_Event;
-    var jhat: Joy_Hat_Event;
-    var jbutton: Joy_Button_Event;
-    var jdevice: Joy_Device_Event;
-    var caxis: Controller_Axis_Event;
-    var cbutton: Controller_Button_Event;
-    var cdevice: Controller_Device_Event;
-    var adevice: Audio_Device_Event;
-    var quit: Quit_Event;
-    var user: User_Event;
-    var syswm: Sys_Wm_Event;
-    var tfinger: Touch_Finger_Event;
-    var mgesture: Multi_Gesture_Event;
-    var dgesture: Dollar_Gesture_Event;
-    var drop: Drop_Event;
+    type: Event_Type;
+    common: Common_Event;
+    window: Window_Event;
+    key: Keyboard_Event;
+    edit: Text_Editing_Event;
+    text: Text_Input_Event;
+    motion: Mouse_Motion_Event;
+    button: Mouse_Button_Event;
+    wheel: Mouse_Wheel_Event;
+    jaxis: Joy_Axis_Event;
+    jball: Joy_Ball_Event;
+    jhat: Joy_Hat_Event;
+    jbutton: Joy_Button_Event;
+    jdevice: Joy_Device_Event;
+    caxis: Controller_Axis_Event;
+    cbutton: Controller_Button_Event;
+    cdevice: Controller_Device_Event;
+    adevice: Audio_Device_Event;
+    quit: Quit_Event;
+    user: User_Event;
+    syswm: Sys_Wm_Event;
+    tfinger: Touch_Finger_Event;
+    mgesture: Multi_Gesture_Event;
+    dgesture: Dollar_Gesture_Event;
+    drop: Drop_Event;
 
-    var padding: [56]u8;
+    padding: [56]u8;
 }
 
 struct Common_Event {
-    var type: Event_Type;
-    var timestamp: u32;
+    type: Event_Type;
+    timestamp: u32;
 }
 
 struct Window_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var event: Window_Event_ID;
-    var padding1: u8;
-    var padding2: u8;
-    var padding3: u8;
-    var data1: i32;
-    var data2: i32;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    event: Window_Event_ID;
+    padding1: u8;
+    padding2: u8;
+    padding3: u8;
+    data1: i32;
+    data2: i32;
 }
 
 struct Keyboard_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var state: u8;
-    var repeat: u8;
-    var padding2: u8;
-    var padding3: u8;
-    var keysym: Keysym;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    state: u8;
+    repeat: u8;
+    padding2: u8;
+    padding3: u8;
+    keysym: Keysym;
 }
 
-const TEXT_EDITING_EVENT_TEXT_SIZE = 32;
+const TEXT_EDITING_EVENT_TEXT_SIZE := 32;
 struct Text_Editing_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var text: [TEXT_EDITING_EVENT_TEXT_SIZE]u8;
-    var start: i32;
-    var length: i32;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    text: [TEXT_EDITING_EVENT_TEXT_SIZE]u8;
+    start: i32;
+    length: i32;
 }
 
 
-const TEXT_INPUT_EVENT_TEXT_SIZE = 32;
+const TEXT_INPUT_EVENT_TEXT_SIZE := 32;
 struct Text_Input_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var text: [TEXT_INPUT_EVENT_TEXT_SIZE]u8;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    text: [TEXT_INPUT_EVENT_TEXT_SIZE]u8;
 }
 
 struct Mouse_Motion_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var which: u32;
-    var state: u32;
-    var x: i32;
-    var y: i32;
-    var xrel: i32;
-    var yrel: i32;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    which: u32;
+    state: u32;
+    x: i32;
+    y: i32;
+    xrel: i32;
+    yrel: i32;
 }
 
 struct Mouse_Button_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var which: u32;
-    var button: u8;
-    var state: u8;
-    var clicks: u8;
-    var padding1: u8;
-    var x: i32;
-    var y: i32;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    which: u32;
+    button: u8;
+    state: u8;
+    clicks: u8;
+    padding1: u8;
+    x: i32;
+    y: i32;
 }
 
 struct Mouse_Wheel_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var which: u32;
-    var x: i32;
-    var y: i32;
-    var direction: u32;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    which: u32;
+    x: i32;
+    y: i32;
+    direction: u32;
 }
 
 struct Joy_Axis_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
-    var axis: u8;
-    var padding1: u8;
-    var padding2: u8;
-    var padding3: u8;
-    var value: i16;
-    var padding4: u16;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
+    axis: u8;
+    padding1: u8;
+    padding2: u8;
+    padding3: u8;
+    value: i16;
+    padding4: u16;
 }
 
 struct Joy_Ball_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
-    var ball: u8;
-    var padding1: u8;
-    var padding2: u8;
-    var padding3: u8;
-    var xrel: i16;
-    var yrel: i16;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
+    ball: u8;
+    padding1: u8;
+    padding2: u8;
+    padding3: u8;
+    xrel: i16;
+    yrel: i16;
 }
 
 struct Joy_Hat_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
-    var hat: u8;
-    var value: u8;
-    var padding1: u8;
-    var padding2: u8;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
+    hat: u8;
+    value: u8;
+    padding1: u8;
+    padding2: u8;
 }
 
 struct Joy_Button_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
-    var button: u8;
-    var state: u8;
-    var padding1: u8;
-    var padding2: u8;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
+    button: u8;
+    state: u8;
+    padding1: u8;
+    padding2: u8;
 }
 
 struct Joy_Device_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
 }
 
 struct Controller_Axis_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
-    var axis: u8;
-    var padding1: u8;
-    var padding2: u8;
-    var padding3: u8;
-    var value: i16;
-    var padding4: u16;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
+    axis: u8;
+    padding1: u8;
+    padding2: u8;
+    padding3: u8;
+    value: i16;
+    padding4: u16;
 }
 
 struct Controller_Button_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
-    var button: u8;
-    var state: u8;
-    var padding1: u8;
-    var padding2: u8;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
+    button: u8;
+    state: u8;
+    padding1: u8;
+    padding2: u8;
 }
 
 struct Controller_Device_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: i32;
+    type: Event_Type;
+    timestamp: u32;
+    which: i32;
 }
 
 struct Audio_Device_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var which: u32;
-    var iscapture: u8;
-    var padding1: u8;
-    var padding2: u8;
-    var padding3: u8;
+    type: Event_Type;
+    timestamp: u32;
+    which: u32;
+    iscapture: u8;
+    padding1: u8;
+    padding2: u8;
+    padding3: u8;
 }
 
 struct Touch_Finger_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var touch_id: i64;
-    var finger_id: i64;
-    var x: f32;
-    var y: f32;
-    var dx: f32;
-    var dy: f32;
-    var pressure: f32;
+    type: Event_Type;
+    timestamp: u32;
+    touch_id: i64;
+    finger_id: i64;
+    x: f32;
+    y: f32;
+    dx: f32;
+    dy: f32;
+    pressure: f32;
 }
 
 struct Multi_Gesture_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var touch_id: i64;
-    var d_theta: f32;
-    var d_dist: f32;
-    var x: f32;
-    var y: f32;
-    var num_fingers: u16;
-    var padding: u16;
+    type: Event_Type;
+    timestamp: u32;
+    touch_id: i64;
+    d_theta: f32;
+    d_dist: f32;
+    x: f32;
+    y: f32;
+    num_fingers: u16;
+    padding: u16;
 }
 
 struct Dollar_Gesture_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var touch_id: i64;
-    var gesture_id: i64;
-    var num_fingers: u32;
-    var error: f32;
-    var x: f32;
-    var y: f32;
+    type: Event_Type;
+    timestamp: u32;
+    touch_id: i64;
+    gesture_id: i64;
+    num_fingers: u32;
+    error: f32;
+    x: f32;
+    y: f32;
 }
 
 struct Drop_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var file: cstring;
-    var window_id: u32;
+    type: Event_Type;
+    timestamp: u32;
+    file: cstring;
+    window_id: u32;
 }
 
 struct Quit_Event {
-    var type: Event_Type;
-    var timestamp: u32;
+    type: Event_Type;
+    timestamp: u32;
 }
 
 struct OS_Event {
-    var type: Event_Type;
-    var timestamp: u32;
+    type: Event_Type;
+    timestamp: u32;
 }
 
 struct User_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var window_id: u32;
-    var code: i32;
-    var data1: ^rawptr;
-    var data2: ^rawptr;
+    type: Event_Type;
+    timestamp: u32;
+    window_id: u32;
+    code: i32;
+    data1: ^rawptr;
+    data2: ^rawptr;
 }
 
 struct Sys_Wm_Event {
-    var type: Event_Type;
-    var timestamp: u32;
-    var msg: ^Sys_Wm_Msg;
+    type: Event_Type;
+    timestamp: u32;
+    msg: ^Sys_Wm_Msg;
 }

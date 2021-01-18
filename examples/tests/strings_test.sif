@@ -2,14 +2,14 @@
 #include "core:math.sif"
 
 proc test_strings() {
-    var str = "Hello, World!";
-    var pieces = string_split(str, ',', default_allocator());
+    str := "Hello, World!";
+    pieces := string_split(str, ',', default_allocator());
     assert(pieces[0] == "Hello");
     assert(pieces[1] == " World!");
 
     assert(aprint(default_allocator(), "this % is a % string %", 123, [2]int.{4, 2}, Vector3.{1, 4, 9}) == "this 123 is a [4, 2] string Vector3.{x = 1.000000, y = 4.000000, z = 9.000000}");
 
-    var index: int;
+    index: int;
     assert(index_of("foozlez", 'z', &index));
     assert(index == 3);
     assert(!index_of("foozlez", 'Z', &index));
@@ -26,40 +26,40 @@ proc test_strings() {
     assert(!string_ends_with("foozle", ""));
 
     {
-        var strings = [4]string.{
+        strings := [4]string.{
             "foo", "bar", "baz", "qux"
         };
-        var full_string = concatenate(to_slice(&strings), default_allocator());
+        full_string := concatenate(to_slice(&strings), default_allocator());
         assert(full_string == "foobarbazqux");
     }
 
     {
-        var strings = [4]string.{
+        strings := [4]string.{
             "", "", "", ""
         };
-        var full_string = concatenate(to_slice(&strings), default_allocator());
+        full_string := concatenate(to_slice(&strings), default_allocator());
         assert(full_string == "");
         assert(full_string.data == null);
     }
 
     {
-        var strings = [4]string.{
+        strings := [4]string.{
             "foo", "", "bar", ""
         };
-        var full_string = concatenate(to_slice(&strings), default_allocator());
+        full_string := concatenate(to_slice(&strings), default_allocator());
         assert(full_string == "foobar");
     }
 
     {
-        var a = "a really really really really really really really really really really really long string";
+        a := "a really really really really really really really really really really really long string";
         assert(a.count == 90);
-        var cstr = clone_to_cstring(a, default_allocator());
+        cstr := clone_to_cstring(a, default_allocator());
         assert(strlen(cstr) == 90);
-        var str = clone_to_string(cstr, default_allocator());
+        str := clone_to_string(cstr, default_allocator());
         assert(str.count == 90);
-        var str2 = cstring_to_string(cstr);
+        str2 := cstring_to_string(cstr);
         assert(str2.count == 90);
-        var cstr2 = unsafe_string_to_cstring(a);
+        cstr2 := unsafe_string_to_cstring(a);
         assert(cast(^byte, cstr2) == a.data);
     }
 }

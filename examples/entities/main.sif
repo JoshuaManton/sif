@@ -2,47 +2,48 @@
 #include "core:math.sif"
 #include "core:dynamic_array.sif"
 
-const EntityID = int;
+const EntityID := int;
+
 struct Entity {
-    var id: EntityID;
-    var position: Vector3;
-    var scale: Vector3;
-    var kind: typeid;
+    id: EntityID;
+    position: Vector3;
+    scale: Vector3;
+    kind: typeid;
 }
 
 struct Player {
-    using var base: Entity;
-    var name: string;
-    var health: int;
-    var inventory: [4]EntityID;
+    using base: Entity;
+    name: string;
+    health: int;
+    inventory: [4]EntityID;
 }
 
 struct Chest {
-    using var base: Entity;
-    var contents: [8]EntityID;
+    using base: Entity;
+    contents: [8]EntityID;
 }
 
 struct Weapon {
-    using var base: Entity;
-    var name: string;
-    var damage: int;
+    using base: Entity;
+    name: string;
+    damage: int;
 }
 
 struct Helmet {
-    using var base: Entity;
-    var defense: int;
+    using base: Entity;
+    defense: int;
 }
 
 proc player_loot_chest(player: ^Player, chest: ^Chest) {
-    for (var chest_idx = 0; chest_idx < chest.contents.count; chest_idx += 1) {
-        var item = chest.contents[chest_idx];
+    for (chest_idx := 0; chest_idx < chest.contents.count; chest_idx += 1) {
+        item := chest.contents[chest_idx];
         if (item == 0) {
             // skip empty chest slots
             continue;
         }
         // find an empty slot in the players inventory
-        var found_inventory_slot = -1;
-        for (var inv_idx = 0; inv_idx < player.inventory.count; inv_idx += 1) {
+        found_inventory_slot := -1;
+        for (inv_idx := 0; inv_idx < player.inventory.count; inv_idx += 1) {
             if (player.inventory[inv_idx] == 0) {
                 found_inventory_slot = inv_idx;
                 break;
@@ -57,8 +58,8 @@ proc player_loot_chest(player: ^Player, chest: ^Chest) {
 }
 
 proc put_items_in_chest(chest: ^Chest, items: []^Entity) : int {
-    var item_index = 0;
-    for (var chest_idx = 0; chest_idx < chest.contents.count && item_index < items.count; chest_idx += 1) {
+    item_index := 0;
+    for (chest_idx := 0; chest_idx < chest.contents.count && item_index < items.count; chest_idx += 1) {
         if (chest.contents[chest_idx] != 0) {
             // skip slots with stuff in them already
             continue;
@@ -70,12 +71,12 @@ proc put_items_in_chest(chest: ^Chest, items: []^Entity) : int {
     return item_index;
 }
 
-var g_last_entity_id: EntityID;
+g_last_entity_id: EntityID;
 proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
     // increment first so there will be no entity id '0'. this allows us to use '0' to mean 'null' for entity IDs
     g_last_entity_id += 1;
 
-    var ptr = new(T, default_allocator()); // you shouldn't allocate entities individially in a real game of course but for this example it's fine
+    ptr := new(T, default_allocator()); // you shouldn't allocate entities individially in a real game of course but for this example it's fine
     ptr.id = g_last_entity_id;
     ptr.kind = T;
     ptr.scale = .{1, 1, 1};
@@ -84,33 +85,33 @@ proc make_entity(entities: ^Dynamic_Array!(^Entity), $T: typeid) : ^T {
 }
 
 proc main() {
-    var entities: Dynamic_Array!(^Entity); // a dynamic array of pointers is not a good way to store entities, but again, fine for this example
+    entities: Dynamic_Array!(^Entity); // a dynamic array of pointers is not a good way to store entities, but again, fine for this example
     entities.allocator = default_allocator();
 
     // make a player
-    var player = make_entity(&entities, Player);
+    player := make_entity(&entities, Player);
     player.position = .{5, 0, 5}; // we are able to access position through Player because of the 'using' in the Player struct
     player.name = "John";
     player.health = 10;
 
     // make a chest
-    var chest = make_entity(&entities, Chest);
+    chest := make_entity(&entities, Chest);
     chest.position = .{6, 0, 5}; // right next to the player
 
     // make some items
-    var sword = make_entity(&entities, Weapon);
+    sword := make_entity(&entities, Weapon);
     sword.name = "Sword";
     sword.damage = 3;
-    var bow = make_entity(&entities, Weapon);
+    bow := make_entity(&entities, Weapon);
     bow.name = "Bow";
     bow.damage = 2;
-    var helmet = make_entity(&entities, Helmet);
+    helmet := make_entity(&entities, Helmet);
     helmet.defense = 1;
 
     // print all the entities
     print("All entities:\n");
-    for (var i = 0; i < entities.count; i += 1) {
-        var entity = entities[i];
+    for (i := 0; i < entities.count; i += 1) {
+        entity := entities[i];
         if (entity.kind == Player) {
             printa(cast(^Player, entity)^);
         }
@@ -126,7 +127,7 @@ proc main() {
     }
 
     // put the items in the chest
-    var array_of_items = [3]^Entity.{
+    array_of_items := [3]^Entity.{
         &sword.base,
         &bow.base,
         &helmet.base

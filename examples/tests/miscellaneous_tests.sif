@@ -1,7 +1,7 @@
 proc test_miscellanea() {
     {
-        var a = 2;
-        var b = 3;
+        a := 2;
+        b := 3;
         a, b = b, a;
         assert(a == 3);
         assert(b == 2);
