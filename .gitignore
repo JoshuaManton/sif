@@ -9,3 +9,4 @@ output.c
 
 .build/
 .vs/
+test.sif

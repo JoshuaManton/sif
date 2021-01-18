@@ -26,8 +26,8 @@ proc main() {
 ## Building and Running
 
 1. Clone the repo
-2. Open a command prompt and make sure that you have run vcvars 64-bit so `cl` is in your path (this is a temporary step, will work around it later)
-3. Run `build.bat release`
+2. Open a command prompt
+3. Run `build.bat release` (this requires `cl.exe` to be in your path in 64-bit mode)
 4. Put the following into a file called `my_program.sif`:
 ```odin
 #include "core:basic.sif"
