@@ -119,7 +119,7 @@ void main(int argc, char **argv) {
     char *sif_exe_path = get_current_exe_name(g_global_linear_allocator);
     char *sif_root = path_directory(sif_exe_path, g_global_linear_allocator);
     String_Builder core_lib_builder = make_string_builder(g_global_linear_allocator, 64);
-    core_lib_builder.printf("%s/../core", sif_root);
+    core_lib_builder.printf("%s/core", sif_root);
     sif_core_lib_path = core_lib_builder.string();
 
     bool is_run   = false;
