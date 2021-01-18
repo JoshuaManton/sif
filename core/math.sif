@@ -99,6 +99,10 @@ struct Vector3 {
         return Vector3{a.x / f, a.y / f, a.z / f};
     }
 
+    proc lerp(a: Vector3, b: Vector3, t: float) : Vector3 {
+        return a + (b - a) * t;
+    }
+
     proc negate(a: Vector3) : Vector3 { // @UnaryOperatorOverloading
         var result: Vector3;
         result.x = -a.x;
