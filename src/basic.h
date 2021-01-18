@@ -382,6 +382,7 @@ struct String_Builder {
 
     char *print(const char *str);
     char *printf(const char *fmt, ...);
+    char *write_with_length(const char *str, int length);
     void clear();
     char *string();
     void destroy();
@@ -734,6 +735,8 @@ void Hashtable<Key, Value>::get_key_header(Key key, Key_Header<Key> **out_header
 
 bool starts_with(const char *str, const char *start);
 bool ends_with(const char *str, const char *end);
+int last_index_of(const char *str, const char *query);
+
 char *path_directory(const char *filepath, Allocator allocator);
 char *path_filename(const char *filepath, Allocator allocator);
 char *path_filename_with_extension(const char *filepath, Allocator allocator);
