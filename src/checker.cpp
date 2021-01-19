@@ -3133,9 +3133,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
                 break;
             }
-            case EXPR_ELEMENTTYPEOF: {
-                Expr_Elementtypeof *element_typeof = (Expr_Elementtypeof *)expr;
-                Operand *expr_operand = typecheck_expr(element_typeof->expr);
+            case EXPR_TYPEOFELEMENT: {
+                Expr_Typeofelement *typeof_element = (Expr_Typeofelement *)expr;
+                Operand *expr_operand = typecheck_expr(typeof_element->expr);
                 if (!expr_operand) {
                     return nullptr;
                 }

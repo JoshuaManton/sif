@@ -26,7 +26,7 @@ extern char *g_interned_string_true;
 extern char *g_interned_string_false;
 extern char *g_interned_string_sizeof;
 extern char *g_interned_string_typeof;
-extern char *g_interned_string_elementtypeof;
+extern char *g_interned_string_typeofelement;
 extern char *g_interned_string_if;
 extern char *g_interned_string_else;
 extern char *g_interned_string_for;

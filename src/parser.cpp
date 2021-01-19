@@ -1977,7 +1977,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
             return SIF_NEW_CLONE(Expr_Typeof(expr, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
-        case TK_ELEMENTTYPEOF: {
+        case TK_TYPEOFELEMENT: {
             eat_next_token(lexer, nullptr);
             EXPECT(lexer, TK_LEFT_PAREN, nullptr);
             Ast_Expr *expr = parse_expr(lexer);
@@ -1985,7 +1985,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 return nullptr;
             }
             EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-            return SIF_NEW_CLONE(Expr_Elementtypeof(expr, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+            return SIF_NEW_CLONE(Expr_Typeofelement(expr, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         case TK_DOT: {
             Token dot_token;

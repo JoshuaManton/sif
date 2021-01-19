@@ -30,7 +30,7 @@ void init_lexer_globals() {
     token_string_map[TK_FALSE]                           = "false";
     token_string_map[TK_SIZEOF]                          = "sizeof";
     token_string_map[TK_TYPEOF]                          = "typeof";
-    token_string_map[TK_ELEMENTTYPEOF]                   = "elementtypeof";
+    token_string_map[TK_TYPEOFELEMENT]                   = "typeofelement";
     token_string_map[TK_IF]                              = "if";
     token_string_map[TK_ELSE]                            = "else";
     token_string_map[TK_FOR]                             = "for";
@@ -124,7 +124,7 @@ void init_lexer_globals() {
     token_name_map[TK_FALSE]                             = "TK_FALSE";
     token_name_map[TK_SIZEOF]                            = "TK_SIZEOF";
     token_name_map[TK_TYPEOF]                            = "TK_TYPEOF";
-    token_name_map[TK_ELEMENTTYPEOF]                     = "TK_ELEMENTTYPEOF";
+    token_name_map[TK_TYPEOFELEMENT]                     = "TK_TYPEOFELEMENT";
     token_name_map[TK_IF]                                = "TK_IF";
     token_name_map[TK_ELSE]                              = "TK_ELSE";
     token_name_map[TK_FOR]                               = "TK_FOR";
@@ -475,7 +475,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         else CHECK_KEYWORD(g_interned_string_false, TK_FALSE)
         else CHECK_KEYWORD(g_interned_string_sizeof, TK_SIZEOF)
         else CHECK_KEYWORD(g_interned_string_typeof, TK_TYPEOF)
-        else CHECK_KEYWORD(g_interned_string_elementtypeof, TK_ELEMENTTYPEOF)
+        else CHECK_KEYWORD(g_interned_string_typeofelement, TK_TYPEOFELEMENT)
         else CHECK_KEYWORD(g_interned_string_if, TK_IF)
         else CHECK_KEYWORD(g_interned_string_else, TK_ELSE)
         else CHECK_KEYWORD(g_interned_string_for, TK_FOR)
