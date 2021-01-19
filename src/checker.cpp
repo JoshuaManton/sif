@@ -3141,11 +3141,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 }
                 assert(expr_operand->type != nullptr);
                 if (is_type_untyped(expr_operand->type)) {
-                    report_error(expr->location, "Cannot use 'elementtypeof' on an untyped declaration.");
+                    report_error(expr->location, "Cannot use 'typeofelement' on an untyped declaration.");
                     return nullptr;
                 }
                 if (!is_type_typeid(expr_operand->type)) {
-                    report_error(expr_operand->location, "Expected a type for elementtypeof(). Maybe try elementtypeof(typeof(var))?");
+                    report_error(expr_operand->location, "Expected a type for typeofelement(). Maybe try typeofelement(typeof(var))?");
                     return nullptr;
                 }
                 Type *element_type = nullptr;
@@ -3161,7 +3161,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     element_type = type_byte;
                 }
                 else {
-                    report_error(expr_operand->location, "elementtypeof() requires an array type, slice type, or string. Cannot use elementtypeof() on type '%s'.", type_to_string(expr_operand->type_value));
+                    report_error(expr_operand->location, "typeofelement() requires an array type, slice type, or string. Cannot use typeofelement() on type '%s'.", type_to_string(expr_operand->type_value));
                     return nullptr;
                 }
                 assert(element_type != nullptr);
