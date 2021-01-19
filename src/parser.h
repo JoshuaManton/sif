@@ -447,6 +447,7 @@ enum Expr_Kind {
 
     EXPR_SIZEOF,
     EXPR_TYPEOF,
+    EXPR_ELEMENTTYPEOF,
     EXPR_CAST,
     EXPR_TRANSMUTE,
 
@@ -687,6 +688,14 @@ struct Expr_Typeof : public Ast_Expr {
     Ast_Expr *expr = {};
     Expr_Typeof(Ast_Expr *expr, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Expr(EXPR_TYPEOF, allocator, current_block, location)
+    , expr(expr)
+    {}
+};
+
+struct Expr_Elementtypeof : public Ast_Expr {
+    Ast_Expr *expr = {};
+    Expr_Elementtypeof(Ast_Expr *expr, Allocator allocator, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_ELEMENTTYPEOF, allocator, current_block, location)
     , expr(expr)
     {}
 };

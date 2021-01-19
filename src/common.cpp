@@ -42,6 +42,7 @@ char *g_interned_string_true;
 char *g_interned_string_false;
 char *g_interned_string_sizeof;
 char *g_interned_string_typeof;
+char *g_interned_string_elementtypeof;
 char *g_interned_string_if;
 char *g_interned_string_else;
 char *g_interned_string_for;
@@ -103,6 +104,7 @@ void init_interned_strings() {
     g_interned_string_false      = intern_string("false");
     g_interned_string_sizeof     = intern_string("sizeof");
     g_interned_string_typeof     = intern_string("typeof");
+    g_interned_string_elementtypeof = intern_string("elementtypeof");
     g_interned_string_if         = intern_string("if");
     g_interned_string_else       = intern_string("else");
     g_interned_string_for        = intern_string("for");

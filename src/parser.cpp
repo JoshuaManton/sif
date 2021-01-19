@@ -1450,8 +1450,6 @@ bool is_unary_op(Token_Kind kind) {
         case TK_NOT:
         case TK_BIT_NOT:
         case TK_DOT_DOT:
-        case TK_SIZEOF:
-        case TK_TYPEOF:
         case TK_AMPERSAND: { // address-of
             return true;
         }
@@ -1637,24 +1635,6 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
                     return nullptr;
                 }
                 return SIF_NEW_CLONE(Expr_Spread(rhs, lexer->allocator, lexer->current_block, op.location), lexer->allocator);
-            }
-            case TK_SIZEOF: {
-                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-                Ast_Expr *expr = parse_expr(lexer);
-                if (!expr) {
-                    return nullptr;
-                }
-                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                return SIF_NEW_CLONE(Expr_Sizeof(expr, lexer->allocator, lexer->current_block, op.location), lexer->allocator);
-            }
-            case TK_TYPEOF: {
-                EXPECT(lexer, TK_LEFT_PAREN, nullptr);
-                Ast_Expr *expr = parse_expr(lexer);
-                if (!expr) {
-                    return nullptr;
-                }
-                EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-                return SIF_NEW_CLONE(Expr_Typeof(expr, lexer->allocator, lexer->current_block, op.location), lexer->allocator);
             }
             default: {
                 assert(false);
@@ -1976,6 +1956,36 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
                 return nullptr;
             }
             return compound_literal;
+        }
+        case TK_SIZEOF: {
+            eat_next_token(lexer, nullptr);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *expr = parse_expr(lexer);
+            if (!expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return SIF_NEW_CLONE(Expr_Sizeof(expr, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+        }
+        case TK_TYPEOF: {
+            eat_next_token(lexer, nullptr);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *expr = parse_expr(lexer);
+            if (!expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return SIF_NEW_CLONE(Expr_Typeof(expr, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+        }
+        case TK_ELEMENTTYPEOF: {
+            eat_next_token(lexer, nullptr);
+            EXPECT(lexer, TK_LEFT_PAREN, nullptr);
+            Ast_Expr *expr = parse_expr(lexer);
+            if (!expr) {
+                return nullptr;
+            }
+            EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
+            return SIF_NEW_CLONE(Expr_Elementtypeof(expr, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         case TK_DOT: {
             Token dot_token;

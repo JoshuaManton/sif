@@ -6,4 +6,38 @@ proc test_miscellanea() {
         assert(a == 3);
         assert(b == 2);
     }
+
+    {
+        proc select(things: $T, bools: []bool, allocator: Allocator) : T {
+            results := new_slice(elementtypeof(T), bools.count, allocator);
+            result_index := 0;
+            for (i := 0; i < bools.count; i += 1) {
+                if (bools[i]) {
+                    results[result_index] = things[i];
+                    result_index += 1;
+                }
+            }
+            results.count = result_index;
+            return transmute(T, results);
+        }
+
+        {
+            things   := [3]int.{1, 4, 9};
+            bools    := [3]bool.{true, false, true};
+            selected := select(to_slice(&things), to_slice(&bools), default_allocator());
+            assert(selected.count == 2);
+            assert(selected[0] == 1);
+            assert(selected[1] == 9);
+        }
+
+        {
+            bools := [5]bool.{false, true, true, true, false};
+            chars := select("Hello", to_slice(&bools), default_allocator());
+            assert(chars.count == 3);
+            assert(chars[0] == 'e');
+            assert(chars[1] == 'l');
+            assert(chars[2] == 'l');
+        }
+    }
 }
+

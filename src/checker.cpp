@@ -3102,7 +3102,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     return nullptr;
                 }
                 if (!is_type_typeid(expr_operand->type)) {
-                    report_error(expr_operand->location, "Expected a type for sizeof(). Maybe you forgot a typeof()?");
+                    report_error(expr_operand->location, "Expected a type for sizeof(). Maybe try sizeof(typeof(var))?");
                     return nullptr;
                 }
                 assert(expr_operand->type_value != nullptr);
@@ -3130,6 +3130,43 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 }
                 result_operand.type = type_typeid;
                 result_operand.type_value = expr_operand->type;
+                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+                break;
+            }
+            case EXPR_ELEMENTTYPEOF: {
+                Expr_Elementtypeof *element_typeof = (Expr_Elementtypeof *)expr;
+                Operand *expr_operand = typecheck_expr(element_typeof->expr);
+                if (!expr_operand) {
+                    return nullptr;
+                }
+                assert(expr_operand->type != nullptr);
+                if (is_type_untyped(expr_operand->type)) {
+                    report_error(expr->location, "Cannot use 'elementtypeof' on an untyped declaration.");
+                    return nullptr;
+                }
+                if (!is_type_typeid(expr_operand->type)) {
+                    report_error(expr_operand->location, "Expected a type for elementtypeof(). Maybe try elementtypeof(typeof(var))?");
+                    return nullptr;
+                }
+                Type *element_type = nullptr;
+                if (is_type_array(expr_operand->type_value)) {
+                    Type_Array *array = (Type_Array *)expr_operand->type_value;
+                    element_type = array->array_of;
+                }
+                else if (is_type_slice(expr_operand->type_value)) {
+                    Type_Slice *slice = (Type_Slice *)expr_operand->type_value;
+                    element_type = slice->slice_of;
+                }
+                else if (expr_operand->type_value == type_string) {
+                    element_type = type_byte;
+                }
+                else {
+                    report_error(expr_operand->location, "elementtypeof() requires an array type, slice type, or string. Cannot use elementtypeof() on type '%s'.", type_to_string(expr_operand->type_value));
+                    return nullptr;
+                }
+                assert(element_type != nullptr);
+                result_operand.type = type_typeid;
+                result_operand.type_value = element_type;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
                 break;
             }

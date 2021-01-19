@@ -43,6 +43,7 @@ enum Token_Kind {
 
     TK_SIZEOF,
     TK_TYPEOF,
+    TK_ELEMENTTYPEOF,
 
     TK_DIRECTIVE_PRINT,
     TK_DIRECTIVE_ASSERT,
