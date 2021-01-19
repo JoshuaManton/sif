@@ -50,8 +50,6 @@ void pop_ast_block(Lexer *lexer, Ast_Block *old_block) {
 
 bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
     assert(new_declaration->name != nullptr);
-    // g_register_declaration_spinlock.lock();
-    // defer(g_register_declaration_spinlock.unlock());
     assert(new_declaration->parent_block != nullptr);
     Declaration **existing_declaration = block->declarations_lookup.get(new_declaration->name);
     if (existing_declaration) {

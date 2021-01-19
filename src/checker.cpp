@@ -1829,7 +1829,7 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             type_operand.flags = OPERAND_TYPE | OPERAND_RVALUE | OPERAND_CONSTANT;
             type_operand.type = type_typeid;
             type_operand.type_value = concrete_type;
-            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, block_to_insert_into, parameter_location), g_global_linear_allocator);
+            Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, block_to_insert_into, type_expr->location), g_global_linear_allocator);
             poly->inserted_declaration = declaration;
             assert(register_declaration(block_to_insert_into, declaration));
             out_polymorphic_declarations->append(declaration);
