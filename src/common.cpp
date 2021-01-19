@@ -62,6 +62,7 @@ char *g_interned_rawptr_string;
 char *g_interned_any_string;
 char *g_interned_typeid_string;
 char *g_interned_data_string;
+char *g_interned_type_string;
 char *g_interned_count_string;
 
 char *g_interned_sif_runtime_bounds_check_proc_string;
@@ -124,6 +125,7 @@ void init_interned_strings() {
     g_interned_any_string         = intern_string("any");
     g_interned_typeid_string      = intern_string("typeid");
     g_interned_data_string        = intern_string("data");
+    g_interned_type_string        = intern_string("type");
     g_interned_count_string       = intern_string("count");
 
     g_interned_sif_runtime_bounds_check_proc_string               = intern_string("sif_bounds_check");

@@ -59,8 +59,7 @@ struct Type {
     Array<Struct_Field> all_fields = {};
     Array<Struct_Field> constant_fields = {};
     Array<Struct_Field> variable_fields = {};
-    Ast_Block *constants_block = {};
-    Ast_Block *variables_block = {};
+    Ast_Block *declarations_block = {};
     char *printable_name = {};
     int printable_name_length = {}; // note(josh): doesn't include null term
     Type_Pointer *pointer_to_this_type = {};

@@ -46,6 +46,7 @@ extern char *g_interned_rawptr_string;
 extern char *g_interned_any_string;
 extern char *g_interned_typeid_string;
 extern char *g_interned_data_string;
+extern char *g_interned_type_string;
 extern char *g_interned_count_string;
 
 extern char *g_interned_sif_runtime_bounds_check_proc_string;
