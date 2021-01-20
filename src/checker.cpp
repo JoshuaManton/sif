@@ -180,32 +180,32 @@ void add_ordered_declaration(Declaration *declaration) {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block), g_global_linear_allocator)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block), g_global_linear_allocator)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block), g_global_linear_allocator)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block), g_global_linear_allocator)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block), g_global_linear_allocator)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block), g_global_linear_allocator));
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block), g_global_linear_allocator)));
 
-    register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block), g_global_linear_allocator));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block), g_global_linear_allocator)));
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
