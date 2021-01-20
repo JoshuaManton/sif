@@ -72,7 +72,7 @@ Declaration *sif_runtime_type_info_typeid;
 
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
-bool complete_type(Type *type);
+bool complete_type(Type *type, Location usage_location);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand operand, Type *expected_type, Operand *out_operand, bool do_report_error = true);
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr, bool require_value = true);
@@ -137,12 +137,12 @@ void init_checker() {
     all_types.allocator = g_global_linear_allocator;
     ordered_declarations.allocator = g_global_linear_allocator;
 
-    type_i8  = NEW_TYPE(Type_Primitive(intern_string("i8"), 1, 1));  type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED;
+    type_i8  = NEW_TYPE(Type_Primitive(intern_string("i8"),  1, 1)); type_i8->flags  = TF_NUMBER | TF_INTEGER | TF_SIGNED;
     type_i16 = NEW_TYPE(Type_Primitive(intern_string("i16"), 2, 2)); type_i16->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED;
     type_i32 = NEW_TYPE(Type_Primitive(intern_string("i32"), 4, 4)); type_i32->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED;
     type_i64 = NEW_TYPE(Type_Primitive(intern_string("i64"), 8, 8)); type_i64->flags = TF_NUMBER | TF_INTEGER | TF_SIGNED;
 
-    type_u8  = NEW_TYPE(Type_Primitive(intern_string("u8"), 1, 1));  type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED;
+    type_u8  = NEW_TYPE(Type_Primitive(intern_string("u8"),  1, 1)); type_u8->flags  = TF_NUMBER | TF_INTEGER | TF_UNSIGNED;
     type_u16 = NEW_TYPE(Type_Primitive(intern_string("u16"), 2, 2)); type_u16->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED;
     type_u32 = NEW_TYPE(Type_Primitive(intern_string("u32"), 4, 4)); type_u32->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED;
     type_u64 = NEW_TYPE(Type_Primitive(intern_string("u64"), 8, 8)); type_u64->flags = TF_NUMBER | TF_INTEGER | TF_UNSIGNED;
@@ -152,21 +152,21 @@ void init_checker() {
 
     type_bool = NEW_TYPE(Type_Primitive(intern_string("bool"), 1, 1));
 
-    type_typeid  = NEW_TYPE(Type_Primitive(intern_string("typeid"), 8, 8));
+    type_typeid  = NEW_TYPE(Type_Primitive(intern_string("typeid"),  8, 8));
     type_cstring = NEW_TYPE(Type_Primitive(intern_string("cstring"), 8, 8)); type_cstring->flags = TF_POINTER;
-    type_string  = NEW_TYPE(Type_Primitive(intern_string("string"), 16, 8)); type_string->flags = TF_STRING;
-    type_rawptr  = NEW_TYPE(Type_Primitive(intern_string("rawptr"), 8, 8)); type_rawptr->flags = TF_POINTER;
+    type_string  = NEW_TYPE(Type_Primitive(intern_string("string"), 16, 8)); type_string->flags  = TF_STRING;
+    type_rawptr  = NEW_TYPE(Type_Primitive(intern_string("rawptr"),  8, 8)); type_rawptr->flags  = TF_POINTER;
 
     type_any = NEW_TYPE(Type_Primitive(intern_string("any"), 16, 8));
 
     type_untyped_integer = NEW_TYPE(Type_Primitive("untyped integer", -1, -1), false); type_untyped_integer->flags = TF_NUMBER  | TF_UNTYPED | TF_INTEGER;
-    type_untyped_float   = NEW_TYPE(Type_Primitive("untyped float", -1, -1), false);   type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
-    type_untyped_null    = NEW_TYPE(Type_Primitive("untyped null", -1, -1), false);    type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
-    type_untyped_string  = NEW_TYPE(Type_Primitive("untyped string", -1, -1), false);  type_untyped_string->flags  = TF_STRING  | TF_UNTYPED;
+    type_untyped_float   = NEW_TYPE(Type_Primitive("untyped float",   -1, -1), false); type_untyped_float->flags   = TF_NUMBER  | TF_UNTYPED | TF_FLOAT;
+    type_untyped_null    = NEW_TYPE(Type_Primitive("untyped null",    -1, -1), false); type_untyped_null->flags    = TF_POINTER | TF_UNTYPED;
+    type_untyped_string  = NEW_TYPE(Type_Primitive("untyped string",  -1, -1), false); type_untyped_string->flags  = TF_STRING  | TF_UNTYPED;
 
-    type_byte = type_u8;
-    type_int = type_i64;
-    type_uint = type_u64;
+    type_byte  = type_u8;
+    type_int   = type_i64;
+    type_uint  = type_u64;
     type_float = type_f32;
 
     type_polymorphic = NEW_TYPE(Type_Primitive("type polymorphic", -1, -1), false); type_polymorphic->flags = TF_POLYMORPHIC;
@@ -505,7 +505,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             assert(declared_type != nullptr);
 
             var->type = declared_type;
-            if (!complete_type(var->type)) {
+            if (!complete_type(var->type, var->location)) {
                 return false;
             }
             assert(var->type != nullptr);
@@ -533,7 +533,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 if (is_type_pointer(var->type)) {
                     Type_Pointer *pointer_type = (Type_Pointer *)var->type;
                     assert(pointer_type->pointer_to);
-                    if (!complete_type(pointer_type->pointer_to)) {
+                    if (!complete_type(pointer_type->pointer_to, var->location)) {
                         return false;
                     }
                 }
@@ -754,7 +754,7 @@ bool typecheck_global_scope(Ast_Block *block) {
                     return false;
                 }
                 if (decl->kind == DECL_STRUCT) {
-                    assert(complete_type(((Struct_Declaration *)decl)->structure->type));
+                    assert(complete_type(((Struct_Declaration *)decl)->structure->type, decl->location));
                 }
                 break;
             }
@@ -826,7 +826,7 @@ bool typecheck_global_scope(Ast_Block *block) {
     //             a call to complete_type(), only actually using the type and it's members will.
     For (idx, all_types) {
         Type *type = all_types[idx];
-        if (!complete_type(type)) {
+        if (!complete_type(type, {})) {
             return false;
         }
     }
@@ -1049,7 +1049,7 @@ char *type_to_string_plain(Type *type) {
     return sb.string();
 }
 
-bool complete_type(Type *type) {
+bool complete_type(Type *type, Location usage_location) {
     if (type->check_state == CS_CHECKED) {
         return true;
     }
@@ -1063,7 +1063,6 @@ bool complete_type(Type *type) {
     if (is_type_incomplete(type)) {
         switch (type->kind) {
             case TYPE_STRUCT: {
-                // complete_struct
                 Type_Struct *struct_type = (Type_Struct *)type;
                 assert(struct_type->ast_struct != nullptr);
                 Ast_Struct *structure = struct_type->ast_struct;
@@ -1074,7 +1073,7 @@ bool complete_type(Type *type) {
                     if (!check_declaration(var->declaration, var->location)) {
                         return false;
                     }
-                    if (!complete_type(var->type)) {
+                    if (!complete_type(var->type, var->location)) {
                         return false;
                     }
                 }
@@ -1139,7 +1138,7 @@ bool complete_type(Type *type) {
             }
             case TYPE_ARRAY: {
                 Type_Array *array_type = (Type_Array *)type;
-                if (!complete_type(array_type->array_of)) {
+                if (!complete_type(array_type->array_of, usage_location)) {
                     return false;
                 }
                 assert(array_type->count > 0);
@@ -1155,7 +1154,7 @@ bool complete_type(Type *type) {
             case TYPE_REFERENCE: {
                 Type_Reference *reference_type = (Type_Reference *)type;
                 assert(reference_type->reference_to);
-                if (!complete_type(reference_type->reference_to)) {
+                if (!complete_type(reference_type->reference_to, usage_location)) {
                     return false;
                 }
                 reference_type->flags &= ~(TF_INCOMPLETE);
@@ -2475,7 +2474,7 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
     if (!lhs_operand) {
         return false;
     }
-    if (!complete_type(lhs_operand->type)) {
+    if (!complete_type(lhs_operand->type, lhs->location)) {
         return false;
     }
 
@@ -2496,7 +2495,7 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
         type_with_fields = lhs_operand->type_value;
     }
     assert(type_with_fields != nullptr);
-    if (!complete_type(type_with_fields)) {
+    if (!complete_type(type_with_fields, lhs->location)) {
         return false;
     }
     out_result->type_with_field = type_with_fields;
@@ -2806,7 +2805,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 if (!lhs_operand) {
                     return nullptr;
                 }
-                if (!complete_type(lhs_operand->type)) {
+                if (!complete_type(lhs_operand->type, expr->location)) {
                     return nullptr;
                 }
 
@@ -2962,7 +2961,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     target_type = type_operand->type_value;
                 }
                 assert(target_type != nullptr);
-                if (!complete_type(target_type)) {
+                if (!complete_type(target_type, expr->location)) {
                     return nullptr;
                 }
 
@@ -3074,7 +3073,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     return nullptr;
                 }
                 assert(expr_operand->type_value != nullptr);
-                if (!complete_type(expr_operand->type_value)) {
+                if (!complete_type(expr_operand->type_value, expr->location)) {
                     return nullptr;
                 }
                 assert(!is_type_incomplete(expr_operand->type_value));
@@ -3146,7 +3145,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 result_operand.type = type_typeid;
                 result_operand.type_value = anonymous_struct->structure->type;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-                if (!complete_type(anonymous_struct->structure->type)) {
+                if (!complete_type(anonymous_struct->structure->type, expr->location)) {
                     return nullptr;
                 }
                 break;
@@ -3314,7 +3313,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
         }
 
         if ((!(result_operand.flags & OPERAND_NO_VALUE))) {
-            if (!complete_type(result_operand.type)) { // if an expressions yields a type, that type better be complete! I think.
+            if (!complete_type(result_operand.type, expr->location)) { // if an expressions yields a type, that type better be complete! I think.
                 return nullptr;
             }
 
@@ -3503,7 +3502,7 @@ bool typecheck_node(Ast_Node *node) {
             assert(type_to_broadcast != nullptr);
             Ast_Block *block_to_broadcast_declarations_of = type_to_broadcast->declarations_block;
             assert(block_to_broadcast_declarations_of != nullptr);
-            if (!complete_type(type_to_broadcast)) {
+            if (!complete_type(type_to_broadcast, node->location)) {
                 return false;
             }
             assert(block_to_broadcast_declarations_of != nullptr);
