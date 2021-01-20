@@ -34,6 +34,7 @@ MEDIUM PRIORITY
 -deduplicate #foreign_import/#foreign_system_import
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 -block comments
+-sized bool types
 -underscores in numbers
 -uninitialized stack members
 -prevent identifiers from being C keywords in the backend, like `signed`

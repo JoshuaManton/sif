@@ -22,6 +22,7 @@ Spinlock g_lexers_to_process_spinlock;
 Array<Lexer> g_lexers_to_process;
 Array<char *> g_all_included_files;
 
+// todo(josh): make this into a static array rather than using `thread_local`
 thread_local int g_num_anonymous_structs = 0;
 thread_local int g_num_anonymous_procedures = 0;
 

@@ -11,6 +11,8 @@
 static char *token_string_map[TK_COUNT];
 static char *token_name_map[TK_COUNT];
 
+Spinlock report_error_spinlock;
+
 void init_lexer_globals() {
     token_string_map[TK_INVALID]                         = "INVALID";
     token_string_map[TK_IDENTIFIER]                      = "IDENTIFIER";
@@ -829,6 +831,8 @@ void report_error(Location location, const char *fmt, ...) {
     if (g_silence_errors) {
         return;
     }
+    report_error_spinlock.lock();
+    defer(report_error_spinlock.unlock());
     g_logged_error = true;
     printf("%s(%d:%d) Error: ", location.filepath, location.line, location.character);
     va_list args;
@@ -839,6 +843,8 @@ void report_error(Location location, const char *fmt, ...) {
 }
 
 void report_info(Location location, const char *fmt, ...) {
+    report_error_spinlock.lock();
+    defer(report_error_spinlock.unlock());
     printf("%s(%d:%d) ", location.filepath, location.line, location.character);
     va_list args;
     va_start(args, fmt);
