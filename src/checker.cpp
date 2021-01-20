@@ -81,14 +81,19 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header);
 char *type_to_string_plain(Type *type);
 
 template<typename T>
-T *NEW_TYPE(T init, bool add_to_all_types_list = true) {
+T *NEW_TYPE(T init, bool add_to_all_types_list = true, Ast_Block *declarations_block_override = nullptr) {
     T *t_ptr = SIF_NEW_CLONE(init, g_global_linear_allocator);
     if (add_to_all_types_list) {
         all_types.append(t_ptr);
         t_ptr->id = all_types.count;
     }
 
-    t_ptr->declarations_block = SIF_NEW_CLONE(Ast_Block(g_global_linear_allocator, {}, {}), g_global_linear_allocator);
+    if (declarations_block_override) {
+        t_ptr->declarations_block = declarations_block_override;
+    }
+    else {
+        t_ptr->declarations_block = SIF_NEW_CLONE(Ast_Block(g_global_linear_allocator, {}, {}), g_global_linear_allocator);
+    }
     return t_ptr;
 }
 
@@ -209,7 +214,7 @@ void add_global_declarations(Ast_Block *block) {
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
-    Type_Struct *incomplete_type = NEW_TYPE(Type_Struct(structure));
+    Type_Struct *incomplete_type = NEW_TYPE(Type_Struct(structure), true, structure->struct_block);
     incomplete_type->flags |= TF_INCOMPLETE;
     incomplete_type->is_union = structure->is_union;
     structure->type = incomplete_type;
@@ -1072,12 +1077,6 @@ bool complete_type(Type *type) {
                     if (!complete_type(var->type)) {
                         return false;
                     }
-                }
-
-                // propagate polymorphic parameters into Type_Struct declarations_block
-                For (idx, structure->struct_block->declarations) {
-                    Declaration *decl = structure->struct_block->declarations[idx];
-                    assert(register_declaration(structure->type->declarations_block, decl));
                 }
 
                 int size = 0;
@@ -2085,7 +2084,8 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
         }
         case AST_STRUCT: {
             Ast_Struct *structure = (Ast_Struct *)new_parse;
-            block_to_insert_declarations_into = structure->struct_block;
+            make_incomplete_type_for_struct(structure);
+            block_to_insert_declarations_into = structure->type->declarations_block;
             polymorph_vars = &structure->polymorphic_parameters;
             break;
         }
@@ -2161,11 +2161,6 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
         case AST_STRUCT: {
             Ast_Struct *structure_polymorph = (Ast_Struct *)new_parse;
             structure_polymorph->declaration->is_polymorphic = false;
-            assert(structure_polymorph->type == nullptr);
-            if (!check_declaration(structure_polymorph->declaration, polymorph_location)) {
-                report_info(polymorph_location, "Error during polymorph triggered here.");
-                return nullptr;
-            }
             assert(structure_polymorph->type != nullptr);
             structure_polymorph->type->polymorphic_parameter_values = parameters;
             structure_polymorph->type->is_polymorph_of = (Ast_Struct *)node_to_polymorph;
