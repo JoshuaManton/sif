@@ -1,5 +1,7 @@
 @echo off
 
+rm sif.exe
+
 set optimizations=/Od
 if "%1"=="release" (
     set optimizations=/O2
