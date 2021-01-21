@@ -361,8 +361,6 @@ bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
                 Type_Struct *struct_type = (Type_Struct *)type;
                 assert(struct_type->ast_struct != nullptr);
                 Ast_Struct *structure = struct_type->ast_struct;
-                assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
-                assert(structure->declaration->link_name);
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
                     if (!check_declaration(var->declaration, var->location)) {
@@ -424,6 +422,8 @@ bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
             case TYPE_STRUCT: {
                 Type_Struct *struct_type = (Type_Struct *)type;
                 Ast_Struct *structure = struct_type->ast_struct;
+                assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
+                assert(structure->declaration->link_name);
                 add_ordered_declaration(structure->declaration);
                 break;
             }
@@ -473,47 +473,6 @@ bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
                     largest_alignment = max(largest_alignment, field->operand.type->align);
                 }
 
-                // For (idx, structure->body->declarations) {
-                //     Declaration *decl = structure->body->declarations[idx];
-                //     switch (decl->kind) {
-                //         case DECL_USING: {
-                //             Using_Declaration *using_decl = (Using_Declaration *)decl;
-                //             assert(register_declaration(structure->type->declarations_block, using_decl));
-                //             break;
-                //         }
-                //         case DECL_VAR: {
-                //             Var_Declaration *decl_var = (Var_Declaration *)decl;
-                //             Ast_Var *var = decl_var->var;
-                //             if (var->is_constant) {
-                //                 assert(var->expr != nullptr);
-                //                 assert(var->constant_operand.type != nullptr);
-                //                 assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                //                 var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location, var->declaration->notes);
-                //                 if (!var->struct_member) {
-                //                     return false;
-                //                 }
-                //             }
-                //             else {
-                //                 assert(var->type->size > 0);
-                //                 if (!structure->is_union) {
-                //                     size = align_forward(size, var->type->align);
-                //                     var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, size, var->location, var->declaration->notes);
-                //                     assert(var->struct_member);
-                //                     size += var->type->size;
-                //                 }
-                //                 else {
-                //                     var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, 0, var->location, var->declaration->notes);
-                //                     assert(var->struct_member);
-                //                     size = max(size, var->type->size);
-                //                 }
-                //                 largest_alignment = max(largest_alignment, var->type->align);
-                //                 assert(var->struct_member != nullptr);
-                //             }
-                //             break;
-                //         }
-                //     }
-                // }
-
                 if (size == 0) {
                     size = 1;
                 }
@@ -522,9 +481,6 @@ bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
                 assert(size > 0);
                 struct_type->size = (int)align_forward((uintptr_t)size, (uintptr_t)largest_alignment);
                 struct_type->align = largest_alignment;
-
-                assert(structure->name);
-                assert(structure->declaration);
                 break;
             }
             case TYPE_ARRAY: {
