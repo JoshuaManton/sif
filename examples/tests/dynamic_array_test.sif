@@ -1,0 +1,118 @@
+#include "core:dynamic_array.sif"
+
+proc test_dynamic_array() {
+    dyn: Dynamic_Array!(int);
+    dyn.allocator = default_allocator();
+
+    _do_all_the_dynamic_array_things(&dyn);
+
+    // clear it and do it all again!
+    clear_dynamic_array(&dyn);
+    assert(dyn.count == 0);
+    assert(dyn.elements.count == 0);
+    assert(dyn.capacity == 20);
+    dyn.capacity = 0;
+    _do_all_the_dynamic_array_things(&dyn);
+
+    destroy_dynamic_array(dyn);
+}
+
+proc _do_all_the_dynamic_array_things(dyn: ^Dynamic_Array!($T)) {
+    //
+    assert(dyn.count == 0);
+    assert(dyn.elements.count == 0);
+    assert(dyn.capacity == 0);
+
+    //
+    append(dyn, 1);
+    assert(dyn.count == 1);
+    assert(dyn.elements.count == 1);
+    assert(dyn.capacity == 8);
+
+    //
+    append(dyn, 2);
+    append(dyn, 3);
+    assert(dyn.count == 3);
+    assert(dyn.elements.count == 3);
+
+    //
+    val := pop(dyn);
+    assert(dyn.count == 2);
+    assert(dyn.elements.count == 2);
+    assert(val == 3);
+
+    //
+    append(dyn, 3);
+    append(dyn, 4);
+    append(dyn, 5);
+    assert(dyn^[0] == 1);
+    assert(dyn^[1] == 2);
+    assert(dyn^[2] == 3);
+    assert(dyn^[3] == 4);
+    assert(dyn^[4] == 5);
+
+    //
+    assert(dyn.count == 5);
+    assert(dyn.elements.count == 5);
+    assert(dyn.capacity == 8);
+    append(dyn, 6);
+    append(dyn, 7);
+    append(dyn, 8);
+    assert(dyn.count == 8);
+    assert(dyn.elements.count == 8);
+    assert(dyn.capacity == 8);
+    append(dyn, 9);
+    assert(dyn.count == 9);
+    assert(dyn.elements.count == 9);
+    assert(dyn.capacity == 24);
+
+    //
+    pop(dyn);
+    pop(dyn);
+    pop(dyn);
+    pop(dyn);
+    assert(dyn.count == 5);
+    assert(dyn.elements.count == 5);
+    assert(dyn^[0] == 1);
+    assert(dyn^[1] == 2);
+    assert(dyn^[2] == 3);
+    assert(dyn^[3] == 4);
+    assert(dyn^[4] == 5);
+    unordered_remove(dyn, 2);
+    assert(dyn.count == 4);
+    assert(dyn.elements.count == 4);
+    assert(dyn^[0] == 1);
+    assert(dyn^[1] == 2);
+    assert(dyn^[2] == 5);
+    assert(dyn^[3] == 4);
+    ordered_remove(dyn, 1);
+    assert(dyn.count == 3);
+    assert(dyn.elements.count == 3);
+    assert(dyn^[0] == 1);
+    assert(dyn^[1] == 5);
+    assert(dyn^[2] == 4);
+
+    //
+    insert(dyn, 1, 10);
+    assert(dyn.count == 4);
+    assert(dyn.elements.count == 4);
+    assert(dyn^[0] == 1);
+    assert(dyn^[1] == 10);
+    assert(dyn^[2] == 5);
+    assert(dyn^[3] == 4);
+
+    //
+    dyn.capacity = 6;
+    insert(dyn, 3, 23);
+    assert(dyn.count == 5);
+    assert(dyn.elements.count == 5);
+    assert(dyn.capacity == 6);
+    insert(dyn, 3, 23);
+    assert(dyn.count == 6);
+    assert(dyn.elements.count == 6);
+    assert(dyn.capacity == 6);
+    insert(dyn, 3, 23);
+    assert(dyn.count == 7);
+    assert(dyn.elements.count == 7);
+    assert(dyn.capacity == 20);
+}

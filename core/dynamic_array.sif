@@ -11,20 +11,8 @@ struct Dynamic_Array!($T: typeid) {
 }
 
 proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
-    if (dyn.allocator.alloc_proc == null) {
-        print("Error: Allocator wasn't set on Dynamic_Array(%).\n", T);
-        assert(false);
-    }
-    if (dyn.count == dyn.capacity) {
-        old_data := dyn.elements.data;
-        new_cap := 8 + dyn.capacity * 2;
-        dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
-        dyn.capacity = new_cap;
-        if (old_data != null) {
-            memcpy(dyn.elements.data, old_data, cast(u64, dyn.count * sizeof(T)));
-            sif_free(old_data, dyn.allocator);
-        }
-    }
+    _dynamic_array_check_allocator(dyn);
+    resize_if_at_capacity(dyn);
     assert(dyn.elements.count < dyn.capacity);
     assert(dyn.elements.count == dyn.count);
     dyn.elements.count += 1;
@@ -37,6 +25,37 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
 proc append_empty(dyn: ^Dynamic_Array!($T)) : ^T {
     t: T;
     return append(dyn, t);
+}
+
+proc insert(dyn: ^Dynamic_Array!($T), index: int, value: T) : ^T {
+    _dynamic_array_check_allocator(dyn);
+    resize_if_at_capacity(dyn);
+    if (index >= dyn.count) {
+        // todo(josh): when we have #caller_location call sif_bounds_check() here
+        print("insert() out of bounds: %\n", index);
+        assert(false);
+    }
+    if (index < 0) {
+        // todo(josh): when we have #caller_location call sif_bounds_check() here
+        print("insert() out of bounds: %\n", index);
+        assert(false);
+    }
+    dyn.count += 1;
+    dyn.elements.count += 1;
+    memmove(&dyn.elements[index+1], &dyn.elements[index], cast(u64, (dyn.count - index) * sizeof(T)));
+    ptr := &dyn^[index];
+    ptr^ = value;
+    return ptr;
+}
+
+proc reserve(dyn: ^Dynamic_Array!($T), new_cap: int) {
+    old_data := dyn.elements.data;
+    dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
+    dyn.capacity = new_cap;
+    if (old_data != null) {
+        memcpy(dyn.elements.data, old_data, cast(u64, dyn.count * sizeof(T)));
+        sif_free(old_data, dyn.allocator);
+    }
 }
 
 proc pop(dyn: ^Dynamic_Array!($T)) : T {
@@ -61,9 +80,9 @@ proc unordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
 proc ordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
     value := dyn^[index];
     if (index != dyn.count-1) {
-        src: rawptr = &dyn^[index+1];
         dst: rawptr = &dyn^[index];
-        memmove(dst, src, cast(u64, (dyn.count-index+1) * sizeof(T)));
+        src: rawptr = &dyn^[index+1];
+        memmove(dst, src, cast(u64, (dyn.count-index-1) * sizeof(T)));
     }
     dyn.elements.count -= 1;
     dyn.count -= 1;
@@ -78,5 +97,18 @@ proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
 proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
     if (dyn.elements.data != null) {
         sif_free(dyn.elements.data, dyn.allocator);
+    }
+}
+
+proc resize_if_at_capacity(dyn: ^Dynamic_Array!($T)) {
+    if (dyn.count == dyn.capacity) {
+        reserve(dyn, 8 + dyn.capacity * 2);
+    }
+}
+
+proc _dynamic_array_check_allocator(dyn: ^Dynamic_Array!($T)) {
+    if (dyn.allocator.alloc_proc == null) {
+        print("Error: Allocator wasn't set on Dynamic_Array(%).\n", T);
+        assert(false);
     }
 }

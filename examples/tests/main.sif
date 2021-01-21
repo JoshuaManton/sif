@@ -4,6 +4,7 @@ proc main() {
     run_test(test_local_declarations, "local_declarations");
     run_test(test_json,               "json");
     run_test(test_strings,            "strings");
+    run_test(test_dynamic_array,      "dynamic_array");
 
     print("Done tests.\n");
 }
@@ -25,5 +26,6 @@ proc run_test(procedure: proc(), test_name: string) {
 #include "local_declarations.sif"
 #include "json_test.sif"
 #include "strings_test.sif"
+#include "dynamic_array_test.sif"
 
 #include "core:basic.sif"
