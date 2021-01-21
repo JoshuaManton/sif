@@ -51,7 +51,7 @@ proc main() {
     }
 
     type_info : ^Type_Info = get_type_info(My_Struct);
-    assert(type_info.kind == .STRUCT);
+    assert(type_info.kind == Type_Info_Struct);
     struct_info := cast(^Type_Info_Struct, type_info);
     for (i := 0; i < struct_info.fields.count; i += 1) {
         field := struct_info.fields[i];
@@ -133,7 +133,7 @@ proc main() {
     proc print_fields_of_type($T: typeid) {
         print("in print_fields_of_type with T == %\n", T);
         type_info := get_type_info(T);
-        assert(type_info.kind == .STRUCT);
+        assert(type_info.kind == Type_Info_Struct);
         struct_info := cast(^Type_Info_Struct, type_info);
         for (i := 0; i < struct_info.fields.count; i += 1) {
             field := struct_info.fields[i];

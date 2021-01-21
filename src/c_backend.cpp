@@ -1248,21 +1248,6 @@ void c_print_gen_type_info_struct(Chunked_String_Builder *sb, char *ti_name, Typ
     }
 }
 
-// :TypeInfoKindValues
-#define TYPE_INFO_KIND_INTEGER   0
-#define TYPE_INFO_KIND_FLOAT     1
-#define TYPE_INFO_KIND_BOOL      2
-#define TYPE_INFO_KIND_STRING    3
-#define TYPE_INFO_KIND_STRUCT    4
-#define TYPE_INFO_KIND_UNION     5
-#define TYPE_INFO_KIND_ENUM      6
-#define TYPE_INFO_KIND_POINTER   7
-#define TYPE_INFO_KIND_SLICE     8
-#define TYPE_INFO_KIND_ARRAY     9
-#define TYPE_INFO_KIND_REFERENCE 10
-#define TYPE_INFO_KIND_PROCEDURE 11
-#define TYPE_INFO_KIND_TYPEID    12
-
 void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
     assert(proc->body != nullptr);
     assert(!proc->header->is_foreign);
@@ -1465,30 +1450,30 @@ u32 type_info_worker_proc(void *userdata) {
             switch (type->kind) {
                 case TYPE_PRIMITIVE: {
                     if (is_type_integer(type)) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_integer->link_name, TYPE_INFO_KIND_INTEGER, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_integer->link_name, sif_runtime_type_info_integer->structure->type->id, type->id, type->size, type->align);
                         sb->printf("    %s->is_signed = %s;\n", ti_name, (type->flags & TF_SIGNED ? "true" : "false"));
                     }
                     else if (is_type_float(type)) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_float->link_name, TYPE_INFO_KIND_FLOAT, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_float->link_name, sif_runtime_type_info_float->structure->type->id, type->id, type->size, type->align);
                     }
                     else if (type == type_bool) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_bool->link_name, TYPE_INFO_KIND_BOOL, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_bool->link_name, sif_runtime_type_info_bool->structure->type->id, type->id, type->size, type->align);
                     }
                     else if (type == type_string) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, sif_runtime_type_info_string->structure->type->id, type->id, type->size, type->align);
                     }
                     else if (type == type_rawptr) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, sif_runtime_type_info_pointer->structure->type->id, type->id, type->size, type->align);
                     }
                     else if (type == type_typeid) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_typeid->link_name, TYPE_INFO_KIND_TYPEID, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_typeid->link_name, sif_runtime_type_info_typeid->structure->type->id, type->id, type->size, type->align);
                     }
                     else if (type == type_any) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_struct->link_name, TYPE_INFO_KIND_STRUCT, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_struct->link_name, sif_runtime_type_info_struct->structure->type->id, type->id, type->size, type->align);
                         c_print_gen_type_info_struct(sb, ti_name, type);
                     }
                     else if (type == type_cstring) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, TYPE_INFO_KIND_STRING, type->id, type->size, type->align);
+                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, sif_runtime_type_info_string->structure->type->id, type->id, type->size, type->align);
                         sb->printf("    %s->is_cstring = true;\n", ti_name);
                     }
                     else {
@@ -1498,7 +1483,7 @@ u32 type_info_worker_proc(void *userdata) {
                 }
                 case TYPE_ARRAY: {
                     Type_Array *type_array = (Type_Array *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_array->link_name, TYPE_INFO_KIND_ARRAY, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_array->link_name, sif_runtime_type_info_array->structure->type->id, type->id, type->size, type->align);
                     sb->printf("    %s->array_of = GTIP(%d);\n", ti_name, type_array->array_of->id);
                     sb->printf("    %s->count = %d;\n", ti_name, type_array->count);
                     break;
@@ -1515,19 +1500,19 @@ u32 type_info_worker_proc(void *userdata) {
                         Type_Varargs *varargs = (Type_Varargs *)type;
                         slice_of = varargs->varargs_of;
                     }
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_slice->link_name, TYPE_INFO_KIND_SLICE, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_slice->link_name, sif_runtime_type_info_slice->structure->type->id, type->id, type->size, type->align);
                     sb->printf("    %s->slice_of = GTIP(%d);\n", ti_name, slice_of->id);
                     break;
                 }
                 case TYPE_REFERENCE: {
                     Type_Reference *type_reference = (Type_Reference *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_reference->link_name, TYPE_INFO_KIND_REFERENCE, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_reference->link_name, sif_runtime_type_info_reference->structure->type->id, type->id, type->size, type->align);
                     sb->printf("    %s->reference_to = GTIP(%d);\n", ti_name, type_reference->reference_to->id);
                     break;
                 }
                 case TYPE_STRUCT: {
                     Type_Struct *struct_type = (Type_Struct *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? sif_runtime_type_info_union->link_name : sif_runtime_type_info_struct->link_name), (struct_type->is_union ? TYPE_INFO_KIND_UNION : TYPE_INFO_KIND_STRUCT), type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? sif_runtime_type_info_union->link_name : sif_runtime_type_info_struct->link_name), (struct_type->is_union ? sif_runtime_type_info_union->structure->type->id : sif_runtime_type_info_struct->structure->type->id), type->id, type->size, type->align);
                     // todo(josh): make macros for these
                     if (struct_type->notes.count > 0) {
                         sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, struct_type->notes.count);
@@ -1542,13 +1527,13 @@ u32 type_info_worker_proc(void *userdata) {
                 }
                 case TYPE_POINTER: {
                     Type_Pointer *pointer = (Type_Pointer *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, TYPE_INFO_KIND_POINTER, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, sif_runtime_type_info_pointer->structure->type->id, type->id, type->size, type->align);
                     sb->printf("    %s->pointer_to = GTIP(%d);\n", ti_name, pointer->pointer_to->id);
                     break;
                 }
                 case TYPE_ENUM: {
                     Type_Enum *type_enum = (Type_Enum *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_enum->link_name, TYPE_INFO_KIND_ENUM, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_enum->link_name, sif_runtime_type_info_enum->structure->type->id, type->id, type->size, type->align);
                     // todo(josh): make macros for these
                     if (type_enum->notes.count > 0) {
                         sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, type_enum->notes.count);
@@ -1571,7 +1556,7 @@ u32 type_info_worker_proc(void *userdata) {
                 }
                 case TYPE_PROCEDURE: {
                     Type_Procedure *procedure = (Type_Procedure *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_procedure->link_name, TYPE_INFO_KIND_PROCEDURE, type->id, type->size, type->align);
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_procedure->link_name, sif_runtime_type_info_procedure->structure->type->id, type->id, type->size, type->align);
                     if (procedure->parameter_types.count) {
                         sb->printf("    %s->parameter_types.data = malloc(%d * sizeof(struct %s *));\n", ti_name, procedure->parameter_types.count, sif_runtime_type_info->link_name);
                         sb->printf("    %s->parameter_types.count = %d;\n", ti_name, procedure->parameter_types.count);
@@ -1715,6 +1700,9 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("}\n");
     sb.print("void print_bool(bool b) {\n");
     sb.print("    printf((b ? \"true\" : \"false\"));\n");
+    sb.print("}\n");
+    sb.print("void print_pointer(void *ptr) {\n");
+    sb.print("    printf(\"0x%llx\", *(u64 *)&ptr);\n");
     sb.print("}\n");
     sb.print("void print_string(String string) {\n");
     sb.print("    for (i64 i = 0; i < string.count; i++) {\n");

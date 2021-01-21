@@ -37,7 +37,7 @@ proc json_serialize_ti(ptr: rawptr, ti: ^Type_Info, allocator: Allocator) : stri
 }
 
 proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, indent_level: int) : bool {
-    if (ti.kind == .INTEGER) {
+    if (ti.kind == Type_Info_Integer) {
         dti := cast(^Type_Info_Integer, ti);
         if (dti.is_signed) {
             if (ti.size == 1) {
@@ -70,7 +70,7 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
             }
         }
     }
-    else if (ti.kind == .FLOAT) {
+    else if (ti.kind == Type_Info_Float) {
         dti := cast(^Type_Info_Float, ti);
         if (ti.size == 4) {
             sbprinta(sb, cast(^f32, ptr)^);
@@ -80,7 +80,7 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
             sbprinta(sb, cast(^f64, ptr)^);
         }
     }
-    else if (ti.kind == .STRING) {
+    else if (ti.kind == Type_Info_String) {
         dti := cast(^Type_Info_String, ti);
         if (dti.is_cstring) {
             sbprint(sb, "\"%\"", cast(^cstring, ptr)^);
@@ -89,11 +89,11 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
             sbprint(sb, "\"%\"", cast(^string, ptr)^);
         }
     }
-    else if (ti.kind == .BOOL) {
+    else if (ti.kind == Type_Info_Bool) {
         dti := cast(^Type_Info_Bool, ti);
         sbprinta(sb, cast(^bool, ptr)^);
     }
-    else if (ti.kind == .STRUCT) {
+    else if (ti.kind == Type_Info_Struct) {
         dti := cast(^Type_Info_Struct, ti);
         sbprinta(sb, "{\n");
         indent_level += 1;
@@ -111,7 +111,7 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
         json_print_indents(sb, indent_level);
         sbprinta(sb, "}");
     }
-    else if (ti.kind == .ARRAY) {
+    else if (ti.kind == Type_Info_Array) {
         dti := cast(^Type_Info_Array, ti);
         sbprinta(sb, "[\n");
         indent_level += 1;
@@ -127,7 +127,7 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
         json_print_indents(sb, indent_level);
         sbprinta(sb, "]");
     }
-    else if (ti.kind == .SLICE) {
+    else if (ti.kind == Type_Info_Slice) {
         dti := cast(^Type_Info_Slice, ti);
         slice := cast(^Raw_Slice, ptr)^;
         sbprinta(sb, "[\n");
@@ -144,7 +144,7 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
         json_print_indents(sb, indent_level);
         sbprinta(sb, "]");
     }
-    else if (ti.kind == .POINTER) {
+    else if (ti.kind == Type_Info_Pointer) {
         dti := cast(^Type_Info_Pointer, ti);
         json_serialize_ti_sb(sb, cast(^rawptr, ptr)^, dti.pointer_to, indent_level);
     }
@@ -327,7 +327,7 @@ proc json_write_value(ptr: ^$T, value: ^JSON_Value, allocator: Allocator) {
 }
 
 proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, allocator: Allocator) {
-    if (ti.kind == .INTEGER) {
+    if (ti.kind == Type_Info_Integer) {
         dti := cast(^Type_Info_Integer, ti);
         assert(value.kind == .NUMBER);
         json_number := cast(^JSON_Value_Number, value);
@@ -362,7 +362,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
             }
         }
     }
-    else if (ti.kind == .FLOAT) {
+    else if (ti.kind == Type_Info_Float) {
         dti := cast(^Type_Info_Float, ti);
         assert(value.kind == .NUMBER);
         json_number := cast(^JSON_Value_Number, value);
@@ -374,7 +374,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
                 cast(^f64, ptr)^ = cast(f64, json_number.float_value);
             }
     }
-    else if (ti.kind == .STRING) {
+    else if (ti.kind == Type_Info_String) {
         dti := cast(^Type_Info_String, ti);
         assert(value.kind == .STRING);
         json_string := cast(^JSON_Value_String, value);
@@ -392,14 +392,14 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
             }
         }
     }
-    else if (ti.kind == .BOOL) {
+    else if (ti.kind == Type_Info_Bool) {
         dti := cast(^Type_Info_Bool, ti);
         assert(ti.size == 1);
         assert(value.kind == .BOOL);
         json_bool := cast(^JSON_Value_Bool, value);
         cast(^bool, ptr)^ = json_bool.value;
     }
-    else if (ti.kind == .STRUCT) {
+    else if (ti.kind == Type_Info_Struct) {
         dti := cast(^Type_Info_Struct, ti);
         assert(value.kind == .OBJECT);
         json_object := cast(^JSON_Value_Object, value);
@@ -414,7 +414,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
             }
         }
     }
-    else if (ti.kind == .ARRAY) {
+    else if (ti.kind == Type_Info_Array) {
         dti := cast(^Type_Info_Array, ti);
         assert(value.kind == .ARRAY);
         // todo(josh): log an error if the counts don't match
@@ -424,7 +424,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
             json_write_value_ti(ptr_offset(cast(^u8, ptr), i * dti.array_of.size), dti.array_of, json_array.values[i], allocator);
         }
     }
-    else if (ti.kind == .SLICE) {
+    else if (ti.kind == Type_Info_Slice) {
         dti := cast(^Type_Info_Slice, ti);
         ptr_slice := cast(^Raw_Slice, ptr);
         assert(value.kind == .ARRAY);
@@ -435,7 +435,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
             json_write_value_ti(ptr_offset(cast(^u8, ptr_slice.data), i * dti.slice_of.size), dti.slice_of, json_array.values[i], allocator);
         }
     }
-    else if (ti.kind == .POINTER) {
+    else if (ti.kind == Type_Info_Pointer) {
         dti := cast(^Type_Info_Pointer, ti);
         if (dti.pointer_to == null) {
             // rawptr

@@ -52,23 +52,23 @@ Declaration *sif_runtime_string_eq_proc;
 Declaration *sif_runtime_zero_pointer_proc;
 Declaration *sif_runtime_source_code_location;
 Declaration *sif_runtime_make_source_code_location;
-Declaration *sif_runtime_union_all_type_infos;
-Declaration *sif_runtime_type_info;
-Declaration *sif_runtime_type_info_integer;
-Declaration *sif_runtime_type_info_float;
-Declaration *sif_runtime_type_info_bool;
-Declaration *sif_runtime_type_info_string;
-Declaration *sif_runtime_type_info_struct_field;
-Declaration *sif_runtime_type_info_struct;
-Declaration *sif_runtime_type_info_union;
-Declaration *sif_runtime_type_info_enum_field;
-Declaration *sif_runtime_type_info_enum;
-Declaration *sif_runtime_type_info_pointer;
-Declaration *sif_runtime_type_info_slice;
-Declaration *sif_runtime_type_info_array;
-Declaration *sif_runtime_type_info_reference;
-Declaration *sif_runtime_type_info_procedure;
-Declaration *sif_runtime_type_info_typeid;
+Struct_Declaration *sif_runtime_union_all_type_infos;
+Struct_Declaration *sif_runtime_type_info;
+Struct_Declaration *sif_runtime_type_info_integer;
+Struct_Declaration *sif_runtime_type_info_float;
+Struct_Declaration *sif_runtime_type_info_bool;
+Struct_Declaration *sif_runtime_type_info_string;
+Struct_Declaration *sif_runtime_type_info_struct_field;
+Struct_Declaration *sif_runtime_type_info_struct;
+Struct_Declaration *sif_runtime_type_info_union;
+Struct_Declaration *sif_runtime_type_info_enum_field;
+Struct_Declaration *sif_runtime_type_info_enum;
+Struct_Declaration *sif_runtime_type_info_pointer;
+Struct_Declaration *sif_runtime_type_info_slice;
+Struct_Declaration *sif_runtime_type_info_array;
+Struct_Declaration *sif_runtime_type_info_reference;
+Struct_Declaration *sif_runtime_type_info_procedure;
+Struct_Declaration *sif_runtime_type_info_typeid;
 
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
@@ -901,29 +901,29 @@ bool typecheck_global_scope(Ast_Block *block) {
         For (note_idx, decl->notes) {
             char *note = decl->notes[note_idx];
             if (note == g_interned_sif_runtime_string) {
-                     if (decl->name == g_interned_sif_runtime_bounds_check_proc_string)            sif_runtime_bounds_check_proc             = decl;
-                else if (decl->name == g_interned_sif_runtime_null_check_proc_string)              sif_runtime_null_check_proc               = decl;
-                else if (decl->name == g_interned_sif_runtime_string_eq_proc_string)               sif_runtime_string_eq_proc                = decl;
-                else if (decl->name == g_interned_sif_runtime_zero_pointer_proc_string)            sif_runtime_zero_pointer_proc             = decl;
-                else if (decl->name == g_interned_sif_runtime_source_code_location_string)         sif_runtime_source_code_location          = decl;
-                else if (decl->name == g_interned_sif_runtime_make_source_code_location_string)    sif_runtime_make_source_code_location     = decl;
-                else if (decl->name == g_interned_sif_runtime_union_all_type_infos_string)         sif_runtime_union_all_type_infos          = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_string)                    sif_runtime_type_info                     = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_integer_string)            sif_runtime_type_info_integer             = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_float_string)              sif_runtime_type_info_float               = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_bool_string)               sif_runtime_type_info_bool                = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_string_string)             sif_runtime_type_info_string              = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_struct_field_string)       sif_runtime_type_info_struct_field        = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_struct_string)             sif_runtime_type_info_struct              = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_union_string)              sif_runtime_type_info_union               = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_enum_field_string)         sif_runtime_type_info_enum_field          = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_enum_string)               sif_runtime_type_info_enum                = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_pointer_string)            sif_runtime_type_info_pointer             = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_slice_string)              sif_runtime_type_info_slice               = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_array_string)              sif_runtime_type_info_array               = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_reference_string)          sif_runtime_type_info_reference           = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_procedure_string)          sif_runtime_type_info_procedure           = decl;
-                else if (decl->name == g_interned_sif_runtime_type_info_typeid_string)             sif_runtime_type_info_typeid              = decl;
+                     if (decl->name == g_interned_sif_runtime_bounds_check_proc_string)            { sif_runtime_bounds_check_proc             = decl; }
+                else if (decl->name == g_interned_sif_runtime_null_check_proc_string)              { sif_runtime_null_check_proc               = decl; }
+                else if (decl->name == g_interned_sif_runtime_string_eq_proc_string)               { sif_runtime_string_eq_proc                = decl; }
+                else if (decl->name == g_interned_sif_runtime_zero_pointer_proc_string)            { sif_runtime_zero_pointer_proc             = decl; }
+                else if (decl->name == g_interned_sif_runtime_source_code_location_string)         { sif_runtime_source_code_location          = decl; }
+                else if (decl->name == g_interned_sif_runtime_make_source_code_location_string)    { sif_runtime_make_source_code_location     = decl; }
+                else if (decl->name == g_interned_sif_runtime_union_all_type_infos_string)         { assert(decl->kind == DECL_STRUCT); sif_runtime_union_all_type_infos   = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_string)                    { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info              = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_integer_string)            { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_integer      = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_float_string)              { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_float        = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_bool_string)               { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_bool         = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_string_string)             { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_string       = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_struct_field_string)       { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_struct_field = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_struct_string)             { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_struct       = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_union_string)              { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_union        = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_enum_field_string)         { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_enum_field   = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_enum_string)               { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_enum         = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_pointer_string)            { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_pointer      = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_slice_string)              { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_slice        = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_array_string)              { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_array        = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_reference_string)          { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_reference    = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_procedure_string)          { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_procedure    = (Struct_Declaration *)decl; }
+                else if (decl->name == g_interned_sif_runtime_type_info_typeid_string)             { assert(decl->kind == DECL_STRUCT); sif_runtime_type_info_typeid       = (Struct_Declaration *)decl; }
 
                 if (!check_declaration(decl, decl->location)) {
                     report_error(decl->location, "Internal compiler error. check_declaration() failed.");
@@ -2700,7 +2700,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                         return nullptr;
                     }
                     if (!is_type_enum(rhs_operand->type)) {
-                        report_error(binary->rhs->location, "Expected enum type, got '%s'.", rhs_operand->type);
+                        report_error(binary->rhs->location, "Expected enum type, got '%s'.", type_to_string(rhs_operand->type));
                         return nullptr;
                     }
                     implicit_enum_selector_type = rhs_operand->type;
@@ -2711,7 +2711,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                         return nullptr;
                     }
                     if (!is_type_enum(lhs_operand->type)) {
-                        report_error(binary->lhs->location, "Expected enum type, got '%s'.", lhs_operand->type);
+                        report_error(binary->lhs->location, "Expected enum type, got '%s'.", type_to_string(lhs_operand->type));
                         return nullptr;
                     }
                     implicit_enum_selector_type = lhs_operand->type;

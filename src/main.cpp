@@ -28,6 +28,8 @@ HIGH PRIORITY
 -do proper nested selector expression elimination with 'using'
 -transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
 -checker thinks string + string is okay for non-constant strings
+-default procedure parameters?
+-#caller_location
 -using bug {
     struct Foo {
         position: Vector3;
@@ -41,8 +43,6 @@ HIGH PRIORITY
         }
     }
 }
-
-
 
 MEDIUM PRIORITY
 -put struct constants in Type_Info
@@ -94,8 +94,6 @@ LOW PRIORITY
 -loop/block labels a la Odin
 -<<< and >>> for shift rotate?
 -procedure overloading
--default procedure parameters?
--#caller_location
 */
 
 void print_usage() {

@@ -172,46 +172,29 @@ proc get_type_info(type: typeid) : ^Type_Info {
     return cast(^Type_Info, &_global_type_table[cast(int, idx)]);
 } @sif_runtime
 
-// note(josh): backend depends on this ordering! :TypeInfoKindValues
-enum Type_Info_Kind {
-    INTEGER   = 0;
-    FLOAT     = 1;
-    BOOL      = 2;
-    STRING    = 3;
-    STRUCT    = 4;
-    UNION     = 5;
-    ENUM      = 6;
-    POINTER   = 7;
-    SLICE     = 8;
-    ARRAY     = 9;
-    REFERENCE = 10;
-    PROCEDURE = 11;
-    TYPEID    = 12;
-} @sif_runtime
-
 struct Type_Info {
     printable_name: string;
-    kind: Type_Info_Kind;
+    kind: typeid;
     id: typeid;
     size: int;
     align: int;
 } @sif_runtime
 
 struct Type_Info_Integer {
-    base: Type_Info;
+    using base: Type_Info;
     is_signed: bool;
 } @sif_runtime
 
 struct Type_Info_Float {
-    base: Type_Info;
+    using base: Type_Info;
 } @sif_runtime
 
 struct Type_Info_Bool {
-    base: Type_Info;
+    using base: Type_Info;
 } @sif_runtime
 
 struct Type_Info_String {
-    base: Type_Info;
+    using base: Type_Info;
     is_cstring: bool;
 } @sif_runtime
 
@@ -222,14 +205,14 @@ struct Type_Info_Struct_Field {
     notes: []string;
 } @sif_runtime
 struct Type_Info_Struct {
-    base: Type_Info;
+    using base: Type_Info;
     name: string;
     fields: []Type_Info_Struct_Field;
     notes: []string;
 } @sif_runtime
 
 struct Type_Info_Union {
-    base: Type_Info;
+    using base: Type_Info;
     name: string;
     fields: []Type_Info_Struct_Field;
     notes: []string;
@@ -240,39 +223,39 @@ struct Type_Info_Enum_Field {
     value: int;
 } @sif_runtime
 struct Type_Info_Enum {
-    base: Type_Info;
+    using base: Type_Info;
     base_type: ^Type_Info;
     fields: []Type_Info_Enum_Field;
     notes: []string;
 } @sif_runtime
 
 struct Type_Info_Pointer {
-    base: Type_Info;
+    using base: Type_Info;
     pointer_to: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Slice {
-    base: Type_Info;
+    using base: Type_Info;
     slice_of: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Array {
-    base: Type_Info;
+    using base: Type_Info;
     array_of: ^Type_Info;
     count: int;
 } @sif_runtime
 
 struct Type_Info_Reference {
-    base: Type_Info;
+    using base: Type_Info;
     reference_to: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Procedure {
-    base: Type_Info;
+    using base: Type_Info;
     parameter_types: []^Type_Info;
     return_type: ^Type_Info;
 } @sif_runtime
 
 struct Type_Info_Typeid {
-    base: Type_Info;
+    using base: Type_Info;
 } @sif_runtime

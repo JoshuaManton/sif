@@ -1,3 +1,4 @@
+
 #include "core:string_builder.sif"
 
 #foreign_system_import "msvcrt.lib"
@@ -6,21 +7,22 @@
 #foreign_system_import "vcruntime.lib"
 #foreign_system_import "Ntdll.lib"
 
-proc print_char  (c: u8)                                   #foreign;
-proc print_int   (i: i64)                                  #foreign;
-proc print_uint  (i: u64)                                  #foreign;
-proc print_float (f: f32)                                  #foreign;
-proc print_bool  (b: bool)                                 #foreign;
-proc print_string(str: string)                             #foreign;
-proc strlen      (cstr: cstring)             : u64         #foreign;
-proc sin         (x: f64)                    : f64         #foreign;
-proc cos         (x: f64)                    : f64         #foreign;
-proc tan         (x: f64)                    : f64         #foreign;
-proc acos        (x: f64)                    : f64         #foreign;
-proc sqrt        (x: f64)                    : f64         #foreign;
-proc fabsf       (a: f32)                    : f32         #foreign;
-proc atoi        (cstr: cstring)             : i32         #foreign;
-proc atof        (cstr: cstring)             : f64         #foreign;
+proc print_char   (c: u8)                                   #foreign;
+proc print_int    (i: i64)                                  #foreign;
+proc print_uint   (i: u64)                                  #foreign;
+proc print_float  (f: f32)                                  #foreign;
+proc print_bool   (b: bool)                                 #foreign;
+proc print_pointer(ptr: rawptr)                             #foreign;
+proc print_string (str: string)                             #foreign;
+proc strlen       (cstr: cstring)             : u64         #foreign;
+proc sin          (x: f64)                    : f64         #foreign;
+proc cos          (x: f64)                    : f64         #foreign;
+proc tan          (x: f64)                    : f64         #foreign;
+proc acos         (x: f64)                    : f64         #foreign;
+proc sqrt         (x: f64)                    : f64         #foreign;
+proc fabsf        (a: f32)                    : f32         #foreign;
+proc atoi         (cstr: cstring)             : i32         #foreign;
+proc atof         (cstr: cstring)             : f64         #foreign;
 
 proc snprintf(buffer: ^u8, buffer_size: u64, fmt: cstring, args: #c_varargs ..any) : i32 #foreign;
 
@@ -54,7 +56,7 @@ proc print_arg(arg: any) {
     }
 
     ti := get_type_info(arg.type);
-    if (ti.kind == Type_Info_Kind.INTEGER) {
+    if (ti.kind == Type_Info_Integer) {
         dti := cast(^Type_Info_Integer, ti);
         if (dti.is_signed) {
             if (ti.size == 1) {
@@ -88,7 +90,7 @@ proc print_arg(arg: any) {
             }
         }
     }
-    else if (ti.kind == Type_Info_Kind.FLOAT) {
+    else if (ti.kind == Type_Info_Float) {
         if (ti.size == 4) {
             print_float(cast(f32, cast(^f32, arg.data)^));
         }
@@ -98,10 +100,10 @@ proc print_arg(arg: any) {
             print_float(cast(f32, cast(^f64, arg.data)^));
         }
     }
-    else if (ti.kind == Type_Info_Kind.BOOL) {
+    else if (ti.kind == Type_Info_Bool) {
         print_bool(cast(^bool, arg.data)^);
     }
-    else if (ti.kind == Type_Info_Kind.STRING) {
+    else if (ti.kind == Type_Info_String) {
         dti := cast(^Type_Info_String, ti);
         if (dti.is_cstring) {
             str := cast(^cstring, arg.data)^;
@@ -113,7 +115,7 @@ proc print_arg(arg: any) {
             print_string(str);
         }
     }
-    else if (ti.kind == Type_Info_Kind.ENUM) {
+    else if (ti.kind == Type_Info_Enum) {
         dti := cast(^Type_Info_Enum, ti);
         printed_field := false;
         enum_value := cast(^int, arg.data)^;
@@ -130,15 +132,15 @@ proc print_arg(arg: any) {
             print("<unknown enum value %>", enum_value);
         }
     }
-    else if (ti.kind == Type_Info_Kind.POINTER) {
-        ptr_value := transmute(^u64, arg.data)^;
-        print("0x%", ptr_value);
+    else if (ti.kind == Type_Info_Pointer) {
+        ptr_value := transmute(^rawptr, arg.data)^;
+        print_pointer(ptr_value);
     }
-    else if (ti.kind == Type_Info_Kind.REFERENCE) {
-        ptr_value := transmute(^u64, arg.data)^;
-        print("0x%", ptr_value);
+    else if (ti.kind == Type_Info_Reference) {
+        ptr_value := transmute(^rawptr, arg.data)^;
+        print_pointer(ptr_value);
     }
-    else if (ti.kind == Type_Info_Kind.ARRAY) {
+    else if (ti.kind == Type_Info_Array) {
         dti := cast(^Type_Info_Array, ti);
         print("[");
         for (i := 0; i < dti.count; i += 1) {
@@ -159,7 +161,7 @@ proc print_arg(arg: any) {
         }
         print("]");
     }
-    else if (ti.kind == Type_Info_Kind.SLICE) {
+    else if (ti.kind == Type_Info_Slice) {
         dti := cast(^Type_Info_Slice, ti);
         slice := transmute(^Raw_Slice, arg.data)^;
         print("[");
@@ -181,7 +183,7 @@ proc print_arg(arg: any) {
         }
         print("]");
     }
-    else if (ti.kind == Type_Info_Kind.STRUCT) {
+    else if (ti.kind == Type_Info_Struct) {
         dti := cast(^Type_Info_Struct, ti);
         print_string(dti.base.printable_name);
         print_string(".{");
@@ -203,7 +205,7 @@ proc print_arg(arg: any) {
         }
         print_string("}");
     }
-    else if (ti.kind == Type_Info_Kind.UNION) {
+    else if (ti.kind == Type_Info_Union) {
         dti := cast(^Type_Info_Union, ti);
         print_string("union{");
         for (i := 0; i < dti.fields.count; i += 1) {
@@ -215,7 +217,7 @@ proc print_arg(arg: any) {
         }
         print_string("}");
     }
-    else if (ti.kind == Type_Info_Kind.PROCEDURE) {
+    else if (ti.kind == Type_Info_Procedure) {
         dti := cast(^Type_Info_Procedure, ti);
         print_string("proc(");
         for (i := 0; i < dti.parameter_types.count; i += 1) {
@@ -230,7 +232,7 @@ proc print_arg(arg: any) {
             print(" : %", dti.return_type.id);
         }
     }
-    else if (ti.kind == Type_Info_Kind.TYPEID) {
+    else if (ti.kind == Type_Info_Typeid) {
         ti := get_type_info(cast(^typeid, arg.data)^);
         print_string(ti.printable_name);
     }
@@ -285,7 +287,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
     }
     else {
         ti := get_type_info(arg.type);
-        if (ti.kind == Type_Info_Kind.INTEGER) {
+        if (ti.kind == Type_Info_Integer) {
             dti := cast(^Type_Info_Integer, ti);
             if (dti.is_signed) {
                 if (ti.size == 1) {
@@ -318,7 +320,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                 }
             }
         }
-        else if (ti.kind == Type_Info_Kind.FLOAT) {
+        else if (ti.kind == Type_Info_Float) {
             if (ti.size == 4) {
                 arg_length = snprintf(buf_ptr, buf_count, "%f", cast(^f32, arg.data)^);
             }
@@ -327,7 +329,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                 arg_length = snprintf(buf_ptr, buf_count, "%f", cast(^f64, arg.data)^);
             }
         }
-        else if (ti.kind == Type_Info_Kind.BOOL) {
+        else if (ti.kind == Type_Info_Bool) {
             if (cast(^bool, arg.data)^) {
                 arg_length = snprintf(buf_ptr, buf_count, "true");
             }
@@ -335,7 +337,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                 arg_length = snprintf(buf_ptr, buf_count, "false");
             }
         }
-        else if (ti.kind == Type_Info_Kind.STRING) {
+        else if (ti.kind == Type_Info_String) {
             dti := cast(^Type_Info_String, ti);
             if (dti.is_cstring) {
                 str := cast(^cstring, arg.data)^;
@@ -346,17 +348,17 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                 arg_length = snprintf(buf_ptr, buf_count, "%.*s", cast(i32, str.count), str.data);
             }
         }
-        else if (ti.kind == Type_Info_Kind.POINTER) {
-            arg_length = snprintf(buf_ptr, buf_count, "0x%p", cast(^rawptr, arg.data)^);
+        else if (ti.kind == Type_Info_Pointer) {
+            arg_length = snprintf(buf_ptr, buf_count, "0x%llx", cast(^rawptr, arg.data)^);
         }
-        else if (ti.kind == Type_Info_Kind.REFERENCE) {
-            arg_length = snprintf(buf_ptr, buf_count, "0x%p", cast(^rawptr, arg.data)^);
+        else if (ti.kind == Type_Info_Reference) {
+            arg_length = snprintf(buf_ptr, buf_count, "0x%llx", cast(^rawptr, arg.data)^);
         }
-        else if (ti.kind == Type_Info_Kind.TYPEID) {
+        else if (ti.kind == Type_Info_Typeid) {
             ti := get_type_info(cast(^typeid, arg.data)^);
             arg_length = snprintf(buf_ptr, buf_count, "%.*s", cast(i32, ti.printable_name.count), ti.printable_name.data);
         }
-        else if (ti.kind == Type_Info_Kind.ENUM) {
+        else if (ti.kind == Type_Info_Enum) {
             dti := cast(^Type_Info_Enum, ti);
             enum_value := cast(^int, arg.data)^;
             found_field: string;
@@ -374,7 +376,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                 arg_length = snprintf(buf_ptr, buf_count, "%.*s.<unknown enum value %lld>", cast(i32, dti.base.printable_name.count), dti.base.printable_name.data, enum_value);
             }
         }
-        else if (ti.kind == Type_Info_Kind.ARRAY) {
+        else if (ti.kind == Type_Info_Array) {
             dti := cast(^Type_Info_Array, ti);
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "["));
             for (i := 0; i < dti.count; i += 1) {
@@ -395,7 +397,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             }
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
         }
-        else if (ti.kind == Type_Info_Kind.SLICE) {
+        else if (ti.kind == Type_Info_Slice) {
             dti := cast(^Type_Info_Slice, ti);
             slice := transmute(^Raw_Slice, arg.data)^;
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "["));
@@ -417,7 +419,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             }
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
         }
-        else if (ti.kind == Type_Info_Kind.STRUCT) {
+        else if (ti.kind == Type_Info_Struct) {
             dti := cast(^Type_Info_Struct, ti);
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%.{", dti.base.printable_name));
             for (i := 0; i < dti.fields.count; i += 1) {
@@ -437,7 +439,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             }
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "}"));
         }
-        else if (ti.kind == Type_Info_Kind.UNION) {
+        else if (ti.kind == Type_Info_Union) {
             dti := cast(^Type_Info_Union, ti);
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "union{"));
             for (i := 0; i < dti.fields.count; i += 1) {
@@ -449,7 +451,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             }
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "}"));
         }
-        else if (ti.kind == Type_Info_Kind.PROCEDURE) {
+        else if (ti.kind == Type_Info_Procedure) {
             dti := cast(^Type_Info_Procedure, ti);
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "proc("));
             for (i := 0; i < dti.parameter_types.count; i += 1) {
