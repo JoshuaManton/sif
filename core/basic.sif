@@ -382,10 +382,16 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                     arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
                 }
                 elem := ptr_offset(cast(^u8, arg.data), dti.array_of.size * i);
+                if (dti.array_of.id == string) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                }
                 a: any;
                 a.data = elem;
                 a.type = dti.array_of.id;
                 arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", a));
+                if (dti.array_of.id == string) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                }
             }
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
         }
@@ -398,10 +404,16 @@ proc bprint_arg(buf: []u8, arg: any) : int {
                     arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
                 }
                 elem := ptr_offset(cast(^u8, slice.data), dti.slice_of.size * i);
+                if (dti.slice_of.id == string) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                }
                 a: any;
                 a.data = elem;
                 a.type = dti.slice_of.id;
                 arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", a));
+                if (dti.slice_of.id == string) {
+                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                }
             }
             arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
         }
