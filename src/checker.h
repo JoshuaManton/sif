@@ -33,15 +33,16 @@ enum Type_Flags {
     TF_UNTYPED      = 1 << 4,
     TF_NUMBER       = 1 << 5,
     TF_POINTER      = 1 << 6,
-    TF_INCOMPLETE   = 1 << 7,
-    TF_POLYMORPHIC  = 1 << 8,
-    TF_STRING       = 1 << 9,
+    TF_POLYMORPHIC  = 1 << 7,
+    TF_STRING       = 1 << 8,
 };
 
-enum Check_State {
-    CS_NOT_CHECKED,
-    CS_CHECKING,
-    CS_CHECKED,
+enum Type_Completion_Flags {
+    TCF_SIZE                    = 1 << 0,
+    TCF_USINGS                  = 1 << 1,
+    TCF_GENERATE_FIELDS         = 1 << 2, // note(josh): this one is done automatically, no need to pass it to complete_type()
+    TCF_ADD_ORDERED_DECLARATION = 1 << 3, // note(josh): this one is done automatically, no need to pass it to complete_type()
+    TCF_ALL = TCF_SIZE | TCF_USINGS | TCF_GENERATE_FIELDS | TCF_ADD_ORDERED_DECLARATION,
 };
 
 struct Type_Pointer;
@@ -49,13 +50,21 @@ struct Type_Slice;
 struct Type_Varargs;
 struct Type_Reference;
 
+struct Struct_Field {
+    const char *name = {};
+    Operand operand = {};
+    int offset = {}; // -1 if is_constant
+    Array<char *> notes = {};
+};
+
 struct Type {
     i64 id = {};
     Type_Kind kind = {};
     int size = {};
     int align = {};
     u64 flags = {};
-    Check_State check_state = {};
+    u64 completed_flags = {};            // Type_Completion_Flags
+    u64 currently_completing_flags = {}; // Type_Completion_Flags
     Array<Struct_Field> all_fields = {};
     Array<Struct_Field> constant_fields = {};
     Array<Struct_Field> variable_fields = {};

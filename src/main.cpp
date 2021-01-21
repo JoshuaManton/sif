@@ -26,8 +26,22 @@ HIGH PRIORITY
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
 -do proper nested selector expression elimination with 'using'
-    -do null checks for using
 -transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
+-using bug {
+    struct Foo {
+        position: Vector3;
+    }
+
+    proc main() {
+        using base: Foo;
+        bar();
+        proc bar() {
+            printa(position); // here the compiler thinks it knows what "position" is, but it shouldn't
+        }
+    }
+}
+
+
 
 MEDIUM PRIORITY
 -put struct constants in Type_Info
@@ -288,13 +302,30 @@ void main(int argc, char **argv) {
         if (g_is_debug_build) {
             command_sb.print("/DEBUG ");
         }
+        command_sb.printf(" 2>&1");
         command_sb.printf("\"");
 
         if (log_cl_command) {
             printf("%s\n", command_sb.string());
         }
 
-        if (system(command_sb.string()) != 0) {
+        FILE *pipe = _popen(command_sb.string(), "r");
+        char buffer[1024];
+        Chunked_String_Builder error_sb = make_chunked_string_builder(g_global_linear_allocator, 1024);
+        bool first_thing = true;
+        while (fgets(buffer, sizeof(buffer), pipe)) {
+            char *str = buffer;
+            if (first_thing) {
+                if (starts_with(buffer, "output.c\n")) {
+                    str += strlen("output.c\n");
+                }
+            }
+            error_sb.print(str);
+            first_thing = false;
+        }
+        char *errors = error_sb.make_string();
+        printf(errors);
+        if (strlen(errors) != 0) {
             printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
             return;
         }

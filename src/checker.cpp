@@ -72,7 +72,8 @@ Declaration *sif_runtime_type_info_typeid;
 
 bool g_silence_errors; // todo(josh): this is pretty janky. would be better to pass some kind of Context struct around
 
-bool complete_type(Type *type, Location usage_location);
+bool complete_type(Type *type, Location usage_location, u64 completion_flags = 0);
+bool check_declaration(Declaration *decl, Location usage_location, Operand *out_operand = nullptr);
 void type_mismatch(Location location, Type *got, Type *expected);
 bool match_types(Operand operand, Type *expected_type, Operand *out_operand, bool do_report_error = true);
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type = nullptr, bool require_value = true);
@@ -215,31 +216,30 @@ void add_global_declarations(Ast_Block *block) {
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
     Type_Struct *incomplete_type = NEW_TYPE(Type_Struct(structure), true, structure->struct_block);
-    incomplete_type->flags |= TF_INCOMPLETE;
     incomplete_type->is_union = structure->is_union;
     structure->type = incomplete_type;
     return incomplete_type;
 }
 
-bool is_type_pointer    (Type *type) { return type->kind == TYPE_POINTER;   }
-bool is_type_polymorphic(Type *type) { return type->flags & TF_POLYMORPHIC; }
-bool is_type_reference  (Type *type) { return type->kind == TYPE_REFERENCE; }
-bool is_type_procedure  (Type *type) { return type->kind == TYPE_PROCEDURE; }
-bool is_type_array      (Type *type) { return type->kind == TYPE_ARRAY;     }
-bool is_type_slice      (Type *type) { return type->kind == TYPE_SLICE;     }
-bool is_type_number     (Type *type) { return type->flags & TF_NUMBER;      }
-bool is_type_integer    (Type *type) { return type->flags & TF_INTEGER;     }
-bool is_type_float      (Type *type) { return type->flags & TF_FLOAT;       }
-bool is_type_bool       (Type *type) { return type == type_bool;            }
-bool is_type_untyped    (Type *type) { return type->flags & TF_UNTYPED;     }
-bool is_type_unsigned   (Type *type) { return type->flags & TF_UNSIGNED;    }
-bool is_type_signed     (Type *type) { return type->flags & TF_SIGNED;      }
-bool is_type_struct     (Type *type) { return type->kind == TYPE_STRUCT;    }
-bool is_type_incomplete (Type *type) { return type->flags & TF_INCOMPLETE;  }
-bool is_type_typeid     (Type *type) { return type == type_typeid;          }
-bool is_type_string     (Type *type) { return type->flags & TF_STRING;      }
-bool is_type_varargs    (Type *type) { return type->kind == TYPE_VARARGS;   }
-bool is_type_enum       (Type *type) { return type->kind == TYPE_ENUM;      }
+bool is_type_pointer    (Type *type) { return type->kind == TYPE_POINTER;       }
+bool is_type_polymorphic(Type *type) { return type->flags & TF_POLYMORPHIC;     }
+bool is_type_reference  (Type *type) { return type->kind == TYPE_REFERENCE;     }
+bool is_type_procedure  (Type *type) { return type->kind == TYPE_PROCEDURE;     }
+bool is_type_array      (Type *type) { return type->kind == TYPE_ARRAY;         }
+bool is_type_slice      (Type *type) { return type->kind == TYPE_SLICE;         }
+bool is_type_number     (Type *type) { return type->flags & TF_NUMBER;          }
+bool is_type_integer    (Type *type) { return type->flags & TF_INTEGER;         }
+bool is_type_float      (Type *type) { return type->flags & TF_FLOAT;           }
+bool is_type_bool       (Type *type) { return type == type_bool;                }
+bool is_type_untyped    (Type *type) { return type->flags & TF_UNTYPED;         }
+bool is_type_unsigned   (Type *type) { return type->flags & TF_UNSIGNED;        }
+bool is_type_signed     (Type *type) { return type->flags & TF_SIGNED;          }
+bool is_type_struct     (Type *type) { return type->kind == TYPE_STRUCT;        }
+bool is_type_incomplete (Type *type) { return type->completed_flags != TCF_ALL; }
+bool is_type_typeid     (Type *type) { return type == type_typeid;              }
+bool is_type_string     (Type *type) { return type->flags & TF_STRING;          }
+bool is_type_varargs    (Type *type) { return type->kind == TYPE_VARARGS;       }
+bool is_type_enum       (Type *type) { return type->kind == TYPE_ENUM;          }
 
 Type *get_most_concrete_type(Type *a, Type *b) {
     if (a->flags & TF_UNTYPED) {
@@ -315,7 +315,245 @@ bool check_basic_block_for_return(Ast_Basic_Block *block) {
     return true;
 }
 
-bool check_declaration(Declaration *decl, Location usage_location, Operand *out_operand = nullptr) {
+bool broadcast_var_using(Ast_Var *var, Ast_Block *broadcast_into) {
+    if (var->is_using) {
+        if (var->is_constant) {
+            report_error(var->location, "Cannot apply 'using' to a constant.");
+            return false;
+        }
+        // todo(josh): what about references here?
+        //             should calling complete_type() with a reference complete the thing
+        //             it's a reference to? probably. hmmmm
+        if (is_type_pointer(var->type)) {
+            Type_Pointer *pointer_type = (Type_Pointer *)var->type;
+            assert(pointer_type->pointer_to);
+            if (!complete_type(pointer_type->pointer_to, var->location)) {
+                return false;
+            }
+        }
+        broadcast_declarations_for_using(broadcast_into, var->type->declarations_block, var->declaration, var);
+    }
+    return true;
+}
+
+bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
+    completion_flags |= TCF_GENERATE_FIELDS;
+    completion_flags |= TCF_ADD_ORDERED_DECLARATION;
+    completion_flags &= ~type->completed_flags; // unset the ones we've completed already
+    if (completion_flags == 0) {
+        return true;
+    }
+    if ((type->currently_completing_flags & completion_flags) > 0) {
+        report_error(usage_location, "Circular dependency."); // todo(josh): better @ErrorMessage
+        return false;
+    }
+    assert(completion_flags > 0);
+    type->currently_completing_flags |= completion_flags;
+    assert((type->completed_flags & completion_flags) == 0);
+    defer(type->currently_completing_flags = 0);
+
+    if (completion_flags & TCF_GENERATE_FIELDS) {
+        defer(type->completed_flags |= TCF_GENERATE_FIELDS);
+        defer(type->currently_completing_flags &= ~TCF_GENERATE_FIELDS);
+
+        switch (type->kind) {
+            case TYPE_STRUCT: {
+                Type_Struct *struct_type = (Type_Struct *)type;
+                assert(struct_type->ast_struct != nullptr);
+                Ast_Struct *structure = struct_type->ast_struct;
+                assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
+                assert(structure->declaration->link_name);
+                For (idx, structure->fields) {
+                    Ast_Var *var = structure->fields[idx];
+                    if (!check_declaration(var->declaration, var->location)) {
+                        return false;
+                    }
+                    if (!complete_type(var->type, var->location)) {
+                        return false;
+                    }
+                    if (var->is_constant) {
+                        assert(var->expr != nullptr);
+                        assert(var->constant_operand.type != nullptr);
+                        assert(var->constant_operand.flags & OPERAND_CONSTANT);
+                        var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location, var->declaration->notes);
+                        if (!var->struct_member) {
+                            return false;
+                        }
+                    }
+                    else {
+                        var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, -1, var->location, var->declaration->notes);
+                        assert(var->struct_member);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    if (completion_flags & TCF_USINGS) {
+        defer(type->completed_flags |= TCF_USINGS);
+        defer(type->currently_completing_flags &= ~TCF_USINGS);
+
+        switch (type->kind) {
+            case TYPE_STRUCT: {
+                Type_Struct *struct_type = (Type_Struct *)type;
+                Ast_Struct *structure = struct_type->ast_struct;
+                For (idx, structure->fields) {
+                    Ast_Var *var = structure->fields[idx];
+                    if (!broadcast_var_using(var, struct_type->declarations_block)) {
+                        return false;
+                    }
+                }
+                break;
+            }
+            case TYPE_POINTER: {
+                Type_Pointer *pointer_type = (Type_Pointer *)type;
+                assert(pointer_type->pointer_to);
+                if (!complete_type(pointer_type->pointer_to, usage_location, TCF_USINGS)) {
+                    return false;
+                }
+                break;
+            }
+        }
+    }
+
+    if (completion_flags & TCF_ADD_ORDERED_DECLARATION) {
+        defer(type->completed_flags |= TCF_ADD_ORDERED_DECLARATION);
+        defer(type->currently_completing_flags &= ~TCF_ADD_ORDERED_DECLARATION);
+        switch (type->kind) {
+            case TYPE_STRUCT: {
+                Type_Struct *struct_type = (Type_Struct *)type;
+                Ast_Struct *structure = struct_type->ast_struct;
+                add_ordered_declaration(structure->declaration);
+                break;
+            }
+            case TYPE_ARRAY: {
+                Type_Array *array_type = (Type_Array *)type;
+                if (!complete_type(array_type->array_of, usage_location)) {
+                    return false;
+                }
+                add_ordered_declaration(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr), g_global_linear_allocator));
+                break;
+            }
+        }
+    }
+
+    if (completion_flags & TCF_SIZE) {
+        defer(type->completed_flags |= TCF_SIZE);
+        defer(type->currently_completing_flags &= ~TCF_SIZE);
+        switch (type->kind) {
+            case TYPE_STRUCT: {
+                Type_Struct *struct_type = (Type_Struct *)type;
+                assert(struct_type->ast_struct != nullptr);
+                Ast_Struct *structure = struct_type->ast_struct;
+
+                For (idx, structure->fields) {
+                    Ast_Var *var = structure->fields[idx];
+                    if (!check_declaration(var->declaration, var->location)) {
+                        return false;
+                    }
+                    if (!complete_type(var->type, var->location, TCF_SIZE)) {
+                        return false;
+                    }
+                }
+
+                int size = 0;
+                int largest_alignment = 1;
+                For (idx, struct_type->variable_fields) {
+                    Struct_Field *field = &struct_type->variable_fields[idx];
+                    if (structure->is_union) {
+                        field->offset = 0;
+                        size = max(size, field->operand.type->size);
+                    }
+                    else {
+                        size = align_forward(size, field->operand.type->align);
+                        field->offset = size;
+                        size += field->operand.type->size;
+                    }
+                    largest_alignment = max(largest_alignment, field->operand.type->align);
+                }
+
+                // For (idx, structure->body->declarations) {
+                //     Declaration *decl = structure->body->declarations[idx];
+                //     switch (decl->kind) {
+                //         case DECL_USING: {
+                //             Using_Declaration *using_decl = (Using_Declaration *)decl;
+                //             assert(register_declaration(structure->type->declarations_block, using_decl));
+                //             break;
+                //         }
+                //         case DECL_VAR: {
+                //             Var_Declaration *decl_var = (Var_Declaration *)decl;
+                //             Ast_Var *var = decl_var->var;
+                //             if (var->is_constant) {
+                //                 assert(var->expr != nullptr);
+                //                 assert(var->constant_operand.type != nullptr);
+                //                 assert(var->constant_operand.flags & OPERAND_CONSTANT);
+                //                 var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location, var->declaration->notes);
+                //                 if (!var->struct_member) {
+                //                     return false;
+                //                 }
+                //             }
+                //             else {
+                //                 assert(var->type->size > 0);
+                //                 if (!structure->is_union) {
+                //                     size = align_forward(size, var->type->align);
+                //                     var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, size, var->location, var->declaration->notes);
+                //                     assert(var->struct_member);
+                //                     size += var->type->size;
+                //                 }
+                //                 else {
+                //                     var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, 0, var->location, var->declaration->notes);
+                //                     assert(var->struct_member);
+                //                     size = max(size, var->type->size);
+                //                 }
+                //                 largest_alignment = max(largest_alignment, var->type->align);
+                //                 assert(var->struct_member != nullptr);
+                //             }
+                //             break;
+                //         }
+                //     }
+                // }
+
+                if (size == 0) {
+                    size = 1;
+                }
+
+                assert(is_power_of_two(largest_alignment));
+                assert(size > 0);
+                struct_type->size = (int)align_forward((uintptr_t)size, (uintptr_t)largest_alignment);
+                struct_type->align = largest_alignment;
+
+                assert(structure->name);
+                assert(structure->declaration);
+                break;
+            }
+            case TYPE_ARRAY: {
+                Type_Array *array_type = (Type_Array *)type;
+                if (!complete_type(array_type->array_of, usage_location, TCF_SIZE)) {
+                    return false;
+                }
+                assert(array_type->count > 0);
+                assert(array_type->array_of->size > 0);
+                assert(array_type->array_of->align > 0);
+                array_type->size = array_type->array_of->size * array_type->count;
+                array_type->align = array_type->array_of->align;
+                assert(array_type->size > 0);
+                break;
+            }
+            case TYPE_REFERENCE: {
+                Type_Reference *reference_type = (Type_Reference *)type;
+                assert(reference_type->reference_to);
+                if (!complete_type(reference_type->reference_to, usage_location, TCF_SIZE)) {
+                    return false;
+                }
+                break;
+            }
+        }
+    }
+    return true;
+}
+
+bool check_declaration(Declaration *decl, Location usage_location, Operand *out_operand) {
     assert(!decl->is_polymorphic);
     if (decl->check_state == DCS_CHECKED) {
         if (out_operand) {
@@ -520,24 +758,6 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 if (is_type_typeid(decl_operand.type)) {
                     assert(decl_operand.type_value != nullptr);
                 }
-            }
-
-            if (var->is_using) {
-                if (var->is_constant) {
-                    report_error(var->location, "Cannot apply 'using' to a constant.");
-                    return false;
-                }
-                // todo(josh): what about references here?
-                //             should calling complete_type() with a reference complete the thing
-                //             it's a reference to? probably. hmmmm
-                if (is_type_pointer(var->type)) {
-                    Type_Pointer *pointer_type = (Type_Pointer *)var->type;
-                    assert(pointer_type->pointer_to);
-                    if (!complete_type(pointer_type->pointer_to, var->location)) {
-                        return false;
-                    }
-                }
-                broadcast_declarations_for_using(var->parent_block, var->type->declarations_block, var->declaration, var);
             }
 
             if (is_type_varargs(var->type)) {
@@ -753,8 +973,9 @@ bool typecheck_global_scope(Ast_Block *block) {
                     report_error(decl->location, "Internal compiler error. check_declaration() failed.");
                     return false;
                 }
-                if (decl->kind == DECL_STRUCT) {
-                    assert(complete_type(((Struct_Declaration *)decl)->structure->type, decl->location));
+                if (!complete_type(decl->operand.type, decl->location, TCF_ALL)) {
+                    report_error(decl->location, "Internal compiler error. complete_type() failed.");
+                    return false;
                 }
                 break;
             }
@@ -826,7 +1047,7 @@ bool typecheck_global_scope(Ast_Block *block) {
     //             a call to complete_type(), only actually using the type and it's members will.
     For (idx, all_types) {
         Type *type = all_types[idx];
-        if (!complete_type(type, {})) {
+        if (!complete_type(type, {}, TCF_ALL)) {
             return false;
         }
     }
@@ -1049,122 +1270,6 @@ char *type_to_string_plain(Type *type) {
     return sb.string();
 }
 
-bool complete_type(Type *type, Location usage_location) {
-    if (type->check_state == CS_CHECKED) {
-        return true;
-    }
-    if (type->check_state == CS_CHECKING) {
-        report_error({}, "Circular dependency."); // todo(josh): better @ErrorMessage
-        return false;
-    }
-    assert(type->check_state == CS_NOT_CHECKED);
-    type->check_state = CS_CHECKING;
-    defer(type->check_state = CS_CHECKED);
-    if (is_type_incomplete(type)) {
-        switch (type->kind) {
-            case TYPE_STRUCT: {
-                Type_Struct *struct_type = (Type_Struct *)type;
-                assert(struct_type->ast_struct != nullptr);
-                Ast_Struct *structure = struct_type->ast_struct;
-                assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
-                assert(structure->declaration->link_name);
-                For (idx, structure->fields) {
-                    Ast_Var *var = structure->fields[idx];
-                    if (!check_declaration(var->declaration, var->location)) {
-                        return false;
-                    }
-                    if (!complete_type(var->type, var->location)) {
-                        return false;
-                    }
-                }
-
-                int size = 0;
-                int largest_alignment = 1;
-                For (idx, structure->body->declarations) {
-                    Declaration *decl = structure->body->declarations[idx];
-                    switch (decl->kind) {
-                        case DECL_USING: {
-                            Using_Declaration *using_decl = (Using_Declaration *)decl;
-                            assert(register_declaration(structure->type->declarations_block, using_decl));
-                            break;
-                        }
-                        case DECL_VAR: {
-                            Var_Declaration *decl_var = (Var_Declaration *)decl;
-                            Ast_Var *var = decl_var->var;
-                            if (var->is_constant) {
-                                assert(var->expr != nullptr);
-                                assert(var->constant_operand.type != nullptr);
-                                assert(var->constant_operand.flags & OPERAND_CONSTANT);
-                                var->struct_member = try_add_constant_type_field(struct_type, var->name, var->constant_operand, var->location, var->declaration->notes);
-                                if (!var->struct_member) {
-                                    return false;
-                                }
-                            }
-                            else {
-                                assert(var->type->size > 0);
-                                if (!structure->is_union) {
-                                    size = align_forward(size, var->type->align);
-                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, size, var->location, var->declaration->notes);
-                                    assert(var->struct_member);
-                                    size += var->type->size;
-                                }
-                                else {
-                                    var->struct_member = try_add_variable_type_field(struct_type, var->name, var->type, 0, var->location, var->declaration->notes);
-                                    assert(var->struct_member);
-                                    size = max(size, var->type->size);
-                                }
-                                largest_alignment = max(largest_alignment, var->type->align);
-                                assert(var->struct_member != nullptr);
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                if (size == 0) {
-                    size = 1;
-                }
-
-                assert(is_power_of_two(largest_alignment));
-                assert(size > 0);
-                struct_type->size = (int)align_forward((uintptr_t)size, (uintptr_t)largest_alignment);
-                struct_type->align = largest_alignment;
-                struct_type->flags &= ~(TF_INCOMPLETE);
-
-                assert(structure->name);
-                assert(structure->declaration);
-                add_ordered_declaration(structure->declaration);
-                break;
-            }
-            case TYPE_ARRAY: {
-                Type_Array *array_type = (Type_Array *)type;
-                if (!complete_type(array_type->array_of, usage_location)) {
-                    return false;
-                }
-                assert(array_type->count > 0);
-                assert(array_type->array_of->size > 0);
-                assert(array_type->array_of->align > 0);
-                array_type->size = array_type->array_of->size * array_type->count;
-                array_type->align = array_type->array_of->align;
-                assert(array_type->size > 0);
-                array_type->flags &= ~(TF_INCOMPLETE);
-                add_ordered_declaration(SIF_NEW_CLONE(Type_Declaration("", array_type, nullptr), g_global_linear_allocator));
-                break;
-            }
-            case TYPE_REFERENCE: {
-                Type_Reference *reference_type = (Type_Reference *)type;
-                assert(reference_type->reference_to);
-                if (!complete_type(reference_type->reference_to, usage_location)) {
-                    return false;
-                }
-                reference_type->flags &= ~(TF_INCOMPLETE);
-                break;
-            }
-        }
-    }
-    return true;
-}
-
 void type_mismatch(Location location, Type *got, Type *expected) {
     report_error(location, "Type mismatch. Expected '%s', got '%s'.", type_to_string(expected), type_to_string(got));
 }
@@ -1266,7 +1371,6 @@ Type_Reference *get_or_create_type_reference_to(Type *reference_to) {
         return reference_to->reference_to_this_type;
     }
     Type_Reference *new_type = NEW_TYPE(Type_Reference(reference_to));
-    new_type->flags = TF_INCOMPLETE;
     new_type->size = POINTER_SIZE;
     new_type->align = POINTER_SIZE;
     reference_to->reference_to_this_type = new_type;
@@ -1286,7 +1390,6 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
         }
     }
     Type_Array *new_type = NEW_TYPE(Type_Array(array_of, count));
-    new_type->flags = TF_INCOMPLETE;
     assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {}));
     Operand operand = {};
     operand.type = type_int;
@@ -2116,7 +2219,7 @@ Ast_Node *polymorph_node(Ast_Node *node_to_polymorph, char *original_name, Array
             report_info(polymorph_location, "Error during polymorph triggered here.");
             return nullptr;
         }
-        assert(inserted_declaration->check_state == CS_CHECKED);
+        assert(inserted_declaration->check_state == DCS_CHECKED);
         assert(inserted_declaration->operand.type != nullptr);
     }
 
@@ -2474,7 +2577,7 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
     if (!lhs_operand) {
         return false;
     }
-    if (!complete_type(lhs_operand->type, lhs->location)) {
+    if (!complete_type(lhs_operand->type, lhs->location, TCF_USINGS)) {
         return false;
     }
 
@@ -2495,9 +2598,10 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
         type_with_fields = lhs_operand->type_value;
     }
     assert(type_with_fields != nullptr);
-    if (!complete_type(type_with_fields, lhs->location)) {
+    if (!complete_type(type_with_fields, lhs->location, TCF_USINGS)) {
         return false;
     }
+
     out_result->type_with_field = type_with_fields;
     Declaration *resolved_declaration = nullptr;
     if (!try_resolve_identifier(field_name, type_with_fields->declarations_block, &out_result->operand, selector_location, false, &resolved_declaration)) {
@@ -2668,8 +2772,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                         return nullptr;
                     }
                 }
-                assert(!is_type_incomplete(lhs_operand->type));
-                assert(!is_type_incomplete(rhs_operand->type));
                 Type *most_concrete = get_most_concrete_type(lhs_operand->type, rhs_operand->type);
                 if (expected_type != nullptr) {
                     most_concrete = get_most_concrete_type(most_concrete, expected_type);
@@ -2762,6 +2864,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 if (!rhs_operand) {
                     return nullptr;
                 }
+                if (!complete_type(type_operand->type_value, transmute->location, TCF_SIZE)) {
+                    return nullptr;
+                }
+                if (!complete_type(rhs_operand->type, rhs_operand->location, TCF_SIZE)) {
+                    return nullptr;
+                }
                 assert(type_operand->type_value->size > 0);
                 assert(rhs_operand->type->size > 0);
                 if (rhs_operand->type->size != type_operand->type_value->size) {
@@ -2819,7 +2927,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 Type *elem_type = nullptr;
                 if (is_type_array(lhs_operand->type)) {
                     Type_Array *array_type = (Type_Array *)lhs_operand->type;
-                    assert(array_type->size > 0);
                     elem_type = array_type->array_of;
                     result_operand.type = elem_type;
                     result_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
@@ -3073,10 +3180,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     return nullptr;
                 }
                 assert(expr_operand->type_value != nullptr);
-                if (!complete_type(expr_operand->type_value, expr->location)) {
+                if (!complete_type(expr_operand->type_value, expr->location, TCF_SIZE)) {
                     return nullptr;
                 }
-                assert(!is_type_incomplete(expr_operand->type_value));
                 assert(expr_operand->type_value->size > 0);
                 result_operand.type = type_untyped_integer;
                 result_operand.uint_value = expr_operand->type_value->size;
@@ -3145,7 +3251,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 result_operand.type = type_typeid;
                 result_operand.type_value = anonymous_struct->structure->type;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-                if (!complete_type(anonymous_struct->structure->type, expr->location)) {
+                // todo(josh): I don't think this complete_type needs to be here?
+                if (!complete_type(anonymous_struct->structure->type, expr->location, TCF_ALL)) {
                     return nullptr;
                 }
                 break;
@@ -3371,6 +3478,15 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         if (!check_declaration(parameter->declaration, parameter->location)) {
             return nullptr;
         }
+        if (parameter->is_using) {
+            if (!complete_type(parameter->declaration->operand.type, parameter->location, TCF_USINGS)) {
+                return nullptr;
+            }
+            if (!broadcast_var_using(parameter, parameter->parent_block)) {
+                return nullptr;
+            }
+        }
+
         assert(parameter->type != nullptr);
         if (is_type_varargs(parameter->type)) {
             if (idx != header->parameters.count-1) {
@@ -3397,6 +3513,7 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
         assert(return_type_operand->type == type_typeid);
         return_type = return_type_operand->type_value;
     }
+
     header->type = get_or_create_type_procedure(parameter_types, return_type);
 
     assert(header->declaration);
@@ -3419,6 +3536,14 @@ bool typecheck_node(Ast_Node *node) {
             assert(typecheck_expr(var->name_expr));
             if (var->type_expr) {
                 assert(typecheck_expr(var->type_expr));
+            }
+            if (var->is_using) {
+                if (!complete_type(var->type, var->location, TCF_USINGS)) {
+                    return false;
+                }
+                if (!broadcast_var_using(var, var->parent_block)) {
+                    return nullptr;
+                }
             }
             break;
         }

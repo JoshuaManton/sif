@@ -173,7 +173,6 @@ void c_print_type(Chunked_String_Builder *sb, Type *type, const char *var_name) 
     }
 
     assert(!(type->flags & TF_UNTYPED));
-    assert(!(type->flags & TF_INCOMPLETE));
 
     c_print_type_prefix(sb, type);
     sb->print(var_name);
@@ -305,7 +304,6 @@ void c_print_type_plain(Chunked_String_Builder *sb, Type *type, const char *var_
     }
 
     assert(!(type->flags & TF_UNTYPED));
-    assert(!(type->flags & TF_INCOMPLETE));
     c_print_type_plain_prefix(sb, type);
     sb->print(var_name);
     c_print_type_plain_postfix(sb, type);

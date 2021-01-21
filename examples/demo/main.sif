@@ -251,6 +251,8 @@ proc order_independence() {
     // out what depends on what for you. delete all your .h files :)
 
     loopy: Loopy;
+    print("%\n", sizeof(typeof(loopy.a)));
+    print("%\n", sizeof(typeof(nesty)));
     assert(sizeof(typeof(loopy.a)) == 8);
     assert(sizeof(typeof(nesty)) == 64);
 }
@@ -431,6 +433,14 @@ proc using_statement() {
 
     // You can 'using' as many fields as you'd like, provided that the names
     // do not collide.
+
+    // 'using' in procedure parameters works too
+    proc a_proc_with_using(using x: My_Struct_With_Using, param: int) {
+        print("%\n", some_field + param);
+    }
+
+    a_proc_with_using(my_struct, 2);
+    a_proc_with_using(my_struct, 4);
 }
 
 

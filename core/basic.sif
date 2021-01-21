@@ -146,10 +146,16 @@ proc print_arg(arg: any) {
                 print(", ");
             }
             elem := ptr_offset(cast(^u8, arg.data), dti.array_of.size * i);
+            if (dti.array_of.id == string) {
+                print_string("\"");
+            }
             a: any;
             a.data = elem;
             a.type = dti.array_of.id;
             print("%", a);
+            if (dti.array_of.id == string) {
+                print_string("\"");
+            }
         }
         print("]");
     }
@@ -162,10 +168,16 @@ proc print_arg(arg: any) {
                 print_string(", ");
             }
             elem := ptr_offset(cast(^u8, slice.data), dti.slice_of.size * i);
+            if (dti.slice_of.id == string) {
+                print_string("\"");
+            }
             a: any;
             a.data = elem;
             a.type = dti.slice_of.id;
             print("%", a);
+            if (dti.slice_of.id == string) {
+                print_string("\"");
+            }
         }
         print("]");
     }
