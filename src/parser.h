@@ -163,6 +163,7 @@ struct Ast_Block : public Ast_Node {
 struct Ast_Proc_Header : public Ast_Node {
     char *name = nullptr;
     Array<Ast_Var *> parameters = {};
+    Array<Ast_Expr *> default_values = {}; // note(josh): sparse
     Ast_Expr *return_type_expr = {};
     Type_Procedure *type = nullptr;
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
@@ -184,6 +185,7 @@ struct Ast_Proc_Header : public Ast_Node {
     {
         polymorphic_parameter_indices.allocator = allocator;
         parameters.allocator = allocator;
+        default_values.allocator = allocator;
         defers.allocator = allocator;
     }
 };
@@ -614,11 +616,13 @@ struct Selector_Expression_Lookup_Result {
 struct Expr_Selector : public Ast_Expr {
     Ast_Expr *lhs = nullptr;
     char *field_name = nullptr;
+    Location field_location = {};
     Selector_Expression_Lookup_Result lookup = {};
-    Expr_Selector(Ast_Expr *lhs, char *field_name, Allocator allocator, Ast_Block *current_block, Location location)
+    Expr_Selector(Ast_Expr *lhs, char *field_name, Location field_location, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Expr(EXPR_SELECTOR, allocator, current_block, location)
     , lhs(lhs)
     , field_name(field_name)
+    , field_location(field_location)
     {}
 };
 

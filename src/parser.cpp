@@ -1177,6 +1177,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     // todo(josh): handle 'x, y, z: float;'
                     assert(lhs_list->exprs.count == 1);
                     node = parse_var(lexer, lhs_list->exprs[0]);
+                    if (node == nullptr) {
+                        return nullptr;
+                    }
                     break;
                }
                 default: {
@@ -1764,7 +1767,7 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
                 eat_next_token(lexer);
                 Token name_token;
                 EXPECT(lexer, TK_IDENTIFIER, &name_token);
-                base_expr = SIF_NEW_CLONE(Expr_Selector(base_expr, name_token.text, lexer->allocator, lexer->current_block, base_expr->location), lexer->allocator);
+                base_expr = SIF_NEW_CLONE(Expr_Selector(base_expr, name_token.text, name_token.location, lexer->allocator, lexer->current_block, base_expr->location), lexer->allocator);
                 break;
             }
             default: {

@@ -10,6 +10,19 @@ struct Dynamic_Array!($T: typeid) {
     }
 }
 
+proc make_dynamic_array($T: typeid, capacity: int, allocator: Allocator) : Dynamic_Array!(T) {
+    dyn: Dynamic_Array!(T);
+    dyn.allocator = allocator;
+    reserve(&dyn, capacity);
+    return dyn;
+}
+
+proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
+    if (dyn.elements.data != null) {
+        sif_free(dyn.elements.data, dyn.allocator);
+    }
+}
+
 proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
     _dynamic_array_check_allocator(dyn);
     resize_if_at_capacity(dyn);
@@ -92,12 +105,6 @@ proc ordered_remove(dyn: ^Dynamic_Array!($T), index: int) : T {
 proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
     dyn.elements.count = 0;
     dyn.count = 0;
-}
-
-proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
-    if (dyn.elements.data != null) {
-        sif_free(dyn.elements.data, dyn.allocator);
-    }
 }
 
 proc resize_if_at_capacity(dyn: ^Dynamic_Array!($T)) {

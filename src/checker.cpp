@@ -281,13 +281,16 @@ Type *try_concretize_type_without_context(Type *type) {
     return nullptr;
 }
 
-void broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Block *block_with_declarations, Declaration *from_using, Ast_Node *node_to_link_back_to) {
+bool broadcast_declarations_for_using(Ast_Block *block_to_broadcast_into, Ast_Block *block_with_declarations, Declaration *from_using, Ast_Node *node_to_link_back_to) {
     For (idx, block_with_declarations->declarations) {
         Declaration *decl_to_broadcast = block_with_declarations->declarations[idx];
         Using_Declaration *new_declaration = SIF_NEW_CLONE(Using_Declaration(node_to_link_back_to, decl_to_broadcast, block_to_broadcast_into, node_to_link_back_to->location), g_global_linear_allocator);
         new_declaration->from_using = from_using;
-        assert(register_declaration(block_to_broadcast_into, new_declaration));
+        if (!register_declaration(block_to_broadcast_into, new_declaration)) {
+            return false;
+        }
     }
+    return true;
 }
 
 bool check_basic_block_for_return(Ast_Basic_Block *block) {
@@ -331,7 +334,7 @@ bool broadcast_var_using(Ast_Var *var, Ast_Block *broadcast_into) {
                 return false;
             }
         }
-        broadcast_declarations_for_using(broadcast_into, var->type->declarations_block, var->declaration, var);
+        return broadcast_declarations_for_using(broadcast_into, var->type->declarations_block, var->declaration, var);
     }
     return true;
 }
@@ -548,7 +551,8 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
 
             String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
             if (struct_decl->structure->parent_declaration != nullptr) {
-                link_name_sb.print(struct_decl->structure->parent_declaration->link_name);
+                // todo(josh): this should be the link name
+                link_name_sb.print(struct_decl->structure->parent_declaration->name);
             }
             link_name_sb.printf("__SIF__%s", struct_decl->name);
             struct_decl->link_name = intern_string(link_name_sb.string());
@@ -805,7 +809,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 }
                 if (proc_decl->header->type->return_type) {
                     if (!check_basic_block_for_return(proc_decl->header->root_basic_block)) {
-                        report_error(proc_decl->header->location, "Procedure doesn't return on all code paths."); // todo(josh): @ErrorMessage
+                        report_error(proc_decl->header->location, "Procedure doesn't return on all code paths.");
                         return false;
                     }
                 }
@@ -1626,6 +1630,13 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 }
                 else {
                     report_error(location, "Operator + is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            else {
+                if (is_type_string(lhs.type)) {
+                    assert(is_type_string(rhs.type));
+                    report_error(location, "Operand + only works for constant strings, not runtime string values.");
                     return false;
                 }
             }
@@ -2528,7 +2539,7 @@ bool try_resolve_identifier(const char *name, Ast_Block *start_block, Operand *o
     return true;
 }
 
-bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Lookup_Result *out_result, Location selector_location) {
+bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Lookup_Result *out_result, Location field_location) {
     Operand *lhs_operand = typecheck_expr(lhs);
     if (!lhs_operand) {
         return false;
@@ -2560,11 +2571,11 @@ bool do_selector_lookup(Ast_Expr *lhs, char *field_name, Selector_Expression_Loo
 
     out_result->type_with_field = type_with_fields;
     Declaration *resolved_declaration = nullptr;
-    if (!try_resolve_identifier(field_name, type_with_fields->declarations_block, &out_result->operand, selector_location, false, &resolved_declaration)) {
+    if (!try_resolve_identifier(field_name, type_with_fields->declarations_block, &out_result->operand, field_location, false, &resolved_declaration)) {
         return false;
     }
     if (!resolved_declaration) {
-        report_error(lhs->location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
+        report_error(field_location, "Type '%s' doesn't have field '%s'.", type_to_string(type_with_fields), field_name);
         return false;
     }
     assert(resolved_declaration);
@@ -2927,7 +2938,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
             case EXPR_SELECTOR: {
                 Expr_Selector *selector = (Expr_Selector *)expr;
                 Selector_Expression_Lookup_Result lookup;
-                if (!do_selector_lookup(selector->lhs, selector->field_name, &lookup, selector->location)) {
+                if (!do_selector_lookup(selector->lhs, selector->field_name, &lookup, selector->field_location)) {
                     return nullptr;
                 }
                 selector->lookup = lookup;
@@ -3587,7 +3598,9 @@ bool typecheck_node(Ast_Node *node) {
                 return false;
             }
             assert(block_to_broadcast_declarations_of != nullptr);
-            broadcast_declarations_for_using(ast_using->parent_block, block_to_broadcast_declarations_of, using_operand->referenced_declaration, ast_using->expr);
+            if (!broadcast_declarations_for_using(ast_using->parent_block, block_to_broadcast_declarations_of, using_operand->referenced_declaration, ast_using->expr)) {
+                return false;
+            }
             break;
         }
 

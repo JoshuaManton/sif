@@ -115,6 +115,10 @@ proc main() {
     vector2 := Vector3.{4, 5, 6};
     printa(add_things(vector1, vector2));
 
+    // string1: string = "Hello, ";
+    // string2: string = "World!";
+    // printa(add_things(string1, string2));
+
     print("\n\n\n");
 
 
