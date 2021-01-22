@@ -25,6 +25,7 @@ proc main() {
 
 ## Building and Running
 
+0. Be on Windows (will support other platforms in the future)
 1. Clone the repo
 2. Open `x64 Native Tools Command Prompt` [(or any other terminal with `vcvars64.bat` run)](https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-160)
 3. Run `build.bat release`
