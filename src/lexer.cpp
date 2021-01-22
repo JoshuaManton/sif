@@ -76,7 +76,8 @@ void init_lexer_globals() {
     token_string_map[TK_BIT_AND_ASSIGN]                  = "&=";
     token_string_map[TK_BIT_OR]                          = "|";
     token_string_map[TK_BIT_OR_ASSIGN]                   = "|=";
-    token_string_map[TK_BIT_NOT]                         = "~";
+    token_string_map[TK_TILDE]                           = "~"; // serves double-duty as unary bitwise NOT and binary bitwise XOR
+    token_string_map[TK_BIT_XOR_ASSIGN]                  = "~=";
 
     token_string_map[TK_DOLLAR]                          = "$";
 
@@ -169,7 +170,8 @@ void init_lexer_globals() {
     token_name_map[TK_BIT_AND_ASSIGN]                    = "TK_BIT_AND_ASSIGN";
     token_name_map[TK_BIT_OR]                            = "TK_BIT_OR";
     token_name_map[TK_BIT_OR_ASSIGN]                     = "TK_BIT_OR_ASSIGN";
-    token_name_map[TK_BIT_NOT]                           = "TK_BIT_NOT";
+    token_name_map[TK_TILDE]                             = "TK_TILDE";
+    token_name_map[TK_BIT_XOR_ASSIGN]                    = "TK_BIT_XOR_ASSIGN";
 
     token_name_map[TK_DOLLAR]                            = "TK_DOLLAR";
 
@@ -632,6 +634,16 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
             out_token->text = "!=";
         }
     }
+    else if (lexer->text[lexer->location.index] == '~') {
+        advance(lexer, 1);
+        out_token->kind = TK_TILDE;
+        out_token->text = "~";
+        if (lexer->text[lexer->location.index] == '=') {
+            advance(lexer, 1);
+            out_token->kind = TK_BIT_XOR_ASSIGN;
+            out_token->text = "~=";
+        }
+    }
     else if (lexer->text[lexer->location.index] == '<') {
         advance(lexer, 1);
         out_token->kind = TK_LESS_THAN;
@@ -788,7 +800,6 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else SIMPLE_TOKEN(',', TK_COMMA)
     else SIMPLE_TOKEN('^', TK_CARET)
     else SIMPLE_TOKEN('$', TK_DOLLAR)
-    else SIMPLE_TOKEN('~', TK_BIT_NOT)
     else {
         lexer->errored = true;
         report_error(token_location, "Unknown character: %c.", lexer->text[lexer->location.index]);

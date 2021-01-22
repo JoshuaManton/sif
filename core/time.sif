@@ -1,3 +1,5 @@
+#include "core:windows.sif"
+
 struct Timer {
     start_time: f64;
     frequency: f64;

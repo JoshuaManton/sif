@@ -1522,6 +1522,10 @@ bool operator_is_defined(Type *lhs, Type *rhs, Token_Kind op) {
                  if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
             break;
         }
+        case TK_TILDE: { // note(josh): bit XOR
+                 if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
+            break;
+        }
         case TK_LESS_THAN: {
                  if (is_type_integer(lhs) && is_type_integer(rhs))  return true;
             else if (is_type_float(lhs)   && is_type_float(rhs))    return true;
@@ -1719,6 +1723,18 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             }
             break;
         }
+        case TK_TILDE: { // XOR
+            result_operand.type = most_concrete;
+            if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
+                result_operand.flags |= OPERAND_CONSTANT;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.int_value = lhs.int_value ^ rhs.int_value;
+                else {
+                    report_error(location, "Operator ^ is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
+                    return false;
+                }
+            }
+            break;
+        }
         case TK_LESS_THAN: {
             result_operand.type = type_bool;
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
@@ -1833,8 +1849,6 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
 
 int total_num_polymorphs = 0;
 
-bool try_create_polymorph_declarations(Ast_Var *var, Operand parameter_operand, Ast_Block *block_to_insert_into, Array<Declaration *> *out_polymorphic_declarations);
-
 bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parameter_operand, Ast_Block *block_to_insert_into, Array<Declaration *> *out_polymorphic_declarations) {
     switch (value_expr->expr_kind) {
         case EXPR_IDENTIFIER: {
@@ -1926,8 +1940,9 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             For (idx, poly_type->parameters) {
                 Ast_Expr *poly_expr = poly_type->parameters[idx];
                 bool ok = try_create_polymorph_value_declaration(poly_expr, struct_type->polymorphic_parameter_values[idx], block_to_insert_into, out_polymorphic_declarations);
-                assert(ok);
-                return ok;
+                if (!ok) {
+                    return false;
+                }
             }
             break;
         }
@@ -2666,7 +2681,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                         }
                         break;
                     }
-                    case TK_BIT_NOT: {
+                    case TK_TILDE: {
                         if (!is_type_integer(rhs_operand->type)) {
                             report_error(rhs_operand->location, "Unary bitwise NOT requires an integer type.");
                             return nullptr;

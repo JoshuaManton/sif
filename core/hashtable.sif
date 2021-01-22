@@ -1,0 +1,243 @@
+#include "core:basic.sif"
+#include "core:math.sif"
+
+struct Hashtable!($Key: typeid, $Value: typeid) {
+    key_headers: []Key_Header!(Key);
+    values: []Key_Value!(Key, Value);
+    count: int;
+    allocator: Allocator;
+}
+
+struct Key_Header!($Key: typeid) {
+    filled: bool;
+    key: Key;
+}
+
+struct Key_Value!($Key: typeid, $Value: typeid) {
+    filled: bool;
+    hash: u64;
+    value: Value;
+}
+
+const INITIAL_HASHTABLE_SIZE := 31;
+
+proc make_hashtable($Key: typeid, $Value: typeid, allocator: Allocator) : Hashtable!(Key, Value) {
+    hashtable: Hashtable!(Key, Value);
+    hashtable.allocator = allocator;
+    hashtable.key_headers = new_slice(Key_Header!(Key), INITIAL_HASHTABLE_SIZE, hashtable.allocator);
+    hashtable.values = new_slice(Key_Value!(Key, Value), INITIAL_HASHTABLE_SIZE, hashtable.allocator);
+    return hashtable;
+}
+
+proc hashtable_insert(table: ^Hashtable!($Key, $Value), key: Key, value: Value) {
+    if (cast(f64, table.count) >= cast(f64, table.key_headers.count)*0.75) {
+        old_key_headers := table.key_headers;
+        old_values := table.values;
+        old_length := old_key_headers.count;
+        old_count := table.count;
+
+        const INITIAL_SIZE := 31;
+        new_len := next_power_of_2(INITIAL_SIZE + old_length);
+        table.key_headers = new_slice(Key_Header!(Key), new_len, table.allocator);
+        table.values = new_slice(Key_Value!(Key, Value), new_len, table.allocator);
+        table.count = 0;
+
+        for (header_idx := 0; header_idx < old_length; header_idx += 1) {
+            old_key_header := &old_key_headers[header_idx];
+            if (old_key_header.filled) {
+                hashtable_insert(table, old_key_header.key, old_values[header_idx].value);
+            }
+        }
+
+        delete_slice(old_key_headers, table.allocator);
+        delete_slice(old_values, table.allocator);
+    }
+
+    key_value_index: int = -1;
+    h := _hashtable_hash_key(key);
+    len_indices := cast(u64, table.key_headers.count);
+    hash_idx := h % len_indices;
+    for (idx := hash_idx; idx < len_indices; idx += 1) {
+        value_ptr := &table.values[cast(int, idx)];
+        if (!value_ptr.filled) {
+            key_value_index = cast(int, idx);
+            break;
+        }
+    }
+    if (key_value_index == -1) {
+        for (idx : u64 = 0; idx < hash_idx; idx += 1) {
+            value_ptr := &table.values[cast(int, idx)];
+            if (!value_ptr.filled) {
+                key_value_index = cast(int, idx);
+                break;
+            }
+        }
+    }
+    assert(key_value_index >= 0);
+
+    table.values[key_value_index] = .{true, h, value};
+    table.key_headers[key_value_index] = .{true, key};
+    table.count += 1;
+}
+
+proc hashtable_get(table: ^Hashtable!($Key, $Value), key: Key) : ^Value {
+    key_header: ^Key_Header!(Key);
+    index: u64;
+    _hashtable_get_key_header(table, key, &key_header, &index);
+    if (key_header == null) {
+        return null;
+    }
+    return &table.values[cast(int, index)].value;
+}
+
+proc _hashtable_get_key_header(table: ^Hashtable!($Key, $Value), key: Key, out_key_header: ^^Key_Header!(Key), out_index: ^u64) {
+    out_key_header^ = null;
+    out_index^ = 0;
+    h := _hashtable_hash_key(key);
+    len_key_headers := cast(u64, table.key_headers.count);
+    hash_idx := h % len_key_headers;
+    for (idx := hash_idx; idx < len_key_headers; idx += 1) {
+        header := &table.key_headers[cast(int, idx)];
+        if (!header.filled) {
+            return;
+        }
+        if (header.key == key) {
+            out_key_header^ = header;
+            out_index^ = idx;
+            return;
+        }
+    }
+    for (idx : u64 = 0; idx < hash_idx; idx += 1) {
+        header := &table.key_headers[cast(int, idx)];
+        if (!header.filled) {
+            return;
+        }
+        if (header.key == key) {
+            out_key_header^ = header;
+            out_index^ = idx;
+            return;
+        }
+    }
+    // should be unreachable
+    assert(false);
+}
+
+proc _hashtable_hash_key(key: $Key) : u64 {
+    // if (Key == int) {
+        return ~transmute(u64, key);
+    // }
+    // todo(josh): hash string data differently
+    // note(josh): fnv64
+    h : u64 = 0xcbf29ce484222325;
+    key_slice := slice_ptr(cast(^byte, &key), sizeof(Key));
+    for (i := 0; i < sizeof(Key); i += 1) {
+        h = (h * 0x100000001b3) ~ cast(u64, key_slice[i]);
+    }
+    return h;
+}
+
+proc hashtable_remove(table: ^Hashtable!($Key, $Value), key: Key) {
+    key_header: ^Key_Header!(Key);
+    key_value_idx: u64;
+    _hashtable_get_key_header(table, key, &key_header, &key_value_idx);
+    if (key_header == null) {
+        return;
+    }
+    key_value := &table.values[cast(int, key_value_idx)];
+    len_values := cast(u64, table.values.count);
+    hash_idx := key_value.hash % len_values;
+    last_thing_that_hashed_to_the_same_idx: ^Key_Value!(Key, Value);
+    last_thing_index: u64;
+    done := false;
+    for (idx := key_value_idx+1; idx < len_values; idx += 1) {
+        value := &table.values[cast(int, idx)];
+        if (!value.filled) {
+            done = true;
+            break;
+        }
+        if (value.hash % len_values == hash_idx) {
+            last_thing_that_hashed_to_the_same_idx = value;
+            last_thing_index = idx;
+        }
+    }
+    if (!done) {
+        for (idx : u64 = 0; idx < hash_idx; idx += 1) {
+            value := &table.values[cast(int, idx)];
+            if (!value.filled) {
+                break;
+            }
+            if (value.hash % len_values == hash_idx) {
+                last_thing_that_hashed_to_the_same_idx = value;
+                last_thing_index = idx;
+            }
+        }
+    }
+
+
+    if (last_thing_that_hashed_to_the_same_idx != null) {
+        key_header^ = table.key_headers[cast(int, last_thing_index)];
+        key_value^ = last_thing_that_hashed_to_the_same_idx^;
+        table.key_headers[cast(int, last_thing_index)].filled = false;
+        last_thing_that_hashed_to_the_same_idx.filled = false;
+    }
+    else {
+        key_header.filled = false;
+        key_value.filled = false;
+    }
+
+    table.count -= 1;
+}
+
+// #include "core:time.sif"
+
+// proc main() {
+//     timer: Timer;
+//     init_timer(&timer);
+
+//     const NUM_ELEMS := 100 * 10000;
+
+//     my_table := make_hashtable(int, int, default_allocator());
+//     {
+//         insert_start := get_time(timer);
+//         for (i := 0; i < NUM_ELEMS; i += 1) {
+//             hashtable_insert(&my_table, i, i * 3);
+//         }
+//         insert_end := get_time(timer);
+//         time := (insert_end-insert_start);
+//         print("My map inserting % elements:   %s\n", NUM_ELEMS, time);
+//     }
+
+//     {
+//         lookup_start := get_time(timer);
+//         for (i := 0; i < NUM_ELEMS; i += 1) {
+//             val := hashtable_get(&my_table, i);
+//             assert(val != null);
+//             assert(val^ == i * 3);
+//         }
+//         lookup_end := get_time(timer);
+//         time := (lookup_end-lookup_start);
+//         print("My map retrieving % elements:   %s\n", NUM_ELEMS, time);
+//     }
+
+//     {
+//         // iterate_start := get_time(timer);
+//         // for header, idx in my_table.key_headers {
+//         //     if !header.filled do continue;
+//         //     key := header.key;
+//         //     value := my_table.values[idx].value;
+//         //     assert(value == key * 3);
+//         // }
+//         // iterate_end := get_time(timer);
+//         // print("My map iterating % elements:   %s\n", NUM_ELEMS, (iterate_end-iterate_start));
+//     }
+
+//     {
+//         removal_start := get_time(timer);
+//         for (i := 0; i < NUM_ELEMS; i += 1) {
+//             hashtable_remove(&my_table, i);
+//         }
+//         removal_end := get_time(timer);
+//         time := (removal_end-removal_start);
+//         print("My map removing % elements:   %s\n", NUM_ELEMS, time);
+//     }
+// }

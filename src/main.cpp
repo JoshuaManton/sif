@@ -26,6 +26,8 @@ HIGH PRIORITY
 -checker thinks string + string is okay for non-constant strings
 -default procedure parameters?
 -#caller_location
+-'any' bug if you pass a nested expr as an 'any'
+-new_slice/new_string are not the right word. use 'make'
 -using bug {
     struct Foo {
         position: Vector3;

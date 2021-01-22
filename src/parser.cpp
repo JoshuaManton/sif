@@ -1407,6 +1407,7 @@ bool is_add_op(Lexer *lexer) {
 bool is_add_op(Token_Kind kind) {
     switch (kind) {
         case TK_BIT_OR: // todo(josh): is this a good precedence for this?
+        case TK_TILDE: // XOR. todo(josh): is this a good precedence for this?
         case TK_PLUS:
         case TK_MINUS: {
             return true;
@@ -1450,7 +1451,7 @@ bool is_unary_op(Token_Kind kind) {
         case TK_MINUS:
         case TK_PLUS:
         case TK_NOT:
-        case TK_BIT_NOT:
+        case TK_TILDE: // bitwise NOT
         case TK_DOT_DOT:
         case TK_AMPERSAND: { // address-of
             return true;
@@ -1623,7 +1624,7 @@ Ast_Expr *parse_unary_expr(Lexer *lexer) {
             }
             case TK_MINUS:
             case TK_PLUS:
-            case TK_BIT_NOT:
+            case TK_TILDE:
             case TK_NOT: {
                 Ast_Expr *rhs = parse_unary_expr(lexer);
                 if (!rhs) {

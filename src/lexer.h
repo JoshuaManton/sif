@@ -79,9 +79,8 @@ enum Token_Kind {
     TK_BIT_AND_ASSIGN,
     TK_BIT_OR,
     TK_BIT_OR_ASSIGN,
-    TK_BIT_NOT,
-
-    // todo(josh): bitwise XOR
+    TK_TILDE, // serves double-duty as unary bitwise NOT and binary bitwise XOR
+    TK_BIT_XOR_ASSIGN,
 
     TK_NOT,
 

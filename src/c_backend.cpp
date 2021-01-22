@@ -565,7 +565,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                             expr_sb.print("!");
                             break;
                         }
-                        case TK_BIT_NOT: {
+                        case TK_TILDE: { // bitwise NOT
                             expr_sb.print("~");
                             break;
                         }
@@ -653,6 +653,8 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                                 case TK_NOT_EQUAL_TO:             { expr_sb.print(" != "); break; }
                                 case TK_AMPERSAND:                { expr_sb.print(" & ");  break; }
                                 case TK_BIT_OR:                   { expr_sb.print(" | ");  break; }
+                                case TK_TILDE:                    { expr_sb.print(" ^ ");  break; }
+                                case TK_BIT_XOR_ASSIGN:           { expr_sb.print(" ^= "); break; }
                                 case TK_BOOLEAN_AND:              { expr_sb.print(" && "); break; }
                                 case TK_BOOLEAN_OR:               { expr_sb.print(" || "); break; }
                                 case TK_LEFT_SHIFT:               { expr_sb.print(" << "); break; }
