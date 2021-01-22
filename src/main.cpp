@@ -3,10 +3,6 @@
 #include <string.h>
 #include <cassert>
 
-#define NOMINMAX
-#define MICROSOFT_CRAZINESS_IMPLEMENTATION
-#include "microsoft_craziness.h"
-
 #include "common.h"
 #include "os_windows.h"
 #include "lexer.h"
@@ -247,45 +243,8 @@ void main(int argc, char **argv) {
     double c_compile_start_time = query_timer(&g_global_timer);
 
     if (!is_check) {
-        Find_Result fr = find_visual_studio_and_windows_sdk();
-        char *windows_sdk_root = wide_to_cstring(fr.windows_sdk_root, default_allocator());
-        char *exe_path = wide_to_cstring(fr.vs_exe_path, default_allocator());
-        char *lib_path = wide_to_cstring(fr.vs_library_path, default_allocator());
-        char *um_lib_path = wide_to_cstring(fr.windows_sdk_um_library_path, default_allocator());
-        char *ucrt_lib_path = wide_to_cstring(fr.windows_sdk_ucrt_library_path, default_allocator());
-        // printf("win sdk root   %s\n", windows_sdk_root);
-        // printf("exe_path:      %s\n", exe_path);
-        // printf("lib_path:      %s\n", lib_path);
-        // printf("um_lib_path:   %s\n", um_lib_path);
-        // printf("ucrt_lib_path: %s\n", ucrt_lib_path);
-
-        int lib_index = last_index_of(ucrt_lib_path, "Lib");
-        if (lib_index == -1) {
-            printf("Error: Unknown lib path: %s\n", ucrt_lib_path);
-            return;
-        }
-
-        // todo(josh): test this stuff on other people's computers. not sure if it will work reliably with different Windows SDK versions
-
-        String_Builder ucrt_include_path_sb = make_string_builder(g_global_linear_allocator, 256);
-        ucrt_include_path_sb.write_with_length(ucrt_lib_path, lib_index);
-        ucrt_include_path_sb.printf("Include\\");
-        ucrt_include_path_sb.write_with_length(ucrt_lib_path+lib_index+4, strlen(ucrt_lib_path)-lib_index-4-4); // -4 for "\Lib" and -4 for "\x64"
-
-        String_Builder um_include_path_sb = make_string_builder(g_global_linear_allocator, 256);
-        um_include_path_sb.write_with_length(um_lib_path, lib_index);
-        um_include_path_sb.printf("Include\\");
-        um_include_path_sb.write_with_length(um_lib_path+lib_index+4, strlen(um_lib_path)-lib_index-4-4); // -4 for "\Lib" and -4 for "\x64"
-
-        String_Builder cl_exe_path = make_string_builder(g_global_linear_allocator, 128);
-        cl_exe_path.printf("\"%s\\cl.exe\"", exe_path);
-
         String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
-        command_sb.printf("cmd.exe /c \"%s ", cl_exe_path.string());
-        command_sb.printf("/I \"%s\\..\\..\\include\" ", lib_path);
-        command_sb.printf("/I \"%s\" ", ucrt_include_path_sb.string());
-        command_sb.printf("/I \"%s\" ", um_include_path_sb.string());
-
+        command_sb.printf("cmd.exe /c \"cl.exe ");
         if (g_is_debug_build) {
             command_sb.print("/Zi /Fd ");
         }
@@ -295,13 +254,9 @@ void main(int argc, char **argv) {
             command_sb.printf("\"%s\" ", g_all_foreign_import_directives[idx]->path);
         }
         command_sb.printf("/link /OUT:\"%s\" ", output_exe_name);
-        command_sb.printf("/LIBPATH:\"%s\" ", lib_path);
-        command_sb.printf("/LIBPATH:\"%s\" ", um_lib_path);
-        command_sb.printf("/LIBPATH:\"%s\" ", ucrt_lib_path);
         if (g_is_debug_build) {
             command_sb.print("/DEBUG ");
         }
-        command_sb.printf(" 2>&1");
         command_sb.printf("\"");
 
         if (log_cl_command) {
