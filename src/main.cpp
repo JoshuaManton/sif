@@ -98,7 +98,7 @@ LOW PRIORITY
 */
 
 void print_usage() {
-    printf("sif compiler version 0.2.0\n\n");
+    printf("sif compiler v0.2.1\n\n");
 
     printf("Usage:\n");
     printf("  sif <build|run|check> <file> [optional flags]\n\n");
