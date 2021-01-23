@@ -986,7 +986,7 @@ bool typecheck_global_scope(Ast_Block *block) {
             report_info(print_directive->location, "%lld", expr_operand->int_value);
         }
         else if (is_type_float(expr_operand->type)) {
-            report_info(print_directive->location, "%f", expr_operand->float_value);
+            report_info(print_directive->location, "%f", expr_operand->f64_value);
         }
         else if (expr_operand->type == type_bool) {
             report_info(print_directive->location, (expr_operand->bool_value ? "true" : "false"));
@@ -1043,7 +1043,7 @@ void sbprint_constant_operand(String_Builder *sb, Operand operand) {
         sb->printf("%lld", operand.int_value);
     }
     else if (is_type_float(operand.type)) {
-        sb->printf("%f", operand.float_value);
+        sb->printf("%f", operand.f64_value);
     }
     else if (is_type_string(operand.type)) {
         sb->printf("%s", operand.escaped_string_value);
@@ -1609,7 +1609,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
                      if (is_type_integer(lhs.type)   && is_type_integer(rhs.type))   result_operand.bool_value = lhs.int_value    == rhs.int_value;
-                else if (is_type_float(lhs.type)     && is_type_float(rhs.type))     result_operand.bool_value = lhs.float_value  == rhs.float_value;
+                else if (is_type_float(lhs.type)     && is_type_float(rhs.type))     result_operand.bool_value = lhs.f64_value    == rhs.f64_value;
                 else if (is_type_bool(lhs.type)      && is_type_bool(rhs.type))      result_operand.bool_value = lhs.bool_value   == rhs.bool_value;
                 else if (is_type_typeid(lhs.type)    && is_type_typeid(rhs.type))    result_operand.bool_value = lhs.type_value   == rhs.type_value;
                 else if (is_type_procedure(lhs.type) && is_type_procedure(rhs.type)) result_operand.bool_value = lhs.proc_value   == rhs.proc_value;
@@ -1626,7 +1626,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
                      if (is_type_integer(lhs.type)   && is_type_integer(rhs.type))   result_operand.bool_value = lhs.int_value   != rhs.int_value;
-                else if (is_type_float(lhs.type)     && is_type_float(rhs.type))     result_operand.bool_value = lhs.float_value != rhs.float_value;
+                else if (is_type_float(lhs.type)     && is_type_float(rhs.type))     result_operand.bool_value = lhs.f64_value   != rhs.f64_value;
                 else if (is_type_bool(lhs.type)      && is_type_bool(rhs.type))      result_operand.bool_value = lhs.bool_value  != rhs.bool_value;
                 else if (is_type_typeid(lhs.type)    && is_type_typeid(rhs.type))    result_operand.bool_value = lhs.type_value  != rhs.type_value;
                 else if (is_type_procedure(lhs.type) && is_type_procedure(rhs.type)) result_operand.bool_value = lhs.proc_value  != rhs.proc_value;
@@ -1645,9 +1645,13 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_integer(lhs.type) && is_type_integer(rhs.type)) {
                     result_operand.int_value   = lhs.int_value   + rhs.int_value;
                     result_operand.uint_value  = lhs.uint_value  + rhs.uint_value;
-                    result_operand.float_value = lhs.float_value + rhs.float_value;
+                    result_operand.f32_value = lhs.f32_value + rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value + rhs.f64_value;
                 }
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value + rhs.float_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type)) {
+                    result_operand.f32_value = lhs.f32_value + rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value + rhs.f64_value;
+                }
                 else if (is_type_string(lhs.type)  && is_type_string(rhs.type)) {
                     int total_length_scanned = (lhs.scanned_string_length + rhs.scanned_string_length);
                     int total_length_escaped = (lhs.escaped_string_length + rhs.escaped_string_length);
@@ -1685,9 +1689,13 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_integer(lhs.type) && is_type_integer(rhs.type)) {
                     result_operand.int_value   = lhs.int_value   - rhs.int_value;
                     result_operand.uint_value  = lhs.uint_value  - rhs.uint_value;
-                    result_operand.float_value = lhs.float_value - rhs.float_value;
+                    result_operand.f32_value   = lhs.f32_value   - rhs.f32_value;
+                    result_operand.f64_value   = lhs.f64_value   - rhs.f64_value;
                 }
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value - rhs.float_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type)) {
+                    result_operand.f32_value = lhs.f32_value - rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value - rhs.f64_value;
+                }
                 else {
                     report_error(location, "Operator - is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1702,9 +1710,13 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_integer(lhs.type) && is_type_integer(rhs.type)) {
                     result_operand.int_value   = lhs.int_value   * rhs.int_value;
                     result_operand.uint_value  = lhs.uint_value  * rhs.uint_value;
-                    result_operand.float_value = lhs.float_value * rhs.float_value;
+                    result_operand.f32_value = lhs.f32_value * rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value * rhs.f64_value;
                 }
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value * rhs.float_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type)) {
+                    result_operand.f32_value = lhs.f32_value * rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value * rhs.f64_value;
+                }
                 else {
                     report_error(location, "Operator * is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1719,9 +1731,13 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_integer(lhs.type) && is_type_integer(rhs.type)) {
                     result_operand.int_value   = lhs.int_value   / rhs.int_value;
                     result_operand.uint_value  = lhs.uint_value  / rhs.uint_value;
-                    result_operand.float_value = lhs.float_value / rhs.float_value;
+                    result_operand.f32_value = lhs.f32_value / rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value / rhs.f64_value;
                 }
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value / rhs.float_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type)) {
+                    result_operand.f32_value = lhs.f32_value / rhs.f32_value;
+                    result_operand.f64_value = lhs.f64_value / rhs.f64_value;
+                }
                 else {
                     report_error(location, "Operator / is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1736,8 +1752,9 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_integer(lhs.type) && is_type_integer(rhs.type)) {
                     result_operand.int_value   = lhs.int_value   % rhs.int_value;
                     result_operand.uint_value  = lhs.uint_value  % rhs.uint_value;
-                    result_operand.float_value = (f64)result_operand.int_value;
-                    // result_operand.float_value = fmod(lhs.float_value % rhs.float_value);
+                    result_operand.f32_value = (f32)result_operand.int_value;
+                    result_operand.f64_value = (f64)result_operand.int_value;
+                    // todo(josh): fmod?
                 }
                 // todo(josh): fmod?
                 // else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.float_value = lhs.float_value % rhs.float_value;
@@ -1756,7 +1773,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_integer(lhs.type) && is_type_integer(rhs.type)) {
                     result_operand.bool_value  = lhs.int_value   < rhs.int_value;
                 }
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value < rhs.float_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.f64_value < rhs.f64_value;
                 else {
                     report_error(location, "Operator < is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1769,8 +1786,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
                     // todo(josh): :IntUintCorrectness
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value   <= rhs.int_value;
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value <= rhs.float_value;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value <= rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.f64_value <= rhs.f64_value;
                 else {
                     report_error(location, "Operator <= is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1783,8 +1800,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
                     // todo(josh): :IntUintCorrectness
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value   > rhs.int_value;
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value > rhs.float_value;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value > rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.f64_value > rhs.f64_value;
                 else {
                     report_error(location, "Operator > is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1797,8 +1814,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
             if ((lhs.flags & OPERAND_CONSTANT) && (rhs.flags & OPERAND_CONSTANT)) {
                 result_operand.flags |= OPERAND_CONSTANT;
                     // todo(josh): :IntUintCorrectness
-                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value   >= rhs.int_value;
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.float_value >= rhs.float_value;
+                     if (is_type_integer(lhs.type) && is_type_integer(rhs.type))  result_operand.bool_value = lhs.int_value  = rhs.int_value;
+                else if (is_type_float(lhs.type)   && is_type_float(rhs.type))    result_operand.bool_value = lhs.f64_value >= rhs.f64_value;
                 else {
                     report_error(location, "Operator >= is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
                     return false;
@@ -1837,7 +1854,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_number(lhs.type) && is_type_number(rhs.type)) {
                     result_operand.int_value  = lhs.int_value  & rhs.int_value;
                     result_operand.uint_value = lhs.uint_value & rhs.uint_value;
-                    result_operand.float_value = (f64)result_operand.int_value;
+                    result_operand.f32_value = (f32)result_operand.int_value;
+                    result_operand.f64_value = (f64)result_operand.int_value;
                 }
                 else {
                     report_error(location, "Operator & is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
@@ -1853,7 +1871,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_number(lhs.type) && is_type_number(rhs.type)) {
                     result_operand.int_value  = lhs.int_value  | rhs.int_value;
                     result_operand.uint_value = lhs.uint_value | rhs.uint_value;
-                    result_operand.float_value = (f64)result_operand.int_value;
+                    result_operand.f32_value = (f32)result_operand.int_value;
+                    result_operand.f64_value = (f64)result_operand.int_value;
                 }
                 else {
                     report_error(location, "Operator | is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
@@ -1869,7 +1888,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_number(lhs.type) && is_type_number(rhs.type)) {
                     result_operand.int_value = lhs.int_value ^ rhs.int_value;
                     result_operand.uint_value = lhs.uint_value ^ rhs.uint_value;
-                    result_operand.float_value = (f64)result_operand.int_value;
+                    result_operand.f32_value = (f32)result_operand.int_value;
+                    result_operand.f64_value = (f64)result_operand.int_value;
                 }
                 else {
                     report_error(location, "Operator ^ is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
@@ -1885,7 +1905,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_number(lhs.type) && is_type_number(rhs.type)) {
                     result_operand.int_value  = lhs.int_value  << rhs.int_value;
                     result_operand.uint_value = lhs.uint_value << rhs.uint_value;
-                    result_operand.float_value = (f64)result_operand.int_value;
+                    result_operand.f32_value = (f32)result_operand.int_value;
+                    result_operand.f64_value = (f64)result_operand.int_value;
                 }
                 else {
                     report_error(location, "Operator << is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
@@ -1901,7 +1922,8 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                 if (is_type_number(lhs.type) && is_type_number(rhs.type)) {
                     result_operand.int_value  = lhs.int_value  >> rhs.int_value;
                     result_operand.uint_value = lhs.uint_value >> rhs.uint_value;
-                    result_operand.float_value = (f64)result_operand.int_value;
+                    result_operand.f32_value = (f32)result_operand.int_value;
+                    result_operand.f64_value = (f64)result_operand.int_value;
                 }
                 else {
                     report_error(location, "Operator >> is unsupported for types '%s' and '%s'.", type_to_string(lhs.type), type_to_string(rhs.type));
@@ -2751,7 +2773,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                         }
                         if (rhs_operand->flags & OPERAND_CONSTANT) {
                             result_operand.int_value = -rhs_operand->int_value;
-                            result_operand.float_value = -rhs_operand->float_value;
+                            result_operand.f32_value = -rhs_operand->f32_value;
+                            result_operand.f64_value = -rhs_operand->f64_value;
                         }
                         break;
                     }
@@ -2896,7 +2919,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     result_operand.flags |= OPERAND_CONSTANT;
                     result_operand.uint_value            = rhs_operand->uint_value;
                     result_operand.int_value             = rhs_operand->int_value;
-                    result_operand.float_value           = rhs_operand->float_value;
+                    result_operand.f32_value             = rhs_operand->f32_value;
+                    result_operand.f64_value             = rhs_operand->f64_value;
                     result_operand.bool_value            = rhs_operand->bool_value;
                     result_operand.type_value            = rhs_operand->type_value;
                     result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
@@ -2939,7 +2963,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     result_operand.flags |= OPERAND_CONSTANT;
                     result_operand.uint_value            = rhs_operand->uint_value;
                     result_operand.int_value             = rhs_operand->int_value;
-                    result_operand.float_value           = rhs_operand->float_value;
+                    result_operand.f32_value             = rhs_operand->f32_value;
+                    result_operand.f64_value             = rhs_operand->f64_value;
                     result_operand.bool_value            = rhs_operand->bool_value;
                     result_operand.type_value            = rhs_operand->type_value;
                     result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
@@ -3187,7 +3212,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
                 result_operand.uint_value  = number->uint_value;
                 result_operand.int_value   = number->int_value;
-                result_operand.float_value = number->float_value;
+                result_operand.f32_value = number->f32_value;
+                result_operand.f64_value = number->f64_value;
                 break;
             }
             case EXPR_STRING_LITERAL: {

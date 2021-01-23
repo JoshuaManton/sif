@@ -14,7 +14,8 @@
 TODO:
 
 HIGH PRIORITY
--printing F32_MAX in sif prints a zero? I think we need a float64_value and float32_value separate instead of just a float_value
+-add binary literals
+-add comprehensive numbers test
 -handle usage before declaration
 -handle unary operators nicer, currently quick-and-dirty
 -#print and #assert don't work in global scope right now

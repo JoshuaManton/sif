@@ -126,7 +126,8 @@ struct Token {
     int scanner_length = {};
     i64 int_value = {};
     u64 uint_value = {};
-    f64 float_value = {};
+    f32 f32_value = {};
+    f64 f64_value = {};
 };
 
 struct Ast_Block;

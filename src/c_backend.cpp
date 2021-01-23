@@ -507,7 +507,13 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
         if (expr->operand.flags & OPERAND_CONSTANT) {
             assert(!is_type_untyped(expr->operand.type));
             if (is_type_float(expr->operand.type)) {
-                expr_sb.printf("%f", expr->operand.float_value);
+                if (expr->operand.type->size == 4) {
+                    expr_sb.printf("%.*e", DECIMAL_DIG, expr->operand.f32_value);
+                }
+                else {
+                    assert(expr->operand.type->size == 8);
+                    expr_sb.printf("%.*e", DECIMAL_DIG, expr->operand.f64_value);
+                }
             }
             else if (is_type_integer(expr->operand.type)) {
                 // todo(josh): :IntUintCorrectness

@@ -146,7 +146,12 @@ proc json_serialize_ti_sb(sb: ^String_Builder, ptr: rawptr, ti: ^Type_Info, inde
     }
     else if (ti.kind == Type_Info_Pointer) {
         dti := cast(^Type_Info_Pointer, ti);
-        json_serialize_ti_sb(sb, cast(^rawptr, ptr)^, dti.pointer_to, indent_level);
+        if (cast(^rawptr, ptr)^ == null) {
+            sbprint(sb, "null");
+        }
+        else {
+            json_serialize_ti_sb(sb, cast(^rawptr, ptr)^, dti.pointer_to, indent_level);
+        }
     }
     else {
         print("Unhandled Type_Info kind in json_serialize_ti_sb(): '%'.\n", ti.kind);

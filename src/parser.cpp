@@ -1903,7 +1903,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_NUMBER: {
             eat_next_token(lexer);
-            return SIF_NEW_CLONE(Expr_Number_Literal(token.uint_value, token.int_value, token.float_value, token.has_a_dot, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+            return SIF_NEW_CLONE(Expr_Number_Literal(token.uint_value, token.int_value, token.f32_value, token.f64_value, token.has_a_dot, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         case TK_CHAR: {
             eat_next_token(lexer);

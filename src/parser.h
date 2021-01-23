@@ -75,7 +75,8 @@ struct Operand {
 
     u64 uint_value   = {};
     i64 int_value    = {};
-    f64 float_value  = {};
+    f32 f32_value  = {};
+    f64 f64_value  = {};
     bool bool_value  = {};
     Type *type_value = {};
     Ast_Proc_Header *proc_value = {};
@@ -533,13 +534,15 @@ struct Expr_Identifier : public Ast_Expr {
 struct Expr_Number_Literal : public Ast_Expr {
     u64 uint_value = {};
     i64 int_value = {};
-    f64 float_value = {};
+    f32 f32_value = {};
+    f64 f64_value = {};
     bool has_a_dot = false;
-    Expr_Number_Literal(u64 uint_value, i64 int_value, f64 float_value, bool has_a_dot, Allocator allocator, Ast_Block *current_block, Location location)
+    Expr_Number_Literal(u64 uint_value, i64 int_value, f32 f32_value, f64 f64_value, bool has_a_dot, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Expr(EXPR_NUMBER_LITERAL, allocator, current_block, location)
     , uint_value(uint_value)
     , int_value(int_value)
-    , float_value(float_value)
+    , f32_value(f32_value)
+    , f64_value(f64_value)
     , has_a_dot(has_a_dot)
     {}
 };

@@ -6,6 +6,7 @@
 
 #include "core:basic.sif"
 #include "core:math.sif"
+#include "core:json.sif"
 
 proc main() {
     print("---- VARIABLES ----\n");
@@ -59,6 +60,10 @@ proc main() {
         printa(field.type^);
         print("\n");
     }
+
+    my_struct := My_Struct.{12, true, "this is a string", null};
+    printa(json_serialize(&my_struct, default_allocator()));
+
 
     print("\n\n");
 

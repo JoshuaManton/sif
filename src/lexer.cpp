@@ -344,7 +344,7 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
     return duplicate;
 }
 
-char *scan_number(Location location, char *text, int *out_length, bool *out_has_a_dot, u64 *uint_value, i64 *int_value, f64 *float_value) {
+char *scan_number(Location location, char *text, int *out_length, bool *out_has_a_dot, u64 *uint_value, i64 *int_value, f32 *f32_value, f64 *f64_value) {
     char *start = text;
 
     if (*text == '0') {
@@ -402,17 +402,15 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
         *int_value = (i64)*uint_value;
         errno = 0;
     }
-    *float_value = 0;
-    if (was_hex) {
-        *float_value = *(f64 *)uint_value;
+    *f32_value = (f32)strtod(result, nullptr);
+    if (errno != 0) {
+        *f32_value = (f32)*int_value;
+        errno = 0;
     }
-    else {
-        *float_value = strtod(result, nullptr);
-        if (errno != 0) {
-            report_error(location, "Internal compiler error: Problem scanning number literal as uint: errno: %d", errno);
-            *float_value = (i64)*uint_value;
-            errno = 0;
-        }
+    *f64_value = strtod(result, nullptr);
+    if (errno != 0) {
+        *f64_value = (f64)*int_value;
+        errno = 0;
     }
 
     return result;
@@ -491,7 +489,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;
         bool has_a_dot = false;
-        char *number = scan_number(lexer->location, &lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->uint_value, &out_token->int_value, &out_token->float_value);
+        char *number = scan_number(lexer->location, &lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->uint_value, &out_token->int_value, &out_token->f32_value, &out_token->f64_value);
         advance(lexer, length);
         out_token->kind = TK_NUMBER;
         out_token->text = number;
