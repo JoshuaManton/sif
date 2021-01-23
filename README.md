@@ -297,6 +297,8 @@ proc order_independence() {
     // out what depends on what for you. delete all your .h files :)
 
     loopy: Loopy;
+    print("%\n", sizeof(typeof(loopy.a)));
+    print("%\n", sizeof(typeof(nesty)));
     assert(sizeof(typeof(loopy.a)) == 8);
     assert(sizeof(typeof(nesty)) == 64);
 }
@@ -385,12 +387,12 @@ proc runtime_type_information() {
 
     // Type_Info_Integer just has a bool indicating whether it's signed or unsigned
     int_type_info: ^Type_Info = get_type_info(int);
-    assert(int_type_info.kind == Type_Info_Kind.INTEGER);
+    assert(int_type_info.kind == Type_Info_Integer);
     int_type_info_kind := cast(^Type_Info_Integer, int_type_info);
     assert(int_type_info_kind.is_signed == true);
 
     uint_type_info: ^Type_Info = get_type_info(uint);
-    assert(uint_type_info.kind == Type_Info_Kind.INTEGER);
+    assert(uint_type_info.kind == Type_Info_Integer);
     uint_type_info_kind := cast(^Type_Info_Integer, uint_type_info);
     assert(uint_type_info_kind.is_signed == false);
 
@@ -409,7 +411,7 @@ proc runtime_type_information() {
     }
 
     my_cool_struct_ti := get_type_info(My_Cool_Struct);
-    assert(my_cool_struct_ti.kind == Type_Info_Kind.STRUCT);
+    assert(my_cool_struct_ti.kind == Type_Info_Struct);
     my_cool_struct_ti_kind := cast(^Type_Info_Struct, my_cool_struct_ti);
     print("My_Cool_Struct\n");
     for (i := 0; i < my_cool_struct_ti_kind.fields.count; i += 1) {
@@ -477,6 +479,14 @@ proc using_statement() {
 
     // You can 'using' as many fields as you'd like, provided that the names
     // do not collide.
+
+    // 'using' in procedure parameters works too
+    proc a_proc_with_using(using x: My_Struct_With_Using, param: int) {
+        print("%\n", some_field + param);
+    }
+
+    a_proc_with_using(my_struct, 2);
+    a_proc_with_using(my_struct, 4);
 }
 
 
