@@ -71,9 +71,9 @@ proc zero_memory(memory: []byte) {
 
 
 
-proc ptr_offset(ptr: ^$T, offset_in_bytes: int) : ^T {
+proc ptr_offset(ptr: ^$T, offset_count: int) : ^T {
     ptr_int := transmute(u64, ptr);
-    ptr_int += cast(u64, offset_in_bytes);
+    ptr_int += cast(u64, offset_count * sizeof(T));
     return transmute(^T, ptr_int);
 } @sif_runtime
 

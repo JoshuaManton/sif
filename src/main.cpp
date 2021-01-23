@@ -14,6 +14,7 @@
 TODO:
 
 HIGH PRIORITY
+-printing F32_MAX in sif prints a zero? I think we need a float64_value and float32_value separate instead of just a float_value
 -handle usage before declaration
 -handle unary operators nicer, currently quick-and-dirty
 -#print and #assert don't work in global scope right now
@@ -48,6 +49,7 @@ MEDIUM PRIORITY
 -deduplicate #foreign_import/#foreign_system_import
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 -block comments
+-while foo := bar(); (foo != null)
 -sized bool types
 -underscores in numbers
 -uninitialized stack members

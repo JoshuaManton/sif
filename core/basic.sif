@@ -11,6 +11,7 @@ proc print_char   (c: u8)                                   #foreign;
 proc print_int    (i: i64)                                  #foreign;
 proc print_uint   (i: u64)                                  #foreign;
 proc print_float  (f: f32)                                  #foreign;
+proc print_double (f: f64)                                  #foreign;
 proc print_bool   (b: bool)                                 #foreign;
 proc print_pointer(ptr: rawptr)                             #foreign;
 proc print_string (str: string)                             #foreign;
@@ -23,6 +24,7 @@ proc sqrt         (x: f64)                    : f64         #foreign;
 proc fabsf        (a: f32)                    : f32         #foreign;
 proc atoi         (cstr: cstring)             : i32         #foreign;
 proc atof         (cstr: cstring)             : f64         #foreign;
+proc fmod         (x: f64, y: f64)            : f64         #foreign;
 
 proc snprintf(buffer: ^u8, buffer_size: u64, fmt: cstring, args: #c_varargs ..any) : i32 #foreign;
 
@@ -74,7 +76,6 @@ proc print_arg(arg: any) {
             }
         }
         else {
-            // todo(josh): make a print_uint() procedure so we don't have to cast to int here
             if (ti.size == 1) {
                 print_uint(cast(uint, cast(^u8, arg.data)^));
             }
@@ -96,8 +97,7 @@ proc print_arg(arg: any) {
         }
         else {
             assert(ti.size == 8);
-            // todo(josh): make a print_double() procedure so we don't have to cast to f32 here
-            print_float(cast(f32, cast(^f64, arg.data)^));
+            print_double(cast(^f64, arg.data)^);
         }
     }
     else if (ti.kind == Type_Info_Bool) {
@@ -623,4 +623,37 @@ proc cstring_to_string(cstr: cstring) : string {
 
 proc unsafe_string_to_cstring(str: string) : cstring {
     return cast(cstring, str.data);
+}
+
+
+
+proc quick_sort(array: []$T, f: proc(a: T, b: T) : $R) : []T {  // R is an integer type, but may be e.g. 32-bit.
+    proc quicksort_helper(a: ^T, n: i64, f: proc(a: T, b: T) : R) {
+        if (n < 2) return;
+
+        p := ptr_offset(a, n / 2)^;
+
+        i := 0;
+        j := n-1;
+
+        while (true) {
+            while (f(ptr_offset(a, i)^, p) < 0)  {i += 1;}
+            while (f(p, ptr_offset(a, j)^) < 0)  {j -= 1;}
+
+            if (i >= j) break;
+
+            t := ptr_offset(a, i)^;
+            ptr_offset(a, i)^ = ptr_offset(a, j)^;
+            ptr_offset(a, j)^ = t;
+
+            i += 1;
+            j -= 1;
+        }
+
+        quicksort_helper(a, i, f);
+        quicksort_helper(ptr_offset(a, i), n - i, f);
+    }
+
+    quicksort_helper(array.data, array.count, f);
+    return array;
 }

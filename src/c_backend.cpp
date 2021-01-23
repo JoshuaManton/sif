@@ -510,14 +510,14 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 expr_sb.printf("%f", expr->operand.float_value);
             }
             else if (is_type_integer(expr->operand.type)) {
-                // todo(josh): handle uints
-                expr_sb.printf("%d", expr->operand.int_value);
+                // todo(josh): :IntUintCorrectness
+                expr_sb.printf("%lld", expr->operand.int_value);
             }
             else if (expr->operand.type == type_bool) {
                 expr_sb.print(expr->operand.bool_value ? "true" : "false");
             }
             else if (expr->operand.type == type_string) {
-                expr_sb.printf("MAKE_STRING(\"%s\", %d)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
+                expr_sb.printf("MAKE_STRING(\"%s\", %lld)", expr->operand.scanned_string_value, expr->operand.escaped_string_length);
             }
             else if (expr->operand.type == type_cstring) {
                 expr_sb.printf("\"%s\"", expr->operand.scanned_string_value);
@@ -526,19 +526,20 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 expr_sb.print(expr->operand.proc_value->declaration->link_name);
             }
             else if (is_type_typeid(expr->operand.type)) {
-                expr_sb.printf("%d", expr->operand.type_value->id);
+                expr_sb.printf("%lld", expr->operand.type_value->id);
             }
             else if (expr->operand.type->flags & TF_POINTER) {
                 expr_sb.printf("((");
                 c_print_type(&expr_sb, expr->operand.type, "");
-                expr_sb.printf(")%d)", expr->operand.int_value);
+                // todo(josh): :IntUintCorrectness
+                expr_sb.printf(")%lld)", expr->operand.int_value);
             }
             else {
                 assert(false);
             }
         }
         else if (is_type_typeid(expr->operand.type) && (expr->operand.flags & OPERAND_CONSTANT)) {
-            expr_sb.printf("%d", expr->operand.type_value->id);
+            expr_sb.printf("%lld", expr->operand.type_value->id);
         }
         else {
             switch (expr->expr_kind) {
@@ -654,7 +655,6 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                                 case TK_AMPERSAND:                { expr_sb.print(" & ");  break; }
                                 case TK_BIT_OR:                   { expr_sb.print(" | ");  break; }
                                 case TK_TILDE:                    { expr_sb.print(" ^ ");  break; }
-                                case TK_BIT_XOR_ASSIGN:           { expr_sb.print(" ^= "); break; }
                                 case TK_BOOLEAN_AND:              { expr_sb.print(" && "); break; }
                                 case TK_BOOLEAN_OR:               { expr_sb.print(" || "); break; }
                                 case TK_LEFT_SHIFT:               { expr_sb.print(" << "); break; }
@@ -985,6 +985,7 @@ void c_print_statement(Chunked_String_Builder *sb, Ast_Block *block, Ast_Node *n
                 case TK_RIGHT_SHIFT_ASSIGN: assign_op = " >>= "; break;
                 case TK_BIT_AND_ASSIGN:     assign_op = " &= ";  break;
                 case TK_BIT_OR_ASSIGN:      assign_op = " |= ";  break;
+                case TK_BIT_XOR_ASSIGN:     assign_op = " ^= "; break;
                 case TK_BOOLEAN_AND_ASSIGN: assign_op = " &&= "; break;
                 case TK_BOOLEAN_OR_ASSIGN:  assign_op = " ||= "; break;
                 default: {
@@ -1382,7 +1383,7 @@ u32 actual_declarations_worker_proc(void *userdata) {
                 For (idx, enum_decl->ast_enum->type->constant_fields) {
                     Struct_Field field = enum_decl->ast_enum->type->constant_fields[idx];
                     assert(field.operand.flags & OPERAND_CONSTANT);
-                    sb->printf("%s_%s = %d;\n", enum_decl->name, field.name, field.operand.int_value);
+                    sb->printf("%s_%s = %lld;\n", enum_decl->name, field.name, field.operand.int_value);
                 }
                 sb->print(";\n");
                 break;
@@ -1699,6 +1700,9 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("}\n");
     sb.print("void print_float(float f) {\n");
     sb.print("    printf(\"%f\", f);\n");
+    sb.print("}\n");
+    sb.print("void print_double(double d) {\n");
+    sb.print("    printf(\"%f\", d);\n");
     sb.print("}\n");
     sb.print("void print_bool(bool b) {\n");
     sb.print("    printf((b ? \"true\" : \"false\"));\n");

@@ -21,7 +21,7 @@ proc buffer_allocate(buffer: []byte, offset: ^int, size: int, alignment: int, pa
     }
 
     offset^ = start + size;
-    ptr = &buffer[start];
+    ptr := &buffer[start];
     zero_memory(slice_ptr(ptr, size));
     return ptr;
 }

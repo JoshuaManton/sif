@@ -1158,6 +1158,7 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 case TK_DIVIDE_ASSIGN:   // fallthrough
                 case TK_MOD_ASSIGN:      // fallthrough
                 case TK_BIT_OR_ASSIGN:   // fallthrough
+                case TK_BIT_XOR_ASSIGN:  // fallthrough
                 case TK_ASSIGN: { // todo(josh): <<=, &&=, etc
                     Token op;
                     assert(get_next_token(lexer, &op));

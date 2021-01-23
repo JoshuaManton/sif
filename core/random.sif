@@ -1,0 +1,71 @@
+#include "core:math.sif"
+
+struct Random_State {
+    state: u64;
+}
+
+proc init_random_state(r: ^Random_State, seed: u64) {
+    r.state = seed;
+}
+
+proc _random_fnv(data: u64) : u64 {
+    // todo(josh): can we just do the whole u64 in one go rather than having a loop?
+    h : u64 = 0xcbf29ce484222325;
+    key_slice := slice_ptr(cast(^byte, &data), sizeof(u64));
+    for (i := 0; i < sizeof(u64); i += 1) {
+        h = (h * 0x100000001b3) ~ cast(u64, key_slice[i]);
+    }
+    return h;
+}
+
+proc _random_next(r: ^Random_State) : u32 {
+    r.state = _random_fnv(r.state);
+    return cast(u32, r.state);
+}
+
+proc random_u32(r: ^Random_State) : u32 {
+    return _random_next(r);
+}
+proc random_u64(r: ^Random_State) : u64 {
+    a := cast(u64, _random_next(r));
+    b := cast(u64, _random_next(r));
+    return (a<<32) | b;
+}
+
+proc random_i31(r: ^Random_State) : i32 {
+    return cast(i32, random_u32(r) << 1 >> 1);
+}
+proc random_i63(r: ^Random_State) : i64 {
+    return cast(i64, random_u64(r) << 1 >> 1);
+}
+
+proc random_i31_max(r: ^Random_State, n: i32) : i32 {
+    if (n <= 0) {
+        print("Invalid argument to random_i31_max\n");
+        assert(false);
+    }
+    val := random_i31(r) % n;
+    return val;
+}
+proc random_i63_max(r: ^Random_State, n: i64) : i64 {
+    if (n <= 0) {
+        print("Invalid argument to random_i63_max\n");
+        assert(false);
+    }
+    val := random_i63(r) % n;
+    return val;
+}
+
+proc random_f64(r: ^Random_State) : f64 {
+    return cast(f64, random_i63_max(r, 1<<53)) / (1 << 53);
+}
+proc random_f32(r: ^Random_State) : f32 {
+    return cast(f32, random_f64(r));
+}
+
+proc random_f64_range(r: ^Random_State, lo: f64, hi: f64) : f64 {
+    return (hi-lo)*random_f64(r) + lo;
+}
+proc random_f32_range(r: ^Random_State, lo: f32, hi: f32) : f32 {
+    return (hi-lo)*random_f32(r) + lo;
+}

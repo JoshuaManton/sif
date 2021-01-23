@@ -344,7 +344,7 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
     return duplicate;
 }
 
-char *scan_number(char *text, int *out_length, bool *out_has_a_dot, u64 *uint_value, i64 *int_value, f64 *float_value) {
+char *scan_number(Location location, char *text, int *out_length, bool *out_has_a_dot, u64 *uint_value, i64 *int_value, f64 *float_value) {
     char *start = text;
 
     if (*text == '0') {
@@ -390,34 +390,31 @@ char *scan_number(char *text, int *out_length, bool *out_has_a_dot, u64 *uint_va
     *out_length = length;
     char *result = clone_string(start, length);
 
-    if (!was_hex) {
-        *uint_value  = atoi(result);
-        *int_value   = atoi(result);
-        *float_value = atof(result);
+    errno = 0;
+    *uint_value  = strtoull(result, nullptr, 0);
+    if (errno != 0) {
+        report_error(location, "Internal compiler error: Problem scanning number literal as uint: errno: %d", errno);
+        errno = 0;
+    }
+    *int_value   = strtoll(result, nullptr, 0);
+    if (errno != 0) {
+        // todo(josh): is this correct/safe behaviour? probably not
+        *int_value = (i64)*uint_value;
+        errno = 0;
+    }
+    *float_value = 0;
+    if (was_hex) {
+        *float_value = *(f64 *)uint_value;
     }
     else {
-        char *hex = result + 2; // skip the 0x
-        int len = strlen(hex) - 1;
-        u64 decimal = 0;
-        for (int i = 0; hex[i] != '\0'; i++) {
-            u64 value = 0;
-            if (hex[i] >= '0' && hex[i] <= '9') {
-                value = hex[i] - 48;
-            }
-            else if (hex[i] >= 'a' && hex[i] <= 'f') {
-                value = hex[i] - 97 + 10;
-            }
-            else if (hex[i] >= 'A' && hex[i] <= 'F') {
-                value = hex[i] - 65 + 10;
-            }
-
-            decimal += value * pow(16, len);
-            len -= 1;
+        *float_value = strtod(result, nullptr);
+        if (errno != 0) {
+            report_error(location, "Internal compiler error: Problem scanning number literal as uint: errno: %d", errno);
+            *float_value = (i64)*uint_value;
+            errno = 0;
         }
-        *uint_value = decimal;
-        *int_value = (i64)decimal;
-        *float_value = (f64)decimal;
     }
+
     return result;
 }
 
@@ -494,7 +491,7 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
     else if (is_digit(lexer->text[lexer->location.index])) {
         int length = 0;
         bool has_a_dot = false;
-        char *number = scan_number(&lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->uint_value, &out_token->int_value, &out_token->float_value);
+        char *number = scan_number(lexer->location, &lexer->text[lexer->location.index], &length, &has_a_dot, &out_token->uint_value, &out_token->int_value, &out_token->float_value);
         advance(lexer, length);
         out_token->kind = TK_NUMBER;
         out_token->text = number;

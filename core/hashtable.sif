@@ -123,10 +123,8 @@ proc _hashtable_get_key_header(table: ^Hashtable!($Key, $Value), key: Key, out_k
 }
 
 proc _hashtable_hash_key(key: $Key) : u64 {
-    // if (Key == int) {
-        return ~transmute(u64, key);
-    // }
     // todo(josh): hash string data differently
+
     // note(josh): fnv64
     h : u64 = 0xcbf29ce484222325;
     key_slice := slice_ptr(cast(^byte, &key), sizeof(Key));
