@@ -14,9 +14,14 @@
 TODO:
 
 HIGH PRIORITY
--add binary literals
--add comprehensive numbers test
+-'any' bug if you pass a nested expr as an 'any'
+-new_slice/new_string are not the right word. use 'make'
+-transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
+-default procedure parameters?
+-#caller_location
 -handle usage before declaration
+-add comprehensive numbers test
+-add binary literals 0x0010110111100001
 -handle unary operators nicer, currently quick-and-dirty
 -#print and #assert don't work in global scope right now
 -enum arrays @EnumArrays
@@ -24,12 +29,7 @@ HIGH PRIORITY
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
 -do proper nested selector expression elimination with 'using'
--transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
--checker thinks string + string is okay for non-constant strings
--default procedure parameters?
--#caller_location
--'any' bug if you pass a nested expr as an 'any'
--new_slice/new_string are not the right word. use 'make'
+-#link_name
 -using bug {
     struct Foo {
         position: Vector3;
@@ -57,7 +57,6 @@ MEDIUM PRIORITY
 -prevent identifiers from being C keywords in the backend, like `signed`
 -Expr_Change (var v2 = v1.{y=4};)
 -slicing
--#link_name
 -declare distinct types
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
 -procedure literal expression handling

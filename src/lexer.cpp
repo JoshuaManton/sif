@@ -390,15 +390,17 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
     *out_length = length;
     char *result = clone_string(start, length);
 
+    // todo(josh): think harder about the behaviour about the following code.
+    //             is it a problem what we are doing here?
+
     errno = 0;
-    *uint_value  = strtoull(result, nullptr, 0);
+    *uint_value = strtoull(result, nullptr, 0);
     if (errno != 0) {
         report_error(location, "Internal compiler error: Problem scanning number literal as uint: errno: %d", errno);
         errno = 0;
     }
     *int_value   = strtoll(result, nullptr, 0);
     if (errno != 0) {
-        // todo(josh): is this correct/safe behaviour? probably not
         *int_value = (i64)*uint_value;
         errno = 0;
     }
