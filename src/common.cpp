@@ -30,7 +30,6 @@ char *intern_string(char *str, int length_override) {
 }
 
 char *g_interned_string_return;
-char *g_interned_string_var;
 char *g_interned_string_const;
 char *g_interned_string_proc;
 char *g_interned_string_operator;
@@ -93,7 +92,6 @@ char *g_interned_sif_runtime_type_info_typeid_string;
 void init_interned_strings() {
     g_interned_strings = make_hashtable<u64, char *>(g_global_linear_allocator, 10 * 1024);
     g_interned_string_return     = intern_string("return");
-    g_interned_string_var        = intern_string("var");
     g_interned_string_const      = intern_string("const");
     g_interned_string_proc       = intern_string("proc");
     g_interned_string_operator   = intern_string("operator");

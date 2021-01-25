@@ -14,7 +14,6 @@ T *SIF_NEW_CLONE(T t, Allocator allocator) {
 }
 
 extern char *g_interned_string_return;
-extern char *g_interned_string_var;
 extern char *g_interned_string_const;
 extern char *g_interned_string_proc;
 extern char *g_interned_string_operator;
