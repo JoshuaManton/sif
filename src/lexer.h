@@ -128,6 +128,7 @@ struct Token {
     u64 uint_value = {};
     f32 f32_value = {};
     f64 f64_value = {};
+    char char_value = {};
 };
 
 struct Ast_Block;

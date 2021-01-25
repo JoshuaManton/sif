@@ -86,7 +86,9 @@ struct Vector2 {
     }
 
     operator [](v: >Vector2, idx: int) : >float {
-        return slice_ptr(&v.x, 2)[idx]; // @PointerArithmetic
+        assert(idx > 0);
+        assert(idx < 2);
+        return ptr_offset(&v.x, idx)^;
     }
 }
 
@@ -157,7 +159,9 @@ struct Vector3 {
     }
 
     operator [](v: >Vector3, idx: int) : >float {
-        return slice_ptr(&v.x, 3)[idx]; // @PointerArithmetic
+        assert(idx > 0);
+        assert(idx < 3);
+        return ptr_offset(&v.x, idx)^;
     }
 }
 
@@ -210,7 +214,9 @@ struct Vector4 {
     }
 
     operator [](v: >Vector4, idx: int) : >float {
-        return slice_ptr(&v.x, 4)[idx]; // @PointerArithmetic
+        assert(idx > 0);
+        assert(idx < 4);
+        return ptr_offset(&v.x, idx)^;
     }
 }
 
@@ -223,7 +229,9 @@ struct Quaternion {
     w: float;
 
     operator [](q: >Quaternion, idx: int) : >float {
-        return slice_ptr(&q.x, 4)[idx]; // @PointerArithmetic
+        assert(idx > 0);
+        assert(idx < 4);
+        return ptr_offset(&q.x, idx)^;
     }
 
     proc identity() : Quaternion {

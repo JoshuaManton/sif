@@ -293,11 +293,12 @@ char *unescape_string(char *str, int *out_escaped_length, Allocator allocator) {
                 case '"':  sb.printf("%c", '\"'); break;
                 case '\\': sb.printf("%c", '\\'); break;
                 case '\'': sb.printf("%c", '\''); break;
-                case 'b':  sb.printf("%c", '\b');  break;
-                case 'f':  sb.printf("%c", '\f');  break;
-                case 'n':  sb.printf("%c", '\n');  break;
-                case 'r':  sb.printf("%c", '\r');  break;
-                case 't':  sb.printf("%c", '\t');  break;
+                case 'b':  sb.printf("%c", '\b'); break;
+                case 'f':  sb.printf("%c", '\f'); break;
+                case 'n':  sb.printf("%c", '\n'); break;
+                case 'r':  sb.printf("%c", '\r'); break;
+                case 't':  sb.printf("%c", '\t'); break;
+                case '0':  sb.printf("%c", 0);    break;
                 // case 'u':  fmt.sbprint(&sb, '\u'); // todo(josh): unicode
                 default: {
                     printf("Unexpected escape character: %c\n", *c);
@@ -311,9 +312,59 @@ char *unescape_string(char *str, int *out_escaped_length, Allocator allocator) {
     return sb.string();
 }
 
-// note(josh): returns the string without quotes, out_length includes the quotes though since the lexer needs to know how much to advance by
-char *scan_string(char delim, char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string, Allocator allocator) {
+char scan_char(Location location, char *text, int *out_scanner_length, bool *did_error, char **out_string) {
+    assert(*text == '\'');
+    char *scanner_start = text;
+    text += 1;
+    if (*text == 0) {
+        report_error(location, "End of file from within character literal.");
+        *did_error = true;
+        return 0;
+    }
+    char c = 0;
+    if (*text == '\\') {
+        text += 1;
+        if (*text == 0) {
+            report_error(location, "End of file from within character literal.");
+            *did_error = true;
+            return 0;
+        }
+        switch (*text) {
+            case '"':  c = '"';  break;
+            case '\\': c = '\\'; break;
+            case '\'': c = '\''; break;
+            case 'b':  c = '\b';  break;
+            case 'f':  c = '\f';  break;
+            case 'n':  c = '\n';  break;
+            case 'r':  c = '\r';  break;
+            case 't':  c = '\t';  break;
+            case '0':  c = 0;    break;
+            default: {
+                report_error(location, "Unknown escape character.");
+                *did_error = true;
+                return 0;
+            }
+        }
+    }
+    else {
+        c = *text;
+    }
+    text += 1;
+    if (*text != '\'') {
+        report_error(location, "Too many characters in character literal.");
+        *did_error = true;
+        return 0;
+    }
+    text += 1;
+    *out_scanner_length = (text - scanner_start);
+    *out_string = clone_string(scanner_start, text - scanner_start);
+    return c;
+}
+
+// note(josh): returns the string without quotes, out_scanner_length includes the quotes though since the lexer needs to know how much to advance by
+char *scan_string(Location location, char delim, char *text, int *out_scanner_length, int *out_escaped_length, char **escaped_string, int *out_newlines_in_string, Allocator allocator) {
     assert(*text == delim);
+    char *scanner_start = text;
     text += 1;
     char *start = text;
     bool escaped = false;
@@ -329,15 +380,15 @@ char *scan_string(char delim, char *text, int *out_scanner_length, int *out_esca
                 escaped = true;
             }
         }
-        else {
-
-        }
         text += 1;
     }
-    assert(*text == delim); // todo(josh): check for EOF
+    if (*text != delim) {
+        report_error(location, "End of file from within string starting here.");
+        return nullptr;
+    }
     int length = (text - start);
     text += 1;
-    *out_scanner_length = length + 2; // note(josh): +2 for the quotation marks
+    *out_scanner_length = (text - scanner_start);
     *out_newlines_in_string = newlines;
     char *duplicate = clone_string(start, length);
     *escaped_string = unescape_string(duplicate, out_escaped_length, allocator);
@@ -497,29 +548,31 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         out_token->text = number;
         out_token->has_a_dot = has_a_dot;
     }
-    // todo(josh): string and char handling is garbage. make better pls
-    // todo(josh): string and char handling is garbage. make better pls
-    // todo(josh): string and char handling is garbage. make better pls
     else if (lexer->text[lexer->location.index] == '\'') {
         int scanner_length = 0;
-        int escaped_length = 0;
-        char *escaped_string = nullptr;
-        int newlines = 0;
-        char *string = scan_string('\'', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
-        lexer->location.line += newlines;
+        bool did_error = false;
+        char *string = nullptr;
+        char c = scan_char(lexer->location, &lexer->text[lexer->location.index], &scanner_length, &did_error, &string);
+        if (did_error) {
+            return false;
+        }
         advance(lexer, scanner_length);
         out_token->kind = TK_CHAR;
         out_token->text = string;
-        out_token->escaped_text = escaped_string;
-        out_token->escaped_length = escaped_length;
-        out_token->scanner_length = scanner_length-2; // note(josh): -2 for the quotes
+        out_token->char_value = c;
     }
+    // todo(josh): string handling is garbage. make better pls
+    // todo(josh): string handling is garbage. make better pls
+    // todo(josh): string handling is garbage. make better pls
     else if (lexer->text[lexer->location.index] == '`') {
         int scanner_length = 0;
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string('`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
+        char *string = scan_string(lexer->location, '`', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
+        if (string == nullptr) {
+            return false;
+        }
         lexer->location.line += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
@@ -533,7 +586,10 @@ bool get_next_token(Lexer *lexer, Token *out_token) {
         int escaped_length = 0;
         char *escaped_string = nullptr;
         int newlines = 0;
-        char *string = scan_string('"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
+        char *string = scan_string(lexer->location, '"', &lexer->text[lexer->location.index], &scanner_length, &escaped_length, &escaped_string, &newlines, lexer->allocator);
+        if (string == nullptr) {
+            return false;
+        }
         lexer->location.line += newlines;
         advance(lexer, scanner_length);
         out_token->kind = TK_STRING;
@@ -863,10 +919,10 @@ void report_info(Location location, const char *fmt, ...) {
 
 void unexpected_token(Lexer *lexer, Token token, Token_Kind expected) {
     if (expected != TK_INVALID) {
-        report_error(token.location, "Unexpected token %s, expected %s.", token_string(token.kind), token_string(expected));
+        report_error(token.location, "Unexpected token '%s', expected '%s'.", token.text, token_string(expected));
     }
     else {
-        report_error(token.location, "Unexpected token %s.", token_string(token.kind));
+        report_error(token.location, "Unexpected token '%s'.", token_string(token.kind));
     }
 }
 

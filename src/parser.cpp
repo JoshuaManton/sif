@@ -49,6 +49,59 @@ void pop_ast_block(Lexer *lexer, Ast_Block *old_block) {
     lexer->current_block = old_block;
 }
 
+const char *expr_string(Expr_Kind kind) {
+    switch (kind) {
+        case EXPR_INVALID:                return "EXPR_INVALID";
+        case EXPR_UNARY:                  return "EXPR_UNARY";
+        case EXPR_BINARY:                 return "EXPR_BINARY";
+        case EXPR_ADDRESS_OF:             return "EXPR_ADDRESS_OF";
+
+        case EXPR_SUBSCRIPT:              return "EXPR_SUBSCRIPT";
+        case EXPR_DEREFERENCE:            return "EXPR_DEREFERENCE";
+        case EXPR_PROCEDURE_CALL:         return "EXPR_PROCEDURE_CALL";
+        case EXPR_SELECTOR:               return "EXPR_SELECTOR";
+        case EXPR_IMPLICIT_ENUM_SELECTOR: return "EXPR_IMPLICIT_ENUM_SELECTOR";
+
+        case EXPR_COMPOUND_LITERAL:       return "EXPR_COMPOUND_LITERAL";
+
+        case EXPR_IDENTIFIER:             return "EXPR_IDENTIFIER";
+        case EXPR_NUMBER_LITERAL:         return "EXPR_NUMBER_LITERAL";
+        case EXPR_STRING_LITERAL:         return "EXPR_STRING_LITERAL";
+        case EXPR_CHAR_LITERAL:           return "EXPR_CHAR_LITERAL";
+
+        case EXPR_POLYMORPHIC_VARIABLE:   return "EXPR_POLYMORPHIC_VARIABLE";
+
+        case EXPR_NULL:                   return "EXPR_NULL";
+        case EXPR_TRUE:                   return "EXPR_TRUE";
+        case EXPR_FALSE:                  return "EXPR_FALSE";
+
+        case EXPR_SIZEOF:                 return "EXPR_SIZEOF";
+        case EXPR_TYPEOF:                 return "EXPR_TYPEOF";
+        case EXPR_TYPEOFELEMENT:          return "EXPR_TYPEOFELEMENT";
+        case EXPR_CAST:                   return "EXPR_CAST";
+        case EXPR_TRANSMUTE:              return "EXPR_TRANSMUTE";
+
+        case EXPR_SPREAD:                 return "EXPR_SPREAD";
+
+        case EXPR_POLYMORPHIC_TYPE:       return "EXPR_POLYMORPHIC_TYPE";
+        case EXPR_POINTER_TYPE:           return "EXPR_POINTER_TYPE";
+        case EXPR_REFERENCE_TYPE:         return "EXPR_REFERENCE_TYPE";
+        case EXPR_ARRAY_TYPE:             return "EXPR_ARRAY_TYPE";
+        case EXPR_SLICE_TYPE:             return "EXPR_SLICE_TYPE";
+        case EXPR_PROCEDURE_TYPE:         return "EXPR_PROCEDURE_TYPE";
+        case EXPR_STRUCT_TYPE:            return "EXPR_STRUCT_TYPE";
+
+        case EXPR_PAREN:                  return "EXPR_PAREN";
+
+        case EXPR_COUNT:                  return "EXPR_COUNT";
+        default: {
+            printf("Internal compiler error: Unhandled Expr_Kind in expr_string(): %d\n", kind);
+            assert(false);
+            return nullptr;
+        }
+    }
+}
+
 bool register_declaration(Ast_Block *block, Declaration *new_declaration) {
     assert(new_declaration->name != nullptr);
     assert(new_declaration->parent_block != nullptr);
@@ -171,13 +224,6 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
         return nullptr;
     }
 
-    if (already_parsed_name) {
-        if (already_parsed_name->expr_kind != EXPR_IDENTIFIER) {
-            report_error(already_parsed_name->location, "Expected a variable name.");
-            return nullptr;
-        }
-    }
-
     bool is_using = false;
     bool is_constant = false;
     bool is_polymorphic_value = false;
@@ -208,6 +254,8 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
         is_polymorphic_value = polymorph_count_before_name != lexer->num_polymorphic_variables_parsed;
     }
 
+    EXPECT(lexer, TK_COLON, nullptr);
+
     assert(name_expr != nullptr);
 
     char *var_name = nullptr;
@@ -223,13 +271,11 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
             break;
         }
         default: {
-            report_error(name_expr->location, "Expected a variable name."); // todo(josh): better @ErrorMessage?
+            report_error(name_expr->location, "Expected a variable name, got %s.", expr_string(name_expr->expr_kind)); // todo(josh): better @ErrorMessage?
             return nullptr;
         }
     }
     assert(var_name != nullptr);
-
-    EXPECT(lexer, TK_COLON, nullptr);
 
     Token maybe_assign;
     if (!peek_next_token(lexer, &maybe_assign)) {
@@ -1907,12 +1953,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         }
         case TK_CHAR: {
             eat_next_token(lexer);
-            if (token.escaped_length != 1) {
-                printf("%d %d\n", token.escaped_length, token.scanner_length);
-                report_error(token.location, "Character literal must be length 1.");
-                return nullptr;
-            }
-            return SIF_NEW_CLONE(Expr_Char_Literal(token.escaped_text[0], lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+            return SIF_NEW_CLONE(Expr_Char_Literal(token.char_value, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         case TK_STRING: {
             eat_next_token(lexer);

@@ -45,6 +45,11 @@ HIGH PRIORITY
 }
 
 MEDIUM PRIORITY
+-bug from bumbo {
+    main: int() {
+        print("Hello, World!\n");
+    }
+}
 -put struct constants in Type_Info
 -[?]int.{1, 2, 3}
 -deduplicate #foreign_import/#foreign_system_import
@@ -77,6 +82,7 @@ MEDIUM PRIORITY
 -append(&dyn, {1, 4, 9}); doesn't work because we can't use expected types when initially checking a polymorphic procedure right now
 
 LOW PRIORITY
+-utf8 strings
 -enum field @notes?
 -use a custom allocator in __init_sif_runtime
 -add allocators to demo
@@ -84,7 +90,6 @@ LOW PRIORITY
 -cast(Type)value syntax in addition to the current cast(Type, value) maybe?
 -unknown directives don't stop compilation
 -figure out if I should allow shadowing (maybe with a keyword?)
--@PointerArithmetic
 -build to dll
 -check for use-before-declaration of local vars
 -make C output a bit prettier, whatever that means
