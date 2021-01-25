@@ -39,7 +39,15 @@ proc main() {
 ```
 5. Run `sif.exe run my_program.sif`
 
-## Demo
+## Demo Video
+
+You can find a demo video where I go over a few key features of Sif [here](https://www.youtube.com/watch?v=LWY4UX7o5tY).
+
+## Sample Game
+
+You can find the source code for a small sample game [here](https://github.com/JoshuaManton/sif-flappy-bird).
+
+## Demo Program
 
 The following is a demo program showing off many of the features of sif. You can find the source file at `examples/demo/main.sif`.
 
