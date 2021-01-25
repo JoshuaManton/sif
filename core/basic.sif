@@ -286,6 +286,10 @@ proc bprint_arg(buf: []u8, arg: any) : int {
         arg_length = snprintf(buf_ptr, buf_count, "<null>");
     }
     else {
+        proc print_to_buffer(buf: []u8, cursor: int, fmt: string, args: ..any) : int {
+            return bprint(slice_ptr(ptr_offset(buf.data, cast(int, cursor)), max(0, buf.count - cast(int, cursor))), fmt, ..args);
+        }
+
         ti := get_type_info(arg.type);
         if (ti.kind == Type_Info_Integer) {
             dti := cast(^Type_Info_Integer, ti);
@@ -378,92 +382,92 @@ proc bprint_arg(buf: []u8, arg: any) : int {
         }
         else if (ti.kind == Type_Info_Array) {
             dti := cast(^Type_Info_Array, ti);
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "["));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "["));
             for (i := 0; i < dti.count; i += 1) {
                 if (i != 0) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), ", "));
                 }
                 elem := ptr_offset(cast(^u8, arg.data), dti.array_of.size * i);
                 if (dti.array_of.id == string) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "\""));
                 }
                 a: any;
                 a.data = elem;
                 a.type = dti.array_of.id;
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", a));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "%", a));
                 if (dti.array_of.id == string) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "\""));
                 }
             }
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "]"));
         }
         else if (ti.kind == Type_Info_Slice) {
             dti := cast(^Type_Info_Slice, ti);
             slice := transmute(^Raw_Slice, arg.data)^;
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "["));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "["));
             for (i := 0; i < slice.count; i += 1) {
                 if (i != 0) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), ", "));
                 }
                 elem := ptr_offset(cast(^u8, slice.data), dti.slice_of.size * i);
                 if (dti.slice_of.id == string) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "\""));
                 }
                 a: any;
                 a.data = elem;
                 a.type = dti.slice_of.id;
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", a));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "%", a));
                 if (dti.slice_of.id == string) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "\""));
                 }
             }
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "]"));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "]"));
         }
         else if (ti.kind == Type_Info_Struct) {
             dti := cast(^Type_Info_Struct, ti);
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%.{", dti.base.printable_name));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "%.{", dti.base.printable_name));
             for (i := 0; i < dti.fields.count; i += 1) {
                 field := dti.fields[i];
                 if (i != 0) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), ", "));
                 }
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "% = ", field.name));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "% = ", field.name));
                 elem := ptr_offset(cast(^u8, arg.data), field.offset);
                 if (field.type.id == string) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "\""));
                 }
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", any.{elem, field.type.id}));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "%", any.{elem, field.type.id}));
                 if (field.type.id == string) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "\""));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "\""));
                 }
             }
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "}"));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "}"));
         }
         else if (ti.kind == Type_Info_Union) {
             dti := cast(^Type_Info_Union, ti);
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "union{"));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "union{"));
             for (i := 0; i < dti.fields.count; i += 1) {
                 if (i != 0) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), ", "));
                 }
                 field := dti.fields[i];
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), field.type.printable_name));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), field.type.printable_name));
             }
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "}"));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "}"));
         }
         else if (ti.kind == Type_Info_Procedure) {
             dti := cast(^Type_Info_Procedure, ti);
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "proc("));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "proc("));
             for (i := 0; i < dti.parameter_types.count; i += 1) {
                 param_type := dti.parameter_types[i];
                 if (i != 0) {
-                    arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ", "));
+                    arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), ", "));
                 }
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), "%", param_type.id));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), "%", param_type.id));
             }
-            arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), ")"));
+            arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), ")"));
             if (dti.return_type != null) {
-                arg_length += cast(i32, bprint(slice_ptr(ptr_offset(buf_ptr, cast(int, arg_length)), max(0, buf.count - cast(int, arg_length))), " : %", dti.return_type.id));
+                arg_length += cast(i32, print_to_buffer(buf, cast(int, arg_length), " : %", dti.return_type.id));
             }
         }
         else {
