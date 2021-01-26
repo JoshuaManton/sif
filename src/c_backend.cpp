@@ -1268,8 +1268,11 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
         c_print_line_directive(sb, proc->header->location, "__SIF__init_sif_runtime()");
         print_indents(sb, 1);
         sb->print("__SIF__init_sif_runtime();\n");
-        For (idx, proc->parent_block->declarations) {
-            Declaration *decl = proc->parent_block->declarations[idx];
+        assert(proc->parent_block != nullptr);
+        assert(proc->parent_block->parent_block != nullptr);
+        assert(proc->parent_block->parent_block->flags & BF_IS_GLOBAL_SCOPE);
+        For (idx, proc->parent_block->parent_block->declarations) {
+            Declaration *decl = proc->parent_block->parent_block->declarations[idx];
             if (decl->kind != DECL_VAR) {
                 continue;
             }

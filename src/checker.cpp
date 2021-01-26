@@ -894,11 +894,11 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
     return true;
 }
 
-bool typecheck_global_scope(Ast_Block *block) {
-    assert(block->flags & BF_IS_GLOBAL_SCOPE);
+bool typecheck_global_scope(Ast_Block *global_scope) {
+    assert(global_scope->flags & BF_IS_GLOBAL_SCOPE);
 
-    For (idx, block->declarations) {
-        Declaration *decl = block->declarations[idx];
+    For (idx, global_scope->declarations) {
+        Declaration *decl = global_scope->declarations[idx];
         if (decl->is_polymorphic) {
             continue;
         }
@@ -942,8 +942,8 @@ bool typecheck_global_scope(Ast_Block *block) {
         }
     }
 
-    For (idx, block->declarations) {
-        Declaration *decl = block->declarations[idx];
+    For (idx, global_scope->declarations) {
+        Declaration *decl = global_scope->declarations[idx];
         if (decl->is_polymorphic) {
             continue;
         }
@@ -1033,6 +1033,12 @@ bool typecheck_global_scope(Ast_Block *block) {
         report_error(g_main_proc->header->location, "main() cannot be foreign.");
         return false;
     }
+    assert(g_main_proc->parent_block != nullptr);
+    if (!(g_main_proc->parent_block->flags & BF_IS_FILE_SCOPE)) {
+        report_error(g_main_proc->header->location, "main() must be located at file scope.");
+        return false;
+    }
+    assert(g_main_proc->parent_block->parent_block == global_scope);
     return true;
 }
 

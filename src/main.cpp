@@ -20,11 +20,8 @@ HIGH PRIORITY
 -default procedure parameters?
 -#caller_location
 -handle usage before declaration
--add comprehensive numbers test
--add binary literals 0x0010110111100001
 -handle unary operators nicer, currently quick-and-dirty
 -#print and #assert don't work in global scope right now
--enum arrays @EnumArrays
 -allow operator overloads to be declared outside a struct
 -+=, -=, etc for operator overloading
 -investigate how to get perfect number literal translation
@@ -45,6 +42,9 @@ HIGH PRIORITY
 }
 
 MEDIUM PRIORITY
+-add more comprehensive numbers test
+-add binary literals 0x0010110111100001
+-enum arrays @EnumArrays
 -bug from bumbo {
     main: int() {
         print("Hello, World!\n");
@@ -70,6 +70,7 @@ MEDIUM PRIORITY
 -remove runtime's dependency on basic
 -@UnaryOperatorOverloading
 -switch statements
+-ternary operator maybe?
 -read command line parameters
 -good logging of cyclic dependencies
 -reference-to-reference parsing bug: var x: >>int lexes as a shift-right
