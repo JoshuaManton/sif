@@ -3630,8 +3630,11 @@ bool typecheck_node(Ast_Node *node) {
                     return false;
                 }
                 if (!broadcast_var_using(var, var->parent_block)) {
-                    return nullptr;
+                    return false;
                 }
+            }
+            if (var->parent_proc) {
+                var->parent_proc->local_variables.append(var);
             }
             break;
         }

@@ -9,6 +9,7 @@
 #include "parser.h"
 #include "checker.h"
 #include "c_backend.h"
+#include "ir.h"
 
 /*
 TODO:
@@ -125,6 +126,8 @@ Allocator g_global_linear_allocator;
 bool g_logged_error = {};
 
 Timer g_global_timer = {};
+
+// todo(josh): put these in some kind of Build_Options struct in common.h?
 bool g_no_type_info = {};
 bool g_is_debug_build = {};
 
@@ -175,6 +178,7 @@ void main(int argc, char **argv) {
     bool show_timings = false;
     bool keep_temp_files = false;
     bool log_cl_command = false;
+    bool ir_test = false;
 
     char *output_exe_name = nullptr;
 
@@ -194,6 +198,9 @@ void main(int argc, char **argv) {
         }
         else if (strcmp(arg, "-log-cl-command") == 0) {
             log_cl_command = true;
+        }
+        else if (strcmp(arg, "-ir-test") == 0) {
+            ir_test = true;
         }
         else if (strcmp(arg, "-o") == 0) {
             if ((i+1) >= argc) {
@@ -245,6 +252,16 @@ void main(int argc, char **argv) {
         return;
     }
 
+    if (ir_test) {
+        IR *ir = SIF_NEW_CLONE(IR(), g_global_linear_allocator);
+        IR_Proc *ir_main = generate_ir_proc(ir, g_main_proc);
+        For (idx, ir_main->statements) {
+            IR_Statement *statement = ir_main->statements[idx];
+            printf_ir_statement(statement);
+            printf("\n");
+        }
+    }
+
     double codegen_start_time = query_timer(&g_global_timer);
 
     Chunked_String_Builder c_code = generate_c_main_file(global_scope);
@@ -254,7 +271,7 @@ void main(int argc, char **argv) {
 
     if (!is_check) {
         String_Builder command_sb = make_string_builder(g_global_linear_allocator, 128);
-        command_sb.printf("cmd.exe /c \"cl.exe ");
+        command_sb.printf("cmd.exe /O2 /c \"cl.exe ");
         if (g_is_debug_build) {
             command_sb.print("/Zi /Fd ");
         }

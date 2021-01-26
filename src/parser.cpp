@@ -312,6 +312,9 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
     Array<char *> notes = parse_notes(lexer);
 
     Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    if (lexer->currently_parsing_proc_body) {
+        var->parent_proc = lexer->currently_parsing_proc_body; // note(josh): may be nullptr
+    }
     var->is_using = is_using;
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, lexer->current_block), lexer->allocator);
     var->declaration->notes = notes;

@@ -59,6 +59,9 @@ struct Type_Struct;
 struct Type_Array;
 struct Type_Enum;
 
+struct IR_Var;
+struct IR_Proc;
+
 enum Operand_Flags {
     OPERAND_CONSTANT = 1 << 0,
     OPERAND_TYPE     = 1 << 1,
@@ -167,6 +170,7 @@ struct Ast_Proc_Header : public Ast_Node {
     Array<Ast_Expr *> default_values = {}; // note(josh): sparse
     Ast_Expr *return_type_expr = {};
     Type_Procedure *type = nullptr;
+    Array<Ast_Var *> local_variables = {};
     Ast_Block *procedure_block = {}; // note(josh): NOT the same as the body. parameters live in this scope and it is the parent scope of the body
     bool is_foreign = {};
     Operand operand = {};
@@ -188,6 +192,7 @@ struct Ast_Proc_Header : public Ast_Node {
         parameters.allocator = allocator;
         default_values.allocator = allocator;
         defers.allocator = allocator;
+        local_variables.allocator = allocator;
     }
 };
 
@@ -261,7 +266,10 @@ struct Ast_Var : public Ast_Node {
     bool is_using = {};
     Ast_Proc_Header *is_parameter_for_procedure = {}; // note(josh): may be null
     Ast_Struct *belongs_to_struct = {}; // note(josh): may be null
+    Ast_Proc_Header *parent_proc = {}; // note(josh): may be null
     Struct_Member_Declaration *struct_member = {}; // note(josh): only set if belongs_to_struct is set
+
+    IR_Var *ir_var = {};
     Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic_value, bool is_polymorphic_type, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_VAR, allocator, current_block, location)
     , name(name)
