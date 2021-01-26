@@ -1,6 +1,47 @@
 #include "core:random.sif"
 
 proc test_numbers() {
+    // untyped and typed things
+    {
+        a := 10;
+        assert(a == 10);
+        assert(typeof(a) == int);
+        assert(a / 2 == 5);
+        assert(typeof(a / 2) == int);
+
+        b := a / 2;
+        assert(typeof(b) == int);
+
+        c := 2 / a;
+        assert(typeof(c) == int);
+
+        d : u32 = 10;
+        assert(d == 10);
+        assert(typeof(d) == u32);
+        assert(d / 2 == 5);
+        assert(typeof(d / 2) == u32);
+        assert(typeof(2 / d) == u32);
+
+        e := 10.0;
+        assert(typeof(e) == float);
+        assert(typeof(e) == f32);
+        assert(typeof(e / 2) == float);
+        assert(typeof(2 / e) == float);
+
+        assert(typeof(cast(float, 2) / 2) == float);
+        assert(typeof(cast(u32, 2) / 2) == u32);
+        assert(typeof(2 / cast(u8, 2)) == u8);
+
+        f : u16 = 16 / 2;
+        assert(f == 8);
+
+        g : float = 16 / 2.0;
+        assert(f == 8);
+
+        h : float = 16.0 / 2;
+        assert(h == 8);
+    }
+
     // random
     {
         r: Random_State;
