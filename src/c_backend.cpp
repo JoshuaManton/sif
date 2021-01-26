@@ -793,17 +793,25 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 case EXPR_CAST: {
                     Expr_Cast *expr_cast = (Expr_Cast *)expr;
                     char *rhs = c_print_expr(_sb, expr_cast->rhs, indent_level);
-                    expr_sb.print("((");
-                    c_print_type(&expr_sb, expr_cast->type_expr->operand.type_value, "");
-                    expr_sb.printf(")%s)", rhs);
+                    expr_sb.print("(");
+                    if (expr_cast->rhs->operand.type != expr_cast->operand.type) {
+                        expr_sb.print("(");
+                        c_print_type(&expr_sb, expr_cast->type_expr->operand.type_value, "");
+                        expr_sb.print(")");
+                    }
+                    expr_sb.printf("%s)", rhs);
                     break;
                 }
                 case EXPR_TRANSMUTE: {
                     Expr_Transmute *transmute = (Expr_Transmute *)expr;
                     char *rhs = c_print_expr(_sb, transmute->rhs, indent_level);
-                    expr_sb.print("*((");
-                    c_print_type(&expr_sb, get_or_create_type_pointer_to(transmute->type_expr->operand.type_value), "");
-                    expr_sb.printf(")&%s)", rhs);
+                    expr_sb.print("*(");
+                    if (transmute->rhs->operand.type != transmute->operand.type) {
+                        expr_sb.print("(");
+                        c_print_type(&expr_sb, get_or_create_type_pointer_to(transmute->type_expr->operand.type_value), "");
+                        expr_sb.print(")");
+                    }
+                    expr_sb.printf("&%s)", rhs);
                     break;
                 }
                 case EXPR_PAREN: {
