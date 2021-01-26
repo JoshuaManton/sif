@@ -7,7 +7,6 @@ struct IR_Statement;
 
 struct IR_Proc {
     Array<IR_Var *> parameters = {};
-    // Array<IR_Var *> local_variables = {};
     Array<IR_Var *> all_variables = {}; // parameters + local_variables
     Array<IR_Statement *> statements = {};
     IR_Proc()

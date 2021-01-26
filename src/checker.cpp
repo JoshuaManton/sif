@@ -2751,9 +2751,6 @@ bool typecheck_expr_list_against_type_tuple(Ast_Expr_List *list, Type_Tuple *tup
 
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value) {
     assert(expr != nullptr);
-    if (expected_type != nullptr) {
-        assert(!(expected_type->flags & TF_UNTYPED)); // note(josh): an expected_type should never be untyped
-    }
 
     if (expr->operand.type == nullptr) {
         Operand result_operand(expr->location);
@@ -2869,11 +2866,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 bool types_matched = match_types(*lhs_operand, most_concrete, &lhs_operand_speculative, false);
                 types_matched = types_matched && match_types(*rhs_operand, most_concrete, &rhs_operand_speculative, false);
                 if (types_matched && operator_is_defined(lhs_operand_speculative.type, rhs_operand_speculative.type, binary->op, (lhs_operand_speculative.flags & OPERAND_CONSTANT) && rhs_operand_speculative.flags & OPERAND_CONSTANT)) {
-                    Operand *lhs_operand = typecheck_expr(binary->lhs, expected_type);
+                    Operand *lhs_operand = typecheck_expr(binary->lhs, most_concrete);
                     if (!lhs_operand) {
                         return nullptr;
                     }
-                    Operand *rhs_operand = typecheck_expr(binary->rhs, expected_type);
+                    Operand *rhs_operand = typecheck_expr(binary->rhs, most_concrete);
                     if (!rhs_operand) {
                         return nullptr;
                     }
@@ -3541,7 +3538,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
         if (!match_types(expr->operand, expected_type, &expr->operand)) {
             return nullptr;
         }
-        assert(!(expr->operand.type->flags & TF_UNTYPED));
     }
     return &expr->operand;
 }
