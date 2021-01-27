@@ -1,6 +1,6 @@
 @echo off
 
-del sif.exe
+del sif.exe >nul 2>nul
 
 set optimizations=/Od
 if "%1"=="release" (
