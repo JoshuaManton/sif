@@ -816,7 +816,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                 }
                 case EXPR_PAREN: {
                     Expr_Paren *paren = (Expr_Paren *)expr;
-                    char *nested = c_print_expr(_sb, paren->nested, indent_level, target_type);
+                    char *nested = c_print_expr(_sb, paren->nested, indent_level);
                     expr_sb.printf("%s", nested);
                     break;
                 }

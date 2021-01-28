@@ -1450,6 +1450,7 @@ bool can_cast(Ast_Expr *expr, Type *target_type) {
     assert(target_type != nullptr);
     if (expr->operand.type == target_type) {
         // casting to the same type
+        // todo(josh): should we disallow casting for struct types?
         return true;
     }
     if (is_type_number(expr->operand.type)) {
@@ -1740,7 +1741,7 @@ bool binary_eval(Operand lhs, Operand rhs, Token_Kind op, Location location, Ope
                     result_operand.f32_value = lhs.f32_value / rhs.f32_value;
                     result_operand.f64_value = lhs.f64_value / rhs.f64_value;
                 }
-                else if (is_type_float(lhs.type)   && is_type_float(rhs.type)) {
+                else if (is_type_float(lhs.type) && is_type_float(rhs.type)) {
                     result_operand.f32_value = lhs.f32_value / rhs.f32_value;
                     result_operand.f64_value = lhs.f64_value / rhs.f64_value;
                 }

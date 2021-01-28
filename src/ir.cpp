@@ -2,7 +2,7 @@
 #include "basic.h"
 #include "common.h"
 
-int g_ir_temporaries;
+static int g_ir_temporaries;
 
 IR_Temporary *ir_temporary(IR *ir) {
     IR_Temporary *t = SIF_NEW(IR_Temporary, g_global_linear_allocator);
@@ -11,32 +11,37 @@ IR_Temporary *ir_temporary(IR *ir) {
     return t;
 }
 
+IR_Register_Storage *ir_register_storage(IR *ir, Type *type) {
+    IR_Temporary *t = ir_temporary(ir);
+    return SIF_NEW_CLONE(IR_Register_Storage(t, type), g_global_linear_allocator);
+}
+
 void ir_add_statement(IR *ir, IR_Statement *statement) {
     ir->current_proc->statements.append(statement);
 }
 
-void ir_store_to_var(IR *ir, IR_Var *var, IR_Temporary *value) {
-    IR_Statement_Store_To_Var *store = SIF_NEW_CLONE(IR_Statement_Store_To_Var(), g_global_linear_allocator);
-    store->var = var;
-    store->value = value;
+void ir_store(IR *ir, IR_Storage *dst, IR_Storage *src) {
+    IR_Statement_Store *store = SIF_NEW_CLONE(IR_Statement_Store(), g_global_linear_allocator);
+    store->dst = dst;
+    store->src = src;
     ir_add_statement(ir, store);
 }
 
-IR_Temporary *ir_load_from_var(IR *ir, IR_Var *var) {
-    IR_Temporary *value = ir_temporary(ir);
-    IR_Statement_Load_From_Var *load = SIF_NEW_CLONE(IR_Statement_Load_From_Var(), g_global_linear_allocator);
-    load->var = var;
-    load->result = value;
+IR_Register_Storage *ir_load(IR *ir, IR_Storage *src) {
+    IR_Register_Storage *dst = ir_register_storage(ir, src->type);
+    IR_Statement_Load *load = SIF_NEW_CLONE(IR_Statement_Load(), g_global_linear_allocator);
+    load->dst = dst;
+    load->src = src;
     ir_add_statement(ir, load);
-    return value;
+    return dst;
 }
 
-IR_Temporary *ir_emit_expr(IR *ir, Ast_Expr *expr) {
+IR_Storage *ir_emit_expr(IR *ir, Ast_Expr *expr) {
     if (expr->operand.flags & OPERAND_CONSTANT) {
         assert(!is_type_untyped(expr->operand.type));
         IR_Statement_Move_Constant *move = SIF_NEW_CLONE(IR_Statement_Move_Constant(), g_global_linear_allocator);
         move->operand = expr->operand;
-        move->result = ir_temporary(ir);
+        move->result = ir_register_storage(ir, expr->operand.type);
         ir_add_statement(ir, move);
         return move->result;
     }
@@ -44,13 +49,13 @@ IR_Temporary *ir_emit_expr(IR *ir, Ast_Expr *expr) {
         switch (expr->expr_kind) {
             case EXPR_BINARY: {
                 Expr_Binary *binary = (Expr_Binary *)expr;
-                IR_Temporary *lhs = ir_emit_expr(ir, binary->lhs);
-                IR_Temporary *rhs = ir_emit_expr(ir, binary->rhs);
+                IR_Storage *lhs = ir_emit_expr(ir, binary->lhs);
+                IR_Storage *rhs = ir_emit_expr(ir, binary->rhs);
                 IR_Statement_Binary *statement = SIF_NEW_CLONE(IR_Statement_Binary(), g_global_linear_allocator);
                 statement->kind = IRS_BINARY;
                 statement->lhs = lhs;
                 statement->rhs = rhs;
-                statement->result = ir_temporary(ir);
+                statement->result = ir_register_storage(ir, binary->operand.type);
                 switch (binary->op) {
                     case TK_PLUS:     statement->op = IRO_ADD; break;
                     case TK_MINUS:    statement->op = IRO_SUB; break;
@@ -69,12 +74,17 @@ IR_Temporary *ir_emit_expr(IR *ir, Ast_Expr *expr) {
                 if (is_type_integer(ident->operand.type)) {
                     assert(ident->operand.referenced_declaration->kind == DECL_VAR);
                     Ast_Var *var = ((Var_Declaration *)ident->operand.referenced_declaration)->var;
-                    IR_Temporary *value = ir_load_from_var(ir, var->ir_var);
-                    return value;
+                    return var->ir_var->storage;
                 }
                 else {
                     assert(false);
                 }
+            }
+            case EXPR_ADDRESS_OF: {
+                Expr_Address_Of *address = (Expr_Address_Of *)expr;
+                assert(address->rhs->operand.flags & OPERAND_LVALUE);
+                IR_Register_Storage *result = ir_register_storage(ir, address->operand.type);
+                return result;
             }
             default: {
                 printf("Unhandled expr type in ir_emit_expr(): %d\n", expr->expr_kind);
@@ -94,15 +104,15 @@ void ir_emit_block(IR *ir, Ast_Block *block) {
             case AST_VAR: {
                 Ast_Var *var = (Ast_Var *)node;
                 if (var->expr) {
-                    IR_Temporary *result = ir_emit_expr(ir, var->expr);
-                    ir_store_to_var(ir, var->ir_var, result);
+                    IR_Storage *result = ir_emit_expr(ir, var->expr);
+                    ir_store(ir, var->ir_var->storage, result);
                 }
                 break;
             }
-            // case AST_ASSIGN: {
-            //     Ast_Assign *assign = (Ast_Assign *)node;
-            //     break;
-            // }
+            case AST_ASSIGN: {
+                Ast_Assign *assign = (Ast_Assign *)node;
+                break;
+            }
             case AST_STRUCT: break;
             case AST_PROC:   break;
             case AST_ENUM:   break;
@@ -125,6 +135,7 @@ IR_Proc *generate_ir_proc(IR *ir, Ast_Proc *procedure) {
         IR_Var *ir_var = SIF_NEW_CLONE(IR_Var(), g_global_linear_allocator);
         ast_var->ir_var = ir_var;
         ir_var->type = ast_var->type;
+        ir_var->storage = SIF_NEW_CLONE(IR_Stack_Storage(ir_proc, ir_var->type), g_global_linear_allocator);
         ir_proc->parameters.append(ir_var);
         ir_proc->all_variables.append(ir_var);
     }
@@ -134,6 +145,7 @@ IR_Proc *generate_ir_proc(IR *ir, Ast_Proc *procedure) {
         IR_Var *ir_var = SIF_NEW_CLONE(IR_Var(), g_global_linear_allocator);
         ast_var->ir_var = ir_var;
         ir_var->type = ast_var->type;
+        ir_var->storage = SIF_NEW_CLONE(IR_Stack_Storage(ir_proc, ir_var->type), g_global_linear_allocator);
         ir_proc->all_variables.append(ir_var);
     }
 
@@ -145,43 +157,47 @@ void printf_ir_statement(IR_Statement *statement) {
     switch (statement->kind) {
         case IRS_BINARY: {
             IR_Statement_Binary *stmt = (IR_Statement_Binary *)statement;
-            printf("IRS_BINARY r%d ", stmt->result->reg);
-            switch (stmt->op) {
-                case IRO_ADD: printf("ADD "); break;
-                case IRO_SUB: printf("SUB "); break;
-                case IRO_MUL: printf("MUL "); break;
-                case IRO_DIV: printf("DIV "); break;
-                default: {
-                    printf("<unhandled op %d>", stmt->op);
-                }
-            }
-            printf("r%d r%d", stmt->lhs->reg, stmt->rhs->reg);
+            printf("unimplemented printf IRS_BINARY");
+            // printf("IRS_BINARY r%d ", stmt->result->reg);
+            // switch (stmt->op) {
+            //     case IRO_ADD: printf("ADD "); break;
+            //     case IRO_SUB: printf("SUB "); break;
+            //     case IRO_MUL: printf("MUL "); break;
+            //     case IRO_DIV: printf("DIV "); break;
+            //     default: {
+            //         printf("<unhandled op %d>", stmt->op);
+            //     }
+            // }
+            // printf("r%d r%d", stmt->lhs->reg, stmt->rhs->reg);
             break;
         }
         case IRS_MOVE_CONSTANT: {
             IR_Statement_Move_Constant *stmt = (IR_Statement_Move_Constant *)statement;
-            printf("IRS_MOVE_CONSTANT r%d ", stmt->result->reg);
-            if (is_type_integer(stmt->operand.type)) {
-                if (is_type_signed(stmt->operand.type)) {
-                    printf("%lld", stmt->operand.int_value);
-                }
-                else {
-                    printf("%llu", stmt->operand.uint_value);
-                }
-            }
-            else {
-                assert(false);
-            }
+            printf("unimplemented printf IRS_MOVE_CONSTANT");
+            // printf("IRS_MOVE_CONSTANT r%d ", stmt->result->reg);
+            // if (is_type_integer(stmt->operand.type)) {
+            //     if (is_type_signed(stmt->operand.type)) {
+            //         printf("%lld", stmt->operand.int_value);
+            //     }
+            //     else {
+            //         printf("%llu", stmt->operand.uint_value);
+            //     }
+            // }
+            // else {
+            //     assert(false);
+            // }
             break;
         }
-        case IRS_STORE_TO_VAR: {
-            IR_Statement_Store_To_Var *stmt = (IR_Statement_Store_To_Var *)statement;
-            printf("IRS_STORE_TO_VAR 0x%p r%d", stmt->var, stmt->value->reg);
+        case IRS_STORE: {
+            IR_Statement_Store *store = (IR_Statement_Store *)statement;
+            printf("unimplemented printf IRS_STORE");
+            // printf("IRS_STORE 0x%p r%d", stmt->var, stmt->value->reg);
             break;
         }
-        case IRS_LOAD_FROM_VAR: {
-            IR_Statement_Load_From_Var *stmt = (IR_Statement_Load_From_Var *)statement;
-            printf("IRS_LOAD_FROM_VAR r%d 0x%p", stmt->result->reg, stmt->var);
+        case IRS_LOAD: {
+            IR_Statement_Load *load = (IR_Statement_Load *)statement;
+            printf("unimplemented printf IRS_LOAD");
+            // printf("IRS_LOAD_FROM_VAR r%d 0x%p", stmt->result->reg, stmt->var);
             break;
         }
         default: {

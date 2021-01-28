@@ -15,8 +15,6 @@
 TODO:
 
 HIGH PRIORITY
--'any' bug if you pass a nested expr as an 'any'
--new_slice/new_string are not the right word. use 'make'
 -transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
 -default procedure parameters?
 -#caller_location
@@ -25,9 +23,9 @@ HIGH PRIORITY
 -#print and #assert don't work in global scope right now
 -allow operator overloads to be declared outside a struct
 -+=, -=, etc for operator overloading
--investigate how to get perfect number literal translation
 -do proper nested selector expression elimination with 'using'
 -#link_name
+-new_slice/new_string are not the right word. use 'make'
 -using bug {
     struct Foo {
         position: Vector3;
@@ -51,6 +49,7 @@ MEDIUM PRIORITY
         print("Hello, World!\n");
     }
 }
+-don't generate short-circuiting jumps if it is unnecessary
 -put struct constants in Type_Info
 -[?]int.{1, 2, 3}
 -deduplicate #foreign_import/#foreign_system_import
@@ -86,6 +85,7 @@ MEDIUM PRIORITY
 LOW PRIORITY
 -utf8 strings
 -enum field @notes?
+-#this to refer to struct type for anonymous
 -use a custom allocator in __init_sif_runtime
 -add allocators to demo
 -opt=N
