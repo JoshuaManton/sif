@@ -186,12 +186,12 @@ void add_ordered_declaration(Declaration *declaration) {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block),  g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block), g_global_linear_allocator)));
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block),  g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block), g_global_linear_allocator)));
@@ -199,7 +199,7 @@ void add_global_declarations(Ast_Block *block) {
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block), g_global_linear_allocator)));
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block), g_global_linear_allocator)));
+    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block),  g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block), g_global_linear_allocator)));
     assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block), g_global_linear_allocator)));
@@ -652,7 +652,10 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 if (!type_operand) {
                     return false;
                 }
-                assert(type_operand->flags & OPERAND_TYPE);
+                if ((!(type_operand->flags & OPERAND_CONSTANT)) || (!is_type_typeid(type_operand->type)) || (type_operand->type_value == nullptr)) {
+                    report_error(var->type_expr->location, "Variable type expression must be a constant typeid.");
+                    return false;
+                }
                 assert(type_operand->type_value);
                 declared_type = type_operand->type_value;
             }
