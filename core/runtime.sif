@@ -1,12 +1,14 @@
 // todo(josh): remove this dependency
 #include "core:basic.sif"
 
-proc malloc      (size: int)                                    : rawptr #foreign; @sif_runtime
+proc malloc      (size: uint)                                   : rawptr #foreign; @sif_runtime
 proc free        (ptr: rawptr)                                           #foreign; @sif_runtime
 proc assert      (condition: bool)                                       #foreign; @sif_runtime
 proc memset      (ptr: rawptr, val: i32, size_in_bytes: u64)    : rawptr #foreign; @sif_runtime
 proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
 proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
+proc memcmp      (ptr1: rawptr, ptr2: rawptr, n: uint)          : i32    #foreign; @sif_runtime
+
 
 
 
@@ -135,7 +137,7 @@ proc sif_free(ptr: rawptr, allocator: Allocator) {
 
 
 proc default_allocator_alloc(allocator: rawptr, size: int, align: int) : rawptr {
-    return malloc(size);
+    return malloc(cast(uint, size));
 } @sif_runtime
 proc default_allocator_free(allocator: rawptr, ptr: rawptr) {
     free(ptr);
@@ -150,15 +152,30 @@ proc default_allocator() : Allocator {
 
 
 proc string_eq(a: string, b: string) : bool {
+    // if the counts are different they can't be equal
     if (a.count != b.count) {
         return false;
     }
-    for (i := 0; i < a.count; i += 1) {
-        if (a[i] != b[i]) {
+
+    // if they are both zero count then they are equal
+    if (a.count == 0) {
+        return true;
+    }
+
+    // make sure they are both non-null
+    if (a.data == null) {
+        if (b.data == null) {
+            return true;
+        }
+        return false;
+    }
+    else {
+        if (b.data == null) {
             return false;
         }
     }
-    return true;
+
+    return memcmp(a.data, b.data, cast(uint, a.count)) == 0;
 } @sif_runtime
 
 

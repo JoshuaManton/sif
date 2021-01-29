@@ -1747,6 +1747,9 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
 
     sb.print("#define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(COND)?1:-1]\n");
 
+    sb.print("STATIC_ASSERT(sizeof(int) == 4, int_was_wrong_size);");
+    sb.print("STATIC_ASSERT(sizeof(void *) == 8, pointer_was_wrong_size);");
+
 
     // todo(josh): @Speed we could clean this up a bunch by introducing some kind of
     // Incomplete_Declaration and only outputting the ones we need to, rather
