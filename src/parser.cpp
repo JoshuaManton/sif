@@ -28,8 +28,6 @@ thread_local int g_num_anonymous_procedures = 0;
 
 Thread g_parser_threads[NUM_PARSER_THREADS];
 
-extern bool g_logged_error;
-
 u32 parser_worker_thread(void *);
 
 void init_parser() {
@@ -846,6 +844,11 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
         }
 
         case TK_LEFT_CURLY: {
+            if (!(lexer->current_toplevel_declaration && lexer->current_toplevel_declaration->kind == DECL_PROC)) {
+                report_error(root_token.location, "Cannot make a block at file scope.");
+                return nullptr;
+            }
+
             Ast_Block *block = parse_block_including_curly_brackets(lexer);
             if (!block) {
                 return nullptr;
@@ -1264,9 +1267,9 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
         switch (node->ast_kind) {
             case AST_DIRECTIVE_FOREIGN_IMPORT: {
                 Ast_Directive_Foreign_Import *directive = (Ast_Directive_Foreign_Import *)node;
-                g_all_foreign_imports_spinlock.lock();
+                if (!g_no_threads) { g_all_foreign_imports_spinlock.lock(); }
                 g_all_foreign_import_directives.append(directive);
-                g_all_foreign_imports_spinlock.unlock();
+                if (!g_no_threads) { g_all_foreign_imports_spinlock.unlock(); }
                 break;
             }
             case AST_EMPTY_STATEMENT: {
@@ -1284,6 +1287,8 @@ Ast_Block *parse_block(Lexer *lexer, bool only_parse_one_statement) {
     }
     return lexer->current_block;
 }
+
+bool process_lexer(Lexer *lexer);
 
 void parse_file(const char *requested_filename, Location include_location) {
     String_Builder include_sb = make_string_builder(g_global_linear_allocator, 128);
@@ -1310,8 +1315,8 @@ void parse_file(const char *requested_filename, Location include_location) {
         }
     }
 
-    g_lexers_to_process_spinlock.lock();
-    defer(g_lexers_to_process_spinlock.unlock());
+    if (!g_no_threads) g_lexers_to_process_spinlock.lock();
+    defer(if (!g_no_threads) { g_lexers_to_process_spinlock.unlock(); });
 
     For (idx, g_all_included_files) {
         if (g_all_included_files[idx] == absolute_path) {
@@ -1326,35 +1331,50 @@ void parse_file(const char *requested_filename, Location include_location) {
     Dynamic_Arena *arena = (Dynamic_Arena *)alloc(g_global_linear_allocator, sizeof(Dynamic_Arena), DEFAULT_ALIGNMENT);
     init_dynamic_arena(arena, 1 * 1024 * 1024, g_global_linear_allocator);
     lexer.allocator = dynamic_arena_allocator(arena);
-    g_lexers_to_process.append(lexer);
+    if (g_no_threads) {
+        process_lexer(&lexer);
+    }
+    else {
+        g_lexers_to_process.append(lexer);
+    }
+}
+
+bool process_lexer(Lexer *lexer) {
+    int len = 0;
+    char *root_file_text = read_entire_file(lexer->location.filepath, &len);
+    if (root_file_text == nullptr) {
+        report_error({}, "Couldn't find file '%s'.", lexer->location.filepath);
+        return false;
+    }
+    lexer->text = root_file_text;
+
+    Ast_Block *block = parse_block(lexer, false);
+    if (!block) {
+        return false;
+    }
+    block->flags = BF_IS_FILE_SCOPE;
+
+    if (!g_no_threads) { g_all_file_blocks_spinlock.lock(); }
+    g_all_file_blocks.append(block);
+    g_files_done_parsing += 1;
+    g_total_lines_parsed += lexer->location.line;
+    if (!g_no_threads) { g_all_file_blocks_spinlock.unlock(); }
+    return true;
 }
 
 u32 parser_worker_thread(void *userdata) {
+    if (g_no_threads) {
+        assert(false);
+    }
     while (g_files_done_parsing < g_all_included_files.count && !g_logged_error) {
         g_lexers_to_process_spinlock.lock();
         if (g_lexers_to_process.count > 0) {
             Lexer lexer = g_lexers_to_process.pop();
             g_lexers_to_process_spinlock.unlock();
 
-            int len = 0;
-            char *root_file_text = read_entire_file(lexer.location.filepath, &len);
-            if (root_file_text == nullptr) {
-                report_error({}, "Couldn't find file '%s'.", lexer.location.filepath);
+            if (!process_lexer(&lexer)) {
                 return 0;
             }
-            lexer.text = root_file_text;
-
-            Ast_Block *block = parse_block(&lexer, false);
-            if (!block) {
-                return 0;
-            }
-            block->flags = BF_IS_FILE_SCOPE;
-
-            g_all_file_blocks_spinlock.lock();
-            g_all_file_blocks.append(block);
-            g_files_done_parsing += 1;
-            g_total_lines_parsed += lexer.location.line;
-            g_all_file_blocks_spinlock.unlock();
         }
         else {
             g_lexers_to_process_spinlock.unlock();
@@ -1368,12 +1388,14 @@ Ast_Block *begin_parsing(const char *filename) {
     parse_file("core:runtime.sif", {});
     parse_file(filename, {});
 
-    for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
-        g_parser_threads[i] = create_thread(parser_worker_thread, (void *)(i64)i);
-    }
+    if (!g_no_threads) {
+        for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
+            g_parser_threads[i] = create_thread(parser_worker_thread, (void *)(i64)i);
+        }
 
-    for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
-        wait_for_thread(g_parser_threads[i]);
+        for (int i = 0; i < NUM_PARSER_THREADS; i += 1) {
+            wait_for_thread(g_parser_threads[i]);
+        }
     }
 
     Ast_Block *global_scope = SIF_NEW_CLONE(Ast_Block(g_global_linear_allocator, {}, {}), g_global_linear_allocator);

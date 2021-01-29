@@ -117,6 +117,7 @@ void print_usage() {
     printf("  -show-timings               Print a log of times for different compilation stages.\n");
     printf("  -keep-temp-files            Don't delete intermediate files used for compilation.\n");
     printf("  -no-type-info               Don't generate runtime type information.\n");
+    printf("  -no-threads                 Don't compile with multithreading.\n");
 }
 
 char *sif_core_lib_path;
@@ -129,6 +130,7 @@ Timer g_global_timer = {};
 
 // todo(josh): put these in some kind of Build_Options struct in common.h?
 bool g_no_type_info = {};
+bool g_no_threads = {};
 bool g_is_debug_build = {};
 
 void main(int argc, char **argv) {
@@ -195,6 +197,9 @@ void main(int argc, char **argv) {
         }
         else if (strcmp(arg, "-no-type-info") == 0) {
             g_no_type_info = true;
+        }
+        else if (strcmp(arg, "-no-threads") == 0) {
+            g_no_threads = true;
         }
         else if (strcmp(arg, "-log-cl-command") == 0) {
             log_cl_command = true;

@@ -5,6 +5,8 @@
 
 extern char *sif_core_lib_path;
 extern Allocator g_global_linear_allocator;
+extern bool g_logged_error;
+extern bool g_no_threads;
 
 #define SIF_NEW(T, allocator) ((T *)alloc(allocator, sizeof(T), true))
 
