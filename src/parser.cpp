@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cassert>
 
 #include "parser.h"
 #include "os_windows.h"
@@ -769,6 +768,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             Ast_Var *var = nullptr;
             if (maybe_colon.kind == TK_COLON) {
                 var = parse_var(lexer, expr);
+                if (!var) {
+                    return nullptr;
+                }
                 var->is_using = true;
                 expr = nullptr;
             }
@@ -1213,7 +1215,8 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 case TK_BIT_XOR_ASSIGN:  // fallthrough
                 case TK_ASSIGN: { // todo(josh): <<=, &&=, etc
                     Token op;
-                    assert(get_next_token(lexer, &op));
+                    bool ok = get_next_token(lexer, &op);
+                    assert(ok);
                     Ast_Expr_List *rhs_list = parse_expr_list(lexer);
                     if (rhs_list == nullptr) {
                         return nullptr;
@@ -1232,6 +1235,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                     node = parse_var(lexer, lhs_list->exprs[0]);
                     if (node == nullptr) {
                         return nullptr;
+                    }
+                    if (eat_semicolon) {
+                        EXPECT_SEMICOLON(lexer, nullptr);
                     }
                     break;
                }
@@ -1767,7 +1773,8 @@ Ast_Expr *parse_postfix_expr(Lexer *lexer) {
 
     while (is_postfix_op(lexer)) {
         Token op = {};
-        assert(peek_next_token(lexer, &op));
+        bool ok = peek_next_token(lexer, &op);
+        assert(ok);
 
         switch (op.kind) {
             case TK_LEFT_PAREN: {
@@ -1918,7 +1925,8 @@ Ast_Expr *parse_polymorphic_type_expr(Lexer *lexer) {
     }
 
     Token token = {};
-    assert(peek_next_token(lexer, &token));
+    bool ok = peek_next_token(lexer, &token);
+    assert(ok);
     switch (token.kind) {
         case TK_NOT: {
             eat_next_token(lexer);

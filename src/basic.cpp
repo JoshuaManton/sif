@@ -134,7 +134,7 @@ byte *buffer_allocate(byte *buffer, int buffer_len, int *offset, int size, int a
 
 
 void *null_allocator_alloc(void *allocator, int size, int align) {
-    ASSERTF(false, "Tried to allocate with the null allocator");
+    assert(false && "Tried to allocate with the null allocator");
     return nullptr;
 }
 

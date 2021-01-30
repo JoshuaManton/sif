@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cassert>
 
 #include "common.h"
 #include "os_windows.h"
@@ -15,7 +14,6 @@
 TODO:
 
 HIGH PRIORITY
--transmute([]byte, "wow I overwrote the file") crashes. should it work? maybe strings can implicitly convert to []byte?
 -default procedure parameters?
 -#caller_location
 -handle usage before declaration
@@ -26,23 +24,19 @@ HIGH PRIORITY
 -do proper nested selector expression elimination with 'using'
 -#link_name
 -new_slice/new_string are not the right word. use 'make'
--using bug {
-    struct Foo {
-        position: Vector3;
-    }
-
+-namespacing bug {
     proc main() {
-        using base: Foo;
-        bar();
-        proc bar() {
-            printa(position); // here the compiler thinks it knows what "position" is, but it shouldn't
+        bar: int;
+        foo();
+        proc foo() {
+            printa(bar); // the compiler thinks it knows what 'bar' is, resulting in an error in the C code
         }
     }
 }
 
 MEDIUM PRIORITY
 -add more comprehensive numbers test
--add binary literals 0x0010110111100001
+-add binary literals 0b0010110111100001
 -enum arrays @EnumArrays
 -bug from bumbo {
     main: int() {
@@ -133,13 +127,13 @@ bool g_no_type_info = {};
 bool g_no_threads = {};
 bool g_is_debug_build = {};
 
-void main(int argc, char **argv) {
+int main(int argc, char **argv) {
     init_timer(&g_global_timer);
     double application_start_time = query_timer(&g_global_timer);
 
     if (argc < 3) {
         print_usage();
-        return;
+        return 0;
     }
 
     Dynamic_Arena dynamic_arena = {};
@@ -168,13 +162,13 @@ void main(int argc, char **argv) {
     else {
         printf("Unknown compiler flag: %s\n", argv[1]);
         print_usage();
-        return;
+        return 0;
     }
 
     char *file_to_compile = argv[2];
     if (!ends_with(file_to_compile, ".sif")) {
         printf("File to compile must end with '.sif'");
-        return;
+        return 0;
     }
 
     bool show_timings = false;
@@ -210,11 +204,11 @@ void main(int argc, char **argv) {
         else if (strcmp(arg, "-o") == 0) {
             if ((i+1) >= argc) {
                 printf("Missing argument for -o flag.");
-                return;
+                return 0;
             }
             if (!ends_with(argv[i+1], ".exe")) {
                 printf("Argument for -o must end with '.exe'");
-                return;
+                return 0;
             }
             output_exe_name = argv[i+1];
             i += 1;
@@ -222,7 +216,7 @@ void main(int argc, char **argv) {
         else {
             printf("Unknown compiler flag: %s\n", arg);
             print_usage();
-            return;
+            return 0;
         }
     }
 
@@ -244,7 +238,7 @@ void main(int argc, char **argv) {
     Ast_Block *global_scope = begin_parsing(file_to_compile);
     if (!global_scope || g_logged_error) {
         printf("There were errors.\n");
-        return;
+        return 0;
     }
 
     add_global_declarations(global_scope);
@@ -254,7 +248,7 @@ void main(int argc, char **argv) {
     bool check_success = typecheck_global_scope(global_scope);
     if (!check_success) {
         printf("There were errors.\n");
-        return;
+        return 0;
     }
 
     if (ir_test) {
@@ -313,7 +307,7 @@ void main(int argc, char **argv) {
         printf(errors);
         if (strlen(errors) != 0) {
             printf("\nInternal compiler error: sif encountered an error when compiling C output. Exiting.\n");
-            return;
+            return 0;
         }
 
         if (!keep_temp_files) {

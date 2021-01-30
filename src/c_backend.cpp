@@ -508,16 +508,41 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
             assert(!is_type_untyped(expr->operand.type));
             if (is_type_float(expr->operand.type)) {
                 if (expr->operand.type->size == 4) {
-                    expr_sb.printf("%.*e", DECIMAL_DIG, expr->operand.f32_value);
+                    expr_sb.printf("%.*e", FLT_DECIMAL_DIG, expr->operand.f32_value);
                 }
                 else {
                     assert(expr->operand.type->size == 8);
-                    expr_sb.printf("%.*e", DECIMAL_DIG, expr->operand.f64_value);
+                    expr_sb.printf("%.*e", DBL_DECIMAL_DIG, expr->operand.f64_value);
                 }
             }
             else if (is_type_integer(expr->operand.type)) {
+                if (is_type_signed(expr->operand.type)) {
+                    switch (expr->operand.type->size) {
+                        case 1: expr_sb.printf("%lld",   expr->operand.int_value); break;
+                        case 2: expr_sb.printf("%lld",   expr->operand.int_value); break;
+                        case 4: expr_sb.printf("%lld",   expr->operand.int_value); break;
+                        case 8: expr_sb.printf("%lldll", expr->operand.int_value); break;
+                        default: {
+                            printf("signed size: %d\n", expr->operand.type->size);
+                            assert(false);
+                        }
+                    }
+                }
+                else {
+                    switch (expr->operand.type->size) {
+                        case 1: expr_sb.printf("%llu",    expr->operand.uint_value); break;
+                        case 2: expr_sb.printf("%llu",    expr->operand.uint_value); break;
+                        case 4: expr_sb.printf("%llu",    expr->operand.uint_value); break;
+                        case 8: expr_sb.printf("%llullu", expr->operand.uint_value); break;
+                        default: {
+                            printf("unsigned size: %d\n", expr->operand.type->size);
+                            assert(false);
+                        }
+                    }
+                }
+
                 // todo(josh): :IntUintCorrectness
-                expr_sb.printf("%lld", expr->operand.int_value);
+
             }
             else if (expr->operand.type == type_bool) {
                 expr_sb.print(expr->operand.bool_value ? "true" : "false");
@@ -1455,145 +1480,143 @@ u32 type_info_worker_proc(void *userdata) {
     Type_Info_Generation_Payload *payload = (Type_Info_Generation_Payload *)userdata;
     Chunked_String_Builder *sb = &payload->sb;
 
-    if (!g_no_type_info) {
-        String_Builder ti_name_sb = make_string_builder(g_global_linear_allocator, 128);
-        for (int idx = payload->start_index; idx < payload->one_past_last_index; idx += 1) {
-            Type *type = all_types[idx];
-            assert(type->id = idx+1);
-            ti_name_sb.clear();
-            ti_name_sb.printf("ti%d", type->id);
-            char *ti_name = ti_name_sb.string();
+    String_Builder ti_name_sb = make_string_builder(g_global_linear_allocator, 128);
+    for (int idx = payload->start_index; idx < payload->one_past_last_index; idx += 1) {
+        Type *type = all_types[idx];
+        assert(type->id = idx+1);
+        ti_name_sb.clear();
+        ti_name_sb.printf("ti%d", type->id);
+        char *ti_name = ti_name_sb.string();
 
-            int printable_name_length;
-            char *printable_name = type_to_string(type, &printable_name_length);
+        int printable_name_length;
+        char *printable_name = type_to_string(type, &printable_name_length);
 
-            switch (type->kind) {
-                case TYPE_PRIMITIVE: {
-                    if (is_type_integer(type)) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_integer->link_name, sif_runtime_type_info_integer->structure->type->id, type->id, type->size, type->align);
-                        sb->printf("    %s->is_signed = %s;\n", ti_name, (type->flags & TF_SIGNED ? "true" : "false"));
-                    }
-                    else if (is_type_float(type)) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_float->link_name, sif_runtime_type_info_float->structure->type->id, type->id, type->size, type->align);
-                    }
-                    else if (type == type_bool) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_bool->link_name, sif_runtime_type_info_bool->structure->type->id, type->id, type->size, type->align);
-                    }
-                    else if (type == type_string) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, sif_runtime_type_info_string->structure->type->id, type->id, type->size, type->align);
-                    }
-                    else if (type == type_rawptr) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, sif_runtime_type_info_pointer->structure->type->id, type->id, type->size, type->align);
-                    }
-                    else if (type == type_typeid) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_typeid->link_name, sif_runtime_type_info_typeid->structure->type->id, type->id, type->size, type->align);
-                    }
-                    else if (type == type_any) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_struct->link_name, sif_runtime_type_info_struct->structure->type->id, type->id, type->size, type->align);
-                        c_print_gen_type_info_struct(sb, ti_name, type);
-                    }
-                    else if (type == type_cstring) {
-                        sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, sif_runtime_type_info_string->structure->type->id, type->id, type->size, type->align);
-                        sb->printf("    %s->is_cstring = true;\n", ti_name);
-                    }
-                    else {
-                        printf("Unhandled primitive type: %\n", type_to_string(type));
-                    }
-                    break;
+        switch (type->kind) {
+            case TYPE_PRIMITIVE: {
+                if (is_type_integer(type)) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_integer->link_name, sif_runtime_type_info_integer->structure->type->id, type->id, type->size, type->align);
+                    sb->printf("    %s->is_signed = %s;\n", ti_name, (type->flags & TF_SIGNED ? "true" : "false"));
                 }
-                case TYPE_ARRAY: {
-                    Type_Array *type_array = (Type_Array *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_array->link_name, sif_runtime_type_info_array->structure->type->id, type->id, type->size, type->align);
-                    sb->printf("    %s->array_of = GTIP(%d);\n", ti_name, type_array->array_of->id);
-                    sb->printf("    %s->count = %d;\n", ti_name, type_array->count);
-                    break;
+                else if (is_type_float(type)) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_float->link_name, sif_runtime_type_info_float->structure->type->id, type->id, type->size, type->align);
                 }
-                case TYPE_VARARGS:
-                case TYPE_SLICE: {
-                    Type *slice_of = nullptr;
-                    if (is_type_slice(type)) {
-                        Type_Slice *type_slice = (Type_Slice *)type;
-                        slice_of = type_slice->slice_of;
-                    }
-                    else {
-                        assert(is_type_varargs(type));
-                        Type_Varargs *varargs = (Type_Varargs *)type;
-                        slice_of = varargs->varargs_of;
-                    }
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_slice->link_name, sif_runtime_type_info_slice->structure->type->id, type->id, type->size, type->align);
-                    sb->printf("    %s->slice_of = GTIP(%d);\n", ti_name, slice_of->id);
-                    break;
+                else if (type == type_bool) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_bool->link_name, sif_runtime_type_info_bool->structure->type->id, type->id, type->size, type->align);
                 }
-                case TYPE_REFERENCE: {
-                    Type_Reference *type_reference = (Type_Reference *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_reference->link_name, sif_runtime_type_info_reference->structure->type->id, type->id, type->size, type->align);
-                    sb->printf("    %s->reference_to = GTIP(%d);\n", ti_name, type_reference->reference_to->id);
-                    break;
+                else if (type == type_string) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, sif_runtime_type_info_string->structure->type->id, type->id, type->size, type->align);
                 }
-                case TYPE_STRUCT: {
-                    Type_Struct *struct_type = (Type_Struct *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? sif_runtime_type_info_union->link_name : sif_runtime_type_info_struct->link_name), (struct_type->is_union ? sif_runtime_type_info_union->structure->type->id : sif_runtime_type_info_struct->structure->type->id), type->id, type->size, type->align);
-                    // todo(josh): make macros for these
-                    if (struct_type->notes.count > 0) {
-                        sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, struct_type->notes.count);
-                        sb->printf("    %s->notes.count = %d;\n", ti_name, struct_type->notes.count);
-                        For (note_idx, struct_type->notes) {
-                            char *note = struct_type->notes[note_idx];
-                            sb->printf("    ((String *)%s->notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, note_idx, note, strlen(note));
-                        }
-                    }
-                    c_print_gen_type_info_struct(sb, ti_name, type);
-                    break;
-                }
-                case TYPE_POINTER: {
-                    Type_Pointer *pointer = (Type_Pointer *)type;
+                else if (type == type_rawptr) {
                     sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, sif_runtime_type_info_pointer->structure->type->id, type->id, type->size, type->align);
-                    sb->printf("    %s->pointer_to = GTIP(%d);\n", ti_name, pointer->pointer_to->id);
-                    break;
                 }
-                case TYPE_ENUM: {
-                    Type_Enum *type_enum = (Type_Enum *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_enum->link_name, sif_runtime_type_info_enum->structure->type->id, type->id, type->size, type->align);
-                    // todo(josh): make macros for these
-                    if (type_enum->notes.count > 0) {
-                        sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, type_enum->notes.count);
-                        sb->printf("    %s->notes.count = %d;\n", ti_name, type_enum->notes.count);
-                        For (note_idx, type_enum->notes) {
-                            char *note = type_enum->notes[note_idx];
-                            sb->printf("    ((String *)%s->notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, note_idx, note, strlen(note));
-                        }
-                    }
-                    sb->printf("    %s->base_type = GTIP(%d);\n", ti_name, type_enum->base_type->id);
-                    sb->printf("    %s->fields.data = malloc(%d * sizeof(struct %s));\n", ti_name, type_enum->constant_fields.count, sif_runtime_type_info_enum_field->link_name);
-                    sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->constant_fields.count);
-                    For (idx, type_enum->constant_fields) {
-                        Struct_Field field = type_enum->constant_fields[idx];
-                        assert(field.offset == -1);
-                        assert(field.operand.flags & OPERAND_CONSTANT);
-                        sb->printf("    GTIEF(%s, %d, \"%s\", %d, %d);\n", ti_name, idx, field.name, strlen(field.name), field.operand.int_value);
-                    }
-                    break;
+                else if (type == type_typeid) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_typeid->link_name, sif_runtime_type_info_typeid->structure->type->id, type->id, type->size, type->align);
                 }
-                case TYPE_PROCEDURE: {
-                    Type_Procedure *procedure = (Type_Procedure *)type;
-                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_procedure->link_name, sif_runtime_type_info_procedure->structure->type->id, type->id, type->size, type->align);
-                    if (procedure->parameter_types.count) {
-                        sb->printf("    %s->parameter_types.data = malloc(%d * sizeof(struct %s *));\n", ti_name, procedure->parameter_types.count, sif_runtime_type_info->link_name);
-                        sb->printf("    %s->parameter_types.count = %d;\n", ti_name, procedure->parameter_types.count);
-                        For (idx, procedure->parameter_types) {
-                            Type *param_type = procedure->parameter_types[idx];
-                            sb->printf("    GPPT(%s, %d, %d);\n", ti_name, idx, param_type->id);
-                        }
-                    }
-                    if (procedure->return_type) {
-                        sb->printf("    %s->return_type = GTIP(%d);\n", ti_name, procedure->return_type->id);
-                    }
-                    break;
+                else if (type == type_any) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_struct->link_name, sif_runtime_type_info_struct->structure->type->id, type->id, type->size, type->align);
+                    c_print_gen_type_info_struct(sb, ti_name, type);
                 }
-                default: {
-                    assert(false);
-                    break;
+                else if (type == type_cstring) {
+                    sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_string->link_name, sif_runtime_type_info_string->structure->type->id, type->id, type->size, type->align);
+                    sb->printf("    %s->is_cstring = true;\n", ti_name);
                 }
+                else {
+                    printf("Unhandled primitive type: %\n", type_to_string(type));
+                }
+                break;
+            }
+            case TYPE_ARRAY: {
+                Type_Array *type_array = (Type_Array *)type;
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_array->link_name, sif_runtime_type_info_array->structure->type->id, type->id, type->size, type->align);
+                sb->printf("    %s->array_of = GTIP(%d);\n", ti_name, type_array->array_of->id);
+                sb->printf("    %s->count = %d;\n", ti_name, type_array->count);
+                break;
+            }
+            case TYPE_VARARGS:
+            case TYPE_SLICE: {
+                Type *slice_of = nullptr;
+                if (is_type_slice(type)) {
+                    Type_Slice *type_slice = (Type_Slice *)type;
+                    slice_of = type_slice->slice_of;
+                }
+                else {
+                    assert(is_type_varargs(type));
+                    Type_Varargs *varargs = (Type_Varargs *)type;
+                    slice_of = varargs->varargs_of;
+                }
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_slice->link_name, sif_runtime_type_info_slice->structure->type->id, type->id, type->size, type->align);
+                sb->printf("    %s->slice_of = GTIP(%d);\n", ti_name, slice_of->id);
+                break;
+            }
+            case TYPE_REFERENCE: {
+                Type_Reference *type_reference = (Type_Reference *)type;
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_reference->link_name, sif_runtime_type_info_reference->structure->type->id, type->id, type->size, type->align);
+                sb->printf("    %s->reference_to = GTIP(%d);\n", ti_name, type_reference->reference_to->id);
+                break;
+            }
+            case TYPE_STRUCT: {
+                Type_Struct *struct_type = (Type_Struct *)type;
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, (struct_type->is_union ? sif_runtime_type_info_union->link_name : sif_runtime_type_info_struct->link_name), (struct_type->is_union ? sif_runtime_type_info_union->structure->type->id : sif_runtime_type_info_struct->structure->type->id), type->id, type->size, type->align);
+                // todo(josh): make macros for these
+                if (struct_type->notes.count > 0) {
+                    sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, struct_type->notes.count);
+                    sb->printf("    %s->notes.count = %d;\n", ti_name, struct_type->notes.count);
+                    For (note_idx, struct_type->notes) {
+                        char *note = struct_type->notes[note_idx];
+                        sb->printf("    ((String *)%s->notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, note_idx, note, strlen(note));
+                    }
+                }
+                c_print_gen_type_info_struct(sb, ti_name, type);
+                break;
+            }
+            case TYPE_POINTER: {
+                Type_Pointer *pointer = (Type_Pointer *)type;
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_pointer->link_name, sif_runtime_type_info_pointer->structure->type->id, type->id, type->size, type->align);
+                sb->printf("    %s->pointer_to = GTIP(%d);\n", ti_name, pointer->pointer_to->id);
+                break;
+            }
+            case TYPE_ENUM: {
+                Type_Enum *type_enum = (Type_Enum *)type;
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_enum->link_name, sif_runtime_type_info_enum->structure->type->id, type->id, type->size, type->align);
+                // todo(josh): make macros for these
+                if (type_enum->notes.count > 0) {
+                    sb->printf("    %s->notes.data  = malloc(%d * sizeof(String));\n", ti_name, type_enum->notes.count);
+                    sb->printf("    %s->notes.count = %d;\n", ti_name, type_enum->notes.count);
+                    For (note_idx, type_enum->notes) {
+                        char *note = type_enum->notes[note_idx];
+                        sb->printf("    ((String *)%s->notes.data)[%d] = MAKE_STRING(\"%s\", %d);\n", ti_name, note_idx, note, strlen(note));
+                    }
+                }
+                sb->printf("    %s->base_type = GTIP(%d);\n", ti_name, type_enum->base_type->id);
+                sb->printf("    %s->fields.data = malloc(%d * sizeof(struct %s));\n", ti_name, type_enum->constant_fields.count, sif_runtime_type_info_enum_field->link_name);
+                sb->printf("    %s->fields.count = %d;\n", ti_name, type_enum->constant_fields.count);
+                For (idx, type_enum->constant_fields) {
+                    Struct_Field field = type_enum->constant_fields[idx];
+                    assert(field.offset == -1);
+                    assert(field.operand.flags & OPERAND_CONSTANT);
+                    sb->printf("    GTIEF(%s, %d, \"%s\", %d, %d);\n", ti_name, idx, field.name, strlen(field.name), field.operand.int_value);
+                }
+                break;
+            }
+            case TYPE_PROCEDURE: {
+                Type_Procedure *procedure = (Type_Procedure *)type;
+                sb->printf("    MTI(%s, MAKE_STRING(\"%s\", %d), %s, %d, %d, %d, %d);\n", ti_name, printable_name, printable_name_length, sif_runtime_type_info_procedure->link_name, sif_runtime_type_info_procedure->structure->type->id, type->id, type->size, type->align);
+                if (procedure->parameter_types.count) {
+                    sb->printf("    %s->parameter_types.data = malloc(%d * sizeof(struct %s *));\n", ti_name, procedure->parameter_types.count, sif_runtime_type_info->link_name);
+                    sb->printf("    %s->parameter_types.count = %d;\n", ti_name, procedure->parameter_types.count);
+                    For (idx, procedure->parameter_types) {
+                        Type *param_type = procedure->parameter_types[idx];
+                        sb->printf("    GPPT(%s, %d, %d);\n", ti_name, idx, param_type->id);
+                    }
+                }
+                if (procedure->return_type) {
+                    sb->printf("    %s->return_type = GTIP(%d);\n", ti_name, procedure->return_type->id);
+                }
+                break;
+            }
+            default: {
+                assert(false);
+                break;
             }
         }
     }
@@ -1602,8 +1625,6 @@ u32 type_info_worker_proc(void *userdata) {
 }
 
 
-
-extern bool g_is_debug_build;
 
 Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     Actual_Declarations_Payload actual_declarations_payload1 = {};
@@ -1621,16 +1642,19 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
 
 
     Type_Info_Generation_Payload type_info_generation_payload1 = {};
-    type_info_generation_payload1.sb = make_chunked_string_builder(g_global_linear_allocator, 10 * 1024);
-    type_info_generation_payload1.start_index = 0;
-    type_info_generation_payload1.one_past_last_index = all_types.count / 2;
-    Thread type_info_thread1 = create_thread(type_info_worker_proc, &type_info_generation_payload1);
-
     Type_Info_Generation_Payload type_info_generation_payload2 = {};
-    type_info_generation_payload2.sb = make_chunked_string_builder(g_global_linear_allocator, 10 * 1024);
-    type_info_generation_payload2.start_index = all_types.count / 2;
-    type_info_generation_payload2.one_past_last_index = all_types.count;
-    Thread type_info_thread2 = create_thread(type_info_worker_proc, &type_info_generation_payload2);
+    if (!g_no_type_info) {
+        type_info_generation_payload1.sb = make_chunked_string_builder(g_global_linear_allocator, 10 * 1024);
+        type_info_generation_payload1.start_index = 0;
+        type_info_generation_payload1.one_past_last_index = all_types.count / 2;
+        Thread type_info_thread1 = create_thread(type_info_worker_proc, &type_info_generation_payload1);
+
+        type_info_generation_payload2.sb = make_chunked_string_builder(g_global_linear_allocator, 10 * 1024);
+        type_info_generation_payload2.start_index = all_types.count / 2;
+        type_info_generation_payload2.one_past_last_index = all_types.count;
+        Thread type_info_thread2 = create_thread(type_info_worker_proc, &type_info_generation_payload2);
+    }
+
 
 
 
@@ -1786,10 +1810,12 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.printf("    // Gen Procedure Parameter Type\n");
     sb.printf("    #define GPPT(_varname, _param_index, _type_index) ((struct %s **)_varname->parameter_types.data)[_param_index] = GTIP(_type_index);\n", sif_runtime_type_info->link_name);
     double type_info_wait_start_time = query_timer(&g_global_timer);
-    while (!type_info_generation_payload1.done) { sleep(1); }
-    sb.print(type_info_generation_payload1.sb.make_string());
-    while (!type_info_generation_payload2.done) { sleep(1); }
-    sb.print(type_info_generation_payload2.sb.make_string());
+    if (!g_no_type_info) {
+        while (!type_info_generation_payload1.done) { sleep(1); }
+        sb.print(type_info_generation_payload1.sb.make_string());
+        while (!type_info_generation_payload2.done) { sleep(1); }
+        sb.print(type_info_generation_payload2.sb.make_string());
+    }
     double type_info_wait_end_time = query_timer(&g_global_timer);
     sb.print("}\n");
 

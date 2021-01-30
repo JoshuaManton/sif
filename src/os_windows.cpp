@@ -42,13 +42,15 @@ void delete_file(char *filename) {
 
 void init_timer(Timer *timer) {
     LARGE_INTEGER large_integer_frequency = {};
-    assert(QueryPerformanceFrequency(&large_integer_frequency) != 0);
+    bool ok = QueryPerformanceFrequency(&large_integer_frequency) != 0;
+    assert(ok);
     timer->frequency = large_integer_frequency.QuadPart/1000.0;
 }
 
 double query_timer(Timer *timer) {
     LARGE_INTEGER large_integer_counter = {};
-    assert(QueryPerformanceCounter(&large_integer_counter) != 0);
+    bool ok = QueryPerformanceCounter(&large_integer_counter) != 0;
+    assert(ok);
     return large_integer_counter.QuadPart / timer->frequency;
 }
 

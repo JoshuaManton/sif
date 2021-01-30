@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cassert>
 #include <stdarg.h>
 
 #include "basic.h"
@@ -450,7 +449,7 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
         report_error(location, "Internal compiler error: Problem scanning number literal as uint: errno: %d", errno);
         errno = 0;
     }
-    *int_value   = strtoll(result, nullptr, 0);
+    *int_value = strtoll(result, nullptr, 0);
     if (errno != 0) {
         *int_value = (i64)*uint_value;
         errno = 0;

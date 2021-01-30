@@ -172,11 +172,12 @@ void init_checker() {
 
     type_polymorphic = NEW_TYPE(Type_Primitive("type polymorphic", -1, -1), false); type_polymorphic->flags = TF_POLYMORPHIC;
 
-    assert(try_add_variable_type_field(type_string, intern_string(g_interned_data_string), get_or_create_type_pointer_to(type_u8), 0, {}));
-    assert(try_add_variable_type_field(type_string, intern_string(g_interned_count_string), type_int, 8, {}));
+    bool ok = false;
+    ok = try_add_variable_type_field(type_string, intern_string(g_interned_data_string), get_or_create_type_pointer_to(type_u8), 0, {}); assert(ok);
+    ok = try_add_variable_type_field(type_string, intern_string(g_interned_count_string), type_int, 8, {});                              assert(ok);
 
-    assert(try_add_variable_type_field(type_any, intern_string(g_interned_data_string), type_rawptr, 0, {}));
-    assert(try_add_variable_type_field(type_any, intern_string(g_interned_type_string), type_typeid, 8, {}));
+    ok = try_add_variable_type_field(type_any, intern_string(g_interned_data_string), type_rawptr, 0, {});                               assert(ok);
+    ok = try_add_variable_type_field(type_any, intern_string(g_interned_type_string), type_typeid, 8, {});                               assert(ok);
 }
 
 void add_ordered_declaration(Declaration *declaration) {
@@ -186,32 +187,33 @@ void add_ordered_declaration(Declaration *declaration) {
 void add_global_declarations(Ast_Block *block) {
     assert(type_i8 != nullptr);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block),  g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block), g_global_linear_allocator)));
+    bool ok = false;
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i8"),  type_i8, block),  g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i16"), type_i16, block), g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i32"), type_i32, block), g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("i64"), type_i64, block), g_global_linear_allocator));         assert(ok);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block),  g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block), g_global_linear_allocator)));
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u8"),  type_u8, block),  g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u16"), type_u16, block), g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u32"), type_u32, block), g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("u64"), type_u64, block), g_global_linear_allocator));         assert(ok);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block), g_global_linear_allocator)));
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f32"), type_f32, block), g_global_linear_allocator));         assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("f64"), type_f64, block), g_global_linear_allocator));         assert(ok);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block),  g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block), g_global_linear_allocator)));
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("byte"),  type_u8, block),  g_global_linear_allocator));       assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("int"),   type_i64, block), g_global_linear_allocator));       assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("uint"),  type_u64, block), g_global_linear_allocator));       assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("float"), type_f32, block), g_global_linear_allocator));       assert(ok);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block), g_global_linear_allocator)));
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("bool"), type_bool, block), g_global_linear_allocator));       assert(ok);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block), g_global_linear_allocator)));
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block), g_global_linear_allocator)));
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("typeid"),  type_typeid,  block), g_global_linear_allocator)); assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("string"),  type_string,  block), g_global_linear_allocator)); assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("cstring"), type_cstring, block), g_global_linear_allocator)); assert(ok);
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("rawptr"),  type_rawptr,  block), g_global_linear_allocator)); assert(ok);
 
-    assert(register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block), g_global_linear_allocator)));
+    ok = register_declaration(block, SIF_NEW_CLONE(Type_Declaration(intern_string("any"), type_any, block), g_global_linear_allocator));         assert(ok);
 }
 
 Type_Struct *make_incomplete_type_for_struct(Ast_Struct *structure) {
@@ -425,7 +427,9 @@ bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
             case TYPE_STRUCT: {
                 Type_Struct *struct_type = (Type_Struct *)type;
                 Ast_Struct *structure = struct_type->ast_struct;
-                assert(check_declaration(structure->declaration, {})); // note(josh): just for making sure the link_name is set
+                if (!check_declaration(structure->declaration, {})) { // note(josh): just for making sure the link_name is set
+                    assert(false);
+                }
                 assert(structure->declaration->link_name);
                 add_ordered_declaration(structure->declaration);
                 break;
@@ -616,9 +620,12 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     Operand field_operand(field->location);
                     field_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
                     field_operand.type = enum_type;
-                    field_operand.int_value = enum_field_value;
+                    field_operand.int_value  = enum_field_value;
+                    field_operand.uint_value = enum_field_value;
                     enum_field_value += 1;
-                    assert(try_add_constant_type_field(enum_type, field->name, field_operand, field->location));
+                    if (!try_add_constant_type_field(enum_type, field->name, field_operand, field->location)) {
+                        assert(false);
+                    }
                     if (!register_declaration(enum_decl->ast_enum->enum_block, SIF_NEW_CLONE(Constant_Declaration(field->name, field_operand, enum_decl->ast_enum->enum_block, field->location), g_global_linear_allocator))) {
                         return false;
                     }
@@ -854,6 +861,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 return false;
             }
         }
+        // todo(josh): this feels bad
         For (idx, struct_decl->structure->procedures) {
             Ast_Proc *procedure = struct_decl->structure->procedures[idx];
             if (!check_declaration(procedure->header->declaration, usage_location)) {
@@ -1360,12 +1368,17 @@ Type_Array *get_or_create_type_array_of(Type *array_of, int count) {
         }
     }
     Type_Array *new_type = NEW_TYPE(Type_Array(array_of, count));
-    assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {}));
+    if (!try_add_variable_type_field(new_type, intern_string(g_interned_data_string), type_rawptr, 0, {})) {
+        assert(false);
+    }
     Operand operand = {};
     operand.type = type_int;
     operand.flags = OPERAND_RVALUE | OPERAND_CONSTANT;
-    operand.int_value = count;
-    assert(try_add_constant_type_field(new_type, intern_string(g_interned_count_string), operand, {}));
+    operand.int_value  = count;
+    operand.uint_value = count;
+    if (!try_add_constant_type_field(new_type, intern_string(g_interned_count_string), operand, {})) {
+        assert(false);
+    }
     return new_type;
 }
 
@@ -1378,8 +1391,12 @@ Type_Slice *get_or_create_type_slice_of(Type *slice_of) {
     Type_Slice *new_type = NEW_TYPE(Type_Slice(slice_of, pointer_to_element_type));
     new_type->size  = 16;
     new_type->align = 8;
-    assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
-    assert(try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {}));
+    if (!try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {})) {
+        assert(false);
+    }
+    if (!try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {})) {
+        assert(false);
+    }
     slice_of->slice_of_this_type = new_type;
     return new_type;
 }
@@ -1401,8 +1418,12 @@ Type_Varargs *get_or_create_type_varargs_of(Type *varargs_of, bool is_c_varargs)
     Type_Varargs *new_type = NEW_TYPE(Type_Varargs(varargs_of, pointer_to_element_type, slice_type, is_c_varargs));
     new_type->size  = 16;
     new_type->align = 8;
-    assert(try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {}));
-    assert(try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {}));
+    if (!try_add_variable_type_field(new_type, intern_string(g_interned_data_string), pointer_to_element_type, 0, {})) {
+        assert(false);
+    }
+    if (!try_add_variable_type_field(new_type, intern_string(g_interned_count_string), type_int, 8, {})) {
+        assert(false);
+    }
     if (is_c_varargs) {
         varargs_of->c_varargs_of_this_type = new_type;
     }
@@ -1973,7 +1994,9 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
             assert(parameter_operand.type != nullptr);
             Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, parameter_operand, block_to_insert_into, value_expr->location), g_global_linear_allocator);
             poly->inserted_declaration = declaration;
-            assert(register_declaration(block_to_insert_into, declaration));
+            if (!register_declaration(block_to_insert_into, declaration)) {
+                assert(false);
+            }
             out_polymorphic_declarations->append(declaration);
             break;
         }
@@ -2013,7 +2036,9 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             type_operand.type_value = concrete_type;
             Declaration *declaration = SIF_NEW_CLONE(Constant_Declaration(poly->ident->name, type_operand, block_to_insert_into, type_expr->location), g_global_linear_allocator);
             poly->inserted_declaration = declaration;
-            assert(register_declaration(block_to_insert_into, declaration));
+            if (!register_declaration(block_to_insert_into, declaration)) {
+                assert(false);
+            }
             out_polymorphic_declarations->append(declaration);
             break;
         }
@@ -2103,7 +2128,8 @@ bool try_create_polymorph_type_declarations(Ast_Expr *type_expr, Type *parameter
             }
             Type_Procedure *parameter_type_proc = (Type_Procedure *)parameter_type;
             if (proc_type->header->parameters.count != parameter_type_proc->parameter_types.count) {
-                assert(false);
+                report_error(parameter_location, "Expected procedure type with %d parameters, got %d.", proc_type->header->parameters.count, parameter_type_proc->parameter_types.count);
+                return false;
             }
             For (idx, parameter_type_proc->parameter_types) {
                 Type *proc_param_type = parameter_type_proc->parameter_types[idx];
@@ -2590,7 +2616,9 @@ Ast_Proc *find_operator_overload(Ast_Struct *structure, Array<Ast_Expr *> exprs,
             // actually match the types
             For (expr_idx, exprs) {
                 Ast_Expr *expr = exprs[expr_idx];
-                assert(match_types(expr->operand, proc->header->parameters[expr_idx]->type, &expr->operand, false));
+                if (!match_types(expr->operand, proc->header->parameters[expr_idx]->type, &expr->operand, false)) {
+                    assert(false);
+                }
             }
             return proc;
         }
@@ -2879,8 +2907,8 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                         return nullptr;
                     }
 
-                    assert(match_types(*lhs_operand, most_concrete, lhs_operand));
-                    assert(match_types(*rhs_operand, most_concrete, rhs_operand));
+                    if (!match_types(*lhs_operand, most_concrete, lhs_operand)) { assert(false); }
+                    if (!match_types(*rhs_operand, most_concrete, rhs_operand)) { assert(false); }
                     bool ok = binary_eval(*lhs_operand, *rhs_operand, binary->op, binary->location, &result_operand);
                     if (!ok) {
                         return nullptr;
@@ -3614,9 +3642,13 @@ bool typecheck_node(Ast_Node *node) {
             if (!check_declaration(var->declaration, var->location)) {
                 return false;
             }
-            assert(typecheck_expr(var->name_expr));
+            if (!typecheck_expr(var->name_expr)) {
+                assert(false);
+            }
             if (var->type_expr) {
-                assert(typecheck_expr(var->type_expr));
+                if (!typecheck_expr(var->type_expr)) {
+                    assert(false);
+                }
             }
             if (var->is_using) {
                 if (!complete_type(var->type, var->location, TCF_USINGS)) {
