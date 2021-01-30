@@ -2954,6 +2954,12 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 if (!complete_type(type_operand->type_value, transmute->location, TCF_SIZE)) {
                     return nullptr;
                 }
+                rhs_operand->type = try_concretize_type_without_context(rhs_operand->type);
+                if (rhs_operand->type == nullptr) {
+                    assert(rhs_operand->type == type_untyped_null);
+                    report_error(transmute->rhs->location, "Cannot transmute untyped null.");
+                    return nullptr;
+                }
                 if (!complete_type(rhs_operand->type, rhs_operand->location, TCF_SIZE)) {
                     return nullptr;
                 }
@@ -2966,19 +2972,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 }
                 result_operand.type = type_operand->type_value;
                 result_operand.flags = OPERAND_RVALUE;
-                if (rhs_operand->flags & OPERAND_CONSTANT) {
-                    result_operand.flags |= OPERAND_CONSTANT;
-                    result_operand.uint_value            = rhs_operand->uint_value;
-                    result_operand.int_value             = rhs_operand->int_value;
-                    result_operand.f32_value             = rhs_operand->f32_value;
-                    result_operand.f64_value             = rhs_operand->f64_value;
-                    result_operand.bool_value            = rhs_operand->bool_value;
-                    result_operand.type_value            = rhs_operand->type_value;
-                    result_operand.scanned_string_value  = rhs_operand->scanned_string_value;
-                    result_operand.scanned_string_length = rhs_operand->scanned_string_length;
-                    result_operand.escaped_string_value  = rhs_operand->escaped_string_value;
-                    result_operand.escaped_string_length = rhs_operand->escaped_string_length;
-                }
                 break;
             }
             case EXPR_ADDRESS_OF: {
