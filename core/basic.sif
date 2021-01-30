@@ -54,6 +54,12 @@ proc max(a: $T, b: T) : T { if (a > b) { return a; } return b; }
 proc scan_line(allocator: Allocator): string {
   temp_string: string = new_string(256, allocator);
   c_scan_line(cast(cstring, temp_string.data), 256);
+  string_length: = 0;
+  for(i: = 0; i < 256 && temp_string[i] != 0; i += 1) {
+    if(temp_string[i] == '\n') break;
+    string_length += 1;
+  }
+  temp_string.count = string_length;
   return temp_string;
 }
 
