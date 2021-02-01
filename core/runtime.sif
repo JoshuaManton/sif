@@ -108,12 +108,12 @@ proc to_slice(arr: ^[$N]$E) : []E {
 
 struct Raw_Slice {
     data: rawptr;
-    count: int;
+    count: i64;
 } @sif_runtime
 
 struct Raw_String {
     data: rawptr;
-    count: int;
+    count: i64;
 } @sif_runtime
 
 

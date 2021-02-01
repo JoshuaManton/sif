@@ -3257,9 +3257,11 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
             case EXPR_CHAR_LITERAL: {
                 Expr_Char_Literal *char_literal = (Expr_Char_Literal *)expr;
                 result_operand.flags = OPERAND_CONSTANT | OPERAND_RVALUE;
-                result_operand.type = type_u8;
+                result_operand.type = type_untyped_integer;
                 result_operand.uint_value = char_literal->c;
                 result_operand.int_value  = char_literal->c;
+                result_operand.f32_value  = char_literal->c;
+                result_operand.f64_value  = char_literal->c;
                 break;
             }
             case EXPR_NULL: {
