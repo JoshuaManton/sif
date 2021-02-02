@@ -38,14 +38,10 @@ MEDIUM PRIORITY
 -add more comprehensive numbers test
 -add binary literals 0b0010110111100001
 -enum arrays @EnumArrays
--bug from bumbo {
-    main: int() {
-        print("Hello, World!\n");
-    }
-}
 -don't generate short-circuiting jumps if it is unnecessary
 -put struct constants in Type_Info
 -[?]int.{1, 2, 3}
+-add type_untyped_number that can convert to int or float so that type_untyped_int can't convert to float in the case of a char literal
 -deduplicate #foreign_import/#foreign_system_import
 -add assert to c_backend that makes sure all declarations have been checked. looks like some array type decls are bypassing check_declaration
 -block comments

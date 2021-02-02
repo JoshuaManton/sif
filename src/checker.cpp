@@ -2781,6 +2781,19 @@ bool typecheck_expr_list_against_type_tuple(Ast_Expr_List *list, Type_Tuple *tup
     return true;
 }
 
+bool typecheck_expr_array_type_with_known_count(Expr_Array_Type *expr_array, int count, Operand *out_operand) {
+    assert(expr_array->array_of != nullptr);
+    Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
+    if (!array_of_operand) {
+        return false;
+    }
+    assert((array_of_operand->flags & OPERAND_CONSTANT) && (array_of_operand->flags & OPERAND_TYPE));
+    out_operand->flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
+    out_operand->type = type_typeid;
+    out_operand->type_value = get_or_create_type_array_of(array_of_operand->type_value, count);
+    return true;
+}
+
 Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value) {
     assert(expr != nullptr);
 
@@ -3168,9 +3181,26 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     }
                 }
                 else {
-                    Operand *type_operand = typecheck_expr(compound_literal->type_expr, type_typeid);
-                    if (!type_operand) {
-                        return nullptr;
+                    Ast_Expr *type_expr = unparen_expr(compound_literal->type_expr);
+                    Operand *type_operand = nullptr;
+                    if (type_expr->expr_kind == EXPR_ARRAY_TYPE) {
+                        Expr_Array_Type *array_type_expr = (Expr_Array_Type *)type_expr;
+                        if (unparen_expr(array_type_expr->count_expr)->expr_kind == EXPR_UNKNOWN_ARRAY_COUNT) {
+                            Operand type_operand_value = {};
+                            if (!typecheck_expr_array_type_with_known_count(array_type_expr, compound_literal->exprs.count, &type_operand_value)) {
+                                return false;
+                            }
+                            assert(is_type_typeid(type_operand_value.type));
+                            assert(type_operand_value.type_value != nullptr);
+                            target_type = type_operand_value.type_value;
+                            type_operand = &type_operand_value;
+                        }
+                    }
+                    if (type_operand == nullptr) {
+                        type_operand = typecheck_expr(compound_literal->type_expr, type_typeid);
+                        if (!type_operand) {
+                            return nullptr;
+                        }
                     }
                     assert(is_type_typeid(type_operand->type));
                     assert(type_operand->type_value != nullptr);
@@ -3397,12 +3427,6 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
             }
             case EXPR_ARRAY_TYPE: {
                 Expr_Array_Type *expr_array = (Expr_Array_Type *)expr;
-                assert(expr_array->array_of != nullptr);
-                Operand *array_of_operand = typecheck_expr(expr_array->array_of, type_typeid);
-                if (!array_of_operand) {
-                    return nullptr;
-                }
-                assert((array_of_operand->flags & OPERAND_CONSTANT) && (array_of_operand->flags & OPERAND_TYPE));
                 Operand *count_operand = typecheck_expr(expr_array->count_expr, type_int);
                 if (!count_operand) {
                     return nullptr;
@@ -3412,9 +3436,9 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                     report_error(expr_array->count_expr->location, "Array size must be greater than 0.");
                     return nullptr;
                 }
-                result_operand.flags = OPERAND_CONSTANT | OPERAND_TYPE | OPERAND_RVALUE;
-                result_operand.type = type_typeid;
-                result_operand.type_value = get_or_create_type_array_of(array_of_operand->type_value, count_operand->int_value);
+                if (!typecheck_expr_array_type_with_known_count(expr_array, count_operand->int_value, &result_operand)) {
+                    return nullptr;
+                }
                 break;
             }
             case EXPR_SLICE_TYPE: {
@@ -3525,6 +3549,10 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
                 result_operand = *expr_operand;
                 result_operand.location = paren->location;
                 break;
+            }
+            case EXPR_UNKNOWN_ARRAY_COUNT: {
+                report_error(expr->location, "? is only allowed in array compound literals e.g. '[?]int.{1, 2, 3, 4}'.");
+                return nullptr;
             }
             default: {
                 assert(false);

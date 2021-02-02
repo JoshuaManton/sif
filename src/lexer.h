@@ -76,6 +76,8 @@ enum Token_Kind {
 
     TK_AMPERSAND, // bitwise AND and address-of
 
+    TK_QUESTION_MARK,
+
     TK_BIT_AND_ASSIGN,
     TK_BIT_OR,
     TK_BIT_OR_ASSIGN,

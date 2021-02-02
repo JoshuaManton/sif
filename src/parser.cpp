@@ -2116,6 +2116,10 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
             lexer->num_polymorphic_variables_parsed += 1;
             return SIF_NEW_CLONE(Expr_Polymorphic_Variable((Expr_Identifier *)ident, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
+        case TK_QUESTION_MARK: {
+            eat_next_token(lexer);
+            return SIF_NEW_CLONE(Expr_Unknown_Array_Count(lexer->allocator, lexer->current_block, token.location), lexer->allocator);
+        }
         default: {
             unexpected_token(lexer, token);
             return nullptr;

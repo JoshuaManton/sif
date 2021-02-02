@@ -456,6 +456,8 @@ enum Expr_Kind {
     EXPR_TRUE,
     EXPR_FALSE,
 
+    EXPR_UNKNOWN_ARRAY_COUNT,
+
     EXPR_SIZEOF,
     EXPR_TYPEOF,
     EXPR_TYPEOFELEMENT,
@@ -723,6 +725,12 @@ struct Expr_True : public Ast_Expr {
 struct Expr_False : public Ast_Expr {
     Expr_False(Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Expr(EXPR_FALSE, allocator, current_block, location)
+    {}
+};
+
+struct Expr_Unknown_Array_Count : public Ast_Expr {
+    Expr_Unknown_Array_Count(Allocator allocator, Ast_Block *current_block, Location location)
+    : Ast_Expr(EXPR_UNKNOWN_ARRAY_COUNT, allocator, current_block, location)
     {}
 };
 
