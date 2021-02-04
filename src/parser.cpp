@@ -598,6 +598,10 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
             switch (node->ast_kind) {
                 case AST_VAR: {
                     Ast_Var *var = (Ast_Var *)node;
+                    if (var->expr && !var->is_constant) {
+                        report_error(var->expr->location, "Default struct member values are not supported.");
+                        return nullptr;
+                    }
                     structure->fields.append(var);
                     var->belongs_to_struct = structure;
                     break;
