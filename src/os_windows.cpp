@@ -17,14 +17,36 @@ char *get_absolute_path(const char *filename, Allocator allocator) {
     return absolute_path;
 }
 
+
+
+wchar_t *cstring_to_wide(char *str, Allocator allocator) {
+    if (str == nullptr) {
+        return nullptr;
+    }
+    int query_num_chars = MultiByteToWideChar(CP_ACP, 0, str, -1, nullptr, 0);
+    if (query_num_chars <= 0) {
+        return nullptr;
+    }
+
+    wchar_t *wide_string = (wchar_t *)alloc(allocator, (query_num_chars+1) * sizeof(u16), true);
+    int result_num_chars = MultiByteToWideChar(CP_ACP, 0, str, -1, wide_string, query_num_chars);
+    assert(result_num_chars == query_num_chars);
+    return wide_string;
+}
+
 char *wide_to_cstring(wchar_t *wide, Allocator allocator) {
-    int query_result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
-    assert(query_result > 0);
+    if (wide == nullptr) {
+        return nullptr;
+    }
+    int query_num_chars = WideCharToMultiByte(CP_ACP, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+    if (query_num_chars <= 0) {
+        return nullptr;
+    }
+    assert(query_num_chars > 0);
 
-    char *cstring = (char *)alloc(allocator, query_result);
-    int result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, cstring, query_result, nullptr, nullptr);
-
-    assert(result == query_result);
+    char *cstring = (char *)alloc(allocator, query_num_chars+1, true);
+    int result_num_chars = WideCharToMultiByte(CP_ACP, 0, wide, -1, cstring, query_num_chars, nullptr, nullptr);
+    assert(result_num_chars == query_num_chars);
     return cstring;
 }
 

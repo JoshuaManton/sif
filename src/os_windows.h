@@ -12,7 +12,8 @@ double query_timer(Timer *timer);
 
 
 char *get_absolute_path(const char *filename, Allocator);
-char *wide_to_cstring(wchar_t *wide, Allocator);
+wchar_t *cstring_to_wide(char *str, Allocator allocator);
+char *wide_to_cstring(wchar_t *wide, Allocator allocator);
 char *get_current_exe_name(Allocator);
 
 void delete_file(char *);
