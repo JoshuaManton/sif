@@ -1983,7 +1983,7 @@ bool try_create_polymorph_value_declaration(Ast_Expr *value_expr, Operand parame
             break;
         }
         case EXPR_POLYMORPHIC_VARIABLE: {
-            // $name: T
+            // $foo
             Expr_Polymorphic_Variable *poly = (Expr_Polymorphic_Variable *)value_expr;
             assert(poly->inserted_declaration == nullptr);
             assert(parameter_operand.type != nullptr);

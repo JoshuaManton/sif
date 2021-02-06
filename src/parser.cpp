@@ -214,7 +214,11 @@ Ast_Expr_List *parse_expr_list(Lexer *lexer) {
 
 
 
-Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
+enum Parse_Var_Flags {
+    PVF_ALLOW_POLYMORPHIC = 1 << 0,
+};
+
+Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name, u64 flags = 0) {
     Token root_token;
     if (!peek_next_token(lexer, &root_token)) {
         report_error(lexer->location, "Unexpected end of file.");
@@ -315,12 +319,14 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name) {
     var->is_using = is_using;
     var->declaration = SIF_NEW_CLONE(Var_Declaration(var, lexer->current_block), lexer->allocator);
     var->declaration->notes = notes;
-    var->is_polymorphic_value = is_polymorphic_value;
-    if (!var->is_polymorphic_value) {
-        if (!register_declaration(lexer->current_block, var->declaration)) {
+
+    if (!(flags & PVF_ALLOW_POLYMORPHIC)) {
+        if (var->is_polymorphic_type || var->is_polymorphic_value) {
+            report_error(var->location, "Polymorphic variable is not allowed here.");
             return nullptr;
         }
     }
+
     return var;
 }
 
@@ -414,20 +420,23 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
                 EXPECT(lexer, TK_COMMA, nullptr);
             }
 
-            Ast_Var *var = parse_var(lexer, nullptr);
+            Ast_Var *var = parse_var(lexer, nullptr, PVF_ALLOW_POLYMORPHIC);
             if (!var) {
                 return nullptr;
             }
+            if (!var->is_polymorphic_value) {
+                if (!register_declaration(header->procedure_block, var->declaration)) {
+                    return nullptr;
+                }
+            }
             if (var->is_polymorphic_value || var->is_polymorphic_type) {
-                header->polymorphic_parameter_indices.append(header->parameters.count);
+                header->is_polymorphic = true;
             }
             var->is_parameter_for_procedure = header;
             header->parameters.append(var);
             first = false;
         }
         EXPECT(lexer, TK_RIGHT_PAREN, nullptr);
-
-        header->is_polymorphic = header->polymorphic_parameter_indices.count > 0;
 
         // return type
         Token colon = {};
@@ -575,8 +584,12 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
                     EXPECT(lexer, TK_COMMA, nullptr);
                 }
 
-                Ast_Var *var = parse_var(lexer, nullptr);
+                Ast_Var *var = parse_var(lexer, nullptr, PVF_ALLOW_POLYMORPHIC);
                 if (!var) {
+                    return nullptr;
+                }
+                if (!var->is_polymorphic_value) {
+                    report_error(var->location, "Struct parameters must be polymorphic-valued."); // todo(josh): improve this error message
                     return nullptr;
                 }
                 structure->polymorphic_parameters.append(var);
@@ -752,6 +765,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (!var) {
                 return nullptr;
             }
+            if (!register_declaration(lexer->current_block, var->declaration)) {
+                return nullptr;
+            }
             if (eat_semicolon) {
                 EXPECT_SEMICOLON(lexer, nullptr);
             }
@@ -773,6 +789,9 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
             if (maybe_colon.kind == TK_COLON) {
                 var = parse_var(lexer, expr);
                 if (!var) {
+                    return nullptr;
+                }
+                if (!register_declaration(lexer->current_block, var->declaration)) {
                     return nullptr;
                 }
                 var->is_using = true;
@@ -1236,13 +1255,17 @@ Ast_Node *parse_single_statement(Lexer *lexer, bool eat_semicolon, char *name_ov
                 case TK_COLON: {
                     // todo(josh): handle 'x, y, z: float;'
                     assert(lhs_list->exprs.count == 1);
-                    node = parse_var(lexer, lhs_list->exprs[0]);
-                    if (node == nullptr) {
+                    Ast_Var *var = parse_var(lexer, lhs_list->exprs[0]);
+                    if (var == nullptr) {
+                        return nullptr;
+                    }
+                    if (!register_declaration(lexer->current_block, var->declaration)) {
                         return nullptr;
                     }
                     if (eat_semicolon) {
                         EXPECT_SEMICOLON(lexer, nullptr);
                     }
+                    node = var;
                     break;
                }
                 default: {

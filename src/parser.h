@@ -176,7 +176,6 @@ struct Ast_Proc_Header : public Ast_Node {
     Operand operand = {};
     Token_Kind operator_to_overload = {};
     bool is_polymorphic = {};
-    Array<int> polymorphic_parameter_indices = {};
     Ast_Proc *procedure = {};
     Proc_Declaration *declaration = {};
     Ast_Node *current_parsing_loop = {};
@@ -188,7 +187,6 @@ struct Ast_Proc_Header : public Ast_Node {
     : Ast_Node(AST_PROC_HEADER, allocator, current_block, location)
     , parent_declaration(parent_declaration)
     {
-        polymorphic_parameter_indices.allocator = allocator;
         parameters.allocator = allocator;
         default_values.allocator = allocator;
         defers.allocator = allocator;
