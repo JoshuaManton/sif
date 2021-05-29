@@ -405,8 +405,24 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
     // note(bumbread): ++ operator... so convinient,
     //  but the code may have become complicated.
 
+    bool was_hex = false;
     if (*text == '0') {
         sb.print(*text++);
+        if (*text == 'x') {
+            sb.print(*text++);
+            while (true) {
+                if (is_hex_char(*text)) {
+                    sb.print(*text++);
+                }
+                else if(*text == '_') {
+                    text += 1;
+                }
+                else {
+                    break;
+                }
+            }
+            was_hex = true;
+        }
     }
     else if (is_one_to_nine(*text)) {
         while (true) {
@@ -425,37 +441,26 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
         assert(false && "scan_number called without being at a number");
     }
 
-    bool was_hex = false;
     bool had_scientific_notation = false;
     if (*text == '.') {
-        sb.print(*text++);
-        *out_has_a_dot = true;
-        while (true) {
-            if (is_digit(*text)) {
-                sb.print(*text++);
-            }
-            else if (*text == '_') {
-                text += 1;
-            }
-            else {
-                break;
+        if(was_hex) {
+            report_error(location, "Hex floats are not supported.");
+        }
+        else {
+            sb.print(*text++);
+            *out_has_a_dot = true;
+            while (true) {
+                if (is_digit(*text)) {
+                    sb.print(*text++);
+                }
+                else if (*text == '_') {
+                    text += 1;
+                }
+                else {
+                    break;
+                }
             }
         }
-    }
-    else if (*text == 'x') {
-        sb.print(*text++);
-        while (true) {
-            if (is_hex_char(*text)) {
-                sb.print(*text++);
-            }
-            else if(*text == '_') {
-                text += 1;
-            }
-            else {
-                break;
-            }
-        }
-        was_hex = true;
     }
 
     if (*text == 'e' || *text == 'E') {
