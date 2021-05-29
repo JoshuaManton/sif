@@ -461,7 +461,9 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
     if (*text == 'e' || *text == 'E') {
         had_scientific_notation = true;
         sb.print(*text++);
-        assert(*text == '-' || *text == '+');
+        if (!(*text == '-' || *text == '+')) {
+            report_error(location, "Exponent should be followed either by '+' or '-'");
+        }
         sb.print(*text++);
         while (is_digit(*text)) {
             sb.print(*text++);
