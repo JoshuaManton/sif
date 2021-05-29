@@ -27,15 +27,15 @@ void zero_memory(void *memory_void, int length) {
     uintptr_t start_aligned = align_forward(start, alignof(uintptr_t));
     uintptr_t end = start + (uintptr_t)length;
     uintptr_t end_aligned = align_backward(end, alignof(uintptr_t));
-
+    
     for (uintptr_t i = start; i < start_aligned; i++) {
         memory[i-start] = 0;
     }
-
+    
     for (uintptr_t i = start_aligned; i < end_aligned; i += sizeof(uintptr_t)) {
         *((uintptr_t *)&memory[i-start]) = 0;
     }
-
+    
     for (uintptr_t i = end_aligned; i < end; i++) {
         memory[i-start] = 0;
     }
@@ -72,12 +72,12 @@ int modulo(int a, int b) {
 
 
 
-void *alloc(Allocator allocator, int size, int alignment, bool zero) {
+void *alloc(Allocator allocator, int size, int alignment) {
     assert(allocator.alloc_proc != nullptr && "Alloc proc was nullptr for allocator");
     void *ptr = allocator.alloc_proc(allocator.data, size, alignment);
-    if (zero) {
-        memset(ptr, 0, size);
-    }
+#ifdef MEM_DO_ZEROING
+    memset(ptr, 0, size);
+#endif
     return ptr;
 }
 
@@ -111,12 +111,12 @@ byte *buffer_allocate(byte *buffer, int buffer_len, int *offset, int size, int a
     if (size == 0) {
         return nullptr;
     }
-
+    
     // todo(josh): The `align_forward()` call and the `start + size` below
     // that could overflow if the `size` or `align` parameters are super huge
-
+    
     int start = align_forward(*offset, alignment);
-
+    
     // Don't allow allocations that would extend past the end of the buffer.
     if ((start + size) > buffer_len) {
         if (panic_on_oom) {
@@ -124,7 +124,7 @@ byte *buffer_allocate(byte *buffer, int buffer_len, int *offset, int size, int a
         }
         return nullptr;
     }
-
+    
     *offset = start + size;
     byte *ptr = &buffer[start];
     // zero_memory(ptr, size);
@@ -184,7 +184,7 @@ void init_dynamic_arena(Dynamic_Arena *dyn, int starting_chunk_size, Allocator b
     dyn->arenas = make_array<Arena>(backing_allocator);
     dyn->leaked_allocations = make_array<void *>(backing_allocator);
     Arena *arena = dyn->arenas.append();
-    init_arena(arena, alloc(backing_allocator, starting_chunk_size, DEFAULT_ALIGNMENT, false), starting_chunk_size, false);
+    init_arena(arena, alloc(backing_allocator, starting_chunk_size), starting_chunk_size, false);
 }
 
 void *dynamic_arena_alloc(void *allocator, int size, int align) {
@@ -199,14 +199,14 @@ void *dynamic_arena_alloc(void *allocator, int size, int align) {
             // make a new arena
             current_arena = dyn->arenas.append();
             dyn->chunk_size *= 2;
-            init_arena(current_arena, alloc(dyn->backing_allocator, dyn->chunk_size, DEFAULT_ALIGNMENT, false), dyn->chunk_size, false);
+            init_arena(current_arena, alloc(dyn->backing_allocator, dyn->chunk_size), dyn->chunk_size, false);
         }
         else {
             // use the next one in the list
             current_arena = &dyn->arenas[dyn->current_arena_index+1];
         }
         dyn->current_arena_index += 1;
-
+        
         // retry the allocation
         ptr = arena_alloc(current_arena, size, align);
         if (!ptr) {
@@ -345,7 +345,7 @@ char *read_entire_file(const char *filename, int *len) {
     char *str = (char *)malloc(length + 1);
     fread(str, 1, length, file);
     fclose(file);
-
+    
     str[length] = 0;
     *len = length+1;
     return str;
@@ -387,7 +387,7 @@ char *String_Builder::printf(const char *fmt, ...) {
         length_would_have_written = vsnprintf(&buf.data[buf.count], buf.capacity - buf.count, fmt, args);
         va_end(args);
     } while (length_would_have_written >= (buf.capacity - buf.count));
-
+    
     assert(length_would_have_written < buf.capacity - buf.count);
     char *copy = &buf.data[buf.count];
     buf.data[buf.count+length_would_have_written+1] = 0;
@@ -436,7 +436,7 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
     assert(max_chunk_size > 0);
     if (chunks.count == 0) {
         current_chunk = chunks.append();
-        current_chunk->buffer = (char *)alloc(allocator, max_chunk_size, DEFAULT_ALIGNMENT, false);
+        current_chunk->buffer = (char *)alloc(allocator, max_chunk_size);
         current_chunk->buffer[0] = 0;
         current_chunk->buffer_size = max_chunk_size;
     }
@@ -446,7 +446,7 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
     if (length > (current_chunk->buffer_size - 1 - current_chunk->cursor)) { // not enough room let in this chunk
         if (length >= max_chunk_size) { // this string is bigger than our max chunk size, copy the string as it's own chunk
             current_chunk = chunks.append();
-            current_chunk->buffer = (char *)alloc(allocator, length+1, DEFAULT_ALIGNMENT, false);
+            current_chunk->buffer = (char *)alloc(allocator, length+1);
             current_chunk->buffer[0] = 0;
             current_chunk->buffer_size = length+1;
             current_chunk_index += 1;
@@ -454,7 +454,7 @@ Chunked_String_Builder_Chunk *Chunked_String_Builder::get_or_make_chunk_buffer_f
         }
         else {
             current_chunk = chunks.append();
-            current_chunk->buffer = (char *)alloc(allocator, max_chunk_size, DEFAULT_ALIGNMENT, false);
+            current_chunk->buffer = (char *)alloc(allocator, max_chunk_size);
             current_chunk->buffer[0] = 0;
             current_chunk->buffer_size = max_chunk_size;
             current_chunk_index += 1;
@@ -476,7 +476,7 @@ char *Chunked_String_Builder::printf(const char *fmt, ...) {
     va_start(args, fmt);
     int length_required = vsnprintf(nullptr, 0, fmt, args);
     va_end(args);
-
+    
     Chunked_String_Builder_Chunk *chunk = get_or_make_chunk_buffer_for_length(length_required);
     char *copy = &chunk->buffer[chunk->cursor];
     va_start(args, fmt);
@@ -519,7 +519,7 @@ char *Chunked_String_Builder::make_string() {
         required_length += chunk.cursor;
     }
     required_length += 1; // null term
-    char *big_buffer = (char *)alloc(allocator, required_length, DEFAULT_ALIGNMENT, false);
+    char *big_buffer = (char *)alloc(allocator, required_length);
     int current_cursor = 0;
     for (int idx = 0; idx <= current_chunk_index && idx < chunks.count; idx += 1) {
         Chunked_String_Builder_Chunk chunk = chunks[idx];
@@ -596,7 +596,7 @@ char *path_directory(const char *filepath, Allocator allocator) {
         return nullptr;
     }
     int length_to_end = length - (length - slash_index);
-    char *new_str = (char *)alloc(allocator, length_to_end+1, DEFAULT_ALIGNMENT, false);
+    char *new_str = (char *)alloc(allocator, length_to_end+1);
     memcpy(new_str, filepath, length_to_end);
     new_str[length_to_end] = 0;
     return new_str;
@@ -630,7 +630,7 @@ char *path_filename(const char *filepath, Allocator allocator) {
     }
     assert(end >= start);
     int length_to_end = end - start;
-    char *new_str = (char *)alloc(allocator, length_to_end+1, DEFAULT_ALIGNMENT, false);
+    char *new_str = (char *)alloc(allocator, length_to_end+1);
     memcpy(new_str, &filepath[start], length_to_end);
     new_str[length_to_end] = 0;
     return new_str;
@@ -655,7 +655,7 @@ char *path_filename_with_extension(const char *filepath, Allocator allocator) {
     }
     assert(end >= start);
     int length_to_end = end - start;
-    char *new_str = (char *)alloc(allocator, length_to_end+1, DEFAULT_ALIGNMENT, false);
+    char *new_str = (char *)alloc(allocator, length_to_end+1);
     memcpy(new_str, &filepath[start], length_to_end);
     new_str[length_to_end] = 0;
     return new_str;
