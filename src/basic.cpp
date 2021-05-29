@@ -365,6 +365,16 @@ String_Builder make_string_builder(Allocator allocator, int capacity) {
     return sb;
 }
 
+char *String_Builder::print(char c) {
+  buf.reserve(buf.count + 1 + 8);
+  char *copy = &buf.data[buf.count];
+  *copy = c;
+  buf.count += 1;
+  BOUNDS_CHECK(buf.count, 0, buf.capacity);
+  buf.data[buf.count] = 0;
+  return copy;
+}
+
 char *String_Builder::print(const char *str) {
     int length = strlen(str);
     buf.reserve(buf.count + length + 8);

@@ -400,13 +400,25 @@ char *scan_string(Location location, char delim, char *text, int *out_scanner_le
 
 char *scan_number(Location location, char *text, int *out_length, bool *out_has_a_dot, u64 *uint_value, i64 *int_value, f32 *f32_value, f64 *f64_value) {
     char *start = text;
+    String_Builder sb = make_string_builder(g_global_linear_allocator);
+
+    // note(bumbread): ++ operator... so convinient,
+    //  but the code may have become complicated.
 
     if (*text == '0') {
-        text += 1;
+        sb.print(*text++);
     }
     else if (is_one_to_nine(*text)) {
-        while (is_digit(*text)) {
-            text += 1;
+        while (true) {
+            if (is_digit(*text)) {
+                sb.print(*text++);
+            }
+            else if (*text == '_') {
+                text += 1;
+            }
+            else {
+                break;
+            }
         }
     }
     else {
@@ -416,33 +428,49 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
     bool was_hex = false;
     bool had_scientific_notation = false;
     if (*text == '.') {
-        text += 1;
+        sb.print(*text++);
         *out_has_a_dot = true;
-        while (is_digit(*text)) {
-            text += 1;
+        while (true) {
+            if (is_digit(*text)) {
+                sb.print(*text++);
+            }
+            else if (*text == '_') {
+                text += 1;
+            }
+            else {
+                break;
+            }
         }
     }
     else if (*text == 'x') {
-        text += 1;
-        while (is_hex_char(*text)) {
-            text += 1;
+        sb.print(*text++);
+        while (true) {
+            if (is_hex_char(*text)) {
+                sb.print(*text++);
+            }
+            else if(*text == '_') {
+                text += 1;
+            }
+            else {
+                break;
+            }
         }
         was_hex = true;
     }
 
     if (*text == 'e' || *text == 'E') {
         had_scientific_notation = true;
-        text += 1;
+        sb.print(*text++);
         assert(*text == '-' || *text == '+');
-        text += 1;
+        sb.print(*text++);
         while (is_digit(*text)) {
-            text += 1;
+            sb.print(*text++);
         }
     }
 
     int length = text - start;
     *out_length = length;
-    char *result = clone_string(start, length);
+    char *result = sb.string();
 
     // todo(josh): think harder about the behaviour about the following code.
     //             is it a problem what we are doing here?
@@ -469,6 +497,8 @@ char *scan_number(Location location, char *text, int *out_length, bool *out_has_
         errno = 0;
     }
 
+    // note(bumbread): not sure if this has to be.
+    // sb.destroy();
     return result;
 }
 

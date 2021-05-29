@@ -382,6 +382,7 @@ void run_array_tests() {
 struct String_Builder {
     Array<char> buf = {};
     
+    char *print(char c);
     char *print(const char *str);
     char *printf(const char *fmt, ...);
     char *write_with_length(const char *str, int length);
