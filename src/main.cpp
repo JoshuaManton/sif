@@ -46,7 +46,6 @@ MEDIUM PRIORITY
 -block comments
 -while foo := bar(); (foo != null)
 -sized bool types
--underscores in numbers
 -uninitialized stack members
 -prevent identifiers from being C keywords in the backend, like `signed`
 -Expr_Change (var v2 = v1.{y=4};)

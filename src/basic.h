@@ -6,29 +6,26 @@
 #include <math.h>
 #include <float.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "spinlock.h"
 
-typedef unsigned char      byte; static_assert(sizeof(byte) == 1, "byte size was not 1");
-typedef unsigned char      u8;   static_assert(sizeof(u8)   == 1, "u8 size was not 1");
-typedef unsigned short     u16;  static_assert(sizeof(u16)  == 2, "u16 size was not 2");
-typedef unsigned int       u32;  static_assert(sizeof(u32)  == 4, "u32 size was not 4");
-typedef unsigned long long u64;  static_assert(sizeof(u64)  == 8, "u64 size was not 8");
+typedef uint8_t byte;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef u32 uint;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+typedef float f32;
+typedef double f64;
 
-typedef u32 uint; static_assert(sizeof(uint)  == 4, "uint size was not 4");
-
-typedef char      i8;   static_assert(sizeof(i8)   == 1, "i8 size was not 1");
-typedef short     i16;  static_assert(sizeof(i16)  == 2, "i16 size was not 2");
-typedef int       i32;  static_assert(sizeof(i32)  == 4, "i32 size was not 4");
-typedef long long i64;  static_assert(sizeof(i64)  == 8, "i64 size was not 8");
-
+static_assert(sizeof(float)  == 4, "float size was not 4");
+static_assert(sizeof(double)  == 8, "double size was not 8");
 static_assert(sizeof(int)  == 4, "int size was not 4");
-
-typedef float  f32; static_assert(sizeof(f32) == 4, "f32 size was not 4");
-typedef double f64; static_assert(sizeof(f64) == 8, "f64 size was not 8");
-
-static_assert(sizeof(float) == 4, "float size was not 4");
-
 static_assert(sizeof(void *) == 8, "void * size was not 8");
 
 // #ifndef ASSERT
@@ -41,8 +38,8 @@ static_assert(sizeof(void *) == 8, "void * size was not 8");
 
 #ifndef ARRAYSIZE
 #define ARRAYSIZE(a) \
-    ((sizeof(a) / sizeof(*(a))) / \
-    static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
+((sizeof(a) / sizeof(*(a))) / \
+static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 #endif
 
 static void bounds__check(int index, int min, int max_plus_one, char *file, int line) {
@@ -71,13 +68,17 @@ int modulo(int a, int b);
 #define DEFAULT_ALIGNMENT sizeof(void *) * 2
 #endif
 
+#ifndef MEM_DO_ZEROING
+#define MEM_DO_ZEROING false
+#endif
+
 struct Allocator {
     void *data;
     void *(*alloc_proc)(void *allocator, int size, int alignment);
     void (*free_proc)(void *allocator, void *ptr);
 };
 
-void *alloc(Allocator allocator, int size, int alignment = DEFAULT_ALIGNMENT, bool zero = true);
+void *alloc(Allocator allocator, int size, int alignment = DEFAULT_ALIGNMENT);
 void free(Allocator allocator, void *ptr);
 #define NEW(allocator, type) ((type *)alloc(allocator, sizeof(type), alignof(type)))
 #define MAKE(allocator, type, count) ((type *)alloc(allocator, sizeof(type) * count, alignof(type)))
@@ -90,7 +91,7 @@ struct Array {
     int count = {};
     int capacity = {};
     Allocator allocator = {};
-
+    
     T *append();
     T *append(T element);
     T *insert(int index, T element);
@@ -100,7 +101,7 @@ struct Array {
     T unordered_remove(int index);
     void clear();
     void destroy();
-
+    
     inline T &operator[](int index) {
         BOUNDS_CHECK(index, 0, count);
         return data[index];
@@ -164,14 +165,14 @@ void Array<T>::reserve(int capacity) {
     if (this->capacity >= capacity) {
         return;
     }
-
+    
     assert(allocator.alloc_proc != nullptr);
-    void *new_data = alloc(allocator, sizeof(T) * capacity, DEFAULT_ALIGNMENT, false);
+    void *new_data = alloc(allocator, sizeof(T) * capacity, DEFAULT_ALIGNMENT);
     if (data != nullptr) {
         memmove(new_data, data, sizeof(T) * count);
         free(allocator, data);
     }
-
+    
     data = (T *)new_data;
     this->capacity = capacity;
 }
@@ -295,7 +296,7 @@ void destroy_pool(Pool_Allocator pool);
 
 
 // todo(josh): read_entire_file should be in a different file I think
-char *read_entire_file(const char *filename, int *len);
+char *read_entire_file(const char *filename, Allocator allocator, int *len);
 void write_entire_file(const char *filename, const char *data);
 
 // note(josh): defer implementation stolen from gb.h
@@ -305,23 +306,23 @@ extern "C++" {
     template <typename T> struct gbRemoveReference       { typedef T Type; };
     template <typename T> struct gbRemoveReference<T &>  { typedef T Type; };
     template <typename T> struct gbRemoveReference<T &&> { typedef T Type; };
-
+    
     /// NOTE(bill): "Move" semantics - invented because the C++ committee are idiots (as a collective not as indiviuals (well a least some aren't))
     template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &t)  { return static_cast<T &&>(t); }
     template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &&t) { return static_cast<T &&>(t); }
     template <typename T> inline T &&gb_move   (T &&t)                                   { return static_cast<typename gbRemoveReference<T>::Type &&>(t); }
     template <typename F>
-    struct gbprivDefer {
+        struct gbprivDefer {
         F f;
         gbprivDefer(F &&f) : f(gb_forward<F>(f)) {}
         ~gbprivDefer() { f(); }
     };
     template <typename F> gbprivDefer<F> gb__defer_func(F &&f) { return gbprivDefer<F>(gb_forward<F>(f)); }
-
-    #define GB_DEFER_1(x, y) x##y
-    #define GB_DEFER_2(x, y) GB_DEFER_1(x, y)
-    #define GB_DEFER_3(x)    GB_DEFER_2(x, __COUNTER__)
-    #define defer(code)      auto GB_DEFER_3(_defer_) = gb__defer_func([&]()->void{code;})
+    
+#define GB_DEFER_1(x, y) x##y
+#define GB_DEFER_2(x, y) GB_DEFER_1(x, y)
+#define GB_DEFER_3(x)    GB_DEFER_2(x, __COUNTER__)
+#define defer(code)      auto GB_DEFER_3(_defer_) = gb__defer_func([&]()->void{code;})
 }
 #endif
 
@@ -340,7 +341,7 @@ struct Array_Test_Struct {
 
 void run_array_tests() {
     // todo(josh): add asserts and whatnot to this
-
+    
     Array<Array_Test_Struct> array = {};
     array.allocator = default_allocator();
     defer(array.destroy());
@@ -352,21 +353,21 @@ void run_array_tests() {
     array.append(c);
     array.unordered_remove(0);
     array.insert(1, a);
-
+    
     printf("--------------\n");
     Foreach(v, array) {
         printf("%f %f %f\n", v->position.x, v->position.y, v->position.z);
     }
-
+    
     Array_Test_Struct last_vertex = array.pop();
     printf("--------------\n");
     printf("%f %f %f\n", last_vertex.position.x, last_vertex.position.y, last_vertex.position.z);
-
+    
     printf("--------------\n");
     Foreach(v, array) {
         printf("%f %f %f\n", v->position.x, v->position.y, v->position.z);
     }
-
+    
     Array_Test_Struct crazy_vertex = {v3(9, 9, 9), v3(1, 1, 1), v4(1, 2, 3, 4)};
     array[1] = crazy_vertex;
     printf("--------------\n");
@@ -380,7 +381,8 @@ void run_array_tests() {
 
 struct String_Builder {
     Array<char> buf = {};
-
+    
+    char *print(char c);
     char *print(const char *str);
     char *printf(const char *fmt, ...);
     char *write_with_length(const char *str, int length);
@@ -438,14 +440,14 @@ struct Hashtable {
     i64 count;
     i64 capacity;
     Allocator allocator;
-
+    
     void insert(Key key, Value value);
     void remove(Key key);
     bool contains(Key key);
     Value *get(Key key);
     void clear();
     void destroy();
-
+    
     void get_key_header(Key key, Key_Header<Key> **out_header, int *out_index);
 };
 
@@ -481,24 +483,24 @@ void Hashtable<Key, Value>::insert(Key key, Value value) {
         Key_Value<Key, Value> *old_values = values;
         i64 old_length = capacity;
         i64 old_count = count;
-
+        
         i64 new_capacity = next_power_of_2(INITIAL_HASHTABLE_SIZE + old_length);
         key_headers = (Key_Header<Key> *)alloc(allocator, sizeof(Key_Header<Key>) * new_capacity);
         values = (Key_Value<Key, Value> *)alloc(allocator, sizeof(Key_Value<Key, Value>) * new_capacity);
         count = 0;
         capacity = new_capacity;
-
+        
         for (i64 header_idx = 0; header_idx < old_length; header_idx++) {
             Key_Header<Key> *old_key_header = &old_key_headers[header_idx];
             if (old_key_header->filled) {
                 insert(old_key_header->key, old_values[header_idx].value);
             }
         }
-
+        
         free(allocator, old_key_headers);
         free(allocator, old_values);
     }
-
+    
     i64 key_value_index = -1;
     u64 h = hash_key(key);
     u64 hash_idx = h % capacity;
@@ -518,7 +520,7 @@ void Hashtable<Key, Value>::insert(Key key, Value value) {
     }
     end_search:;
     assert(key_value_index >= 0);
-
+    
     values[key_value_index] = {true, h, value};
     key_headers[key_value_index] = {true, key};
     count += 1;
@@ -587,7 +589,7 @@ void Hashtable<Key, Value>::remove(Key key) {
         }
     }
     end_search:;
-
+    
     if (last_thing_that_hashed_to_the_same_idx != nullptr) {
         *key_header = key_headers[last_thing_index];
         *key_value  = *last_thing_that_hashed_to_the_same_idx;
@@ -598,7 +600,7 @@ void Hashtable<Key, Value>::remove(Key key) {
         key_header->filled = false;
         key_value->filled = false;
     }
-
+    
     count -= 1;
 }
 
