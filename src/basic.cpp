@@ -333,8 +333,7 @@ void destroy_pool(Pool_Allocator pool) {
 
 
 
-// todo(josh): custom allocator
-char *read_entire_file(const char *filename, int *len) {
+char *read_entire_file(const char *filename, Allocator allocator, int *len) {
     FILE *file = fopen(filename, "rb");
     if (file == nullptr) {
         return nullptr;
@@ -342,7 +341,7 @@ char *read_entire_file(const char *filename, int *len) {
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
     fseek(file, 0, SEEK_SET);
-    char *str = (char *)malloc(length + 1);
+    char *str = (char *)alloc(allocator, length+1);
     fread(str, 1, length, file);
     fclose(file);
     
