@@ -226,7 +226,7 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name, u64 flags = 0) {
     }
 
     bool is_using = false;
-    bool is_constant = false;
+    bool is_const = false;
     bool is_polymorphic_value = false;
     Ast_Expr *name_expr = nullptr;
     if (already_parsed_name) {
@@ -243,7 +243,7 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name, u64 flags = 0) {
             return nullptr;
         }
         if (maybe_const.kind == TK_CONST) {
-            is_constant = true;
+            is_const = true;
             eat_next_token(lexer);
         }
 
@@ -312,7 +312,7 @@ Ast_Var *parse_var(Lexer *lexer, Ast_Expr *already_parsed_name, u64 flags = 0) {
 
     Array<char *> notes = parse_notes(lexer);
 
-    Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_constant, is_polymorphic_value, is_polymorphic_type, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
+    Ast_Var *var = SIF_NEW_CLONE(Ast_Var(var_name, name_expr, type_expr, expr, is_const, is_polymorphic_value, is_polymorphic_type, lexer->allocator, lexer->current_block, root_token.location), lexer->allocator);
     if (lexer->currently_parsing_proc_body) {
         var->parent_proc = lexer->currently_parsing_proc_body; // note(josh): may be nullptr
     }
@@ -424,6 +424,14 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
             if (!var) {
                 return nullptr;
             }
+            if (var->is_const) {
+                report_error(var->location, "'const' variables are not allowed in procedure parameter lists.");
+                return nullptr;
+            }
+            if (var->expr) {
+                report_error(var->expr->location, "Default values for procedure parameters are not yet supported.");
+                return nullptr;
+            }
             if (!var->is_polymorphic_value) {
                 if (!register_declaration(header->procedure_block, var->declaration)) {
                     return nullptr;
@@ -460,6 +468,8 @@ Ast_Proc_Header *parse_proc_header(Lexer *lexer, char *name_override) {
         if (foreign.kind == TK_DIRECTIVE_FOREIGN) {
             eat_next_token(lexer);
             header->is_foreign = true;
+            Token lib_name = {};
+            EXPECT(lexer, TK_STRING, &lib_name);
             EXPECT_SEMICOLON(lexer, nullptr); // note(josh): this isn't really necessary but it looks nicer
         }
     }
@@ -611,7 +621,7 @@ Ast_Struct *parse_struct_or_union(Lexer *lexer, char *name_override) {
             switch (node->ast_kind) {
                 case AST_VAR: {
                     Ast_Var *var = (Ast_Var *)node;
-                    if (var->expr && !var->is_constant) {
+                    if (var->expr && !var->is_const) {
                         report_error(var->expr->location, "Default struct member values are not supported.");
                         return nullptr;
                     }
@@ -2106,6 +2116,7 @@ Ast_Expr *parse_base_expr(Lexer *lexer) {
         case TK_STRUCT: // note(josh): fallthrough
         case TK_UNION: {
             Ast_Struct *structure = parse_struct_or_union(lexer);
+            // todo(josh): enforce no name for anonymous structs?
             return SIF_NEW_CLONE(Expr_Struct_Type(structure, lexer->allocator, lexer->current_block, token.location), lexer->allocator);
         }
         case TK_CAST: {

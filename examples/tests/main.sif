@@ -5,6 +5,7 @@ proc main() {
     run_test(test_json,               "json");
     run_test(test_strings,            "strings");
     run_test(test_dynamic_array,      "dynamic_array");
+    run_test(test_file_io,            "file_io");
     run_test(test_miscellanea,        "miscellanea");
 
     print("Done tests.\n");
@@ -29,5 +30,6 @@ proc run_test(procedure: proc(), test_name: string) {
 #include "json_test.sif"
 #include "strings_test.sif"
 #include "dynamic_array_test.sif"
+#include "file_io_test.sif"
 
 #include "core:basic.sif"

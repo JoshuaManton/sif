@@ -316,7 +316,7 @@ void c_print_procedure_header(Chunked_String_Builder *sb, Ast_Proc_Header *heade
     header_name_sb.print("(");
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
-        assert(!parameter->is_constant);
+        assert(!parameter->is_const);
         assert(!parameter->is_polymorphic_value);
         if (idx != 0) {
             header_name_sb.print(", ");
@@ -436,11 +436,11 @@ void c_print_null_check(Chunked_String_Builder *sb, int indent_level, char *ptr_
     c_print_line_directive(sb, location, "null check after");
 }
 
-void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, char *lhs_name, char *count_field, char *index_name, Location location) {
+void c_print_bounds_check(Chunked_String_Builder *sb, int indent_level, char *count, char *index_name, Location location) {
     char *location_t = c_print_gen_location(sb, indent_level, location);
     c_print_line_directive(sb, location, "bounds check");
     print_indents(sb, indent_level);
-    sb->printf("%s(%s.%s, %s, %s);\n", sif_runtime_bounds_check_proc->link_name, lhs_name, count_field, index_name, location_t);
+    sb->printf("%s(%s, %s, %s);\n", sif_runtime_bounds_check_proc->link_name, count, index_name, location_t);
     c_print_line_directive(sb, location, "bounds check after");
 }
 
@@ -710,6 +710,7 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                     Expr_Subscript *subscript = (Expr_Subscript *)expr;
                     char *lhs = c_print_expr(_sb, subscript->lhs, indent_level);
                     char *index = c_print_expr(_sb, subscript->index, indent_level);
+                    String_Builder count_sb = make_string_builder(g_global_linear_allocator, 128);
                     if (is_type_slice(subscript->lhs->operand.type) || is_type_varargs(subscript->lhs->operand.type)) {
                         Type_Slice *slice_type = nullptr;
                         if (is_type_slice(subscript->lhs->operand.type)) {
@@ -718,7 +719,8 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                         else if (is_type_varargs(subscript->lhs->operand.type)) {
                             slice_type = ((Type_Varargs *)subscript->lhs->operand.type)->slice_type;
                         }
-                        c_print_bounds_check(_sb, indent_level, lhs, "count", index, subscript->location);
+                        count_sb.printf("%s.count", lhs);
+                        c_print_bounds_check(_sb, indent_level, count_sb.string(), index, subscript->location);
                         assert(slice_type != nullptr);
                         expr_sb.print("((");
                         c_print_type(&expr_sb, slice_type->data_pointer_type, "");
@@ -729,11 +731,21 @@ char *c_print_expr(Chunked_String_Builder *_sb, Ast_Expr *expr, int indent_level
                         expr_sb.print("]");
                     }
                     else if (is_type_array(subscript->lhs->operand.type)) {
-                        // todo(josh): assert not out of bounds
+                        Type_Array *array_type = (Type_Array *)subscript->lhs->operand.type;
+                        if (subscript->index->operand.flags & OPERAND_CONSTANT) {
+                            assert(is_type_integer(subscript->index->operand.type));
+                            assert(subscript->index->operand.int_value >= 0);
+                            assert(subscript->index->operand.int_value < array_type->count);
+                        }
+                        else {
+                            count_sb.printf("%d", array_type->count);
+                            c_print_bounds_check(_sb, indent_level, count_sb.string(), index, subscript->location);
+                        }
                         expr_sb.printf("%s.elements[%s]", lhs, index);
                     }
                     else if (subscript->lhs->operand.type == type_string) {
-                        c_print_bounds_check(_sb, indent_level, lhs, "count", index, subscript->location);
+                        count_sb.printf("%s.count", lhs);
+                        c_print_bounds_check(_sb, indent_level, count_sb.string(), index, subscript->location);
                         expr_sb.printf("%s.data[%s]", lhs, index);
                     }
                     else {
@@ -954,7 +966,7 @@ void print_indents(Chunked_String_Builder *sb, int indent_level) {
 void c_print_block(Chunked_String_Builder *sb, Ast_Block *block, int indent_level);
 
 void c_print_var_statement(Chunked_String_Builder *sb, Ast_Var *var, int indent_level) {
-    if (!var->is_constant) {
+    if (!var->is_const) {
         char *rhs = nullptr;
         if (var->expr) {
             rhs = c_print_expr(sb, var->expr, indent_level, var->type);
@@ -1310,7 +1322,7 @@ void c_print_procedure(Chunked_String_Builder *sb, Ast_Proc *proc) {
                 continue;
             }
             Var_Declaration *var = (Var_Declaration *)decl;
-            if (var->var->is_constant) {
+            if (var->var->is_const) {
                 continue;
             }
             if (var->var->expr) {
@@ -1372,12 +1384,6 @@ u32 forward_declarations_worker_proc(void *userdata) {
                 }
                 break;
             }
-            case DECL_VAR: {
-                break;
-            }
-            default: {
-                assert(false);
-            }
         }
     }
     payload->done = true;
@@ -1404,7 +1410,7 @@ u32 actual_declarations_worker_proc(void *userdata) {
                 bool did_print_at_least_one_member = false;
                 For (idx, structure->fields) {
                     Ast_Var *var = structure->fields[idx];
-                    if (var->is_constant) {
+                    if (var->is_const) {
                         continue;
                     }
                     did_print_at_least_one_member = true;
@@ -1432,7 +1438,7 @@ u32 actual_declarations_worker_proc(void *userdata) {
             }
             case DECL_VAR: {
                 Var_Declaration *var = (Var_Declaration *)decl;
-                if (!var->var->is_constant) {
+                if (!var->var->is_const) {
                     c_print_type(sb, var->var->type, var->link_name);
                     if (var->var->expr == nullptr) {
                         sb->printf(" = {0}");
@@ -1752,10 +1758,17 @@ Chunked_String_Builder generate_c_main_file(Ast_Block *global_scope) {
     sb.print("    printf(\"0x%llx\", *(u64 *)&ptr);\n");
     sb.print("}\n");
     sb.print("void print_string(String string) {\n");
-    sb.print("    for (i64 i = 0; i < string.count; i++) {\n");
-    sb.print("        char c = string.data[i];\n");
-    sb.print("        putchar(c);\n");
+    sb.print("    char *ptr = string.data;\n");
+    sb.print("    i64 count_left = string.count;\n");
+    sb.print("    while (count_left > 0) {\n");
+    sb.print("        int chunk_size = (int)min(count_left, INT_MAX);\n");
+    sb.print("        printf(\"%.*s\", chunk_size, ptr);\n");
+    sb.print("        count_left -= (i64)chunk_size;\n");
+    sb.print("        ptr += chunk_size;\n");
     sb.print("    }\n");
+    sb.print("}\n");
+    sb.print("void print_cstring(char *cstr) {\n");
+    sb.print("     printf(cstr);\n");
     sb.print("}\n");
     sb.print("void assert(bool condition) {\n");
     sb.print("    if (!condition) {\n");

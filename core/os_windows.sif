@@ -11,7 +11,7 @@ proc file_open(filepath: string, out_file: ^File, flags: File_Open_Flags, alloca
     if (!success) {
         return false;
     }
-    defer sif_free(filepath_wide, allocator);
+    defer free(filepath_wide, allocator);
     access_flags: i32;
     share_flags: i32;
     create_flags: i32;
@@ -50,20 +50,32 @@ proc file_length(file: File, out_length: ^int) : bool {
     return true;
 }
 
-proc file_read(file: File, data: []byte) : bool {
+proc file_read(file: File, data: []byte, out_bytes_read: ^int) : bool {
     num_read: u32;
     if (ReadFile(file.handle, data.data, cast(u32, data.count), &num_read, null) == 0) {
         return false;
     }
-    // todo(josh): check that num_read == data.count?
+    out_bytes_read^ = cast(int, num_read);
     return true;
 }
 
-proc file_write(file: File, data: []byte) : bool {
+proc file_write(file: File, data: []byte, out_bytes_written: ^int) : bool {
     num_written: u32;
     if (WriteFile(file.handle, data.data, cast(u32, data.count), &num_written, null) == 0) {
         return false;
     }
-    // todo(josh): check that num_written == data.count?
+    out_bytes_written^ = cast(int, num_written);
+    return true;
+}
+
+proc delete_file(filepath: string, allocator: Allocator) : bool {
+    success: bool;
+    length: i32;
+    filepath_wide := to_wide_string(filepath, allocator, &success, &length);
+    if (!success) {
+        return false;
+    }
+    defer free(filepath_wide, allocator);
+    DeleteFileW(filepath_wide);
     return true;
 }

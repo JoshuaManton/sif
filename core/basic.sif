@@ -1,4 +1,3 @@
-
 #include "core:string_builder.sif"
 
 #foreign_system_import "msvcrt.lib"
@@ -7,26 +6,27 @@
 #foreign_system_import "vcruntime.lib"
 #foreign_system_import "Ntdll.lib"
 
-proc print_char   (c: u8)                                   #foreign;
-proc print_int    (i: i64)                                  #foreign;
-proc print_uint   (i: u64)                                  #foreign;
-proc print_float  (f: f32)                                  #foreign;
-proc print_double (f: f64)                                  #foreign;
-proc print_bool   (b: bool)                                 #foreign;
-proc print_pointer(ptr: rawptr)                             #foreign;
-proc print_string (str: string)                             #foreign;
-proc strlen       (cstr: cstring)             : u64         #foreign;
-proc sin          (x: f64)                    : f64         #foreign;
-proc cos          (x: f64)                    : f64         #foreign;
-proc tan          (x: f64)                    : f64         #foreign;
-proc acos         (x: f64)                    : f64         #foreign;
-proc sqrt         (x: f64)                    : f64         #foreign;
-proc fabsf        (a: f32)                    : f32         #foreign;
-proc atoi         (cstr: cstring)             : i32         #foreign;
-proc atof         (cstr: cstring)             : f64         #foreign;
-proc fmod         (x: f64, y: f64)            : f64         #foreign;
+proc print_char   (c: u8)                                   #foreign "sif";
+proc print_int    (i: i64)                                  #foreign "sif";
+proc print_uint   (i: u64)                                  #foreign "sif";
+proc print_float  (f: f32)                                  #foreign "sif";
+proc print_double (f: f64)                                  #foreign "sif";
+proc print_bool   (b: bool)                                 #foreign "sif";
+proc print_pointer(ptr: rawptr)                             #foreign "sif";
+proc print_string (str: string)                             #foreign "sif";
+proc print_cstring(cstr: cstring)                           #foreign "sif";
+proc strlen       (cstr: cstring)             : u64         #foreign "sif";
+proc sin          (x: f64)                    : f64         #foreign "sif";
+proc cos          (x: f64)                    : f64         #foreign "sif";
+proc tan          (x: f64)                    : f64         #foreign "sif";
+proc acos         (x: f64)                    : f64         #foreign "sif";
+proc sqrt         (x: f64)                    : f64         #foreign "sif";
+proc fabsf        (a: f32)                    : f32         #foreign "sif";
+proc atoi         (cstr: cstring)             : i32         #foreign "sif";
+proc atof         (cstr: cstring)             : f64         #foreign "sif";
+proc fmod         (x: f64, y: f64)            : f64         #foreign "sif";
 
-proc snprintf(buffer: ^u8, buffer_size: u64, fmt: cstring, args: #c_varargs ..any) : i32 #foreign;
+proc snprintf(buffer: ^u8, buffer_size: u64, fmt: cstring, args: #c_varargs ..any) : i32 #foreign "sif";
 
 
 
@@ -107,8 +107,7 @@ proc print_arg(arg: any) {
         dti := cast(^Type_Info_String, ti);
         if (dti.is_cstring) {
             str := cast(^cstring, arg.data)^;
-            // todo(josh): this strlen is kind of silly. could just have a print_cstring() routine
-            print_string(string.{cast(^u8, str), cast(int, strlen(str))});
+            print_cstring(str);
         }
         else {
             str := cast(^string, arg.data)^;
@@ -295,7 +294,7 @@ proc bprint_arg(buf: []u8, arg: any) : int {
             dti := cast(^Type_Info_Integer, ti);
             if (dti.is_signed) {
                 if (ti.size == 1) {
-                    arg_length= snprintf(buf_ptr, buf_count, "%i", cast(^i8, arg.data)^);
+                    arg_length = snprintf(buf_ptr, buf_count, "%i", cast(^i8, arg.data)^);
                 }
                 else if (ti.size == 2) {
                     arg_length = snprintf(buf_ptr, buf_count, "%hi", cast(^i16, arg.data)^);
@@ -536,19 +535,19 @@ proc aprinta(allocator: Allocator, args: ..any) : string {
 const DEFAULT_ALIGNMENT := sizeof(rawptr)*2;
 
 proc new($T: typeid, allocator: Allocator) : ^T {
-    ptr := cast(^T, sif_alloc(sizeof(T), DEFAULT_ALIGNMENT, allocator));
+    ptr := cast(^T, alloc(sizeof(T), DEFAULT_ALIGNMENT, allocator));
     zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T)));
     return ptr;
 }
 
 proc delete(ptr: ^$T, allocator: Allocator) {
     if (ptr != null) {
-        sif_free(ptr, allocator);
+        free(ptr, allocator);
     }
 }
 
 proc new_clone(value: $T, allocator: Allocator) : ^T {
-    ptr := cast(^T, sif_alloc(sizeof(T), DEFAULT_ALIGNMENT, allocator));
+    ptr := cast(^T, alloc(sizeof(T), DEFAULT_ALIGNMENT, allocator));
     ptr^ = value;
     return ptr;
 }
@@ -556,7 +555,7 @@ proc new_clone(value: $T, allocator: Allocator) : ^T {
 
 
 proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
-    ptr := cast(^T, sif_alloc(sizeof(T) * count, DEFAULT_ALIGNMENT, allocator));
+    ptr := cast(^T, alloc(sizeof(T) * count, DEFAULT_ALIGNMENT, allocator));
     slice := slice_ptr(ptr, count);
     zero_memory(slice_ptr(cast(^byte, ptr), sizeof(T) * count));
     return slice;
@@ -564,7 +563,7 @@ proc new_slice($T: typeid, count: int, allocator: Allocator) : []T {
 
 proc delete_slice(slice: []$T, allocator: Allocator) {
     if (slice.data != null) {
-        sif_free(slice.data, allocator);
+        free(slice.data, allocator);
     }
 }
 
@@ -582,7 +581,7 @@ proc copy_slice(dst: []$T, src: []T) {
 
 proc new_string(count: int, allocator: Allocator) : string {
     str: string;
-    str.data = cast(^u8, sif_alloc(count, DEFAULT_ALIGNMENT, allocator));
+    str.data = cast(^u8, alloc(count, DEFAULT_ALIGNMENT, allocator));
     zero_pointer(str.data, count);
     str.count = count;
     return str;
@@ -590,7 +589,7 @@ proc new_string(count: int, allocator: Allocator) : string {
 
 proc delete_string(str: string, allocator: Allocator) {
     if (str.data != null) {
-        sif_free(str.data, allocator);
+        free(str.data, allocator);
     }
 }
 
@@ -604,7 +603,7 @@ proc clone_to_cstring(str: string, allocator: Allocator) : cstring {
     if (str.count == 0) {
         return null;
     }
-    cstr := sif_alloc(str.count+1, DEFAULT_ALIGNMENT, allocator);
+    cstr := alloc(str.count+1, DEFAULT_ALIGNMENT, allocator);
     memcpy(cstr, str.data, cast(u64, str.count));
     ptr_offset(cast(^byte, cstr), str.count)^ = 0;
     return cast(cstring, cstr);

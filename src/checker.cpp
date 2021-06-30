@@ -322,7 +322,7 @@ bool check_basic_block_for_return(Ast_Basic_Block *block) {
 
 bool broadcast_var_using(Ast_Var *var, Ast_Block *broadcast_into) {
     if (var->is_using) {
-        if (var->is_constant) {
+        if (var->is_const) {
             report_error(var->location, "Cannot apply 'using' to a constant.");
             return false;
         }
@@ -374,7 +374,7 @@ bool complete_type(Type *type, Location usage_location, u64 completion_flags) {
                     if (!complete_type(var->type, var->location)) {
                         return false;
                     }
-                    if (var->is_constant) {
+                    if (var->is_const) {
                         assert(var->expr != nullptr);
                         assert(var->constant_operand.type != nullptr);
                         assert(var->constant_operand.flags & OPERAND_CONSTANT);
@@ -679,7 +679,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     }
                 }
                 else {
-                    if (!var->is_constant) {
+                    if (!var->is_const) {
                         expr_operand->type = try_concretize_type_without_context(expr_operand->type);
                         if (expr_operand->type == nullptr) {
                             assert(expr_operand->type == type_untyped_null);
@@ -692,7 +692,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                     declared_type = expr_operand->type;
                 }
 
-                if (var->is_constant) {
+                if (var->is_const) {
                     if (!(expr_operand->flags & OPERAND_CONSTANT)) {
                         report_error(var->expr->location, "Expression must be constant.");
                         return false;
@@ -704,7 +704,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
                 }
             }
             else {
-                if (var->is_constant) {
+                if (var->is_const) {
                     report_error(var->location, "Constant must have an expression.");
                     return false;
                 }
@@ -718,7 +718,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             }
             assert(var->type != nullptr);
 
-            if (!var->is_constant) {
+            if (!var->is_const) {
                 decl_operand.type = var->type;
                 decl_operand.flags = OPERAND_LVALUE | OPERAND_RVALUE;
             }
@@ -759,11 +759,7 @@ bool check_declaration(Declaration *decl, Location usage_location, Operand *out_
             assert(proc_decl->header->type != nullptr);
             decl_operand = proc_decl->header->operand;
 
-            if (proc_decl->name == g_interned_main_string) {
-                assert(g_main_proc == nullptr);
-                g_main_proc = proc_decl->header->procedure;
-            }
-            else if (!proc_decl->header->is_foreign) {
+            if (proc_decl->header->procedure != g_main_proc && !proc_decl->header->is_foreign) {
                 assert(proc_decl->header->name != nullptr);
                 String_Builder link_name_sb = make_string_builder(g_global_linear_allocator, 128);
                 if (proc_decl->header->parent_declaration != nullptr) {
@@ -955,11 +951,13 @@ bool typecheck_global_scope(Ast_Block *global_scope) {
 
     For (idx, global_scope->declarations) {
         Declaration *decl = global_scope->declarations[idx];
-        if (decl->is_polymorphic) {
-            continue;
-        }
-        if (!check_declaration(decl, decl->location)) {
-            return false;
+        if (decl->name == g_interned_main_string && decl->kind == DECL_PROC) {
+            assert(g_main_proc == nullptr);
+            Proc_Declaration *proc_decl = (Proc_Declaration *)decl;
+            g_main_proc = proc_decl->header->procedure;
+            if (!check_declaration(decl, decl->location)) {
+                return false;
+            }
         }
     }
 
@@ -3587,7 +3585,7 @@ Operand *typecheck_expr(Ast_Expr *expr, Type *expected_type, bool require_value)
 
     if (expected_type) {
         if (expr->operand.flags & OPERAND_NO_VALUE) {
-            report_error(expr->location, "Expected '%s', got no value.", type_to_string(expected_type));
+            report_error(expr->location, "Expression does not yield a value.");
             return nullptr;
         }
         if (!match_types(expr->operand, expected_type, &expr->operand)) {
@@ -3606,14 +3604,9 @@ Operand *typecheck_procedure_header(Ast_Proc_Header *header) {
     parameter_types.allocator = g_global_linear_allocator;
     For (idx, header->parameters) {
         Ast_Var *parameter = header->parameters[idx];
-        if (parameter->is_constant) {
-            report_error(parameter->location, "Constant parameters are not allowed.");
-            return nullptr;
-        }
-        if (parameter->expr != nullptr) {
-            report_error(parameter->expr->location, "Default values for procedure parameters are not yet supported.");
-            return nullptr;
-        }
+        assert(!parameter->is_const);
+        assert(parameter->expr == nullptr);
+
         if (!check_declaration(parameter->declaration, parameter->location)) {
             return nullptr;
         }

@@ -239,7 +239,7 @@ proc compile_vertex_shader_from_file(filename: string, out_blob: ^^ID3D10Blob) :
     success: bool;
     result_length_in_bytes: i32;
     filename_wide := to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
-    defer sif_free(filename_wide, default_allocator());
+    defer free(filename_wide, default_allocator());
     result := D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "vs_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &vertex_shader_blob, &errors);
     if (errors != null) {
         str := cast(cstring, errors.GetBufferPointer(errors));
@@ -261,7 +261,7 @@ proc compile_pixel_shader_from_file(filename: string) : ^ID3D11PixelShader {
     success: bool;
     result_length_in_bytes: i32;
     filename_wide := to_wide_string(filename, default_allocator(), &success, &result_length_in_bytes);
-    defer sif_free(filename_wide, default_allocator());
+    defer free(filename_wide, default_allocator());
     result := D3DCompileFromFile(filename_wide, cast(rawptr, 0), cast(^ID3DInclude, 1), "main", "ps_5_0", D3D_SHADER_COMPILE_FLAGS, 0, &pixel_shader_blob, &errors);
     if (errors != null) {
         str := cast(cstring, errors.GetBufferPointer(errors));

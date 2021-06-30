@@ -33,6 +33,8 @@ HIGH PRIORITY
         }
     }
 }
+-get rid of spinlocking in dynamic_arena, just give each thread its own allocator
+-special sauce for [] overloads instead of actually having reference types in the language
 
 MEDIUM PRIORITY
 -add more comprehensive numbers test
@@ -48,8 +50,8 @@ MEDIUM PRIORITY
 -sized bool types
 -underscores in numbers
 -uninitialized stack members
--prevent identifiers from being C keywords in the backend, like `signed`
--Expr_Change (var v2 = v1.{y=4};)
+-error if you use reserved C identifiers like 'char', 'double', 'signed', etc?
+-Expr_Change (v2 := v1.{y=4};)
 -slicing
 -declare distinct types
 -allow passing a ^Derived to a proc that takes ^Base if the first field in Derived is 'using base: Base'
@@ -226,7 +228,6 @@ int main(int argc, char **argv) {
     init_interned_strings();
     init_parser();
     init_checker();
-    init_c_backend();
 
     double parsing_start_time = query_timer(&g_global_timer);
 
@@ -239,6 +240,8 @@ int main(int argc, char **argv) {
     add_global_declarations(global_scope);
 
     double checking_start_time = query_timer(&g_global_timer);
+
+    init_c_backend();
 
     bool check_success = typecheck_global_scope(global_scope);
     if (!check_success) {

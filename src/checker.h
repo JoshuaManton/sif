@@ -42,7 +42,7 @@ enum Type_Completion_Flags {
     TCF_USINGS                  = 1 << 1,
     TCF_GENERATE_FIELDS         = 1 << 2, // note(josh): this one is done automatically, no need to pass it to complete_type()
     TCF_ADD_ORDERED_DECLARATION = 1 << 3, // note(josh): this one is done automatically, no need to pass it to complete_type()
-    TCF_ALL = TCF_SIZE | TCF_USINGS | TCF_GENERATE_FIELDS | TCF_ADD_ORDERED_DECLARATION,
+    TCF_ALL                     = TCF_SIZE | TCF_USINGS | TCF_GENERATE_FIELDS | TCF_ADD_ORDERED_DECLARATION,
 };
 
 struct Type_Pointer;
@@ -213,11 +213,22 @@ extern Type *type_typeid;
 extern Type *type_cstring;
 extern Type *type_string;
 extern Type *type_rawptr;
+extern Type *type_byte;
+extern Type *type_int;
+extern Type *type_uint;
+extern Type *type_float;
 extern Type *type_any;
 
 extern Array<Type *> all_types;
+extern Array<Type *> g_completed_types;
 
 extern Ast_Proc *g_main_proc;
+
+extern Spinlock g_ordered_declarations_spinlock;
+extern Spinlock g_completed_types_spinlock;
+
+extern bool g_done_typechecking;
+extern bool g_done_typechecking_sif_runtime_stuff;
 
 extern Declaration *sif_runtime_bounds_check_proc;
 extern Declaration *sif_runtime_null_check_proc;

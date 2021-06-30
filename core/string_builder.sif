@@ -9,12 +9,12 @@ proc make_string_builder(length: int, allocator: Allocator) : String_Builder {
     sb: String_Builder;
     sb.buffer_length = length;
     sb.allocator = allocator;
-    sb.buffer = cast(^u8, sif_alloc(length, DEFAULT_ALIGNMENT, allocator));
+    sb.buffer = cast(^u8, alloc(length, DEFAULT_ALIGNMENT, allocator));
     return sb;
 }
 
 proc destroy_string_builder(sb: String_Builder) {
-    sif_free(sb.buffer, sb.allocator);
+    free(sb.buffer, sb.allocator);
 }
 
 proc sbprint(sb: ^String_Builder, fmt: string, args: ..any) {
@@ -22,9 +22,9 @@ proc sbprint(sb: ^String_Builder, fmt: string, args: ..any) {
     if (sb.cursor + length > sb.buffer_length) {
         old := sb.buffer;
         sb.buffer_length = (sb.cursor + length) * 2;
-        sb.buffer = cast(^u8, sif_alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator));
+        sb.buffer = cast(^u8, alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator));
         copy_slice(slice_ptr(sb.buffer, sb.buffer_length), slice_ptr(old, sb.cursor));
-        sif_free(old, sb.allocator);
+        free(old, sb.allocator);
         length2 := bprint(slice_ptr(ptr_offset(sb.buffer, sb.cursor), max(0, sb.buffer_length - sb.cursor)), fmt, ..args);
         assert(length == length2);
         assert(sb.cursor + length2 <= sb.buffer_length);
@@ -37,9 +37,9 @@ proc sbprinta(sb: ^String_Builder, args: ..any) {
     if (sb.cursor + length > sb.buffer_length) {
         old := sb.buffer;
         sb.buffer_length = (sb.cursor + length) * 2;
-        sb.buffer = cast(^u8, sif_alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator));
+        sb.buffer = cast(^u8, alloc(sb.buffer_length, DEFAULT_ALIGNMENT, sb.allocator));
         copy_slice(slice_ptr(sb.buffer, sb.buffer_length), slice_ptr(old, sb.cursor));
-        sif_free(old, sb.allocator);
+        free(old, sb.allocator);
         length2 := bprinta(slice_ptr(ptr_offset(sb.buffer, sb.cursor), max(0, sb.buffer_length - sb.cursor)), ..args);
         assert(length == length2);
         assert(sb.cursor + length2 <= sb.buffer_length);

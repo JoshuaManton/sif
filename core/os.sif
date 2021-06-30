@@ -16,10 +16,12 @@ proc read_entire_file(filepath: string, allocator: Allocator) : []byte {
         return .{};
     }
     data := new_slice(byte, length, allocator);
-    if (!file_read(file, data)) {
+    bytes_read: int;
+    if (!file_read(file, data, &bytes_read)) {
         delete_slice(data, allocator);
         return .{};
     }
+    assert(bytes_read == data.count);
     return data;
 }
 
@@ -29,8 +31,10 @@ proc write_entire_file(filepath: string, data: []byte, allocator: Allocator) : b
         return .{};
     }
     defer file_close(file);
-    if (!file_write(file, data)) {
+    bytes_written: int;
+    if (!file_write(file, data, &bytes_written)) {
         return false;
     }
+    assert(bytes_written == data.count);
     return true;
 }

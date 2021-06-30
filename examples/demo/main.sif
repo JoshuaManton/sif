@@ -685,11 +685,11 @@ proc append(dyn: ^Dynamic_Array!($T), value: T) : ^T {
     if (dyn.count == dyn.elements.count) {
         old_data := dyn.elements.data;
         new_cap := 8 + dyn.elements.count * 2;
-        dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
+        dyn.elements.data = cast(^T, alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
         dyn.elements.count = new_cap;
         if (old_data != null) {
             memcpy(dyn.elements.data, old_data, cast(u64, dyn.count * sizeof(T)));
-            sif_free(old_data, dyn.allocator);
+            free(old_data, dyn.allocator);
         }
     }
     assert(dyn.count < dyn.elements.count);
@@ -712,7 +712,7 @@ proc clear_dynamic_array(dyn: ^Dynamic_Array!($T)) {
 
 proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
     if (dyn.elements.data != null) {
-        sif_free(dyn.elements.data, dyn.allocator);
+        free(dyn.elements.data, dyn.allocator);
     }
 }
 

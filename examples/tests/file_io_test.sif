@@ -1,0 +1,21 @@
+proc test_file_io() {
+    data1 := read_entire_file("examples/tests/doesnt_exist.txt", default_allocator());
+    assert(data1.data == null);
+    assert(data1.count == 0);
+
+    data2 := read_entire_file("examples/tests/test_file.txt", default_allocator());
+    assert(transmute(string, data2) == "this is a cool file");
+
+    write_entire_file("examples/tests/doesnt_exist.txt", transmute([]byte, "some text to create a file with"), default_allocator());
+
+    data3 := read_entire_file("examples/tests/doesnt_exist.txt", default_allocator());
+    assert(transmute(string, data3) == "some text to create a file with");
+
+    delete_file("examples/tests/doesnt_exist.txt", default_allocator());
+
+    data4 := read_entire_file("examples/tests/doesnt_exist.txt", default_allocator());
+    assert(data4.data == null);
+    assert(data4.count == 0);
+}
+
+#include "core:os.sif"

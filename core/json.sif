@@ -435,7 +435,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
         assert(value.kind == .ARRAY);
         json_array := cast(^JSON_Value_Array, value);
         ptr_slice.count = json_array.values.count;
-        ptr_slice.data = sif_alloc(dti.slice_of.size * json_array.values.count, DEFAULT_ALIGNMENT, allocator);
+        ptr_slice.data = alloc(dti.slice_of.size * json_array.values.count, DEFAULT_ALIGNMENT, allocator);
         for (i := 0; i < json_array.values.count; i += 1) {
             json_write_value_ti(ptr_offset(cast(^u8, ptr_slice.data), i * dti.slice_of.size), dti.slice_of, json_array.values[i], allocator);
         }
@@ -446,7 +446,7 @@ proc json_write_value_ti(ptr: rawptr, ti: ^Type_Info, value: ^JSON_Value, alloca
             // rawptr
         }
         else {
-            new_ptr := sif_alloc(dti.pointer_to.size, DEFAULT_ALIGNMENT, allocator);
+            new_ptr := alloc(dti.pointer_to.size, DEFAULT_ALIGNMENT, allocator);
             json_write_value_ti(new_ptr, dti.pointer_to, value, allocator);
             cast(^rawptr, ptr)^ = new_ptr;
         }

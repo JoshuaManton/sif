@@ -108,7 +108,7 @@ proc dynamic_arena_alloc(allocator: rawptr, size: int, align: int) : rawptr {
         ptr = arena_alloc(current_arena, size, align);
         if (ptr == null) {
             // if it STILL failed then that means that the allocation is too big for our chunk size. fallback to the backing allocator
-            ptr = sif_alloc(size, align, dyn.backing_allocator);
+            ptr = alloc(size, align, dyn.backing_allocator);
             assert(ptr != null);
             append(&dyn.leaked_allocations, ptr);
         }
@@ -142,7 +142,7 @@ proc destroy_dynamic_arena(dynamic_arena: Dynamic_Arena) {
     }
     destroy_dynamic_array(dynamic_arena.arenas);
     for (idx := 0; idx < dynamic_arena.leaked_allocations.count; idx += 1) {
-        sif_free(dynamic_arena.leaked_allocations[idx], dynamic_arena.backing_allocator);
+        free(dynamic_arena.leaked_allocations[idx], dynamic_arena.backing_allocator);
     }
     destroy_dynamic_array(dynamic_arena.leaked_allocations);
 }

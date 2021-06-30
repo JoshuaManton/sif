@@ -1,14 +1,11 @@
 // todo(josh): remove this dependency
 #include "core:basic.sif"
 
-proc malloc      (size: uint)                                   : rawptr #foreign; @sif_runtime
-proc free        (ptr: rawptr)                                           #foreign; @sif_runtime
-proc assert      (condition: bool)                                       #foreign; @sif_runtime
-proc memset      (ptr: rawptr, val: i32, size_in_bytes: u64)    : rawptr #foreign; @sif_runtime
-proc memcpy      (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
-proc memmove     (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign; @sif_runtime
-proc memcmp      (ptr1: rawptr, ptr2: rawptr, n: uint)          : i32    #foreign; @sif_runtime
-
+proc assert (condition: bool)                                       #foreign "sif"; @sif_runtime
+proc memset (ptr: rawptr, val: i32, size_in_bytes: u64)    : rawptr #foreign "sif"; @sif_runtime
+proc memcpy (dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign "sif"; @sif_runtime
+proc memmove(dst: rawptr, src: rawptr, size_in_bytes: u64) : rawptr #foreign "sif"; @sif_runtime
+proc memcmp (ptr1: rawptr, ptr2: rawptr, n: uint)          : i32    #foreign "sif"; @sif_runtime
 
 
 
@@ -124,12 +121,12 @@ struct Allocator {
     free_proc:  proc(allocator: rawptr, ptr: rawptr);
 } @sif_runtime
 
-proc sif_alloc(size: int, align: int, allocator: Allocator) : rawptr {
+proc alloc(size: int, align: int, allocator: Allocator) : rawptr {
     assert(allocator.alloc_proc != null);
     return allocator.alloc_proc(allocator.data, size, align);
 } @sif_runtime
 
-proc sif_free(ptr: rawptr, allocator: Allocator) {
+proc free(ptr: rawptr, allocator: Allocator) {
     assert(allocator.free_proc != null);
     allocator.free_proc(allocator.data, ptr);
 } @sif_runtime
@@ -137,11 +134,15 @@ proc sif_free(ptr: rawptr, allocator: Allocator) {
 
 
 proc default_allocator_alloc(allocator: rawptr, size: int, align: int) : rawptr {
+    proc malloc(size: uint) : rawptr #foreign "sif";
     return malloc(cast(uint, size));
 } @sif_runtime
+
 proc default_allocator_free(allocator: rawptr, ptr: rawptr) {
+    proc free(ptr: rawptr) #foreign "sif";
     free(ptr);
 } @sif_runtime
+
 proc default_allocator() : Allocator {
     a: Allocator;
     a.alloc_proc = default_allocator_alloc;

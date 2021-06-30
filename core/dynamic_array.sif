@@ -19,7 +19,7 @@ proc make_dynamic_array($T: typeid, capacity: int, allocator: Allocator) : Dynam
 
 proc destroy_dynamic_array(dyn: Dynamic_Array!($T)) {
     if (dyn.elements.data != null) {
-        sif_free(dyn.elements.data, dyn.allocator);
+        free(dyn.elements.data, dyn.allocator);
     }
 }
 
@@ -63,11 +63,11 @@ proc insert(dyn: ^Dynamic_Array!($T), index: int, value: T) : ^T {
 
 proc reserve(dyn: ^Dynamic_Array!($T), new_cap: int) {
     old_data := dyn.elements.data;
-    dyn.elements.data = cast(^T, sif_alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
+    dyn.elements.data = cast(^T, alloc(new_cap * sizeof(T), DEFAULT_ALIGNMENT, dyn.allocator));
     dyn.capacity = new_cap;
     if (old_data != null) {
         memcpy(dyn.elements.data, old_data, cast(u64, dyn.count * sizeof(T)));
-        sif_free(old_data, dyn.allocator);
+        free(old_data, dyn.allocator);
     }
 }
 

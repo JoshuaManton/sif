@@ -256,7 +256,7 @@ struct Ast_Var : public Ast_Node {
     Ast_Expr *type_expr = {};
     Ast_Expr *expr = {};
     Type *type = {};
-    bool is_constant = {};
+    bool is_const = {};
     Var_Declaration *declaration = {};
     Operand constant_operand = {};
     bool is_polymorphic_value = {};
@@ -268,13 +268,13 @@ struct Ast_Var : public Ast_Node {
     Struct_Member_Declaration *struct_member = {}; // note(josh): only set if belongs_to_struct is set
 
     IR_Var *ir_var = {};
-    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_constant, bool is_polymorphic_value, bool is_polymorphic_type, Allocator allocator, Ast_Block *current_block, Location location)
+    Ast_Var(char *name, Ast_Expr *name_expr, Ast_Expr *type_expr, Ast_Expr *expr, bool is_const, bool is_polymorphic_value, bool is_polymorphic_type, Allocator allocator, Ast_Block *current_block, Location location)
     : Ast_Node(AST_VAR, allocator, current_block, location)
     , name(name)
     , name_expr(name_expr)
     , type_expr(type_expr)
     , expr(expr)
-    , is_constant(is_constant)
+    , is_const(is_const)
     , is_polymorphic_value(is_polymorphic_value)
     , is_polymorphic_type(is_polymorphic_type)
     {}

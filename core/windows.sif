@@ -551,8 +551,8 @@ const SW_MAX             := 11;
 // Default window position for CreateWindow x,y parameters.
 const CW_USEDEFAULT := 0x80000000;
 
-proc AdjustWindowRect  (lpRect: ^RECT, dwStyle: u32, bMenu: BOOL)                 : BOOL #foreign; // user32
-proc AdjustWindowRectEx(lpRect: ^RECT, dwStyle: u32, bMenu: BOOL, dwExStyle: i32) : BOOL #foreign; // user32
+proc AdjustWindowRect  (lpRect: ^RECT, dwStyle: u32, bMenu: BOOL)                 : BOOL #foreign "user32";
+proc AdjustWindowRectEx(lpRect: ^RECT, dwStyle: u32, bMenu: BOOL, dwExStyle: i32) : BOOL #foreign "user32";
 //AllowSetForegroundWindow
 //AnimateWindow
 //AnyPopup
@@ -568,10 +568,10 @@ proc AdjustWindowRectEx(lpRect: ^RECT, dwStyle: u32, bMenu: BOOL, dwExStyle: i32
 //CloseWindow
 //CreateWindow
 // CreateWindowExA :: (dwExStyle: i32, lpClassName: ^byte, lpWindowName: ^byte, dwStyle: u32, x: i32, y: i32, nWidth: i32, nHeight: i32, hwndParent: HWND, hMenu: HMENU, hInstance: HINSTANCE, lpParam: rawptr) -> HWND #foreign user32 #deprecated "Use CreateWindowExW instead.";
-proc CreateWindowExW(dwExStyle: i32, lpClassName: ^u16, lpWindowName: ^u16, dwStyle: u32, x: i32, y: i32, nWidth: i32, nHeight: i32, hwndParent: HWND, hMenu: HMENU, hInstance: HINSTANCE, lpParam: rawptr) : HWND #foreign; // user32
+proc CreateWindowExW(dwExStyle: i32, lpClassName: ^u16, lpWindowName: ^u16, dwStyle: u32, x: i32, y: i32, nWidth: i32, nHeight: i32, hwndParent: HWND, hMenu: HMENU, hInstance: HINSTANCE, lpParam: rawptr) : HWND #foreign "user32";
 //DeferWindowPos
 //DeregisterShellHookWindow
-proc DestroyWindow      (hWnd: HWND) : BOOL #foreign; // user32
+proc DestroyWindow      (hWnd: HWND) : BOOL #foreign "user32";
 //EndDeferWindowPos
 //EndTask
 //EnumChildProc
@@ -584,9 +584,9 @@ proc DestroyWindow      (hWnd: HWND) : BOOL #foreign; // user32
 //FindWindowEx
 //GetAltTabInfo
 //GetAncestor
-proc GetClientRect      (hwnd: HWND, rect: ^RECT) : i32 #foreign; // user32
-proc GetDesktopWindow   () : HWND #foreign; // user32
-proc GetForegroundWindow() : HWND #foreign; // user32
+proc GetClientRect      (hwnd: HWND, rect: ^RECT) : i32 #foreign "user32";
+proc GetDesktopWindow   () : HWND #foreign "user32";
+proc GetForegroundWindow() : HWND #foreign "user32";
 //GetGUIThreadInfo
 //GetLastActivePopup
 //GetLayeredWindowAttributes
@@ -602,7 +602,7 @@ proc GetForegroundWindow() : HWND #foreign; // user32
 //GetWindowInfo
 //GetWindowModuleFileName
 //GetWindowPlacement
-proc GetWindowRect     (hwnd: HWND, rect: ^RECT) : i32 #foreign; // user32
+proc GetWindowRect     (hwnd: HWND, rect: ^RECT) : i32 #foreign "user32";
 //GetWindowText
 //GetWindowTextLength
 //GetWindowThreadProcessId
@@ -628,16 +628,16 @@ proc GetWindowRect     (hwnd: HWND, rect: ^RECT) : i32 #foreign; // user32
 //SetLayeredWindowAttributes
 //SetParent
 //SetProcessDefaultLayout
-proc SetProcessDPIAware() : i32 #foreign; // user32
+proc SetProcessDPIAware() : i32 #foreign "user32";
 //SetSysColors
 //SetWindowDisplayAffinity
 //SetWindowFeedbackSettings
 //SetWindowPlacement
-proc SetWindowPos      (hwnd: HWND, hWndInsertAfter: HWND, X: i32, Y: i32, cx: i32, cy: i32, uFlags: u32) : BOOL #foreign; // user32
+proc SetWindowPos      (hwnd: HWND, hWndInsertAfter: HWND, X: i32, Y: i32, cx: i32, cy: i32, uFlags: u32) : BOOL #foreign "user32";
 // SetWindowTextA :: (hWnd: HWND, lpString :^u16) : BOOL #foreign user32 #deprecated "Use SetWindowTextW instead";
-proc SetWindowTextW(hWnd: HWND, lpString :^u16) : BOOL #foreign; // user32
+proc SetWindowTextW(hWnd: HWND, lpString :^u16) : BOOL #foreign "user32";
 //ShowOwnedPopups
-proc ShowWindow(hwnd: HWND, nCmdShow: i32) : i32 #foreign; // user32
+proc ShowWindow(hwnd: HWND, nCmdShow: i32) : i32 #foreign "user32";
 //ShowWindowAsync
 //SoundSentry
 //SwitchToThisWindow
@@ -645,7 +645,7 @@ proc ShowWindow(hwnd: HWND, nCmdShow: i32) : i32 #foreign; // user32
 //UpdateLayeredWindow
 //UpdateLayeredWindowIndirect
 //WindowFromPhysicalPoint
-proc WindowFromPoint(Point: POINT) : HWND #foreign; // user32
+proc WindowFromPoint(Point: POINT) : HWND #foreign "user32";
 
 
 // Window Class API.
@@ -740,24 +740,24 @@ const GWL_ID              := -12;
 // GetClassName
 // GetClassWord
 // GetWindowLongA :: (hwnd: HWND, nIndex: i32) : i32 #foreign user32 #deprecated "Use GetWindowLongW instead.";
-proc GetWindowLongW(hwnd: HWND, nIndex: i32) : i32 #foreign; // user32
+proc GetWindowLongW(hwnd: HWND, nIndex: i32) : i32 #foreign "user32";
 // GetWindowLongPtr
 // RegisterClassA
 // RegisterClassW
 // RegisterClassExA :: (lpwcx: *WNDCLASSEXA) : i16 #foreign user32 #deprecated "Use RegisterClassExW instead.";
-proc RegisterClassExW(lpwcx: ^WNDCLASSEXW) : i16 #foreign; // user32
+proc RegisterClassExW(lpwcx: ^WNDCLASSEXW) : i16 #foreign "user32";
 // SetClassLong
 // SetClassLongPtr
 // SetClassWord
 // SetWindowLongA :: (hwnd: HWND, nIndex: i32, dwNewLong: i32) : i32 #foreign user32 #deprecated "Use SetWindowLongW instead, bucko.";
-proc SetWindowLongW(hwnd: HWND, nIndex: i32, dwNewLong: i32) : i32 #foreign; // user32
+proc SetWindowLongW(hwnd: HWND, nIndex: i32, dwNewLong: i32) : i32 #foreign "user32";
 // SetWindowLongPtr
 // UnregisterClass
 
 
 // Coordinate Spaces and Transformation API
 
-proc ClientToScreen(hwnd: HWND, lpPoint: ^POINT) : i32 #foreign; // user32
+proc ClientToScreen(hwnd: HWND, lpPoint: ^POINT) : i32 #foreign "user32";
 //CombineTransform
 //DPtoLP
 //GetCurrentPositionEx
@@ -776,7 +776,7 @@ proc ClientToScreen(hwnd: HWND, lpPoint: ^POINT) : i32 #foreign; // user32
 //OffsetWindowOrgEx
 //ScaleViewportExtEx
 //ScaleWindowExtEx
-proc ScreenToClient(hwnd: HWND, p: ^POINT) : i32 #foreign; // user32
+proc ScreenToClient(hwnd: HWND, p: ^POINT) : i32 #foreign "user32";
 //SetDisplayAutoRotationPreferences
 //SetGraphicsMode
 //SetMapMode
@@ -832,8 +832,8 @@ proc ScreenToClient(hwnd: HWND, p: ^POINT) : i32 #foreign; // user32
 //SetBoundsRect
 //SetROP2
 //SetWindowRgn
-proc UpdateWindow(hwnd: HWND) : i32 #foreign; // user32
-proc ValidateRect(hwnd: HWND, lpRect: ^RECT) : BOOL #foreign; // user32
+proc UpdateWindow(hwnd: HWND) : i32 #foreign "user32";
+proc ValidateRect(hwnd: HWND, lpRect: ^RECT) : BOOL #foreign "user32";
 //ValidateRgn
 
 
@@ -854,7 +854,7 @@ proc ValidateRect(hwnd: HWND, lpRect: ^RECT) : BOOL #foreign; // user32
 //EnumObjects
 //EnumObjectsProc
 //GetCurrentObject
-proc GetDC(hwnd: HWND) : HDC #foreign; // user32
+proc GetDC(hwnd: HWND) : HDC #foreign "user32";
 //GetDCBrushColor
 //GetDCEx
 //GetDCOrgEx
@@ -904,12 +904,12 @@ const BLTALIGNMENT    := 119;
 const SHADEBLENDCAPS  := 120;
 const COLORMGMTCAPS   := 121;
 
-proc GetDeviceCaps(hdc: HDC, index: i32) : i32 #foreign; // gdi
+proc GetDeviceCaps(hdc: HDC, index: i32) : i32 #foreign "gdi";
 //GetLayout
 //GetObject
 //GetObjectType
-proc GetStockObject(fnObject: i32) : HANDLE #foreign; // gdi
-proc ReleaseDC(hwnd: HWND, hdc: HDC) : i32 #foreign; // user32
+proc GetStockObject(fnObject: i32) : HANDLE #foreign "gdi";
+proc ReleaseDC(hwnd: HWND, hdc: HDC) : i32 #foreign "user32";
 //ResetDC
 //RestoreDC
 //SaveDC
@@ -917,7 +917,7 @@ proc ReleaseDC(hwnd: HWND, hdc: HDC) : i32 #foreign; // user32
 //SetDCBrushColor
 //SetDCPenColor
 //SetLayout
-proc WindowFromDC(dc: HDC) : HWND #foreign; // user32
+proc WindowFromDC(dc: HDC) : HWND #foreign "user32";
 
 
 // Icon API
@@ -953,14 +953,14 @@ struct ICONINFOEXW {
 // DuplicateIcon
 // ExtractAssociateIcon
 // ExtractIconA :: (hInst: HINSTANCE, lpszExeFileName: ^byte, nIconIndex: u32) : HICON #foreign shell32 #deprecated "Use ExtractIconW instead.";
-proc ExtractIconW(hInst: HINSTANCE, lpszExeFileName: ^u16, nIconIndex: u32) : HICON #foreign; // shell32
+proc ExtractIconW(hInst: HINSTANCE, lpszExeFileName: ^u16, nIconIndex: u32) : HICON #foreign "shell32";
 // ExtractIconEx
-proc GetIconInfo(hIcon: HICON, piconinfo: ^ICONINFO) : BOOL #foreign; // user32
+proc GetIconInfo(hIcon: HICON, piconinfo: ^ICONINFO) : BOOL #foreign "user32";
 // GetIconInfoEx
 // GetIconInfoExA :: (hIcon: HICON, piconinfo: rawptr) : BOOL #foreign user32 #deprecated "Use GetIconInfoExW instead.";
-proc GetIconInfoExW(hIcon: HICON, piconinfo: ^ICONINFOEXW) : BOOL #foreign; // user32
+proc GetIconInfoExW(hIcon: HICON, piconinfo: ^ICONINFOEXW) : BOOL #foreign "user32";
 // LoadIconA :: (hInstance: HINSTANCE, lpIconName: ^byte) : HICON #foreign user32 #deprecated "Use LoadIconW instead.";
-proc LoadIconW(hInstance: HINSTANCE, lpIconName: LPCWSTR) : HICON #foreign; // user32
+proc LoadIconW(hInstance: HINSTANCE, lpIconName: LPCWSTR) : HICON #foreign "user32";
 // LookupIconIdFromDirectory
 // LookupIconIdFromDirectoryEx
 // PrivateExtractIcons
@@ -971,23 +971,23 @@ proc LoadIconW(hInstance: HINSTANCE, lpIconName: LPCWSTR) : HICON #foreign; // u
 const IDC_ARROW := 32512;
 const IDC_HAND  := 32649;
 
-proc ClipCursor(lpRect: ^RECT) : i32 #foreign; // user32
+proc ClipCursor(lpRect: ^RECT) : i32 #foreign "user32";
 // CopyCursor
 // CreateCursor
 // DestroyCursor
 // GetClipCursor
 // GetCursor
 // GetCursorInfo
-proc GetCursorPos(p: ^POINT) : i32 #foreign; // user32
+proc GetCursorPos(p: ^POINT) : i32 #foreign "user32";
 // GetPhysicalCursorPos
 // LoadCursorA :: (hInstance: HINSTANCE, lpCursorName: ^byte) : HCURSOR #foreign user32 #deprecated "Use LoadCursorW instead.";
-proc LoadCursorW(hInstance: HINSTANCE, lpCursorName: LPCWSTR) : HCURSOR #foreign; // user32
+proc LoadCursorW(hInstance: HINSTANCE, lpCursorName: LPCWSTR) : HCURSOR #foreign "user32";
 // LoadCursorFromFile
 // SetCursor
 // SetCursorPos
 // SetPhysicalCursorPos
 // SetSystemCursor
-proc ShowCursor(bShow: i32) : i32 #foreign; // user32
+proc ShowCursor(bShow: i32) : i32 #foreign "user32";
 
 
 // Message.
@@ -1009,19 +1009,19 @@ const PM_NOYIELD          := 0x0002;
 //BroadcastSystemMessage
 //BroadcastSystemMessageEx
 // DispatchMessageA :: (msg: ^MSG) : i32 #foreign user32 #deprecated "Use DispatchMessageW instead.";
-proc DispatchMessageW(msg: ^MSG) : i32 #foreign; // user32
+proc DispatchMessageW(msg: ^MSG) : i32 #foreign "user32";
 //GetInputState
 //GetMessage
-proc GetMessageExtraInfo() : LPARAM #foreign; // user32
+proc GetMessageExtraInfo() : LPARAM #foreign "user32";
 //GetMessagePos
 //GetMessageTime
 //GetQueueStatus
 //InSendMessage
 //InSendMessageEx
 // PeekMessageA :: (msg: ^MSG, hwnd: HWND, wMsgFilterMin: u32, wMsgFilterMax: u32, wRemoveMsg: u32) : i32 #foreign user32 #deprecated "Use PeekMessageW instead.";
-proc PeekMessageW(msg: ^MSG, hwnd: HWND, wMsgFilterMin: u32, wMsgFilterMax: u32, wRemoveMsg: u32) : i32 #foreign; // user32
+proc PeekMessageW(msg: ^MSG, hwnd: HWND, wMsgFilterMin: u32, wMsgFilterMax: u32, wRemoveMsg: u32) : i32 #foreign "user32";
 //PostMessage
-proc PostQuitMessage(index: i32) #foreign; // user32
+proc PostQuitMessage(index: i32) #foreign "user32";
 //PostThreadMessage
 //RegisterWindowMessage
 //ReplyMessage
@@ -1031,7 +1031,7 @@ proc PostQuitMessage(index: i32) #foreign; // user32
 //SendMessageTimeout
 //SendNotifyMessage
 //SetMessageExtraInfo
-proc TranslateMessage(msg: ^MSG) : i32 #foreign; // user32
+proc TranslateMessage(msg: ^MSG) : i32 #foreign "user32";
 //WaitMessage
 
 
@@ -1041,7 +1041,7 @@ proc TranslateMessage(msg: ^MSG) : i32 #foreign; // user32
 
 //CallWindowProc :: (lpPrevWndFunc: *WNDPROC, hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM ) : LRESULT #foreign user32;
 // DefWindowProcA :: (hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) : i64 #foreign user32 #deprecated "Use DefWindowProcW instead.";
-proc DefWindowProcW(hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) : i64 #foreign; // user32
+proc DefWindowProcW(hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) : i64 #foreign "user32";
 
 
 // Multiple Display Monitors API:
@@ -1057,22 +1057,22 @@ struct MONITORINFO {
     dwFlags: i32;
 }
 
-proc EnumDisplayMonitors (hdc: HDC, lprcClip: ^RECT, lpfnEnum:MONITORENUMPROC, dwData:LPARAM) : BOOL #foreign; // user32
+proc EnumDisplayMonitors (hdc: HDC, lprcClip: ^RECT, lpfnEnum:MONITORENUMPROC, dwData:LPARAM) : BOOL #foreign "user32";
 // proc GetMonitorInfoA     (hMonitor: HMONITOR, lpmi: ^MONITORINFO) : BOOL #foreign user32 #deprecated "Use GetMonitorInfoW instead.";
-proc GetMonitorInfoW     (hMonitor: HMONITOR, lpmi: ^MONITORINFO) : BOOL #foreign; // user32
+proc GetMonitorInfoW     (hMonitor: HMONITOR, lpmi: ^MONITORINFO) : BOOL #foreign "user32";
 const MONITORENUMPROC := proc(hMonitor: HMONITOR, hdcMonitor: HDC, lprcMonitor: ^RECT, dwData: LPARAM) : BOOL;
-proc MonitorFromPoint    (pt: POINT, dwFlags: u32) : HMONITOR #foreign; // user32
-proc MonitorFromRect     (lprc: ^RECT, dwFlags: u32) : HMONITOR #foreign; // user32
-proc MonitorFromWindow   (hwnd: HWND, dwFlags: u32) : HMONITOR #foreign; // user32
+proc MonitorFromPoint    (pt: POINT, dwFlags: u32) : HMONITOR #foreign "user32";
+proc MonitorFromRect     (lprc: ^RECT, dwFlags: u32) : HMONITOR #foreign "user32";
+proc MonitorFromWindow   (hwnd: HWND, dwFlags: u32) : HMONITOR #foreign "user32";
 
 
 // Keyboard Input
 
 //BlockInput
 //EnableWindow
-proc GetActiveWindow() : HWND #foreign; // user32
-proc GetAsyncKeyState(nVirtKey: i32) : i16 #foreign; // user32
-proc GetFocus() : HWND #foreign; // user32
+proc GetActiveWindow() : HWND #foreign "user32";
+proc GetAsyncKeyState(nVirtKey: i32) : i16 #foreign "user32";
+proc GetFocus() : HWND #foreign "user32";
 //GetKBCodePage
 //GetKeyboardLayout
 //GetKeyboardLayoutList
@@ -1080,7 +1080,7 @@ proc GetFocus() : HWND #foreign; // user32
 //GetKeyboardState
 //GetKeyboardType
 //GetKeyNameText
-proc GetKeyState(nVirtKey: i32) : i16 #foreign; // user32
+proc GetKeyState(nVirtKey: i32) : i16 #foreign "user32";
 //GetLastInputInfo
 //IsWindowEnabled
 //keybd_event
@@ -1148,8 +1148,8 @@ proc GetKeyState(nVirtKey: i32) : i16 #foreign; // user32
 //GetDoubleClickTime
 //GetMouseMovePointsEx
 //mouse_event
-proc ReleaseCapture() : BOOL #foreign; // user32
-proc SetCapture    (hwnd: HWND) : HWND #foreign; // user32
+proc ReleaseCapture() : BOOL #foreign "user32";
+proc SetCapture    (hwnd: HWND) : HWND #foreign "user32";
 //SetDoubleClickTime
 //SwapMouseButton
 //TrackMouseEvent
@@ -1258,11 +1258,11 @@ const RI_KEY_E1                   := 4;
 
 //DefRawInputProc
 //GetRawInputBuffer
-proc GetRawInputData(hRawInput: HRAWINPUT, uiCommand: u32, pData: rawptr, pcbSize: ^u32, cbSizeHeader: u32) : u32 #foreign; // user32
+proc GetRawInputData(hRawInput: HRAWINPUT, uiCommand: u32, pData: rawptr, pcbSize: ^u32, cbSizeHeader: u32) : u32 #foreign "user32";
 //GetRawInputDeviceInfo
 //GetRawInputDeviceList
 //GetRegisteredRawInputDevices
-proc RegisterRawInputDevices(pRawInputDevices: rawptr, uiNumDevices: u32, cbSize: u32) : i32 #foreign; // user32
+proc RegisterRawInputDevices(pRawInputDevices: rawptr, uiNumDevices: u32, cbSize: u32) : i32 #foreign "user32";
 
 
 // WGL
@@ -1362,30 +1362,30 @@ const WGL_SWAP_UNDERLAY15         := 0x40000000;
 
 const HGLRC                       := HANDLE;
 
-proc ChoosePixelFormat(hdc: HDC, ppfd: ^PIXELFORMATDESCRIPTOR) : i32 #foreign; // gdi
-proc DescribePixelFormat(hdc: HDC, iPixelFormat: i32, nBytes: u32, ppfd: ^PIXELFORMATDESCRIPTOR) : i32 #foreign; // gdi
-// proc GetEnhMetaFilePixelFormat(hemf: HENHMETAFILE, ppfd: ^PIXELFORMATDESCRIPTOR) : u32 #foreign; // gdi
-proc GetPixelFormat(hdc: HDC) : i32 #foreign; // gdi
-proc SetPixelFormat(hdc: HDC, iPixelFormat: i32, ppfd: ^PIXELFORMATDESCRIPTOR) : BOOL #foreign; // gdi
-proc SwapBuffers(hdc: HDC) : BOOL #foreign; // gdi
-proc wglCopyContext(hglrcSrc: HGLRC, hglrcDst: HGLRC, mask: u32) : BOOL #foreign; // gl
-proc wglCreateContext(hdc: HDC) : HGLRC #foreign; // gl
-proc wglCreateLayerContext(hdc: HDC, level: i32) : HGLRC #foreign; // gl
-proc wglDeleteContext(oldContext: HGLRC) : BOOL #foreign; // gl
-// proc wglDescribeLayerPlane(hDc: HDC, pixelFormat: i32, layerPlane: i32, nBytes: u32, plpd: *LAYERPLANEDESCRIPTOR) : BOOL #foreign; // gl
-proc wglGetCurrentContext() : HGLRC #foreign; // gl
-proc wglGetCurrentDC() : HDC #foreign; // gl
-// proc wglGetLayerPaletteEntries(hdc: HDC, iLayerPlane: i32, iStart: i32, cEntries: i32, pcr: *COLORREF) : i32 #foreign; // gl
-proc wglGetProcAddress(lpszProc: ^byte) : rawptr #foreign; // gl
-proc wglMakeCurrent(hdc: HDC, newContext: HGLRC) : BOOL #foreign; // gl
-proc wglRealizeLayerPalette(hdc: HDC, iLayerPlane: i32, bRealize: BOOL) : BOOL #foreign; // gl
-// proc wglSetLayerPaletteEntries(hdc: HDC, iLayerPlane: i32, iStart: i32, cEntries: i32, pcr: *COLORREF) : i32 #foreign; // gl
-proc wglShareLists(hrcSrvShare: HGLRC, hrcSrvSource: HGLRC) : BOOL #foreign; // gl
-proc wglSwapLayerBuffers(hdc: HDC, fuFlags: u32) : BOOL #foreign; // gl
-proc wglUseFontBitmapsA(hDC: HDC, first: u32, count: u32, listBase: u32) : BOOL #foreign; // gl
-proc wglUseFontBitmapsW(hDC: HDC, first: u32, count: u32, listBase: u32) : BOOL #foreign; // gl
-// proc wglUseFontOutlinesA(hDC: HDC, first: u32, count: u32, listBase: u32, deviation: float, extrusion: float, format: i32, lpgmf: LPGLYPHMETRICSFLOAT) : BOOL #foreign; // gl
-// proc wglUseFontOutlinesW(hDC: HDC, first: u32, count: u32, listBase: u32, deviation: float, extrusion: float, format: i32, lpgmf: LPGLYPHMETRICSFLOAT) : BOOL #foreign; // gl
+proc ChoosePixelFormat(hdc: HDC, ppfd: ^PIXELFORMATDESCRIPTOR) : i32 #foreign "gdi";
+proc DescribePixelFormat(hdc: HDC, iPixelFormat: i32, nBytes: u32, ppfd: ^PIXELFORMATDESCRIPTOR) : i32 #foreign "gdi";
+// proc GetEnhMetaFilePixelFormat(hemf: HENHMETAFILE, ppfd: ^PIXELFORMATDESCRIPTOR) : u32 #foreign "gdi";
+proc GetPixelFormat(hdc: HDC) : i32 #foreign "gdi";
+proc SetPixelFormat(hdc: HDC, iPixelFormat: i32, ppfd: ^PIXELFORMATDESCRIPTOR) : BOOL #foreign "gdi";
+proc SwapBuffers(hdc: HDC) : BOOL #foreign "gdi";
+proc wglCopyContext(hglrcSrc: HGLRC, hglrcDst: HGLRC, mask: u32) : BOOL #foreign "gl";
+proc wglCreateContext(hdc: HDC) : HGLRC #foreign "gl";
+proc wglCreateLayerContext(hdc: HDC, level: i32) : HGLRC #foreign "gl";
+proc wglDeleteContext(oldContext: HGLRC) : BOOL #foreign "gl";
+// proc wglDescribeLayerPlane(hDc: HDC, pixelFormat: i32, layerPlane: i32, nBytes: u32, plpd: *LAYERPLANEDESCRIPTOR) : BOOL #foreign "gl";
+proc wglGetCurrentContext() : HGLRC #foreign "gl";
+proc wglGetCurrentDC() : HDC #foreign "gl";
+// proc wglGetLayerPaletteEntries(hdc: HDC, iLayerPlane: i32, iStart: i32, cEntries: i32, pcr: *COLORREF) : i32 #foreign "gl";
+proc wglGetProcAddress(lpszProc: ^byte) : rawptr #foreign "gl";
+proc wglMakeCurrent(hdc: HDC, newContext: HGLRC) : BOOL #foreign "gl";
+proc wglRealizeLayerPalette(hdc: HDC, iLayerPlane: i32, bRealize: BOOL) : BOOL #foreign "gl";
+// proc wglSetLayerPaletteEntries(hdc: HDC, iLayerPlane: i32, iStart: i32, cEntries: i32, pcr: *COLORREF) : i32 #foreign "gl";
+proc wglShareLists(hrcSrvShare: HGLRC, hrcSrvSource: HGLRC) : BOOL #foreign "gl";
+proc wglSwapLayerBuffers(hdc: HDC, fuFlags: u32) : BOOL #foreign "gl";
+proc wglUseFontBitmapsA(hDC: HDC, first: u32, count: u32, listBase: u32) : BOOL #foreign "gl";
+proc wglUseFontBitmapsW(hDC: HDC, first: u32, count: u32, listBase: u32) : BOOL #foreign "gl";
+// proc wglUseFontOutlinesA(hDC: HDC, first: u32, count: u32, listBase: u32, deviation: float, extrusion: float, format: i32, lpgmf: LPGLYPHMETRICSFLOAT) : BOOL #foreign "gl";
+// proc wglUseFontOutlinesW(hDC: HDC, first: u32, count: u32, listBase: u32, deviation: float, extrusion: float, format: i32, lpgmf: LPGLYPHMETRICSFLOAT) : BOOL #foreign "gl";
 
 
 
@@ -1487,7 +1487,7 @@ const MAX_COMPUTERNAME_LENGTH := 31;
 //EnumSystemFirmwareTables
 //ExpandEnvironmentStrings
 // GetComputerNameA :: (lpBuffer: ^byte, nSize: ^u32) : BOOL #foreign kernel32; // #deprecated?
-proc GetComputerNameW(lpBuffer: ^u16, nSize: ^u32) : BOOL #foreign; // kernel32
+proc GetComputerNameW(lpBuffer: ^u16, nSize: ^u32) : BOOL #foreign "kernel32";
 //GetComputerNameEx
 //GetComputerObjectName
 //GetCurrentHwProfile
@@ -1498,27 +1498,27 @@ proc GetComputerNameW(lpBuffer: ^u16, nSize: ^u32) : BOOL #foreign; // kernel32
 //GetNativeSystemInfo
 //GetProductInfo
 // GetSystemDirectoryA :: (lpBuffer: ^byte, uSize: u32) : u32 #foreign kernel32 #deprecated "Use GetSystemDirectoryW instead.";
-proc GetSystemDirectoryW(lpBuffer: ^u16, uSize: u32) : u32 #foreign; // kernel32
+proc GetSystemDirectoryW(lpBuffer: ^u16, uSize: u32) : u32 #foreign "kernel32";
 //GetSystemFirmwareTable
-proc GetSystemInfo(lpSystemInfo : ^SYSTEM_INFO) #foreign; // kernel32
-proc GetNativeSystemInfo(lpSystemInfo : ^SYSTEM_INFO) #foreign; // kernel32
+proc GetSystemInfo(lpSystemInfo : ^SYSTEM_INFO) #foreign "kernel32";
+proc GetNativeSystemInfo(lpSystemInfo : ^SYSTEM_INFO) #foreign "kernel32";
 //GetSystemRegistryQuota
 //GetSystemWindowsDirectory
 //GetSystemWow64Directory
 //GetSystemWow64Directory2
 // GetUserNameA :: (lpBuffer: ^byte, lpnSize: ^u32) : BOOL #foreign Advapi32 #deprecated "Use GetUserNameW instead.";
-proc GetUserNameW(lpBuffer: ^u16, lpnSize: ^u32) : BOOL #foreign; // Advapi32
+proc GetUserNameW(lpBuffer: ^u16, lpnSize: ^u32) : BOOL #foreign "Advapi32";
 //GetUserNameEx
-proc GetVersion() : u32 #foreign; // kernel32
+proc GetVersion() : u32 #foreign "kernel32";
 // GetVersionExA :: (lpVersionInfo: *OSVERSIONINFOA) : BOOL #foreign kernel32 #deprecated "Use GetVersionExW instead.";
-proc GetVersionExW(lpVersionInfo: ^OSVERSIONINFOW) : BOOL #foreign; // kernel32
+proc GetVersionExW(lpVersionInfo: ^OSVERSIONINFOW) : BOOL #foreign "kernel32";
 //GetWindowsDirectory
 //IsNativeVhdBoot
 //IsProcessorFeaturePresent
 //IsWow64GuestMachineSupported
 //NtQuerySystemInformation
-proc QueryPerformanceFrequency(result: ^i64) : i32 #foreign; // kernel32
-proc QueryPerformanceCounter  (result: ^i64) : i32 #foreign; // kernel32
+proc QueryPerformanceFrequency(result: ^i64) : i32 #foreign "kernel32";
+proc QueryPerformanceCounter  (result: ^i64) : i32 #foreign "kernel32";
 //RtlGetSuiteMask
 //SetComputerName
 //SetComputerNameEx
@@ -1541,7 +1541,7 @@ const VER_NT_SERVER            := 0x0000003;
 
 // @@ This is supposed to return NTSTATUS:
 // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/content/wdm/nf-wdm-rtlgetversion
-proc RtlGetVersion(lpVersionInfo : ^OSVERSIONINFOW) #foreign; // ntdll
+proc RtlGetVersion(lpVersionInfo : ^OSVERSIONINFOW) #foreign "ntdll";
 
 // Not sure how to link against api-ms-win-core-version-l1-1-0.dll
 // GetFileVersionInfo :: (lptstrFilename: ^byte, dwHandle: u32, dwLen: u32, lpData : rawptr) -> BOOL #foreign Mincore;
@@ -1650,7 +1650,7 @@ const ERROR_IO_PENDING     := 0x3E5;
 // }
 
 
-proc CreatePipe(hReadPipe: ^HANDLE, hWritePipe: ^HANDLE, lpPipeAttributes: ^SECURITY_ATTRIBUTES, nSize: DWORD) : BOOL #foreign; // kernel32
+proc CreatePipe(hReadPipe: ^HANDLE, hWritePipe: ^HANDLE, lpPipeAttributes: ^SECURITY_ATTRIBUTES, nSize: DWORD) : BOOL #foreign "kernel32";
 //AcquireSRWLockExclusive
 //AcquireSRWLockShared
 //AddSIDToBoundaryDescriptor
@@ -1661,7 +1661,7 @@ proc CreatePipe(hReadPipe: ^HANDLE, hWritePipe: ^HANDLE, lpPipeAttributes: ^SECU
 //ClosePrivateNamespace
 //CreateBoundaryDescriptor
 // CreateEventA :: (lpEventAttributes: ^SECURITY_ATTRIBUTES, bManualReset: i32, bInitialState: i32, lpName: ^byte) : HANDLE #foreign kernel32 #deprecated "Use CreateEventW instead.";
-proc CreateEventW(lpEventAttributes: ^SECURITY_ATTRIBUTES, bManualReset: i32, bInitialState: i32, lpName: ^u16) : HANDLE #foreign; // kernel32
+proc CreateEventW(lpEventAttributes: ^SECURITY_ATTRIBUTES, bManualReset: i32, bInitialState: i32, lpName: ^u16) : HANDLE #foreign "kernel32";
 //CreateEventEx
 //CreateMutex
 //CreateMutexEx
@@ -1673,17 +1673,17 @@ proc CreateEventW(lpEventAttributes: ^SECURITY_ATTRIBUTES, bManualReset: i32, bI
 //CreateWaitableTimer
 //CreateWaitableTimerEx
 //DeleteBoundaryDescriptor
-proc DeleteCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign; // kernel32
+proc DeleteCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign "kernel32";
 //DeleteSynchronizationBarrier
 //DeleteTimerQueue
 //DeleteTimerQueueEx
 //DeleteTimerQueueTimer
-proc EnterCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign; // kernel32
+proc EnterCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign "kernel32";
 //EnterSynchronizationBarrier
-proc GetOverlappedResult(hFile: HANDLE, lpOverlapped: ^OVERLAPPED, lpNumberOfBytesTransferred: ^i32, bWait: i32) : i32 #foreign; // kernel32
+proc GetOverlappedResult(hFile: HANDLE, lpOverlapped: ^OVERLAPPED, lpNumberOfBytesTransferred: ^i32, bWait: i32) : i32 #foreign "kernel32";
 //GetOverlappedResultEx
 //InitializeConditionVariable
-proc InitializeCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign; // kernel32
+proc InitializeCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign "kernel32";
 //InitializeCriticalSectionAndSpinCount
 //InitializeCriticalSectionEx
 //InitializeSListHead
@@ -1831,7 +1831,7 @@ proc InitializeCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign; /
 //InterlockedXor64Acquire
 //InterlockedXor64Release
 //InterlockedXor64NoFence
-proc LeaveCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign; // kernel32
+proc LeaveCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign "kernel32";
 //MsgWaitForMultipleObjects
 //MsgWaitForMultipleObjectsEx
 //OpenEvent
@@ -1839,12 +1839,12 @@ proc LeaveCriticalSection(lpCriticalSection: ^CRITICAL_SECTION) #foreign; // ker
 //OpenPrivateNamespace
 //OpenSemaphore
 //OpenWaitableTimer
-proc PulseEvent(handle: HANDLE) : i32 #foreign; // kernel32
+proc PulseEvent(handle: HANDLE) : i32 #foreign "kernel32";
 //QueryDepthSList
 //QueueUserAPC
 //RegisterWaitForSingleObject
 //ReleaseMutex
-proc ReleaseSemaphore(hSemaphore: HANDLE, lReleaseCount: i32, lpPreviousCount: ^i32) : BOOL #foreign; // kernel32
+proc ReleaseSemaphore(hSemaphore: HANDLE, lReleaseCount: i32, lpPreviousCount: ^i32) : BOOL #foreign "kernel32";
 //ReleaseSRWLockExclusive
 //ReleaseSRWLockShared
 //ResetEvent
@@ -1867,9 +1867,9 @@ proc ReleaseSemaphore(hSemaphore: HANDLE, lReleaseCount: i32, lpPreviousCount: ^
 //TryEnterCriticalSection
 //UnregisterWait
 //UnregisterWaitEx
-proc WaitForMultipleObjects(nCount: DWORD, lpHandles: ^HANDLE, bWaitAll: BOOL, dwMilliseconds: DWORD) : DWORD #foreign; // kernel32
+proc WaitForMultipleObjects(nCount: DWORD, lpHandles: ^HANDLE, bWaitAll: BOOL, dwMilliseconds: DWORD) : DWORD #foreign "kernel32";
 //WaitForMultipleObjectsEx
-proc WaitForSingleObject(handle: HANDLE, milliseconds: DWORD) : i32 #foreign; // kernel32
+proc WaitForSingleObject(handle: HANDLE, milliseconds: DWORD) : i32 #foreign "kernel32";
 //WaitForSingleObjectEx
 //WaitOnAddress
 //WaitOrTimerCallback
@@ -1962,7 +1962,7 @@ proc CreateFileMappingA(hFile: HANDLE,
                        flProtect: DWORD,
                        dwMaximumSizeHigh: DWORD,
                        dwMaximumSizeLow: DWORD,
-                       lpName: LPCSTR) : HANDLE #foreign; // kernel32
+                       lpName: LPCSTR) : HANDLE #foreign "kernel32";
 //CreateFileMapping
 //CreateFileMappingFromApp
 //CreateFileMappingNuma
@@ -1980,17 +1980,17 @@ proc CreateFileMappingA(hFile: HANDLE,
 //GetSystemDEPPolicy
 //GetSystemFileCacheSize
 //GetWriteWatch
-proc GlobalAlloc(uFlags: u32, dwBytes: SIZE_T) : HGLOBAL #foreign; // kernel32
+proc GlobalAlloc(uFlags: u32, dwBytes: SIZE_T) : HGLOBAL #foreign "kernel32";
 //GlobalDiscard
 //GlobalFlags
 //GlobalFree
 //GlobalHandle
-proc GlobalLock(hMem: HGLOBAL) : rawptr #foreign; // kernel32
+proc GlobalLock(hMem: HGLOBAL) : rawptr #foreign "kernel32";
 // GlobalMemoryStatus
-proc GlobalMemoryStatusEx(lpBuffer: ^MEMORYSTATUSEX) : BOOL #foreign; // kernel32
+proc GlobalMemoryStatusEx(lpBuffer: ^MEMORYSTATUSEX) : BOOL #foreign "kernel32";
 //GlobalReAlloc
 //GlobalSize
-proc GlobalUnlock(hMem: HGLOBAL) : BOOL  #foreign; // kernel32
+proc GlobalUnlock(hMem: HGLOBAL) : BOOL  #foreign "kernel32";
 //HeapAlloc
 //HeapCompact
 //HeapCreate
@@ -2021,7 +2021,7 @@ proc MapViewOfFile(hFileMappingObject: HANDLE,
                   dwDesiredAccess: DWORD,
                   dwFileOffsetHigh: DWORD,
                   dwFileOffsetLow: DWORD,
-                  dwNumberOfBytesToMap: SIZE_T) : rawptr #foreign; // kernel32
+                  dwNumberOfBytesToMap: SIZE_T) : rawptr #foreign "kernel32";
 //MapViewOfFile2
 //MapViewOfFileEx
 //MapViewOfFileExNuma
@@ -2033,7 +2033,7 @@ proc MapViewOfFile(hFileMappingObject: HANDLE,
 
 proc OpenFileMappingA(dwDesiredAccess: DWORD,
                      bInheritHandle: BOOL,
-                     lpName: LPCSTR) : HANDLE #foreign; // kernel32
+                     lpName: LPCSTR) : HANDLE #foreign "kernel32";
 
 //OpenFileMapping
 //OpenFileMappingFromApp
@@ -2050,19 +2050,19 @@ proc OpenFileMappingA(dwDesiredAccess: DWORD,
 //SetProcessValidCallTargets
 //SetSystemFileCacheSize
 
-proc UnmapViewOfFile(address: rawptr) : BOOL #foreign; // kernel32
+proc UnmapViewOfFile(address: rawptr) : BOOL #foreign "kernel32";
 
 //UnmapViewOfFile2
 //UnmapViewOfFileEx
 //UnregisterBadMemoryNotification
-proc VirtualAlloc(lpAddress: rawptr, dwSize: u64, flAllocationType: u32, flProtect: u32) : rawptr #foreign; // kernel32
+proc VirtualAlloc(lpAddress: rawptr, dwSize: u64, flAllocationType: u32, flProtect: u32) : rawptr #foreign "kernel32";
 //VirtualAllocEx
 //VirtualAllocExNuma
 //VirtualAllocFromApp
-proc VirtualFree(lpAddress: rawptr, dwSize: u64, dwFreeType: u32) : BOOL #foreign; // kernel32
+proc VirtualFree(lpAddress: rawptr, dwSize: u64, dwFreeType: u32) : BOOL #foreign "kernel32";
 //VirtualFreeEx
 //VirtualLock
-proc VirtualProtect(lpAddress: rawptr, dwSize: u64, flNewProtect: u32, lpflOldProtect: ^u32) : BOOL #foreign; // kernel32
+proc VirtualProtect(lpAddress: rawptr, dwSize: u64, flNewProtect: u32, lpflOldProtect: ^u32) : BOOL #foreign "kernel32";
 //VirtualProtectEx
 //VirtualProtectFromApp
 //VirtualQuery
@@ -2076,11 +2076,11 @@ proc VirtualProtect(lpAddress: rawptr, dwSize: u64, flNewProtect: u32, lpflOldPr
 
 
 // Handles and Objects API
-proc CloseHandle(handle: HANDLE) : i32 #foreign; // kernel32
+proc CloseHandle(handle: HANDLE) : i32 #foreign "kernel32";
 //CompareObjectHandles
 //DuplicateHandle
 //GetHandleInformation
-proc SetHandleInformation(hObject: HANDLE, dwMask: DWORD, dwFlags: DWORD) : BOOL #foreign; // kernel32
+proc SetHandleInformation(hObject: HANDLE, dwMask: DWORD, dwFlags: DWORD) : BOOL #foreign "kernel32";
 
 
 // Dynamic Link Library API
@@ -2091,15 +2091,15 @@ proc SetHandleInformation(hObject: HANDLE, dwMask: DWORD, dwFlags: DWORD) : BOOL
 //FreeLibraryAndExitThread
 //GetDllDirectory
 // GetModuleFileNameA :: (module: HANDLE, result: ^byte, size: i32) : i32 #foreign kernel32 #deprecated "Use GetModuleFileNameW instead.";
-proc GetModuleFileNameW(module: HANDLE, result: ^u16, size: i32) : i32 #foreign; // kernel32
+proc GetModuleFileNameW(module: HANDLE, result: ^u16, size: i32) : i32 #foreign "kernel32";
 // GetModuleHandleA   :: (module_name: ^byte) : HANDLE #foreign kernel32 #deprecated "Use GetModuleHandleW instead.";
-proc GetModuleHandleW(module_name: ^u16) : HANDLE #foreign; // kernel32
+proc GetModuleHandleW(module_name: ^u16) : HANDLE #foreign "kernel32";
 //GetModuleHandleEx
-proc GetProcAddress(module: HMODULE, proc_name: ^byte) : rawptr #foreign; // kernel32
-proc LoadLibraryA(filename: ^byte) : HMODULE #foreign; // kernel32  // We don't deprecate LoadLibraryA since it is kind of inconvenient to call the W versions sometimes, for no version.
-proc LoadLibraryW(filename: ^u16) : HMODULE #foreign; // kernel32
-proc LoadLibraryExA(filename: ^byte, file: HANDLE, flags: DWORD) : HMODULE #foreign; // kernel32
-proc LoadLibraryExW(filename: ^u16, file: HANDLE, flags: DWORD) : HMODULE #foreign; // kernel32
+proc GetProcAddress(module: HMODULE, proc_name: ^byte) : rawptr #foreign "kernel32";
+proc LoadLibraryA(filename: ^byte) : HMODULE #foreign "kernel32";  // We don't deprecate LoadLibraryA since it is kind of inconvenient to call the W versions sometimes, for no version.
+proc LoadLibraryW(filename: ^u16) : HMODULE #foreign "kernel32";
+proc LoadLibraryExA(filename: ^byte, file: HANDLE, flags: DWORD) : HMODULE #foreign "kernel32";
+proc LoadLibraryExW(filename: ^u16, file: HANDLE, flags: DWORD) : HMODULE #foreign "kernel32";
 
 const DONT_RESOLVE_DLL_REFERENCES         := 0x00000001;
 const LOAD_IGNORE_CODE_AUTHZ_LEVEL        := 0x00000010;
@@ -2144,21 +2144,21 @@ const FILE_ACTION_RENAMED_OLD_NAME := 0x004;
 const FILE_ACTION_RENAMED_NEW_NAME := 0x005;
 
 // CreateDirectoryA :: (lpPathName: ^byte, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : i32 #foreign kernel32  #deprecated "Use CreateDirectoryW instead.";
-proc CreateDirectoryW(lpPathName: ^u16, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : i32 #foreign; // kernel32
+proc CreateDirectoryW(lpPathName: ^u16, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : i32 #foreign "kernel32";
 //CreateDirectoryEx
 //CreateDirectoryTransacted
 //FindCloseChangeNotification
 //FindFirstChangeNotification
 //FindNextChangeNotification
 // GetCurrentDirectoryA :: (nBufferLength: DWORD, lpBuffer: ^byte) : DWORD #foreign kernel32 #deprecated "Use GetCurrentDirectoryW instead.";
-proc GetCurrentDirectoryW(nBufferLength: DWORD, lpBuffer: ^u16) : DWORD #foreign; // kernel32
+proc GetCurrentDirectoryW(nBufferLength: DWORD, lpBuffer: ^u16) : DWORD #foreign "kernel32";
 //ReadDirectoryChangesExW
-proc ReadDirectoryChangesW(hDirectory: HANDLE, lpBuffer: rawptr, nBufferLength: i32, bWatchSubtree: i32, dwNotifyFilter: i32, lpBytesReturned: ^i32, lpOverlapped: ^OVERLAPPED, lpCompletionRoutine: rawptr) : BOOL #foreign; // kernel32
+proc ReadDirectoryChangesW(hDirectory: HANDLE, lpBuffer: rawptr, nBufferLength: i32, bWatchSubtree: i32, dwNotifyFilter: i32, lpBytesReturned: ^i32, lpOverlapped: ^OVERLAPPED, lpCompletionRoutine: rawptr) : BOOL #foreign "kernel32";
 // RemoveDirectoryA :: (lpPathName: ^byte) : BOOL #foreign kernel32 #deprecated "Use RemoveDirectoryW instead.";
-proc RemoveDirectoryW(lpPathName: ^u16) : BOOL #foreign; // kernel32
+proc RemoveDirectoryW(lpPathName: ^u16) : BOOL #foreign "kernel32";
 //RemoveDirectoryTransacted
 
-proc SetCurrentDirectoryW(name: ^u16) : BOOL #foreign; // kernel32
+proc SetCurrentDirectoryW(name: ^u16) : BOOL #foreign "kernel32";
 
 
 // @@ Console API
@@ -2171,15 +2171,15 @@ struct CONSOLE_SCREEN_BUFFER_INFO {
     dwMaximumWindowSize: COORD;
 }
 
-proc GetStdHandle(handle: i32) : HANDLE #foreign; // kernel32
-proc GetConsoleScreenBufferInfo(hConsoleOutput: HANDLE, lpConsoleScreenBufferInfo : ^CONSOLE_SCREEN_BUFFER_INFO) : BOOL #foreign; // kernel32
-proc SetConsoleTextAttribute(hConsoleOutput: HANDLE, wAttributes : u16) : BOOL #foreign; // kernel32
+proc GetStdHandle(handle: i32) : HANDLE #foreign "kernel32";
+proc GetConsoleScreenBufferInfo(hConsoleOutput: HANDLE, lpConsoleScreenBufferInfo : ^CONSOLE_SCREEN_BUFFER_INFO) : BOOL #foreign "kernel32";
+proc SetConsoleTextAttribute(hConsoleOutput: HANDLE, wAttributes : u16) : BOOL #foreign "kernel32";
 
-proc GetConsoleMode(hConsoleHandle: HANDLE, lpMode: ^DWORD) : BOOL #foreign; // kernel32
-proc SetConsoleMode(hConsoleHandle: HANDLE, lpMode:  DWORD) : BOOL #foreign; // kernel32
+proc GetConsoleMode(hConsoleHandle: HANDLE, lpMode: ^DWORD) : BOOL #foreign "kernel32";
+proc SetConsoleMode(hConsoleHandle: HANDLE, lpMode:  DWORD) : BOOL #foreign "kernel32";
 
-proc SetConsoleCP(wCodePageID: u32) : BOOL #foreign; // kernel32
-proc SetConsoleOutputCP(wCodePageID: u32) : BOOL #foreign; // kernel32
+proc SetConsoleCP(wCodePageID: u32) : BOOL #foreign "kernel32";
+proc SetConsoleOutputCP(wCodePageID: u32) : BOOL #foreign "kernel32";
 
 const ENABLE_VIRTUAL_TERMINAL_PROCESSING := 0x4;
 
@@ -2188,7 +2188,7 @@ const ENABLE_VIRTUAL_TERMINAL_PROCESSING := 0x4;
 
 const LCID := i32;
 
-proc GetUserDefaultLCID() : LCID #foreign; // kernel32
+proc GetUserDefaultLCID() : LCID #foreign "kernel32";
 
 
 
@@ -2222,11 +2222,11 @@ const CF_DSPENHMETAFILE  := 0x008E;
 
 //AddClipboardFormatListener
 //ChangeClipboardChain
-proc CloseClipboard() : BOOL #foreign; // user32
+proc CloseClipboard() : BOOL #foreign "user32";
 //CountClipboardFormats
-proc EmptyClipboard() : BOOL #foreign; // user32
+proc EmptyClipboard() : BOOL #foreign "user32";
 //EnumClipboardFormats
-proc GetClipboardData(uFormat: u32) : HANDLE #foreign; // user32
+proc GetClipboardData(uFormat: u32) : HANDLE #foreign "user32";
 //GetClipboardFormatName
 //GetClipboardOwner
 //GetClipboardSequenceNumber
@@ -2235,16 +2235,16 @@ proc GetClipboardData(uFormat: u32) : HANDLE #foreign; // user32
 //GetPriorityClipboardFormat
 //GetUpdatedClipboardFormats
 //IsClipboardFormatAvailable
-proc OpenClipboard (hwnd: HWND) : BOOL #foreign; // user32
+proc OpenClipboard (hwnd: HWND) : BOOL #foreign "user32";
 //RegisterClipboardFormat
 //RemoveClipboardFormatListener
-proc SetClipboardData(uFormat: u32, hMem: HANDLE) : HANDLE #foreign; // user32
+proc SetClipboardData(uFormat: u32, hMem: HANDLE) : HANDLE #foreign "user32";
 //SetClipboardViewer
 
 
 // Process and Thread API
 
-// ShellExecuteA :: (hwnd: HWND, lpOperation: ^byte, lpFile: ^byte, lpParmeters: ^byte, lpDirectory: ^byte, nShowCmd: int) : i32 #foreign;
+// ShellExecuteA :: (hwnd: HWND, lpOperation: ^byte, lpFile: ^byte, lpParmeters: ^byte, lpDirectory: ^byte, nShowCmd: int) : i32 #foreign "Shell32";
 // STARTUPINFO :: struct (str_type := ^byte) {
 //     cb: i32;
 //     lpReserved: str_type;
@@ -2367,14 +2367,14 @@ proc CreateProcessW(lpApplicationName: ^u16, lpCommandLine: ^u16,
                    lpSecurityAttributes: ^SECURITY_ATTRIBUTES, lpThreadAttributes: ^SECURITY_ATTRIBUTES,
                    bInheritHandles: BOOL, dwCreationFlags: i32, lpEnvironment: rawptr,
                    lpCurrentDirectory: ^u16,
-                   lpStartupInfo: ^STARTUPINFOW, lpProcessInformation: ^PROCESS_INFORMATION) : i32 #foreign; // kernel32
-proc GetExitCodeProcess(hProcess: HANDLE, lpExitCode: ^u32) : i32 #foreign; // kernel32
+                   lpStartupInfo: ^STARTUPINFOW, lpProcessInformation: ^PROCESS_INFORMATION) : i32 #foreign "kernel32";
+proc GetExitCodeProcess(hProcess: HANDLE, lpExitCode: ^u32) : i32 #foreign "kernel32";
 //CreateProcessAsUser
 //CreateProcessWithLogonW
 //CreateProcessWithTokenW
 //CreateRemoteThread
 //CreateRemoteThreadEx
-proc CreateThread(threadAttributes: rawptr, stackSize: i64, startAddress: rawptr, parameter: rawptr, creation_flags: i32, threadIdReturn: ^i32) : HANDLE #foreign; // kernel32
+proc CreateThread(threadAttributes: rawptr, stackSize: i64, startAddress: rawptr, parameter: rawptr, creation_flags: i32, threadIdReturn: ^i32) : HANDLE #foreign "kernel32";
 //CreateThreadpool
 //CreateThreadpoolCleanupGroup
 //CreateThreadpoolIo
@@ -2392,7 +2392,7 @@ proc CreateThread(threadAttributes: rawptr, stackSize: i64, startAddress: rawptr
 //DisassociateCurrentThreadFromCallback
 //EnterUmsSchedulingMode
 //ExecuteUmsThread
-proc ExitProcess(exit_code: u32) #foreign; // kernel32
+proc ExitProcess(exit_code: u32) #foreign "kernel32";
 //ExitThread
 //FiberProc
 //FlsAlloc
@@ -2410,12 +2410,12 @@ proc ExitProcess(exit_code: u32) #foreign; // kernel32
 //GetDisplayAutoRotationPreferencesByProcessId
 //GetDisplayAutoRotationPreferences
 //GetCommandLine
-proc GetCurrentProcess() : HANDLE #foreign; // kernel32
-proc GetCurrentProcessId() : u32 #foreign; // kernel32
+proc GetCurrentProcess() : HANDLE #foreign "kernel32";
+proc GetCurrentProcessId() : u32 #foreign "kernel32";
 //GetCurrentProcessorNumber
 //GetCurrentProcessorNumberEx
-proc GetCurrentThread() : HANDLE #foreign; // kernel32
-proc GetCurrentThreadId() : DWORD #foreign; // kernel32
+proc GetCurrentThread() : HANDLE #foreign "kernel32";
+proc GetCurrentThreadId() : DWORD #foreign "kernel32";
 //GetCurrentThreadStackLimits
 //GetCurrentUmsThread
 //GetEnvironmentStrings
@@ -2443,7 +2443,7 @@ proc GetCurrentThreadId() : DWORD #foreign; // kernel32
 //GetProcessGroupAffinity
 //GetProcessHandleCount
 
-proc GetProcessId(Process: HANDLE) : DWORD #foreign; // kernel32
+proc GetProcessId(Process: HANDLE) : DWORD #foreign "kernel32";
 
 //GetProcessIdOfThread
 //GetProcessInformation
@@ -2460,7 +2460,7 @@ proc GetProcessId(Process: HANDLE) : DWORD #foreign; // kernel32
 //GetSystemCpuSetInformation
 //GetThreadDescription
 //GetThreadGroupAffinity
-proc GetThreadId(Thread: HANDLE) : DWORD #foreign; // kernel32
+proc GetThreadId(Thread: HANDLE) : DWORD #foreign "kernel32";
 //GetThreadIdealProcessorEx
 //GetThreadInformation
 //GetThreadIOPendingFlag
@@ -2503,7 +2503,7 @@ proc GetThreadId(Thread: HANDLE) : DWORD #foreign; // kernel32
 //QueueUserWorkItem
 //ReleaseMutexWhenCallbackReturns
 //ReleaseSemaphoreWhenCallbackReturns
-proc ResumeThread(thread: HANDLE) : i32 #foreign; // kernel32
+proc ResumeThread(thread: HANDLE) : i32 #foreign "kernel32";
 //SetDisplayAutoRotationPreferences
 //SetEnvironmentVariable
 //SetEventWhenCallbackReturns
@@ -2540,13 +2540,13 @@ proc ResumeThread(thread: HANDLE) : i32 #foreign; // kernel32
 //SetThreadpoolTimerEx
 //SetThreadpoolWait
 //SetThreadpoolWaitEx
-proc SetThreadPriority(thread: HANDLE, priority: i32) : i32 #foreign; // kernel32
+proc SetThreadPriority(thread: HANDLE, priority: i32) : i32 #foreign "kernel32";
 //SetThreadPriorityBoost
 //SetThreadSelectedCpuSets
 //SetThreadStackGuarantee
 //SetUmsThreadInformation
 //SimpleCallback
-proc Sleep(milliseconds: i32) #foreign; // kernel32
+proc Sleep(milliseconds: i32) #foreign "kernel32";
 //SleepEx
 //StartThreadpoolIo
 //SubmitThreadpoolWork
@@ -2554,7 +2554,7 @@ proc Sleep(milliseconds: i32) #foreign; // kernel32
 //SwitchToFiber
 //SwitchToThread
 //TerminateJobObject
-proc TerminateProcess(hProcess: HANDLE, uExitCode: u32) : BOOL #foreign; // kernel32
+proc TerminateProcess(hProcess: HANDLE, uExitCode: u32) : BOOL #foreign "kernel32";
 //TerminateThread
 //ThreadProc
 //TimerCallback
@@ -2594,18 +2594,18 @@ proc TerminateProcess(hProcess: HANDLE, uExitCode: u32) : BOOL #foreign; // kern
 
 // CheckRemoteDebuggerPresent
 // ContinueDebugEvent
-proc DebugActiveProcess(dwProcessId: u32) : BOOL #foreign; // kernel32
+proc DebugActiveProcess(dwProcessId: u32) : BOOL #foreign "kernel32";
 // DebugActiveProcessStop
-proc DebugBreak() #foreign; // kernel32
+proc DebugBreak() #foreign "kernel32";
 // DebugBreakProcess
 // DebugSetProcessKillOnExit
 // FatalExit
 // FlushInstructionCache
 // GetThreadContext
 // GetThreadSelectorEntry
-proc IsDebuggerPresent() : BOOL #foreign; // kernel32
-proc OutputDebugStringA(s : ^byte) #foreign; // kernel32      // This is not deprecated!
-proc OutputDebugStringW(s : ^u16) #foreign; // kernel32     // For this to work you have to call WaitForDebugEventEx first.
+proc IsDebuggerPresent() : BOOL #foreign "kernel32";
+proc OutputDebugStringA(s : ^byte) #foreign "kernel32";      // This is not deprecated!
+proc OutputDebugStringW(s : ^u16) #foreign "kernel32";     // For this to work you have to call WaitForDebugEventEx first.
 // ReadProcessMemory
 // SetThreadContext
 // WaitForDebugEvent
@@ -2660,11 +2660,11 @@ struct MMTIME {
     };
 }
 
-proc timeGetDevCaps(ptc: ^TIMECAPS, cbtc: u32) : u32 #foreign; // winmm
-proc timeBeginPeriod(period: u32) : u32 #foreign; // winmm
-proc timeEndPeriod(period: u32) : u32 #foreign; // winmm
-proc timeGetTime() : u32 #foreign; // winmm
-proc timeGetSystemTime(pmmt: ^MMTIME, cbmmt: u32) : u32 #foreign; // winmm
+proc timeGetDevCaps(ptc: ^TIMECAPS, cbtc: u32) : u32 #foreign "winmm";
+proc timeBeginPeriod(period: u32) : u32 #foreign "winmm";
+proc timeEndPeriod(period: u32) : u32 #foreign "winmm";
+proc timeGetTime() : u32 #foreign "winmm";
+proc timeGetSystemTime(pmmt: ^MMTIME, cbmmt: u32) : u32 #foreign "winmm";
 
 
 
@@ -2750,7 +2750,7 @@ const IDCONTINUE                := 11;
 //MapDialogRect
 //MB_GetString
 // MessageBoxA :: (hWnd: HWND, lpText: ^byte, lpCaption: ^byte, uType:u32) : i32 #foreign user32 #deprecated "Use MessageBoxW instead.";
-proc MessageBoxW(hWnd: HWND, lpText: ^u16, lpCaption: ^u16, uType:u32) : i32 #foreign; // user32
+proc MessageBoxW(hWnd: HWND, lpText: ^u16, lpCaption: ^u16, uType:u32) : i32 #foreign "user32";
 //MessageBoxEx
 //MessageBoxIndirect
 //SendDlgItemMessage
@@ -2815,19 +2815,19 @@ enum SetFilePointer_MoveMethod u32 {
 // CopyProgressRoutine
 // CreateFileA   :: (filename: ^byte, desired_access: i32, share_mode: i32 = FILE_SHARE_READ, security: rawptr = null, creation: i32 = OPEN_EXISTING, flags_and_attributes: i32 = 0, hTemplateFile: HANDLE = null) : HANDLE #foreign kernel32 #deprecated "Use CreateFileW instead.";
 // todo(josh): default proc params
-// proc CreateFileW(filename: ^u16, desired_access: i32, share_mode: i32 = FILE_SHARE_READ, security: rawptr = null, creation: i32 = OPEN_EXISTING, flags_and_attributes: i32 = 0, hTemplateFile: HANDLE = null) : HANDLE #foreign; // kernel32
-proc CreateFileW(filename: ^u16, desired_access: i32, share_mode: i32, security: rawptr, creation: i32, flags_and_attributes: i32, hTemplateFile: HANDLE) : HANDLE #foreign; // kernel32
+// proc CreateFileW(filename: ^u16, desired_access: i32, share_mode: i32 = FILE_SHARE_READ, security: rawptr = null, creation: i32 = OPEN_EXISTING, flags_and_attributes: i32 = 0, hTemplateFile: HANDLE = null) : HANDLE #foreign "kernel32";
+proc CreateFileW(filename: ^u16, desired_access: i32, share_mode: i32, security: rawptr, creation: i32, flags_and_attributes: i32, hTemplateFile: HANDLE) : HANDLE #foreign "kernel32";
 // CreateFile2
 // CreateFileTransacted
 // CreateHardLinkA :: (lpFileName: ^byte, lpExistingFileName: ^byte, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : BOOL #foreign kernel32 #deprecated "Use CreateHardLinkW instead.";
-proc CreateHardLinkW(lpFileName: ^u16, lpExistingFileName: ^u16, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : BOOL #foreign; // kernel32
+proc CreateHardLinkW(lpFileName: ^u16, lpExistingFileName: ^u16, lpSecurityAttributes: ^SECURITY_ATTRIBUTES) : BOOL #foreign "kernel32";
 // CreateHardLinkTransacted
 // CreateIoCompletionPort
 // CreateSymbolicLink
 // CreateSymbolicLinkTransacted
 // DecryptFile
-// proc DeleteFileA(filename: ^byte) : BOOL #foreign kernel32 #deprecated "Use DeleteFileW instead.";
-proc DeleteFileW(filename: ^u16) : BOOL #foreign; // kernel32
+// proc DeleteFileA(filename: cstring) : BOOL #foreign "kernel32";
+proc DeleteFileW(filename: ^u16) : BOOL #foreign "kernel32";
 // DeleteFileTransacted
 // DuplicateEncryptionInfoFile
 // EncryptFile
@@ -2835,9 +2835,9 @@ proc DeleteFileW(filename: ^u16) : BOOL #foreign; // kernel32
 // ExportCallback
 // FileEncryptionStatus
 // FileIOCompletionRoutine
-proc FindClose(file: HANDLE) : BOOL #foreign; // kernel32
+proc FindClose(file: HANDLE) : BOOL #foreign "kernel32";
 // proc FindFirstFileA(lpFileName: ^byte, lpFindFileData: rawptr) : HANDLE #foreign kernel32 #deprecated "Use FindFirstFileW instead.";
-proc FindFirstFileW(lpFileName: ^u16, lpFindFileData: ^WIN32_FIND_DATAW) : HANDLE #foreign; // kernel32
+proc FindFirstFileW(lpFileName: ^u16, lpFindFileData: ^WIN32_FIND_DATAW) : HANDLE #foreign "kernel32";
 // FindFirstFileEx
 // FindFirstFileNameTransactedW
 // FindFirstFileNameW
@@ -2845,7 +2845,7 @@ proc FindFirstFileW(lpFileName: ^u16, lpFindFileData: ^WIN32_FIND_DATAW) : HANDL
 // FindFirstStreamTransactedW
 // FindFirstStreamW
 // proc FindNextFileA(hFile: HANDLE,   lpFindFileData: rawptr) : BOOL #foreign kernel32 #deprecated "Use FindNextFileW instead.";
-proc FindNextFileW(hFile: HANDLE,   lpFindFileData: ^WIN32_FIND_DATAW) : BOOL #foreign; // kernel32
+proc FindNextFileW(hFile: HANDLE,   lpFindFileData: ^WIN32_FIND_DATAW) : BOOL #foreign "kernel32";
 // FindNextFileNameW
 // FindNextStreamW
 // FlushFileBuffers
@@ -2855,18 +2855,18 @@ proc FindNextFileW(hFile: HANDLE,   lpFindFileData: ^WIN32_FIND_DATAW) : BOOL #f
 // GetCompressedFileSizeTransacted
 // GetExpandedName
 // proc GetFileAttributesA(lpFileName: ^byte) : u32 #foreign kernel32 #deprecated "Use CreateHardLinkW instead.";
-proc GetFileAttributesW(lpFileName: ^u16) : u32 #foreign; // kernel32
+proc GetFileAttributesW(lpFileName: ^u16) : u32 #foreign "kernel32";
 // GetFileAttributesEx
 // GetFileAttributesTransacted
 // GetFileBandwidthReservation
 // GetFileInformationByHandle
 // GetFileInformationByHandleEx
-proc GetFileSize(file: HANDLE, FileSizeHigh: ^u32) : u32 #foreign; // kernel32
-proc GetFileSizeEx(file: HANDLE, size: ^LARGE_INTEGER) : i32 #foreign; // kernel32
+proc GetFileSize(file: HANDLE, FileSizeHigh: ^u32) : u32 #foreign "kernel32";
+proc GetFileSizeEx(file: HANDLE, size: ^LARGE_INTEGER) : i32 #foreign "kernel32";
 // GetFileType
 // GetFinalPathNameByHandle
 // GetFullPathNameA :: (filename: ^byte, buffer_length: DWORD, buffer: ^byte, file_part: ^byte) : DWORD #foreign kernel32 #deprecated "Use GetFullPathNameW instead.";
-proc GetFullPathNameW(filename: ^u16, buffer_length: DWORD, buffer: ^byte, file_part: ^u16) : DWORD #foreign; // kernel32
+proc GetFullPathNameW(filename: ^u16, buffer_length: DWORD, buffer: ^byte, file_part: ^u16) : DWORD #foreign "kernel32";
 // GetFullPathNameTransacted
 // GetLongPathName
 // GetLongPathNameTransacted
@@ -2876,8 +2876,8 @@ proc GetFullPathNameW(filename: ^u16, buffer_length: DWORD, buffer: ^byte, file_
 // GetTempFileName
 // GetTempPath
 // ImportCallback
-proc LockFile(file: HANDLE, dwFileOffsetLow: DWORD, dwFileOffsetHigh: DWORD, nNumberOfBytesToLockLow: DWORD, nNumberOfBytesToLockHigh: DWORD) : BOOL #foreign; // kernel32
-proc LockFileEx(file: HANDLE, dwFlags: DWORD, dwReserved: DWORD, nNumberOfBytesToLockLow: DWORD, nNumberOfBytesToLockHigh: DWORD, lpOverlapped: ^OVERLAPPED) : BOOL #foreign; // kernel32
+proc LockFile(file: HANDLE, dwFileOffsetLow: DWORD, dwFileOffsetHigh: DWORD, nNumberOfBytesToLockLow: DWORD, nNumberOfBytesToLockHigh: DWORD) : BOOL #foreign "kernel32";
+proc LockFileEx(file: HANDLE, dwFlags: DWORD, dwReserved: DWORD, nNumberOfBytesToLockLow: DWORD, nNumberOfBytesToLockHigh: DWORD, lpOverlapped: ^OVERLAPPED) : BOOL #foreign "kernel32";
 // LZClose
 // LZCopy
 // LZInit
@@ -2885,7 +2885,7 @@ proc LockFileEx(file: HANDLE, dwFlags: DWORD, dwReserved: DWORD, nNumberOfBytesT
 // LZRead
 // LZSeek
 // MoveFileA     :: (filename: ^byte, new_filename: ^byte) : BOOL #foreign kernel32 #deprecated "Use MoveFileW instead.";
-proc MoveFileW(filename: ^u16, new_filename: ^u16) : BOOL #foreign; // kernel32
+proc MoveFileW(filename: ^u16, new_filename: ^u16) : BOOL #foreign "kernel32";
 // MoveFileEx
 // MoveFileTransacted
 // MoveFileWithProgress
@@ -2898,13 +2898,13 @@ proc MoveFileW(filename: ^u16, new_filename: ^u16) : BOOL #foreign; // kernel32
 // ReadEncryptedFileRaw
 
 // todo(josh): default proc params
-// proc ReadFile(file: HANDLE, buffer: rawptr, to_read: DWORD, did_read: ^DWORD, overlapped: rawptr = null) : BOOL #foreign; // kernel32
-proc ReadFile(file: HANDLE, buffer: rawptr, to_read: DWORD, did_read: ^DWORD, overlapped: rawptr) : BOOL #foreign; // kernel32
+// proc ReadFile(file: HANDLE, buffer: rawptr, to_read: DWORD, did_read: ^DWORD, overlapped: rawptr = null) : BOOL #foreign "kernel32";
+proc ReadFile(file: HANDLE, buffer: rawptr, to_read: DWORD, did_read: ^DWORD, overlapped: rawptr) : BOOL #foreign "kernel32";
 // ReadFileEx
 // ReadFileScatter
 // RemoveUsersFromEncryptedFile
 // ReOpenFile
-proc ReplaceFileW(lpReplacedFileName: LPCWSTR, lpReplacementFileName: LPCWSTR, lpBackupFileName: LPCWSTR, dwReplaceFlags: DWORD, lpExclude: rawptr, lpReserved: rawptr) : BOOL #foreign; // kernel32
+proc ReplaceFileW(lpReplacedFileName: LPCWSTR, lpReplacementFileName: LPCWSTR, lpBackupFileName: LPCWSTR, dwReplaceFlags: DWORD, lpExclude: rawptr, lpReserved: rawptr) : BOOL #foreign "kernel32";
 
 // SearchPath
 // SetEndOfFile
@@ -2916,8 +2916,8 @@ proc ReplaceFileW(lpReplacedFileName: LPCWSTR, lpReplacementFileName: LPCWSTR, l
 // SetFileCompletionNotificationModes
 // SetFileInformationByHandle
 // SetFileIoOverlappedRange
-proc SetFilePointer(hFile: HANDLE, liDistanceToMove: i32, lpNewFilePointer: ^i32, dwMoveMethod: SetFilePointer_MoveMethod) : u32 #foreign; // kernel32
-proc SetFilePointerEx(hFile: HANDLE, liDistanceToMove: LARGE_INTEGER_i64, lpNewFilePointer: ^LARGE_INTEGER_i64, dwMoveMethod: SetFilePointer_MoveMethod) : BOOL #foreign; // kernel32
+proc SetFilePointer(hFile: HANDLE, liDistanceToMove: i32, lpNewFilePointer: ^i32, dwMoveMethod: SetFilePointer_MoveMethod) : u32 #foreign "kernel32";
+proc SetFilePointerEx(hFile: HANDLE, liDistanceToMove: LARGE_INTEGER_i64, lpNewFilePointer: ^LARGE_INTEGER_i64, dwMoveMethod: SetFilePointer_MoveMethod) : BOOL #foreign "kernel32";
 // SetFileShortName
 // SetFileValidData
 // SetSearchPathMode
@@ -2941,7 +2941,7 @@ proc SetFilePointerEx(hFile: HANDLE, liDistanceToMove: LARGE_INTEGER_i64, lpNewF
 // Wow64EnableWow64FsRedirection
 // Wow64RevertWow64FsRedirection
 // WriteEncryptedFileRaw
-proc WriteFile(handle: HANDLE, buffer: rawptr, buffer_length: DWORD, written_result: ^DWORD, overlapped: rawptr) : BOOL #foreign; // kernel32
+proc WriteFile(handle: HANDLE, buffer: rawptr, buffer_length: DWORD, written_result: ^DWORD, overlapped: rawptr) : BOOL #foreign "kernel32";
 // WriteFileEx
 // WriteFileGather
 
@@ -2963,7 +2963,7 @@ proc WriteFile(handle: HANDLE, buffer: rawptr, buffer_length: DWORD, written_res
 // DwmGetTransportAttributes
 // DwmGetWindowAttribute
 // DwmInvalidateIconicBitmaps
-proc DwmIsCompositionEnabled(pfEnabled: ^BOOL) : HRESULT #foreign; // Dwmapi
+proc DwmIsCompositionEnabled(pfEnabled: ^BOOL) : HRESULT #foreign "Dwmapi";
 // DwmModifyPreviousDxFrameDuration
 // DwmQueryThumbnailSourceSize
 // DwmRegisterThumbnail
@@ -3267,12 +3267,12 @@ const TranslateAddressProc64    := proc(hProcess: HANDLE, hThread: HANDLE, lpadd
 // SearchTreeForFile
 proc StackWalk64(MachineType: IMAGE_FILE_MACHINE, hProcess: HANDLE, hThread: HANDLE, StackFrame:^STACKFRAME64, ContextRecord: rawptr,
     ReadMemoryRoutine: ReadProcessMemoryProc64, FunctionTableAccessRoutine: FunctionTableAccessProc64,
-    GetModuleBaseRoutine: GetModuleBaseProc64, TranslateAddres: TranslateAddressProc64) : BOOL #foreign; // DbgHelp
+    GetModuleBaseRoutine: GetModuleBaseProc64, TranslateAddres: TranslateAddressProc64) : BOOL #foreign "DbgHelp";
 // StackWalkEx
 // SymAddrIncludeInlineTrace
 // SymAddSourceStream
 // SymAddSymbol
-proc SymCleanup(hProcess: HANDLE) : BOOL #foreign; // DbgHelp
+proc SymCleanup(hProcess: HANDLE) : BOOL #foreign "DbgHelp";
 // SymCompareInlineTrace
 // SymDeleteSymbol
 // SymEnumerateModulei64
@@ -3298,21 +3298,21 @@ proc SymCleanup(hProcess: HANDLE) : BOOL #foreign; // DbgHelp
 // SymFindExecutableImage
 // SymFindFileInPath
 // SymFindFileInPathProc
-proc SymFromAddr(hProcess: HANDLE, Address: u64, Displacement: ^u64, Symbol: SYMBOL_INFO) : BOOL #foreign; // DbgHelp
+proc SymFromAddr(hProcess: HANDLE, Address: u64, Displacement: ^u64, Symbol: SYMBOL_INFO) : BOOL #foreign "DbgHelp";
 // SymFromIndex
 // SymFromInlineContext
 // SymFromName
 // SymFromToken
-proc SymFunctionTableAccesi64(hProcess: HANDLE, AddrBase:u64) : rawptr #foreign; // DbgHelp
+proc SymFunctionTableAccesi64(hProcess: HANDLE, AddrBase:u64) : rawptr #foreign "DbgHelp";
 // SymGetExtendedOption
 // SymGetFileLineOffseti64
 // SymGetHomeDirectory
-proc SymGetLineFromAddr64(hProcess: HANDLE, dwAddr: u64, pdwDisplacement: ^u32, Line: ^IMAGEHLP_LINE64) : BOOL #foreign; // DbgHelp
+proc SymGetLineFromAddr64(hProcess: HANDLE, dwAddr: u64, pdwDisplacement: ^u32, Line: ^IMAGEHLP_LINE64) : BOOL #foreign "DbgHelp";
 // SymGetLineFromInlineContext
 // SymGetLineFromName64
 // SymGetLineNext64
 // SymGetLinePrev64
-proc SymGetModuleBase64(hProcess: HANDLE, dwAddr:u64) : u64 #foreign; // DbgHelp
+proc SymGetModuleBase64(hProcess: HANDLE, dwAddr:u64) : u64 #foreign "DbgHelp";
 // SymGetModuleInfo64
 // SymGetOmaps
 // SymGetOptions
@@ -3324,14 +3324,14 @@ proc SymGetModuleBase64(hProcess: HANDLE, dwAddr:u64) : u64 #foreign; // DbgHelp
 // SymGetSourceFileToken
 // SymGetSourceVarFromToken
 // SymGetSymbolFile
-proc SymGetSymFromAddr64(hProcess: HANDLE, Address: u64, Displacement: ^u64, Symbol: ^IMAGEHLP_SYMBOL64) : BOOL #foreign; // DbgHelp
+proc SymGetSymFromAddr64(hProcess: HANDLE, Address: u64, Displacement: ^u64, Symbol: ^IMAGEHLP_SYMBOL64) : BOOL #foreign "DbgHelp";
 // SymGetSymFromName64
 // SymGetSymNext64
 // SymGetSymPrev64
 // SymGetTypeFromName
 // SymGetTypeInfo
 // SymGetTypeInfoEx
-proc SymInitialize(hProcess: HANDLE, UserSearchPath: ^byte, fInvadeProcess: BOOL) : BOOL #foreign; // DbgHelp
+proc SymInitialize(hProcess: HANDLE, UserSearchPath: ^byte, fInvadeProcess: BOOL) : BOOL #foreign "DbgHelp";
 // SymLoadModule64
 // SymLoadModuleEx
 // SymMatchFileName
@@ -3348,7 +3348,7 @@ proc SymInitialize(hProcess: HANDLE, UserSearchPath: ^byte, fInvadeProcess: BOOL
 // SymSetContext
 // SymSetExtendedOption
 // SymSetHomeDirectory
-proc SymSetOptions(SymOptions: SYMOPT) : SYMOPT #foreign; // DbgHelp
+proc SymSetOptions(SymOptions: SYMOPT) : SYMOPT #foreign "DbgHelp";
 // SymSetParentWindow
 // SymSetScopeFromAddr
 // SymSetScopeFromIndex
@@ -3408,13 +3408,13 @@ const EXCEPTION_CONTINUE_EXECUTION := -1;
 // RemoveVectoredExceptionHandler
 // RtlAddFunctionTable
 // RtlAddGrowableFunctionTable
-proc RtlCaptureContext(ContextRecord: ^CONTEXT) #foreign; // kernel32
+proc RtlCaptureContext(ContextRecord: ^CONTEXT) #foreign "kernel32";
 // RtlDeleteFunctionTable
 // RtlDeleteGrowableFunctionTable
 // RtlGrowFunctionTable
 // RtlInstallFunctionTableCallback
 // RtlRestoreContext
-proc SetUnhandledExceptionFilter(lpTopLevelExceptionFilter: LPTOP_LEVEL_EXCEPTION_FILTER) : LPTOP_LEVEL_EXCEPTION_FILTER #foreign; // kernel32
+proc SetUnhandledExceptionFilter(lpTopLevelExceptionFilter: LPTOP_LEVEL_EXCEPTION_FILTER) : LPTOP_LEVEL_EXCEPTION_FILTER #foreign "kernel32";
 // UnhandledExceptionFilter
 // VectoredHandler
 
@@ -3452,12 +3452,12 @@ struct FLASHWINFO {
 // Beep
 // CaptureStackBackTrace
 // FatalAppExit
-proc FlashWindow(hWnd: HWND, bInvert: BOOL) : BOOL #foreign; // user32
-proc FlashWindowEx(pfwi: ^FLASHWINFO) : BOOL #foreign; // user32
+proc FlashWindow(hWnd: HWND, bInvert: BOOL) : BOOL #foreign "user32";
+proc FlashWindowEx(pfwi: ^FLASHWINFO) : BOOL #foreign "user32";
 // FormatMessageA :: (dwFlags: u32, lpSource: rawptr, dwMessageId: u32, dwLanguageId: u32, lpBuffer: *^byte, nSize: u32, Arguments: rawptr) : i32 #foreign kernel32 #deprecated "Use FormatMessageW instead.";
-proc FormatMessageW(dwFlags: u32, lpSource: rawptr, dwMessageId: u32, dwLanguageId: u32, lpBuffer: ^^u16, nSize: u32, Arguments: rawptr) : i32 #foreign; // kernel32
-proc GetErrorMode() : SEM #foreign; // kernel32
-proc GetLastError() : u32 #foreign; // kernel32
+proc FormatMessageW(dwFlags: u32, lpSource: rawptr, dwMessageId: u32, dwLanguageId: u32, lpBuffer: ^^u16, nSize: u32, Arguments: rawptr) : i32 #foreign "kernel32";
+proc GetErrorMode() : SEM #foreign "kernel32";
+proc GetLastError() : u32 #foreign "kernel32";
 // GetThreadErrorMode
 // MessageBeep
 // RtlLookupFunctionEntry
@@ -3468,7 +3468,7 @@ proc GetLastError() : u32 #foreign; // kernel32
 // RtlUnwind2
 // RtlUnwindEx
 // RtlVirtualUnwind
-proc SetErrorMode(uMode : SEM) : SEM #foreign; // kernel32
+proc SetErrorMode(uMode : SEM) : SEM #foreign "kernel32";
 // SetLastError
 // SetLastErrorEx
 // SetThreadErrorMode
@@ -3509,15 +3509,15 @@ struct TIME_ZONE_INFORMATION { // @@
 // EnumDynamicTimeZoneInformation
 // FileTimeToDosDateTime
 // FileTimeToLocalFileTime
-proc FileTimeToSystemTime(lpFileTime: ^FILETIME, lpSystemTime: ^SYSTEMTIME) : BOOL #foreign; // kernel32
+proc FileTimeToSystemTime(lpFileTime: ^FILETIME, lpSystemTime: ^SYSTEMTIME) : BOOL #foreign "kernel32";
 // GetDynamicTimeZoneInformation
 // GetDynamicTimeZoneInformationEffectiveYears
-proc GetFileTime(file: HANDLE, lpCreationTime: ^FILETIME, lpLastAccessTime: ^FILETIME, lpLastWriteTime: ^FILETIME) : i32 #foreign; // kernel32
-proc GetLocalTime(time: ^SYSTEMTIME) #foreign; // kernel32
-proc GetSystemTime(time : ^SYSTEMTIME) #foreign; // kernel32
+proc GetFileTime(file: HANDLE, lpCreationTime: ^FILETIME, lpLastAccessTime: ^FILETIME, lpLastWriteTime: ^FILETIME) : i32 #foreign "kernel32";
+proc GetLocalTime(time: ^SYSTEMTIME) #foreign "kernel32";
+proc GetSystemTime(time : ^SYSTEMTIME) #foreign "kernel32";
 // GetSystemTimeAdjustment
 // GetSystemTimeAdjustmentPrecise
-proc GetSystemTimeAsFileTime(lpFileTime: ^FILETIME) #foreign; // kernel32
+proc GetSystemTimeAsFileTime(lpFileTime: ^FILETIME) #foreign "kernel32";
 // GetSystemTimePreciseAsFileTime
 // GetSystemTimes
 // GetTickCount
@@ -3540,8 +3540,8 @@ proc GetSystemTimeAsFileTime(lpFileTime: ^FILETIME) #foreign; // kernel32
 // SetSystemTimeAdjustment
 // SetSystemTimeAdjustmentPrecise
 // SetTimeZoneInformation
-proc SystemTimeToFileTime(lpSystemTime : ^SYSTEMTIME, lpFileTime : ^FILETIME) : BOOL #foreign; // kernel32
-proc SystemTimeToTzSpecificLocalTime(lpTimeZone: ^TIME_ZONE_INFORMATION, lpUniversalTime:^SYSTEMTIME, lpLocalTime:^SYSTEMTIME) : BOOL #foreign; // kernel32
+proc SystemTimeToFileTime(lpSystemTime : ^SYSTEMTIME, lpFileTime : ^FILETIME) : BOOL #foreign "kernel32";
+proc SystemTimeToTzSpecificLocalTime(lpTimeZone: ^TIME_ZONE_INFORMATION, lpUniversalTime:^SYSTEMTIME, lpLocalTime:^SYSTEMTIME) : BOOL #foreign "kernel32";
 // SystemTimeToTzSpecificLocalTimeEx
 // TzSpecificLocalTimeToSystemTime
 // TzSpecificLocalTimeToSystemTimeEx
@@ -3560,7 +3560,7 @@ proc SystemTimeToTzSpecificLocalTime(lpTimeZone: ^TIME_ZONE_INFORMATION, lpUnive
 // PathCompactPathEx
 // PathCreateFromUrl
 // PathCreateFromUrlAlloc
-proc PathFileExistsW(pszPath: ^u16) : i32 #foreign; // Shlwapi
+proc PathFileExistsW(pszPath: ^u16) : i32 #foreign "Shlwapi";
 // PathFindExtension
 // PathFindFileName
 // PathFindNextComponent
@@ -3791,9 +3791,9 @@ enum FILTERKEY_FLAGS u32 {
     FKF_CLICKON =         0x00000040;
 };
 
-proc GetSystemMetrics(nIndex: i32) : i32 #foreign; // user32
+proc GetSystemMetrics(nIndex: i32) : i32 #foreign "user32";
 // SystemParametersInfoA :: (uiAction: u32, uiParam: u32, pvParam: rawptr, fWinIni: u32) : BOOL #foreign user32 #deprecated "Use SystemParametersInfoW instead";
-proc SystemParametersInfoW(uiAction: u32, uiParam: u32, pvParam: rawptr, fWinIni: u32) : BOOL #foreign; // user32
+proc SystemParametersInfoW(uiAction: u32, uiParam: u32, pvParam: rawptr, fWinIni: u32) : BOOL #foreign "user32";
 
 
 // Bitmap API
@@ -3890,7 +3890,7 @@ struct OPENFILENAME!($T: Type) {
 const OPENFILENAMEA := OPENFILENAME!(u8);
 const OPENFILENAMEW := OPENFILENAME!(u16);
 
-proc CommDlgExtendedError() : u32 #foreign; // comdlg32
+proc CommDlgExtendedError() : u32 #foreign "comdlg32";
 // FindTextA
 // FindTextW
 // GetCurrentDevMode
@@ -3898,10 +3898,10 @@ proc CommDlgExtendedError() : u32 #foreign; // comdlg32
 // GetCurrentPrinterName
 // GetFileTitleA
 // GetFileTitleW
-proc GetOpenFileNameA(arg: ^OPENFILENAMEA) : BOOL #foreign; // comdlg32
-proc GetOpenFileNameW(arg: ^OPENFILENAMEW) : BOOL #foreign; // comdlg32
-proc GetSaveFileNameA(arg: ^OPENFILENAMEA) : BOOL #foreign; // comdlg32
-proc GetSaveFileNameW(arg: ^OPENFILENAMEW) : BOOL #foreign; // comdlg32
+proc GetOpenFileNameA(arg: ^OPENFILENAMEA) : BOOL #foreign "comdlg32";
+proc GetOpenFileNameW(arg: ^OPENFILENAMEW) : BOOL #foreign "comdlg32";
+proc GetSaveFileNameA(arg: ^OPENFILENAMEA) : BOOL #foreign "comdlg32";
+proc GetSaveFileNameW(arg: ^OPENFILENAMEW) : BOOL #foreign "comdlg32";
 
 
 // Shell API
@@ -4022,7 +4022,7 @@ struct SHFILEOPSTRUCTW {
 // SHEnumerateUnreadMailAccountsW
 // SHEvaluateSystemCommandTemplate
 // SHFileOperationA :: (FileOp: *SHFILEOPSTRUCTA) : i32 #foreign shell32 #deprecated "Use SHFileOperationW instead.";
-proc SHFileOperationW(FileOp: ^SHFILEOPSTRUCTW) : i32 #foreign; // shell32
+proc SHFileOperationW(FileOp: ^SHFILEOPSTRUCTW) : i32 #foreign "shell32";
 // SHFreeNameMappings
 // SHGetDiskFreeSpaceExA
 // SHGetDiskFreeSpaceExW
@@ -4065,8 +4065,8 @@ const _CRTDBG_REPORT_MODE := -1;
 
 //_CrtSetReportMode :: (reportType: i32, reportMode: i32) : i32 #foreign Crt;    // @@ Where is this defined?
 
-proc _beginthreadex(_Security: rawptr, _StackSize: u32, _StartAddress: rawptr, _ArgList: rawptr, _InitFlag: u32, _ThrdAddr: ^i32) : ^u32 #foreign; // Crt
-proc _endthreadex(return_code: u32) #foreign; // Crt
+proc _beginthreadex(_Security: rawptr, _StackSize: u32, _StartAddress: rawptr, _ArgList: rawptr, _InitFlag: u32, _ThrdAddr: ^i32) : ^u32 #foreign "Crt";
+proc _endthreadex(return_code: u32) #foreign "Crt";
 
 
 // @@ Still needs to be organized {
@@ -4109,9 +4109,9 @@ const LANG_ENGLISH := 0x09;
 const SUBLANG_DEFAULT := 0x1;
 
 proc WideCharToMultiByte(CodePage: u32, dwFlags: i32, lpWideCharStr: ^u16, cchWideChar: i32, lpMultiByteStr: ^byte,
-                        cbMultiByte: i32, lpDefaultChar: ^byte, lpUsedDefaultChar: ^i32) : i32 #foreign; // kernel32
+                        cbMultiByte: i32, lpDefaultChar: ^byte, lpUsedDefaultChar: ^i32) : i32 #foreign "kernel32";
 proc MultiByteToWideChar(CodePage: u32, dwFlags: i32, lpMultiByteStr: ^byte, cbMultiByte: i32,
-                        lpWideCharStr: ^u16, cchWideChar: i32) : i32 #foreign; // kernel32
+                        lpWideCharStr: ^u16, cchWideChar: i32) : i32 #foreign "kernel32";
 const CP_ACP := 0;
 const CP_UTF8 := 65001;
 const WC_NO_BEST_FIT_CHARS := 0x00000400;
@@ -4212,13 +4212,16 @@ proc to_wide_string(my_str: string, allocator: Allocator, out_success: ^bool, ou
     name_u16s := new_slice(u16, cast(int, query_num_chars+1), allocator);
     result_num_chars := MultiByteToWideChar(CP_ACP, 0, my_str.data, cast(i32, my_str.count), &name_u16s[0], query_num_chars);
 
-    if (result_num_chars > 0) {
-        assert(cast(int, result_num_chars) < name_u16s.count);
-        name_u16s[cast(i64, result_num_chars)] = 0;
-        name_u16s.count -= 1;
-        out_success^ = true;
-        out_result_length_in_bytes^ = result_num_chars * 2;
+    if (result_num_chars == 0) {
+        delete_slice(name_u16s, allocator);
+        return null;
     }
+
+    assert(cast(int, result_num_chars) < name_u16s.count);
+    name_u16s[cast(i64, result_num_chars)] = 0;
+    name_u16s.count -= 1;
+    out_success^ = true;
+    out_result_length_in_bytes^ = result_num_chars * 2;
     return &name_u16s[0];
 }
 
@@ -4234,25 +4237,25 @@ proc wide_string_to_ascii(data: ^u16, out_success: ^bool, allocator: Allocator) 
         return "";
     }
 
-    name_bytes := cast(^u8, sif_alloc(cast(i64, query_result), DEFAULT_ALIGNMENT, allocator));
+    name_bytes := cast(^u8, alloc(cast(i64, query_result), DEFAULT_ALIGNMENT, allocator));
     result := WideCharToMultiByte(CP_ACP, 0,
                                           data, -1,
                                           name_bytes, query_result,
                                           null, null);
 
-    if (result > 0) {
-        assert(result <= query_result);
-
-        name: string;
-        name.data  = name_bytes;
-        name.count = cast(i64, result)-1;  // Do not include the terminating zero.
-        assert(name[name.count] == 0);
-
-        out_success^ = true;
-        return name;
+    if (result == 0) {
+        free(name_bytes, allocator);
+        return "";
     }
 
-    return "";
+    out_success^ = true;
+    assert(result <= query_result);
+
+    name: string;
+    name.data  = name_bytes;
+    name.count = cast(i64, result)-1;  // Do not include the terminating zero.
+    assert(name[name.count] == 0);
+    return name;
 }
 
 
